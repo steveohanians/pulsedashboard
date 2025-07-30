@@ -24,7 +24,9 @@ export default function AdminPanel() {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tab = urlParams.get('tab');
     if (tab && ['users', 'clients', 'benchmark', 'system'].includes(tab)) {
-      setActiveTab(tab);
+      // Map 'system' to 'filters' for the internal tab state
+      const mappedTab = tab === 'system' ? 'filters' : tab;
+      setActiveTab(mappedTab);
     }
   }, [location]);
 
@@ -73,19 +75,13 @@ export default function AdminPanel() {
       </nav>
 
       <div className="p-6 max-w-7xl mx-auto">
-        <Card>
-          <CardHeader>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="users">Users Manager</TabsTrigger>
-                <TabsTrigger value="clients">Clients Manager</TabsTrigger>
-                <TabsTrigger value="benchmark">Benchmark Companies</TabsTrigger>
-                <TabsTrigger value="filters">Filters Editor</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="users">Users Manager</TabsTrigger>
+            <TabsTrigger value="clients">Clients Manager</TabsTrigger>
+            <TabsTrigger value="benchmark">Benchmark Companies</TabsTrigger>
+            <TabsTrigger value="filters">Filters Editor</TabsTrigger>
+          </TabsList>
               {/* Users Manager */}
               <TabsContent value="users">
                 <div className="flex items-center justify-between mb-6">
@@ -471,9 +467,7 @@ export default function AdminPanel() {
                   </Card>
                 </div>
               </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        </Tabs>
       </div>
     </div>
   );
