@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -22,7 +23,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tab = urlParams.get('tab');
-    if (tab && ['users', 'clients', 'benchmark', 'filters'].includes(tab)) {
+    if (tab && ['users', 'clients', 'benchmark', 'system'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [location]);
@@ -145,10 +146,20 @@ export default function AdminPanel() {
                                   </div>
                                   <div>
                                     <Label htmlFor="user-role">Role</Label>
-                                    <Input id="user-role" defaultValue="Admin" />
+                                    <Select defaultValue="Admin">
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="User">User</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div className="flex justify-end space-x-2">
-                                    <Button variant="outline">Cancel</Button>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline">Cancel</Button>
+                                    </DialogTrigger>
                                     <Button>Save Changes</Button>
                                   </div>
                                 </div>
@@ -228,10 +239,23 @@ export default function AdminPanel() {
                                     </div>
                                     <div>
                                       <Label htmlFor="client-size">Business Size</Label>
-                                      <Input id="client-size" defaultValue={client.businessSize} />
+                                      <Select defaultValue={client.businessSize}>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="All">All</SelectItem>
+                                          <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
+                                          <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
+                                          <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
+                                          <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                                     </div>
                                     <div className="flex justify-end space-x-2">
-                                      <Button variant="outline">Cancel</Button>
+                                      <DialogTrigger asChild>
+                                        <Button variant="outline">Cancel</Button>
+                                      </DialogTrigger>
                                       <Button>Save Changes</Button>
                                     </div>
                                   </div>

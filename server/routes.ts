@@ -63,6 +63,7 @@ export function registerRoutes(app: Express): Server {
       // Return available filter options
       res.json({
         businessSizes: [
+          "All",
           "Medium Business (100–500 employees)",
           "Large Business (500–1,000 employees)", 
           "Enterprise (1,000–5,000 employees)",

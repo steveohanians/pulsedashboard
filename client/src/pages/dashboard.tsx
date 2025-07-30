@@ -16,7 +16,7 @@ import CompetitorModal from "@/components/competitor-modal";
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const [timePeriod, setTimePeriod] = useState("Last Month");
-  const [businessSize, setBusinessSize] = useState("Medium Business (100–500 employees)");
+  const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -183,6 +183,7 @@ export default function Dashboard() {
                         id="start-date"
                         type="date"
                         value={startDate}
+                        max={new Date().toISOString().split('T')[0]}
                         onChange={(e) => setStartDate(e.target.value)}
                       />
                     </div>
@@ -192,6 +193,7 @@ export default function Dashboard() {
                         id="end-date"
                         type="date"
                         value={endDate}
+                        max={new Date().toISOString().split('T')[0]}
                         onChange={(e) => setEndDate(e.target.value)}
                       />
                     </div>
@@ -202,7 +204,8 @@ export default function Dashboard() {
                       <Button 
                         onClick={() => {
                           if (startDate && endDate) {
-                            setTimePeriod(`${startDate} to ${endDate}`);
+                            const formattedRange = `Custom: ${startDate} to ${endDate}`;
+                            setTimePeriod(formattedRange);
                             setShowDatePicker(false);
                           }
                         }}
@@ -278,25 +281,25 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Link href="/admin?tab=filters">
+                <Link href="/admin-panel?tab=system">
                   <Button variant="outline" className="w-full h-20 flex flex-col">
                     <Filter className="h-6 w-6 mb-2" />
                     <span className="text-sm">Filters Editor</span>
                   </Button>
                 </Link>
-                <Link href="/admin?tab=benchmark">
+                <Link href="/admin-panel?tab=benchmark">
                   <Button variant="outline" className="w-full h-20 flex flex-col">
                     <Building2 className="h-6 w-6 mb-2" />
                     <span className="text-sm">Benchmark Companies</span>
                   </Button>
                 </Link>
-                <Link href="/admin?tab=clients">
+                <Link href="/admin-panel?tab=clients">
                   <Button variant="outline" className="w-full h-20 flex flex-col">
                     <Users className="h-6 w-6 mb-2" />
                     <span className="text-sm">Clients Manager</span>
                   </Button>
                 </Link>
-                <Link href="/admin?tab=users">
+                <Link href="/admin-panel?tab=users">
                   <Button variant="outline" className="w-full h-20 flex flex-col">
                     <Settings className="h-6 w-6 mb-2" />
                     <span className="text-sm">Users Manager</span>
