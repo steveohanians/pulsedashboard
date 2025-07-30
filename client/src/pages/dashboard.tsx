@@ -257,7 +257,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-sm">
-                <Users className="h-4 w-4 mr-2" />
+                <Building2 className="h-4 w-4 mr-2" />
                 Competitors
               </CardTitle>
             </CardHeader>
