@@ -285,10 +285,10 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Mandatory AI-Generated Insights */}
-                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-4 mb-4">
+                  <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
                     <div className="flex items-center mb-3">
-                      <Lightbulb className="h-5 w-5 text-pink-600 mr-2" />
-                      <h3 className="font-semibold text-pink-900">AI-Generated Insights</h3>
+                      <Lightbulb className="h-5 w-5 text-primary mr-2" />
+                      <h3 className="font-semibold text-primary">AI-Generated Insights</h3>
                     </div>
                     {insight ? (
                       <AIInsights
