@@ -69,6 +69,7 @@ export function registerRoutes(app: Express): Server {
           "Large Enterprise (5,000+ employees)"
         ],
         industryVerticals: [
+          "All",
           "Technology",
           "Technology - Artificial Intelligence",
           "Technology - Cloud", 

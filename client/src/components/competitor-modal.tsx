@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -65,18 +65,31 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
   });
 
   const handleAddCompetitor = () => {
-    if (!domain.trim() || !label.trim()) {
+    if (!domain.trim()) {
       toast({
         title: "Invalid input",
-        description: "Please enter both domain and label.",
+        description: "Please enter a domain.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate URL format
+    const urlPattern = /^https:\/\/.+\..+/;
+    const fullDomain = domain.startsWith('https://') ? domain : `https://${domain}`;
+    
+    if (!urlPattern.test(fullDomain)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid URL starting with https://",
         variant: "destructive",
       });
       return;
     }
 
     addCompetitorMutation.mutate({
-      domain: domain.trim(),
-      label: label.trim(),
+      domain: fullDomain,
+      label: label.trim() || new URL(fullDomain).hostname,
       clientId,
     });
   };
@@ -89,12 +102,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Manage Competitors</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>Manage Competitors</DialogTitle>
+          <DialogDescription>
+            Add and manage competitor websites for benchmarking analysis
+          </DialogDescription>
         </DialogHeader>
         
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
@@ -103,16 +114,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
             <h3 className="font-medium text-slate-900 mb-4">Add New Competitor</h3>
             <div className="flex gap-4">
               <Input
-                placeholder="Enter competitor domain (e.g., competitor.com)"
+                placeholder="Enter competitor URL (e.g., https://competitor.com)"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 className="flex-1"
-              />
-              <Input
-                placeholder="Display label"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="w-48"
               />
               <Button
                 onClick={handleAddCompetitor}

@@ -4,7 +4,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -14,8 +17,11 @@ export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const [timePeriod, setTimePeriod] = useState("Last Month");
   const [businessSize, setBusinessSize] = useState("Medium Business (100–500 employees)");
-  const [industryVertical, setIndustryVertical] = useState("Technology");
+  const [industryVertical, setIndustryVertical] = useState("All");
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   interface DashboardData {
     client: any;
@@ -144,7 +150,13 @@ export default function Dashboard() {
               <CardTitle>Time Period</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={timePeriod} onValueChange={setTimePeriod}>
+              <Select value={timePeriod} onValueChange={(value) => {
+                if (value === "Custom Date Range") {
+                  setShowDatePicker(true);
+                } else {
+                  setTimePeriod(value);
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -154,6 +166,54 @@ export default function Dashboard() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Custom Date Range Dialog */}
+              <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Select Custom Date Range</DialogTitle>
+                    <DialogDescription>
+                      Choose the start and end dates for your custom time period
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="start-date">Start Date</Label>
+                      <Input
+                        id="start-date"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="end-date">End Date</Label>
+                      <Input
+                        id="end-date"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setShowDatePicker(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (startDate && endDate) {
+                            setTimePeriod(`${startDate} to ${endDate}`);
+                            setShowDatePicker(false);
+                          }
+                        }}
+                        disabled={!startDate || !endDate}
+                      >
+                        Apply Range
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 

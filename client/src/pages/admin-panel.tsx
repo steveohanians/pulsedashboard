@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus } from "lucide-react";
@@ -130,6 +130,9 @@ export default function AdminPanel() {
                               <DialogContent>
                                 <DialogHeader>
                                   <DialogTitle>Edit User</DialogTitle>
+                                  <DialogDescription>
+                                    Update user information and permissions
+                                  </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div>
@@ -206,6 +209,9 @@ export default function AdminPanel() {
                                 <DialogContent>
                                   <DialogHeader>
                                     <DialogTitle>Edit Client</DialogTitle>
+                                    <DialogDescription>
+                                      Update client information and settings
+                                    </DialogDescription>
                                   </DialogHeader>
                                   <div className="space-y-4">
                                     <div>
@@ -293,6 +299,9 @@ export default function AdminPanel() {
                                 <DialogContent>
                                   <DialogHeader>
                                     <DialogTitle>Edit Benchmark Company</DialogTitle>
+                                    <DialogDescription>
+                                      Update benchmark company details
+                                    </DialogDescription>
                                   </DialogHeader>
                                   <div className="space-y-4">
                                     <div>
@@ -363,6 +372,9 @@ export default function AdminPanel() {
                               <DialogContent>
                                 <DialogHeader>
                                   <DialogTitle>Edit Business Size</DialogTitle>
+                                  <DialogDescription>
+                                    Update business size category
+                                  </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div>
@@ -412,6 +424,9 @@ export default function AdminPanel() {
                               <DialogContent>
                                 <DialogHeader>
                                   <DialogTitle>Edit Industry Vertical</DialogTitle>
+                                  <DialogDescription>
+                                    Update industry vertical category
+                                  </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div>
