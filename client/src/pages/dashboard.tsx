@@ -66,7 +66,12 @@ export default function Dashboard() {
   const scrollToMetric = (metricName: string) => {
     const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const headerHeight = 64; // Height of sticky header
+      const elementPosition = element.offsetTop - headerHeight - 20; // Extra 20px padding
+      window.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth'
+      });
     }
   };
 
