@@ -280,32 +280,12 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Link href="/admin-panel?tab=system">
-                  <Button variant="outline" className="w-full h-20 flex flex-col">
-                    <Filter className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Filters Editor</span>
-                  </Button>
-                </Link>
-                <Link href="/admin-panel?tab=benchmark">
-                  <Button variant="outline" className="w-full h-20 flex flex-col">
-                    <Building2 className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Benchmark Companies</span>
-                  </Button>
-                </Link>
-                <Link href="/admin-panel?tab=clients">
-                  <Button variant="outline" className="w-full h-20 flex flex-col">
-                    <Users className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Clients Manager</span>
-                  </Button>
-                </Link>
-                <Link href="/admin-panel?tab=users">
-                  <Button variant="outline" className="w-full h-20 flex flex-col">
-                    <Settings className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Users Manager</span>
-                  </Button>
-                </Link>
-              </div>
+              <Link href="/admin-panel">
+                <Button className="w-full h-16 flex items-center justify-center">
+                  <Settings className="h-6 w-6 mr-3" />
+                  <span className="text-lg font-medium">Go to Admin Panel</span>
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}
