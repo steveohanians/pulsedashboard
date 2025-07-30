@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [activeSection, setActiveSection] = useState<string>("");
 
   interface DashboardData {
     client: any;
@@ -62,6 +63,48 @@ export default function Dashboard() {
 
   const metricNames = ["Bounce Rate", "Avg Session Duration", "Pages per Session", "Sessions per User", "Traffic Channels", "Device Distribution"];
 
+  const scrollToMetric = (metricName: string) => {
+    const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Track active section with Intersection Observer
+  useEffect(() => {
+    if (isLoading) return;
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -50% 0px',
+      threshold: 0.1
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          if (id.startsWith('metric-')) {
+            const metricName = id.replace('metric-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            setActiveSection(metricName);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all metric sections
+    metricNames.forEach((metricName: string) => {
+      const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [metricNames, isLoading]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -69,13 +112,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const scrollToMetric = (metricName: string) => {
-    const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -117,7 +153,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 min-h-screen sticky top-16 z-10">
+        <nav className="w-64 bg-white border-r border-slate-200 h-screen sticky top-16 z-10 overflow-y-auto">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
@@ -125,7 +161,11 @@ export default function Dashboard() {
                 <li key={metricName}>
                   <button
                     onClick={() => scrollToMetric(metricName)}
-                    className="w-full text-left p-2 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700 hover:text-primary"
+                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
+                      activeSection === metricName
+                        ? 'bg-primary/10 text-primary border-r-2 border-primary font-bold'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
+                    }`}
                   >
                     {metricName}
                   </button>
