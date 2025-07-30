@@ -95,9 +95,16 @@ export default function Dashboard() {
         
         const id = mostVisible.target.id;
         if (id.startsWith('metric-')) {
-          const metricName = id.replace('metric-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          console.log('Setting active section:', metricName, 'from id:', id);
-          setActiveSection(metricName);
+          // Find the exact matching metric name from our list
+          const idWithoutPrefix = id.replace('metric-', '');
+          const matchingMetric = metricNames.find(name => 
+            name.replace(/\s+/g, '-').toLowerCase() === idWithoutPrefix
+          );
+          
+          if (matchingMetric) {
+            console.log('Setting active section:', matchingMetric, 'from id:', id);
+            setActiveSection(matchingMetric);
+          }
         }
       }
     };
