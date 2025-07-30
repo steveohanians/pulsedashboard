@@ -1337,7 +1337,6 @@ export default function AdminPanel() {
                             <SelectContent>
                               <SelectItem value="businessSizes">Business Sizes</SelectItem>
                               <SelectItem value="industryVerticals">Industry Verticals</SelectItem>
-                              <SelectItem value="timePeriods">Time Periods</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
