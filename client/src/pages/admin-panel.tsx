@@ -410,16 +410,53 @@ export default function AdminPanel() {
     setSortConfig({ key, direction });
   };
 
-  const sortedData = (data: any[] | undefined, sortKey: string) => {
-    if (!data || !sortConfig || sortConfig.key !== sortKey) return data || [];
+  const sortedData = (data: any[] | undefined, _tab: string) => {
+    if (!data || !sortConfig) return data || [];
     
     return [...data].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
       
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
+      // Handle null/undefined values - put them at the end
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      
+      // Handle dates/timestamps
+      if (aValue instanceof Date || bValue instanceof Date || 
+          (typeof aValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(aValue))) {
+        const aDate = aValue instanceof Date ? aValue : new Date(aValue);
+        const bDate = bValue instanceof Date ? bValue : new Date(bValue);
+        const timeDiff = aDate.getTime() - bDate.getTime();
+        return sortConfig.direction === 'asc' ? timeDiff : -timeDiff;
+      }
+      
+      // Handle booleans
+      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+        if (aValue === bValue) return 0;
+        return sortConfig.direction === 'asc' 
+          ? (aValue ? 1 : -1)
+          : (aValue ? -1 : 1);
+      }
+      
+      // Handle strings
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      // Handle numbers
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Default comparison - convert to strings
+      const aStr = String(aValue);
+      const bStr = String(bValue);
+      return sortConfig.direction === 'asc' 
+        ? aStr.localeCompare(bStr)
+        : bStr.localeCompare(aStr);
     });
   };
 
