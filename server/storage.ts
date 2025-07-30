@@ -1,12 +1,13 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, metrics, benchmarks, aiInsights,
+  clients, users, competitors, benchmarkCompanies, metrics, benchmarks, aiInsights, passwordResetTokens,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
   type BenchmarkCompany, type InsertBenchmarkCompany,
   type Metric, type InsertMetric,
   type Benchmark, type InsertBenchmark,
-  type AIInsight, type InsertAIInsight
+  type AIInsight, type InsertAIInsight,
+  type PasswordResetToken, type InsertPasswordResetToken
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull } from "drizzle-orm";
@@ -55,6 +56,11 @@ export interface IStorage {
   // AI Insights
   getAIInsights(clientId: string, timePeriod: string): Promise<AIInsight[]>;
   createAIInsight(insight: InsertAIInsight): Promise<AIInsight>;
+  
+  // Password Reset
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  usePasswordResetToken(token: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -227,6 +233,30 @@ export class DatabaseStorage implements IStorage {
       .values(insertInsight)
       .returning();
     return insight;
+  }
+
+  // Password Reset
+  async createPasswordResetToken(insertToken: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [token] = await db
+      .insert(passwordResetTokens)
+      .values(insertToken)
+      .returning();
+    return token;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken || undefined;
+  }
+
+  async usePasswordResetToken(token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token));
   }
 }
 

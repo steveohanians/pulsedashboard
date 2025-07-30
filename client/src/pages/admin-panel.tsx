@@ -167,6 +167,26 @@ export default function AdminPanel() {
     },
   });
 
+  const sendPasswordResetMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/send-password-reset`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password reset sent",
+        description: "Password reset email has been sent to the user.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send password reset",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle save operations
   const handleSaveClient = (event: React.FormEvent) => {
     event.preventDefault();
@@ -223,6 +243,7 @@ export default function AdminPanel() {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as string,
+      clientId: formData.get("clientId") as string || null,
     };
     
     if (!data.name || !data.email) {
@@ -235,6 +256,10 @@ export default function AdminPanel() {
     }
     
     updateUserMutation.mutate({ id: editingItem.id, data });
+  };
+
+  const handleSendPasswordReset = (userId: string) => {
+    sendPasswordResetMutation.mutate(userId);
   };
 
   const handleDeleteUser = (id: string) => {
@@ -310,7 +335,7 @@ export default function AdminPanel() {
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.clientId || "N/A"}</TableCell>
+                          <TableCell>{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
                           <TableCell>
                             <Badge variant={user.role === "Admin" ? "default" : "secondary"}>
                               {user.role}
@@ -377,23 +402,49 @@ export default function AdminPanel() {
                                         </SelectContent>
                                       </Select>
                                     </div>
-                                    <div className="flex justify-end space-x-2">
+                                    <div>
+                                      <Label htmlFor="clientId">Assigned Client</Label>
+                                      <Select name="clientId" defaultValue={user.clientId || ""}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select a client" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="">No Client (Admin Only)</SelectItem>
+                                          {clients?.map((client: any) => (
+                                            <SelectItem key={client.id} value={client.id}>
+                                              {client.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="flex justify-between">
                                       <Button 
                                         type="button"
                                         variant="outline"
-                                        onClick={() => {
-                                          setIsDialogOpen(false);
-                                          setEditingItem(null);
-                                        }}
+                                        onClick={() => handleSendPasswordReset(user.id)}
+                                        disabled={sendPasswordResetMutation.isPending}
                                       >
-                                        Cancel
+                                        {sendPasswordResetMutation.isPending ? "Sending..." : "Send Password Reset"}
                                       </Button>
-                                      <Button 
-                                        type="submit"
-                                        disabled={updateUserMutation.isPending}
-                                      >
-                                        {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
-                                      </Button>
+                                      <div className="flex space-x-2">
+                                        <Button 
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setIsDialogOpen(false);
+                                            setEditingItem(null);
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button 
+                                          type="submit"
+                                          disabled={updateUserMutation.isPending}
+                                        >
+                                          {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                                        </Button>
+                                      </div>
                                     </div>
                                   </form>
                                 </DialogContent>

@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const roleEnum = pgEnum("role", ["Admin", "Viewer"]);
+export const roleEnum = pgEnum("role", ["Admin", "User"]);
 export const statusEnum = pgEnum("status", ["Active", "Inactive", "Invited"]);
 export const sourceTypeEnum = pgEnum("source_type", ["Client", "CD_Avg", "Industry", "Competitor", "Industry_Avg", "Competitor_Avg"]);
 
@@ -23,13 +23,22 @@ export const clients = pgTable("clients", {
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  clientId: varchar("client_id").references(() => clients.id),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: roleEnum("role").default("Viewer").notNull(),
+  role: roleEnum("role").default("User").notNull(),
   status: statusEnum("status").default("Active").notNull(),
   lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -94,10 +103,18 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   aiInsights: many(aiInsights),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   client: one(clients, {
     fields: [users.clientId],
     references: [clients.id],
+  }),
+  passwordResetTokens: many(passwordResetTokens),
+}));
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [passwordResetTokens.userId],
+    references: [users.id],
   }),
 }));
 
@@ -164,6 +181,11 @@ export const insertAIInsightSchema = createInsertSchema(aiInsights).omit({
   createdAt: true,
 });
 
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -179,3 +201,5 @@ export type Benchmark = typeof benchmarks.$inferSelect;
 export type InsertBenchmark = z.infer<typeof insertBenchmarkSchema>;
 export type AIInsight = typeof aiInsights.$inferSelect;
 export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;

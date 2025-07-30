@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,12 +40,12 @@ export default function AuthPage() {
       email: formData.get("email") as string,
       password: formData.get("password") as string,
       clientId: "demo-client-id", // This would be set during proper registration flow
-      role: "Viewer",
+      role: "User",
       status: "Active",
     });
   };
 
-  const handleDebugLogin = (role: "Admin" | "Viewer") => {
+  const handleDebugLogin = (role: "Admin" | "User") => {
     loginMutation.mutate({
       email: role === "Admin" ? "admin@clearsight.com" : "user@clearsight.com",
       password: "password123",
@@ -112,6 +112,13 @@ export default function AuthPage() {
                       {loginMutation.isPending ? "Signing In..." : "Sign In"}
                     </Button>
                   </form>
+                  <div className="text-center mt-4">
+                    <Link href="/forgot-password">
+                      <Button variant="link" className="text-sm">
+                        Forgot your password?
+                      </Button>
+                    </Link>
+                  </div>
                 </TabsContent>
                 <TabsContent value="register">
                   <form onSubmit={handleRegister} className="space-y-4">
@@ -182,7 +189,7 @@ export default function AuthPage() {
                 Login as Admin
               </Button>
               <Button
-                onClick={() => handleDebugLogin("Viewer")}
+                onClick={() => handleDebugLogin("User")}
                 variant="outline"
                 className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
                 disabled={loginMutation.isPending}

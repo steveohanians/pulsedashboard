@@ -188,6 +188,103 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/admin/users/:id/send-password-reset", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate a secure token
+      const token = require("crypto").randomBytes(32).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
+
+      await storage.createPasswordResetToken({
+        userId: id,
+        token,
+        expiresAt,
+      });
+
+      // In a real application, you would send an email here
+      // For now, we'll just return the reset link for testing
+      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+      
+      res.json({ 
+        message: "Password reset link generated",
+        resetLink // Remove this in production
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Password reset endpoints
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Don't reveal if user exists or not
+        return res.json({ message: "If an account with that email exists, a reset link has been sent." });
+      }
+
+      // Generate a secure token
+      const token = require("crypto").randomBytes(32).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
+
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+
+      // In a real application, you would send an email here
+      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+      
+      res.json({ 
+        message: "If an account with that email exists, a reset link has been sent.",
+        resetLink // Remove this in production
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Hash the new password using scrypt
+      const crypto = require("crypto");
+      const salt = crypto.randomBytes(16);
+      const hashedPassword = crypto.scryptSync(newPassword, salt, 64).toString("hex") + ":" + salt.toString("hex");
+
+      // Update user password
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      
+      // Mark token as used
+      await storage.usePasswordResetToken(token);
+
+      res.json({ message: "Password has been reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
     try {
       const companies = await storage.getBenchmarkCompanies();
