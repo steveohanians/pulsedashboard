@@ -76,8 +76,8 @@ export default function Dashboard() {
     
     const observerOptions = {
       root: null,
-      rootMargin: '-100px 0px -50% 0px',
-      threshold: 0.1
+      rootMargin: '-120px 0px -40% 0px',
+      threshold: 0.3
     };
 
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
@@ -163,7 +163,7 @@ export default function Dashboard() {
                     onClick={() => scrollToMetric(metricName)}
                     className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
                       activeSection === metricName
-                        ? 'bg-primary/10 text-primary border-r-2 border-primary font-bold'
+                        ? 'bg-slate-100 text-primary'
                         : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
                     }`}
                   >
