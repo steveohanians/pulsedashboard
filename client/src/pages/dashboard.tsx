@@ -12,6 +12,7 @@ import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
+import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
@@ -83,7 +84,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <img 
-              src="/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png" 
+              src={clearLogoPath} 
               alt="Clear Digital Logo" 
               className="h-10 w-auto"
             />
