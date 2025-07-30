@@ -220,6 +220,59 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/admin/users/invite", requireAdmin, async (req, res) => {
+    try {
+      const { name, email, role, clientId } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: "Name and email are required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+      
+      // Create user with temporary password (they'll need to reset it)
+      const tempPassword = require("crypto").randomBytes(12).toString("hex");
+      const crypto = require("crypto");
+      const salt = crypto.randomBytes(16);
+      const hashedPassword = crypto.scryptSync(tempPassword, salt, 64).toString("hex") + ":" + salt.toString("hex");
+      
+      const user = await storage.createUser({
+        name,
+        email,
+        password: hashedPassword,
+        role: role || "User",
+        clientId: clientId === "none" ? null : clientId
+      });
+      
+      // Generate password reset token so they can set their own password
+      const token = require("crypto").randomBytes(32).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 168); // 7 days for new user setup
+      
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+      
+      // In a real application, you would send an email here with the invitation link
+      const inviteLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}&new=true`;
+      
+      res.json({ 
+        message: "User invitation sent successfully",
+        user: { ...user, password: undefined }, // Don't return password
+        inviteLink // Remove this in production
+      });
+    } catch (error) {
+      console.error("Error inviting user:", error);
+      res.status(500).json({ message: "Failed to invite user" });
+    }
+  });
+
   // Password reset endpoints
   app.post("/api/forgot-password", async (req, res) => {
     try {
@@ -291,6 +344,17 @@ export function registerRoutes(app: Express): Server {
       res.json(companies);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertBenchmarkCompanySchema.parse(req.body);
+      const company = await storage.createBenchmarkCompany(validatedData);
+      res.status(201).json(company);
+    } catch (error) {
+      console.error("Error creating benchmark company:", error);
+      res.status(400).json({ message: "Invalid data" });
     }
   });
 
