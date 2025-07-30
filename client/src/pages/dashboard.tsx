@@ -69,11 +69,39 @@ export default function Dashboard() {
     );
   }
 
+  const scrollToMetric = (metricName: string) => {
+    const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Top Navigation */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Left Navigation */}
+      <nav className="w-64 bg-white border-r border-slate-200 fixed h-full overflow-y-auto z-10">
+        <div className="p-4">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Metrics</h2>
+          <ul className="space-y-2">
+            {metricNames.map((metricName) => (
+              <li key={metricName}>
+                <button
+                  onClick={() => scrollToMetric(metricName)}
+                  className="w-full text-left p-3 rounded-lg hover:bg-slate-100 transition-colors text-sm text-slate-700 hover:text-primary"
+                >
+                  {metricName}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
+        {/* Top Navigation */}
+        <nav className="bg-white border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center">
               <ChartLine className="text-white text-lg" />
@@ -102,10 +130,10 @@ export default function Dashboard() {
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </nav>
+          </div>
+        </nav>
 
-      <div className="p-6 max-w-7xl mx-auto">
+        <div className="p-6 max-w-7xl mx-auto">
         {/* Filters Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card>
@@ -269,7 +297,7 @@ export default function Dashboard() {
             const insight = insights.find((i: any) => i.metricName === metricName);
             
             return (
-              <Card key={metricName}>
+              <Card key={metricName} id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{metricName}</CardTitle>
@@ -288,7 +316,7 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
                     <div className="flex items-center mb-3">
                       <Lightbulb className="h-5 w-5 text-primary mr-2" />
-                      <h3 className="font-semibold text-primary">AI-Generated Insights</h3>
+                      <h3 className="font-semibold text-primary">Pulse™ AI Insight</h3>
                     </div>
                     {insight ? (
                       <AIInsights
@@ -379,6 +407,7 @@ export default function Dashboard() {
         competitors={competitors}
         clientId={user?.clientId || ""}
       />
+      </div>
     </div>
   );
 }
