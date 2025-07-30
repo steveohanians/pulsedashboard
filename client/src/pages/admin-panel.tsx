@@ -243,7 +243,7 @@ export default function AdminPanel() {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as string,
-      clientId: formData.get("clientId") as string || null,
+      clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
     };
     
     if (!data.name || !data.email) {
@@ -404,12 +404,12 @@ export default function AdminPanel() {
                                     </div>
                                     <div>
                                       <Label htmlFor="clientId">Assigned Client</Label>
-                                      <Select name="clientId" defaultValue={user.clientId || ""}>
+                                      <Select name="clientId" defaultValue={user.clientId || "none"}>
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select a client" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="">No Client (Admin Only)</SelectItem>
+                                          <SelectItem value="none">No Client (Admin Only)</SelectItem>
                                           {clients?.map((client: any) => (
                                             <SelectItem key={client.id} value={client.id}>
                                               {client.name}
