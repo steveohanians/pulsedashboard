@@ -81,20 +81,25 @@ export default function Dashboard() {
     
     const observerOptions = {
       root: null,
-      rootMargin: '-120px 0px -40% 0px',
-      threshold: 0.3
+      rootMargin: '-100px 0px -30% 0px',
+      threshold: [0.1, 0.3, 0.5, 0.7]
     };
 
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const id = entry.target.id;
-          if (id.startsWith('metric-')) {
-            const metricName = id.replace('metric-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            setActiveSection(metricName);
-          }
+      const visibleEntries = entries.filter(entry => entry.isIntersecting);
+      if (visibleEntries.length > 0) {
+        // Get the most visible entry (highest intersection ratio)
+        const mostVisible = visibleEntries.reduce((prev, current) => 
+          current.intersectionRatio > prev.intersectionRatio ? current : prev
+        );
+        
+        const id = mostVisible.target.id;
+        if (id.startsWith('metric-')) {
+          const metricName = id.replace('metric-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          console.log('Setting active section:', metricName, 'from id:', id);
+          setActiveSection(metricName);
         }
-      });
+      }
     };
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
