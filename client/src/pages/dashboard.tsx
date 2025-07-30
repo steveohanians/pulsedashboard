@@ -86,19 +86,19 @@ export default function Dashboard() {
               <ChartLine className="text-white text-lg" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Pulse Dashboard™</h1>
-              <p className="text-sm text-slate-600">{client?.name || "Loading..."}</p>
+              <h1 className="text-lg font-bold text-slate-900">Pulse Dashboard™</h1>
+              <p className="text-xs text-slate-600">{client?.name || "Loading..."}</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-slate-600">{client?.websiteUrl}</span>
+            <span className="text-xs text-slate-600">{client?.websiteUrl}</span>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-slate-700">
+              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center">
+                <span className="text-xs font-medium text-slate-700">
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-sm font-medium text-slate-700">{user?.name}</span>
+              <span className="text-xs font-medium text-slate-700">{user?.name}</span>
             </div>
             <Button
               variant="ghost"
@@ -116,13 +116,13 @@ export default function Dashboard() {
         {/* Left Navigation */}
         <nav className="w-64 bg-white border-r border-slate-200 min-h-screen sticky top-16 z-10">
           <div className="p-4">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Metrics</h2>
+            <h2 className="text-base font-semibold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
               {metricNames.map((metricName) => (
                 <li key={metricName}>
                   <button
                     onClick={() => scrollToMetric(metricName)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-slate-100 transition-colors text-sm text-slate-700 hover:text-primary"
+                    className="w-full text-left p-2 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700 hover:text-primary"
                   >
                     {metricName}
                   </button>
@@ -145,7 +145,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Business Size</label>
+                <label className="block text-xs font-medium text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
                   <SelectTrigger>
                     <SelectValue />
@@ -158,7 +158,7 @@ export default function Dashboard() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Industry Vertical</label>
+                <label className="block text-xs font-medium text-slate-700 mb-2">Industry Vertical</label>
                 <Select value={industryVertical} onValueChange={setIndustryVertical}>
                   <SelectTrigger>
                     <SelectValue />
@@ -300,8 +300,8 @@ export default function Dashboard() {
               <Card key={metricName} id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{metricName}</CardTitle>
-                    <span className="text-2xl font-bold text-primary">
+                    <CardTitle className="text-base">{metricName}</CardTitle>
+                    <span className="text-xl font-bold text-primary">
                       {metricData.Client || "N/A"}
                       {metricName.includes("Rate") ? "%" : ""}
                     </span>
@@ -316,7 +316,7 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
                     <div className="flex items-center mb-3">
                       <Lightbulb className="h-5 w-5 text-primary mr-2" />
-                      <h3 className="font-semibold text-primary">Pulse™ AI Insight</h3>
+                      <h3 className="text-sm font-semibold text-primary">Pulse™ AI Insight</h3>
                     </div>
                     {insight ? (
                       <AIInsights
@@ -327,11 +327,11 @@ export default function Dashboard() {
                     ) : (
                       <div className="space-y-3">
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                            <Info className="h-4 w-4 mr-2 text-primary" />
+                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                            <Info className="h-3 w-3 mr-2 text-primary" />
                             Context
                           </h4>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-xs text-slate-600">
                             {metricName} is a key performance indicator that measures {
                               metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
                               metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
@@ -343,11 +343,11 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                            <Lightbulb className="h-4 w-4 mr-2 text-yellow-500" />
+                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                            <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
                             Insight
                           </h4>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-xs text-slate-600">
                             Your current {metricName.toLowerCase()} of {metricData.Client || "N/A"} 
                             {metricName.includes("Rate") ? "%" : ""} shows {
                               metricData.Client > (metricData.Industry_Avg || 0) ? "above-average" : "below-average"
@@ -359,11 +359,11 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                            <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
+                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                            <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
                             Recommendation
                           </h4>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-xs text-slate-600">
                             {metricData.Client > (metricData.Industry_Avg || 0) ? 
                               `Continue your current strategy while exploring advanced optimization techniques. Consider A/B testing new approaches to maintain your competitive advantage.` :
                               `Focus on improving ${metricName.toLowerCase()} through targeted optimization. Consider analyzing user behavior, improving page load times, and enhancing content relevance.`
@@ -390,9 +390,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <Link href="/admin-panel">
-                <Button className="w-full h-16 flex items-center justify-center">
-                  <Settings className="h-6 w-6 mr-3" />
-                  <span className="text-lg font-medium">Go to Admin Panel</span>
+                <Button className="w-full h-12 flex items-center justify-center">
+                  <Settings className="h-4 w-4 mr-2" />
+                  <span className="text-sm font-medium">Go to Admin Panel</span>
                 </Button>
               </Link>
             </CardContent>
