@@ -79,34 +79,42 @@ export default function Dashboard() {
   useEffect(() => {
     if (isLoading) return;
     
+    let timeoutId: NodeJS.Timeout;
+    
     const observerOptions = {
       root: null,
-      rootMargin: '-100px 0px -30% 0px',
-      threshold: [0.1, 0.3, 0.5, 0.7]
+      rootMargin: '-120px 0px -40% 0px',
+      threshold: 0.5
     };
 
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      const visibleEntries = entries.filter(entry => entry.isIntersecting);
-      if (visibleEntries.length > 0) {
-        // Get the most visible entry (highest intersection ratio)
-        const mostVisible = visibleEntries.reduce((prev, current) => 
-          current.intersectionRatio > prev.intersectionRatio ? current : prev
-        );
+      // Clear any pending timeout
+      clearTimeout(timeoutId);
+      
+      // Debounce the update by 100ms to prevent flashing
+      timeoutId = setTimeout(() => {
+        const visibleEntries = entries.filter(entry => entry.isIntersecting && entry.intersectionRatio > 0.3);
         
-        const id = mostVisible.target.id;
-        if (id.startsWith('metric-')) {
-          // Find the exact matching metric name from our list
-          const idWithoutPrefix = id.replace('metric-', '');
-          const matchingMetric = metricNames.find(name => 
-            name.replace(/\s+/g, '-').toLowerCase() === idWithoutPrefix
+        if (visibleEntries.length > 0) {
+          // Get the entry with the highest intersection ratio
+          const mostVisible = visibleEntries.reduce((prev, current) => 
+            current.intersectionRatio > prev.intersectionRatio ? current : prev
           );
           
-          if (matchingMetric) {
-            console.log('Setting active section:', matchingMetric, 'from id:', id);
-            setActiveSection(matchingMetric);
+          const id = mostVisible.target.id;
+          if (id.startsWith('metric-')) {
+            // Find the exact matching metric name from our list
+            const idWithoutPrefix = id.replace('metric-', '');
+            const matchingMetric = metricNames.find(name => 
+              name.replace(/\s+/g, '-').toLowerCase() === idWithoutPrefix
+            );
+            
+            if (matchingMetric && matchingMetric !== activeSection) {
+              setActiveSection(matchingMetric);
+            }
           }
         }
-      }
+      }, 100);
     };
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
@@ -119,8 +127,11 @@ export default function Dashboard() {
       }
     });
 
-    return () => observer.disconnect();
-  }, [metricNames, isLoading]);
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [metricNames, isLoading, activeSection]);
 
   if (isLoading) {
     return (
