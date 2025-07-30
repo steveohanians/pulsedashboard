@@ -1,0 +1,89 @@
+You’re about to scaffold “ClearSight™,” a full‑stack analytics benchmarking dashboard for Clear Digital’s B2B clients.
+
+Tech Stack:
+- Backend: Node.js + Express
+- Database: Postgres via a single DB_URL env var
+- Automation: n8n for scheduled data pulls
+- AI Insights: OpenAI API
+- Frontend: React + Recharts (or Chart.js)
+- Auth: JWT‑based sessions
+
+1. DATABASE & MODELS
+- Tables/models (with ORM/migrations): 
+  • Clients (id, name, websiteUrl, industryVertical, businessSize, ga4PropertyId, active)  
+  • Users (id, clientId, name, email, passwordHash, role [Admin/Viewer], status, lastLogin)  
+  • Competitors (id, clientId, domain, label, status)  
+  • BenchmarkCompanies (id, name, websiteUrl, industryVertical, businessSize, sourceVerified, active)  
+  • Metrics (id, clientId|null, competitorId|null, metricName, value, sourceType [Client|CD_Avg|Industry|Competitor], timePeriod)  
+  • Benchmarks (id, metricName, industryVertical, businessSize, sourceType [CD_Avg|Industry_Avg|Competitor_Avg], value, timePeriod)  
+  • AIInsights (id, clientId, metricName, timePeriod, contextText, insightText, recommendationText)
+
+2. AUTHENTICATION & AUTHORIZATION
+- JWT login endpoint: POST /api/login → returns token  
+- Protect all routes; only authenticated users can access.  
+- Role‑based guard: only role=Admin may access /api/admin/* endpoints.
+
+3. API ROUTES
+- Public (auth required):
+  • GET  /api/dashboard/:clientId?period=YYYY‑MM  
+  • GET  /api/filters  
+  • POST /api/competitors  
+- Admin (role=Admin only):
+  • GET/PUT /api/filters  
+  • GET/PUT /api/benchmark‑companies  
+  • GET/PUT /api/clients  
+  • GET/PUT /api/users  
+- Data ingest (internal/webhook):
+  • POST /api/metrics      (GA4 data)  
+  • POST /api/benchmarks   (SEMrush/DataForSEO)  
+  • POST /api/insights/generate  (OpenAI)  
+
+4. AUTOMATION (n8n)
+- Monthly workflows:
+  1. Fetch GA4 data → POST to /api/metrics  
+  2. Fetch SEMrush/DataForSEO benchmarks → POST to /api/benchmarks  
+  3. POST last‑month metrics to /api/insights/generate → store in AIInsights  
+
+5. FRONTEND (React)
+- **Login page** (email/password → JWT stored in localStorage)  
+- **Dashboard**:
+  - Top bar: client name + website URL  
+  - Filters box labeled “Industry Filters”:
+      • Business Size (default “All”)  
+      • Industry Vertical (default “All”)  
+  - Separate “Time Period” selector box  
+  - Single “Manage Competitors” modal/button  
+  - Charts (Recharts/Chart.js) for each metric: Bounce Rate, Avg Session Duration, Pages/Session, Sessions/User, Traffic Channels, Device Distribution — each chart shows Client vs. CD Avg vs. Industry vs. Competitors  
+  - Under each chart: AI‑generated Context → Insight → Recommendation  
+- **Admin area** (only for role=Admin, under /admin):
+  - Filters Editor (Business Sizes & Industries)  
+  - Benchmark Companies Manager (add/edit/delete ~500–750 URLs)  
+  - Clients Manager (CRUD clients)  
+  - Users Manager (invite/edit roles/deactivate)
+
+6. PROJECT STRUCTURE
+/
+├ .env # DB_URL, GA4_PROP_ID, SEMRUSH_KEY, OPENAI_KEY, JWT_SECRET
+├ package.json # or requirements.txt
+├ src/
+│ ├ config/ # db.js + auth.js
+│ ├ models/ # ORM definitions
+│ ├ routes/ # api endpoints
+│ ├ controllers/ # business logic
+│ ├ services/ # GA4, SEMrush, OpenAI clients
+│ └ index.js # app entrypoint
+├ migrations/ # table creation
+├ n8n/ # workflow definitions (JSON exports)
+└ frontend/ # React app
+
+diff
+Copy
+Edit
+
+Please generate:
+- Database schema/migrations  
+- ORM model files  
+- Express app with routes/controllers  
+- n8n workflow exports  
+- React component stubs for login, dashboard, and admin pages  
+- Environment config and README with setup instructions  
