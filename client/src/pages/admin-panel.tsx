@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,17 +7,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminPanel() {
   const { user } = useAuth();
   const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("users");
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Form refs for controlled form handling
+  const clientFormRef = useRef<HTMLFormElement>(null);
+  const companyFormRef = useRef<HTMLFormElement>(null);
 
   // Extract tab from URL
   useEffect(() => {
@@ -39,6 +49,123 @@ export default function AdminPanel() {
     queryKey: ["/api/admin/benchmark-companies"],
     enabled: user?.role === "Admin",
   });
+
+  // Mutations for client management
+  const updateClientMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/clients/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "Client updated",
+        description: "Client information has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update client",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutations for benchmark company management
+  const updateCompanyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/benchmark-companies/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "Company updated",
+        description: "Benchmark company has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update company",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/benchmark-companies/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+      toast({
+        title: "Company deleted",
+        description: "Benchmark company has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete company",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle save operations
+  const handleSaveClient = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      websiteUrl: formData.get("website") as string,
+      industryVertical: formData.get("industry") as string,
+      businessSize: formData.get("businessSize") as string,
+    };
+    
+    if (!data.name || !data.websiteUrl) {
+      toast({
+        title: "Validation error",
+        description: "Name and website URL are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateClientMutation.mutate({ id: editingItem.id, data });
+  };
+
+  const handleSaveCompany = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      websiteUrl: formData.get("website") as string,
+      industryVertical: formData.get("industry") as string,
+      businessSize: formData.get("businessSize") as string,
+    };
+    
+    if (!data.name || !data.websiteUrl) {
+      toast({
+        title: "Validation error",
+        description: "Name and website URL are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateCompanyMutation.mutate({ id: editingItem.id, data });
+  };
+
+  const handleDeleteCompany = (id: string) => {
+    deleteCompanyMutation.mutate(id);
+  };
 
   if (user?.role !== "Admin") {
     return (
@@ -207,9 +334,19 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Dialog>
+                              <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
+                                setIsDialogOpen(open);
+                                if (!open) setEditingItem(null);
+                              }}>
                                 <DialogTrigger asChild>
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingItem(client);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
@@ -220,27 +357,42 @@ export default function AdminPanel() {
                                       Update client information and settings
                                     </DialogDescription>
                                   </DialogHeader>
-                                  <div className="space-y-4">
+                                  <form onSubmit={handleSaveClient} className="space-y-4">
                                     <div>
-                                      <Label htmlFor="client-name">Name</Label>
-                                      <Input id="client-name" defaultValue={client.name} />
+                                      <Label htmlFor="name">Name *</Label>
+                                      <Input 
+                                        id="name" 
+                                        name="name"
+                                        defaultValue={client.name} 
+                                        required
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="client-website">Website</Label>
-                                      <Input id="client-website" defaultValue={client.websiteUrl} />
+                                      <Label htmlFor="website">Website *</Label>
+                                      <Input 
+                                        id="website" 
+                                        name="website"
+                                        type="url"
+                                        defaultValue={client.websiteUrl} 
+                                        required
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="client-industry">Industry</Label>
-                                      <Input id="client-industry" defaultValue={client.industryVertical} />
+                                      <Label htmlFor="industry">Industry</Label>
+                                      <Input 
+                                        id="industry" 
+                                        name="industry"
+                                        defaultValue={client.industryVertical} 
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="client-size">Business Size</Label>
-                                      <Select defaultValue={client.businessSize}>
+                                      <Label htmlFor="businessSize">Business Size</Label>
+                                      <Select name="businessSize" defaultValue={client.businessSize}>
                                         <SelectTrigger>
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="All">All</SelectItem>
+                                          <SelectItem value="SMB">SMB</SelectItem>
                                           <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
                                           <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
                                           <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
@@ -249,17 +401,47 @@ export default function AdminPanel() {
                                       </Select>
                                     </div>
                                     <div className="flex justify-end space-x-2">
-                                      <DialogTrigger asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                      </DialogTrigger>
-                                      <Button>Save Changes</Button>
+                                      <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateClientMutation.isPending}
+                                      >
+                                        {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
                                     </div>
-                                  </div>
+                                  </form>
                                 </DialogContent>
                               </Dialog>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Client</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{client.name}"? This action cannot be undone and will remove all associated data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                      Delete Client
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -310,9 +492,19 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Dialog>
+                              <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
+                                setIsDialogOpen(open);
+                                if (!open) setEditingItem(null);
+                              }}>
                                 <DialogTrigger asChild>
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingItem(company);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
@@ -323,33 +515,95 @@ export default function AdminPanel() {
                                       Update benchmark company details
                                     </DialogDescription>
                                   </DialogHeader>
-                                  <div className="space-y-4">
+                                  <form onSubmit={handleSaveCompany} className="space-y-4">
                                     <div>
-                                      <Label htmlFor="company-name">Name</Label>
-                                      <Input id="company-name" defaultValue={company.name} />
+                                      <Label htmlFor="name">Name *</Label>
+                                      <Input 
+                                        id="name" 
+                                        name="name"
+                                        defaultValue={company.name} 
+                                        required
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="company-website">Website</Label>
-                                      <Input id="company-website" defaultValue={company.websiteUrl} />
+                                      <Label htmlFor="website">Website *</Label>
+                                      <Input 
+                                        id="website" 
+                                        name="website"
+                                        type="url"
+                                        defaultValue={company.websiteUrl} 
+                                        required
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="company-industry">Industry</Label>
-                                      <Input id="company-industry" defaultValue={company.industryVertical} />
+                                      <Label htmlFor="industry">Industry</Label>
+                                      <Input 
+                                        id="industry" 
+                                        name="industry"
+                                        defaultValue={company.industryVertical} 
+                                      />
                                     </div>
                                     <div>
-                                      <Label htmlFor="company-size">Business Size</Label>
-                                      <Input id="company-size" defaultValue={company.businessSize} />
+                                      <Label htmlFor="businessSize">Business Size</Label>
+                                      <Select name="businessSize" defaultValue={company.businessSize}>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="SMB">SMB</SelectItem>
+                                          <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
+                                          <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
+                                          <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
+                                          <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                                     </div>
                                     <div className="flex justify-end space-x-2">
-                                      <Button variant="outline">Cancel</Button>
-                                      <Button>Save Changes</Button>
+                                      <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateCompanyMutation.isPending}
+                                      >
+                                        {updateCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
                                     </div>
-                                  </div>
+                                  </form>
                                 </DialogContent>
                               </Dialog>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Benchmark Company</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{company.name}"? This action cannot be undone and will remove all associated benchmark data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDeleteCompany(company.id)}
+                                      disabled={deleteCompanyMutation.isPending}
+                                    >
+                                      {deleteCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>

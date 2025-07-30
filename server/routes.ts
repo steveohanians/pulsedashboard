@@ -185,6 +185,29 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/admin/benchmark-companies/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const company = await storage.updateBenchmarkCompany(id, req.body);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      res.json(company);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/benchmark-companies/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBenchmarkCompany(id);
+      res.sendStatus(204);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Data ingestion endpoints
   app.post("/api/metrics", async (req, res) => {
     try {
