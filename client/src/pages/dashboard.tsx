@@ -158,7 +158,7 @@ export default function Dashboard() {
                 }
               }}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>{timePeriod || "Select time period"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {filtersData?.timePeriods?.map((period: string) => (
@@ -235,37 +235,35 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/api/generate-insights/${user?.clientId}?period=${timePeriod}`, {
-                      method: 'POST',
-                      credentials: 'include'
-                    });
-                    if (response.ok) {
-                      // Refresh dashboard data to show new insights
-                      window.location.reload();
-                    }
-                  } catch (error) {
-                    console.error('Error generating insights:', error);
-                  }
-                }}
-                className="w-full"
-              >
-                <Lightbulb className="h-4 w-4 mr-2" />
-                Generate AI Insights
-              </Button>
-            </CardContent>
-          </Card>
+
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* AI Insights Generation */}
+        <div className="mb-6">
+          <Button
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/generate-insights/${user?.clientId}?period=${timePeriod}`, {
+                  method: 'POST',
+                  credentials: 'include'
+                });
+                if (response.ok) {
+                  // Refresh dashboard data to show new insights
+                  window.location.reload();
+                }
+              } catch (error) {
+                console.error('Error generating insights:', error);
+              }
+            }}
+            className="w-full h-12"
+          >
+            <Lightbulb className="h-5 w-5 mr-2" />
+            Generate AI Insights for All Metrics
+          </Button>
+        </div>
+
+        {/* Metrics Grid - Full Width */}
+        <div className="grid grid-cols-1 gap-8">
           {metricNames.map((metricName) => {
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
@@ -287,10 +285,10 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Mandatory AI-Generated Insights */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-4 mb-4">
                     <div className="flex items-center mb-3">
-                      <Lightbulb className="h-5 w-5 text-blue-600 mr-2" />
-                      <h3 className="font-semibold text-blue-900">AI-Generated Insights</h3>
+                      <Lightbulb className="h-5 w-5 text-pink-600 mr-2" />
+                      <h3 className="font-semibold text-pink-900">AI-Generated Insights</h3>
                     </div>
                     {insight ? (
                       <AIInsights
