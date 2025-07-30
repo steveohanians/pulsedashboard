@@ -14,10 +14,12 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("login");
 
-  // Redirect if already logged in
+  // Redirect if already logged in - use timeout to avoid setting state during render
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      setTimeout(() => {
+        setLocation("/");
+      }, 0);
     }
   }, [user, setLocation]);
 
