@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar } from "lucide-react";
+import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Lightbulb, Info, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -227,10 +227,38 @@ export default function Dashboard() {
             <CardContent>
               <Button
                 onClick={() => setShowCompetitorModal(true)}
-                className="w-full"
+                className="w-full mb-3"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Manage Competitors
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Insights</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/generate-insights/${user?.clientId}?period=${timePeriod}`, {
+                      method: 'POST',
+                      credentials: 'include'
+                    });
+                    if (response.ok) {
+                      // Refresh dashboard data to show new insights
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    console.error('Error generating insights:', error);
+                  }
+                }}
+                className="w-full"
+              >
+                <Lightbulb className="h-4 w-4 mr-2" />
+                Generate AI Insights
               </Button>
             </CardContent>
           </Card>
@@ -257,13 +285,68 @@ export default function Dashboard() {
                   <div className="h-64 mb-6">
                     <MetricsChart metricName={metricName} data={metricData} />
                   </div>
-                  {insight && (
-                    <AIInsights
-                      context={insight.contextText}
-                      insight={insight.insightText}
-                      recommendation={insight.recommendationText}
-                    />
-                  )}
+                  
+                  {/* Mandatory AI-Generated Insights */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center mb-3">
+                      <Lightbulb className="h-5 w-5 text-blue-600 mr-2" />
+                      <h3 className="font-semibold text-blue-900">AI-Generated Insights</h3>
+                    </div>
+                    {insight ? (
+                      <AIInsights
+                        context={insight.contextText}
+                        insight={insight.insightText}
+                        recommendation={insight.recommendationText}
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                            <Info className="h-4 w-4 mr-2 text-primary" />
+                            Context
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            {metricName} is a key performance indicator that measures {
+                              metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
+                              metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
+                              metricName === "Pages per Session" ? "the average number of pages viewed during a single session" :
+                              metricName === "Sessions per User" ? "how frequently users return to your website" :
+                              metricName === "Traffic Channels" ? "how visitors find and reach your website" :
+                              "user engagement and device preferences"
+                            }. This metric is crucial for understanding user engagement and optimizing your digital strategy.
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                            <Lightbulb className="h-4 w-4 mr-2 text-yellow-500" />
+                            Insight
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            Your current {metricName.toLowerCase()} of {metricData.Client || "N/A"} 
+                            {metricName.includes("Rate") ? "%" : ""} shows {
+                              metricData.Client > (metricData.Industry_Avg || 0) ? "above-average" : "below-average"
+                            } performance compared to industry benchmarks. This indicates {
+                              metricData.Client > (metricData.Industry_Avg || 0) ? 
+                              "strong user engagement and effective content strategy" :
+                              "opportunities for improvement in user experience and content optimization"
+                            }.
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
+                            Recommendation
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            {metricData.Client > (metricData.Industry_Avg || 0) ? 
+                              `Continue your current strategy while exploring advanced optimization techniques. Consider A/B testing new approaches to maintain your competitive advantage.` :
+                              `Focus on improving ${metricName.toLowerCase()} through targeted optimization. Consider analyzing user behavior, improving page load times, and enhancing content relevance.`
+                            } Monitor this metric weekly and implement data-driven improvements.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );

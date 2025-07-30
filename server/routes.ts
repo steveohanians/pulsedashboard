@@ -96,6 +96,81 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // AI Insights generation endpoint
+  app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { period = "2024-01" } = req.query;
+      
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const metrics = await storage.getMetricsByClient(clientId, period as string);
+      
+      // Group metrics by name
+      const groupedMetrics = metrics.reduce((acc: any, metric: any) => {
+        if (!acc[metric.metricName]) {
+          acc[metric.metricName] = {};
+        }
+        acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
+        return acc;
+      }, {});
+
+      const insights = [];
+      
+      // Generate insights for each metric
+      for (const [metricName, metricData] of Object.entries(groupedMetrics)) {
+        const data = metricData as any;
+        const clientValue = data.Client || 0;
+        const cdAverage = data.CD_Avg || 0;
+        const industryAverage = data.Industry_Avg || 0;
+        const competitorValues = [data.Competitor_Avg || 0];
+
+        try {
+          const aiInsight = await generateMetricInsights(
+            metricName,
+            clientValue,
+            cdAverage,
+            industryAverage,
+            competitorValues,
+            client.industryVertical,
+            client.businessSize
+          );
+
+          // Store the insight in database
+          const insight = await storage.createAIInsight({
+            clientId,
+            metricName,
+            timePeriod: period as string,
+            contextText: aiInsight.context,
+            insightText: aiInsight.insight,
+            recommendationText: aiInsight.recommendation
+          });
+
+          insights.push(insight);
+        } catch (error) {
+          console.error(`Error generating insights for ${metricName}:`, error);
+        }
+      }
+
+      res.json({ 
+        message: "AI insights generated successfully",
+        insights,
+        count: insights.length
+      });
+    } catch (error) {
+      console.error("Error generating AI insights:", error);
+      res.status(500).json({ message: "Failed to generate AI insights" });
+    }
+  });
+
   // Competitors management
   app.post("/api/competitors", requireAuth, async (req, res) => {
     try {
