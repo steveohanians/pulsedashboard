@@ -50,6 +50,11 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin",
   });
 
+  const { data: users } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: user?.role === "Admin",
+  });
+
   // Mutations for client management
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -118,6 +123,50 @@ export default function AdminPanel() {
     },
   });
 
+  // Mutations for user management
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/users/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "User updated",
+        description: "User information has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User deleted",
+        description: "User has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle save operations
   const handleSaveClient = (event: React.FormEvent) => {
     event.preventDefault();
@@ -165,6 +214,31 @@ export default function AdminPanel() {
 
   const handleDeleteCompany = (id: string) => {
     deleteCompanyMutation.mutate(id);
+  };
+
+  const handleSaveUser = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      role: formData.get("role") as string,
+    };
+    
+    if (!data.name || !data.email) {
+      toast({
+        title: "Validation error",
+        description: "Name and email are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateUserMutation.mutate({ id: editingItem.id, data });
+  };
+
+  const handleDeleteUser = (id: string) => {
+    deleteUserMutation.mutate(id);
   };
 
   if (user?.role !== "Admin") {
@@ -232,68 +306,127 @@ export default function AdminPanel() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">John Smith</TableCell>
-                        <TableCell>john@acme.com</TableCell>
-                        <TableCell>Acme Corporation</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Admin</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">Active</Badge>
-                        </TableCell>
-                        <TableCell>2024-01-15 14:30</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit User</DialogTitle>
-                                  <DialogDescription>
-                                    Update user information and permissions
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="user-name">Name</Label>
-                                    <Input id="user-name" defaultValue="John Smith" />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="user-email">Email</Label>
-                                    <Input id="user-email" defaultValue="john@acme.com" />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="user-role">Role</Label>
-                                    <Select defaultValue="Admin">
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                        <SelectItem value="User">User</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="flex justify-end space-x-2">
-                                    <DialogTrigger asChild>
-                                      <Button variant="outline">Cancel</Button>
-                                    </DialogTrigger>
-                                    <Button>Save Changes</Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      {users?.map((user: any) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.clientId || "N/A"}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.role === "Admin" ? "default" : "secondary"}>
+                              {user.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">Active</Badge>
+                          </TableCell>
+                          <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Dialog open={isDialogOpen && editingItem?.id === user.id} onOpenChange={(open) => {
+                                setIsDialogOpen(open);
+                                if (!open) setEditingItem(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingItem(user);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit User</DialogTitle>
+                                    <DialogDescription>
+                                      Update user information and permissions
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <form onSubmit={handleSaveUser} className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="name">Name *</Label>
+                                      <Input 
+                                        id="name" 
+                                        name="name"
+                                        defaultValue={user.name} 
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="email">Email *</Label>
+                                      <Input 
+                                        id="email"
+                                        name="email" 
+                                        type="email"
+                                        defaultValue={user.email}
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="role">Role</Label>
+                                      <Select name="role" defaultValue={user.role}>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Admin">Admin</SelectItem>
+                                          <SelectItem value="User">User</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateUserMutation.isPending}
+                                      >
+                                        {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
+                                    </div>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{user.name}"? This action cannot be undone and will remove the user's access to the system.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      disabled={deleteUserMutation.isPending}
+                                    >
+                                      {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </div>

@@ -158,9 +158,31 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
-      // This would need a more complex query to join with clients
-      // For now, returning a basic response
-      res.json({ message: "Users endpoint - implementation needed" });
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.updateUser(id, req.body);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.sendStatus(204);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
