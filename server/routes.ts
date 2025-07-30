@@ -62,9 +62,32 @@ export function registerRoutes(app: Express): Server {
     try {
       // Return available filter options
       res.json({
-        businessSizes: ["All", "Small (1-50)", "Medium (51-250)", "Large (251+)"],
-        industryVerticals: ["All", "E-commerce", "Technology", "Healthcare", "Finance", "Manufacturing", "Education", "Real Estate"],
-        timePeriods: ["2024-01", "2023-12", "2023-11", "2023-10", "2023-09", "2023-08"]
+        businessSizes: [
+          "Medium Business (100–500 employees)",
+          "Large Business (500–1,000 employees)", 
+          "Enterprise (1,000–5,000 employees)",
+          "Large Enterprise (5,000+ employees)"
+        ],
+        industryVerticals: [
+          "Technology",
+          "Technology - Artificial Intelligence",
+          "Technology - Cloud", 
+          "Technology - Cybersecurity",
+          "Technology - SaaS",
+          "Technology - Services",
+          "Financial Services & Insurance",
+          "Healthcare",
+          "Manufacturing", 
+          "Semiconductor",
+          "Consumer Goods",
+          "Renewable Energy"
+        ],
+        timePeriods: [
+          "Last Month",
+          "Last Quarter", 
+          "Last Year",
+          "Custom Date Range"
+        ]
       });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });

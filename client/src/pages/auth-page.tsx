@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartLine, TrendingUp, BarChart3, PieChart } from "lucide-react";
+import { ChartLine, TrendingUp, BarChart3, PieChart, Bug } from "lucide-react";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function AuthPage() {
@@ -15,10 +15,11 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
 
   // Redirect if already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,6 +40,13 @@ export default function AuthPage() {
       clientId: "demo-client-id", // This would be set during proper registration flow
       role: "Viewer",
       status: "Active",
+    });
+  };
+
+  const handleDebugLogin = (role: "Admin" | "Viewer") => {
+    loginMutation.mutate({
+      email: role === "Admin" ? "admin@clearsight.com" : "user@clearsight.com",
+      password: "password123",
     });
   };
 
@@ -148,6 +156,37 @@ export default function AuthPage() {
                   </form>
                 </TabsContent>
               </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Debug Mode */}
+          <Card className="mt-4 border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-orange-800">
+                <Bug className="h-5 w-5 mr-2" />
+                Debug Mode
+              </CardTitle>
+              <CardDescription className="text-orange-600">
+                Quick login for testing (Development Only)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => handleDebugLogin("Admin")}
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                disabled={loginMutation.isPending}
+              >
+                Login as Admin
+              </Button>
+              <Button
+                onClick={() => handleDebugLogin("Viewer")}
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                disabled={loginMutation.isPending}
+              >
+                Login as User
+              </Button>
             </CardContent>
           </Card>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,12 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function AdminPanel() {
   const { user } = useAuth();
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("users");
+  const [editingItem, setEditingItem] = useState<any>(null);
+
+  // Extract tab from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const tab = urlParams.get('tab');
+    if (tab && ['users', 'clients', 'benchmark', 'filters'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location]);
 
   const { data: clients } = useQuery<any[]>({
     queryKey: ["/api/admin/clients"],
@@ -107,9 +121,36 @@ export default function AdminPanel() {
                         <TableCell>2024-01-15 14:30</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit User</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="user-name">Name</Label>
+                                    <Input id="user-name" defaultValue="John Smith" />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="user-email">Email</Label>
+                                    <Input id="user-email" defaultValue="john@acme.com" />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="user-role">Role</Label>
+                                    <Input id="user-role" defaultValue="Admin" />
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button variant="outline">Cancel</Button>
+                                    <Button>Save Changes</Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                             <Button variant="ghost" size="sm">
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -156,9 +197,40 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Client</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="client-name">Name</Label>
+                                      <Input id="client-name" defaultValue={client.name} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="client-website">Website</Label>
+                                      <Input id="client-website" defaultValue={client.websiteUrl} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="client-industry">Industry</Label>
+                                      <Input id="client-industry" defaultValue={client.industryVertical} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="client-size">Business Size</Label>
+                                      <Input id="client-size" defaultValue={client.businessSize} />
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Button variant="outline">Cancel</Button>
+                                      <Button>Save Changes</Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                               <Button variant="ghost" size="sm">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -212,9 +284,40 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Benchmark Company</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="company-name">Name</Label>
+                                      <Input id="company-name" defaultValue={company.name} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="company-website">Website</Label>
+                                      <Input id="company-website" defaultValue={company.websiteUrl} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="company-industry">Industry</Label>
+                                      <Input id="company-industry" defaultValue={company.industryVertical} />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="company-size">Business Size</Label>
+                                      <Input id="company-size" defaultValue={company.businessSize} />
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Button variant="outline">Cancel</Button>
+                                      <Button>Save Changes</Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                               <Button variant="ghost" size="sm">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -243,24 +346,38 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                          <span>Small (1-50)</span>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                          <span>Medium (51-250)</span>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                          <span>Large (251+)</span>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {[
+                          "Medium Business (100–500 employees)",
+                          "Large Business (500–1,000 employees)",
+                          "Enterprise (1,000–5,000 employees)",
+                          "Large Enterprise (5,000+ employees)"
+                        ].map((size) => (
+                          <div key={size} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                            <span>{size}</span>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Business Size</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="business-size">Business Size</Label>
+                                    <Input id="business-size" defaultValue={size} />
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button variant="outline">Cancel</Button>
+                                    <Button>Save Changes</Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
@@ -270,12 +387,44 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {["E-commerce", "Technology", "Healthcare", "Finance", "Manufacturing"].map((industry) => (
+                        {[
+                          "Technology",
+                          "Technology - Artificial Intelligence",
+                          "Technology - Cloud",
+                          "Technology - Cybersecurity", 
+                          "Technology - SaaS",
+                          "Technology - Services",
+                          "Financial Services & Insurance",
+                          "Healthcare",
+                          "Manufacturing",
+                          "Semiconductor",
+                          "Consumer Goods",
+                          "Renewable Energy"
+                        ].map((industry) => (
                           <div key={industry} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                             <span>{industry}</span>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Industry Vertical</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="industry">Industry Vertical</Label>
+                                    <Input id="industry" defaultValue={industry} />
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button variant="outline">Cancel</Button>
+                                    <Button>Save Changes</Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           </div>
                         ))}
                       </div>
