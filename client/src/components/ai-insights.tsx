@@ -22,7 +22,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
     <div className="space-y-4 border-t border-slate-200 pt-4">
       {context && (
         <div>
-          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
             <Info className="h-3 w-3 mr-2 text-primary" />
             Context
           </h4>
@@ -32,7 +32,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
       
       {insight && (
         <div>
-          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
             <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
             Insight
           </h4>
@@ -42,7 +42,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
       
       {recommendation && (
         <div>
-          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
             <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
             Recommendation
           </h4>

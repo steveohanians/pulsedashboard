@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Lightbulb, Info, TrendingUp } from "lucide-react";
+import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Lightbulb, Info, TrendingUp, Clock } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -82,12 +82,14 @@ export default function Dashboard() {
       <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center">
-              <ChartLine className="text-white text-lg" />
-            </div>
+            <img 
+              src="/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png" 
+              alt="Clear Digital Logo" 
+              className="h-10 w-auto"
+            />
             <div>
               <h1 className="text-lg font-bold text-slate-900">Pulse Dashboard™</h1>
-              <p className="text-xs text-slate-600">{client?.name || "Loading..."}</p>
+              <p className="text-xs text-slate-600">{client?.name || "Client Name"}</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -98,7 +100,7 @@ export default function Dashboard() {
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-xs font-medium text-slate-700">{user?.name}</span>
+              <span className="text-xs font-bold text-slate-700">{user?.name}</span>
             </div>
             <Button
               variant="ghost"
@@ -116,7 +118,7 @@ export default function Dashboard() {
         {/* Left Navigation */}
         <nav className="w-64 bg-white border-r border-slate-200 min-h-screen sticky top-16 z-10">
           <div className="p-4">
-            <h2 className="text-base font-semibold text-slate-800 mb-4">Metrics</h2>
+            <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
               {metricNames.map((metricName) => (
                 <li key={metricName}>
@@ -138,14 +140,14 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Filter className="h-5 w-5 mr-2" />
+              <CardTitle className="flex items-center text-sm">
+                <Filter className="h-4 w-4 mr-2" />
                 Industry Filters
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-2">Business Size</label>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
                   <SelectTrigger>
                     <SelectValue />
@@ -158,7 +160,7 @@ export default function Dashboard() {
                 </Select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-2">Industry Vertical</label>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
                 <Select value={industryVertical} onValueChange={setIndustryVertical}>
                   <SelectTrigger>
                     <SelectValue />
@@ -175,7 +177,10 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Time Period</CardTitle>
+              <CardTitle className="flex items-center text-sm">
+                <Clock className="h-4 w-4 mr-2" />
+                Time Period
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Select value={timePeriod} onValueChange={(value) => {
@@ -250,7 +255,10 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Competitors</CardTitle>
+              <CardTitle className="flex items-center text-sm">
+                <Users className="h-4 w-4 mr-2" />
+                Competitors
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Button
@@ -316,7 +324,7 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
                     <div className="flex items-center mb-3">
                       <Lightbulb className="h-5 w-5 text-primary mr-2" />
-                      <h3 className="text-sm font-semibold text-primary">Pulse™ AI Insight</h3>
+                      <h3 className="text-sm font-bold text-primary">Pulse™ AI Insight</h3>
                     </div>
                     {insight ? (
                       <AIInsights
@@ -327,7 +335,7 @@ export default function Dashboard() {
                     ) : (
                       <div className="space-y-3">
                         <div>
-                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
                             <Info className="h-3 w-3 mr-2 text-primary" />
                             Context
                           </h4>
@@ -343,7 +351,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
                             <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
                             Insight
                           </h4>
@@ -359,7 +367,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
+                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
                             <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
                             Recommendation
                           </h4>
@@ -383,8 +391,8 @@ export default function Dashboard() {
         {user?.role === "Admin" && (
           <Card className="mt-8">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
+              <CardTitle className="flex items-center text-sm">
+                <Settings className="h-4 w-4 mr-2" />
                 Admin Panel
               </CardTitle>
             </CardHeader>
