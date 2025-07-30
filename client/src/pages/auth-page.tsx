@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartLine, TrendingUp, BarChart3, PieChart } from "lucide-react";
+import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -47,8 +48,12 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mb-4">
-              <ChartLine className="text-white text-2xl" />
+            <div className="mx-auto mb-6">
+              <img 
+                src={clearLogoPath} 
+                alt="Clear Digital" 
+                className="h-12 w-auto mx-auto mb-4"
+              />
             </div>
             <h2 className="text-3xl font-bold text-slate-900">Pulse Dashboard™</h2>
             <p className="mt-2 text-sm text-slate-600">Analytics Benchmarking & AI Insights</p>
