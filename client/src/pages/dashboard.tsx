@@ -83,27 +83,36 @@ export default function Dashboard() {
     
     const observerOptions = {
       root: null,
-      rootMargin: '-120px 0px -40% 0px',
-      threshold: 0.5
+      rootMargin: '-100px 0px -60% 0px',
+      threshold: 0.1
     };
 
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
       // Clear any pending timeout
       clearTimeout(timeoutId);
       
-      // Debounce the update by 100ms to prevent flashing
+      // Debounce the update by 50ms to prevent excessive flashing while keeping responsiveness
       timeoutId = setTimeout(() => {
-        const visibleEntries = entries.filter(entry => entry.isIntersecting && entry.intersectionRatio > 0.3);
+        const visibleEntries = entries.filter(entry => entry.isIntersecting);
         
         if (visibleEntries.length > 0) {
-          // Get the entry with the highest intersection ratio
-          const mostVisible = visibleEntries.reduce((prev, current) => 
-            current.intersectionRatio > prev.intersectionRatio ? current : prev
-          );
+          // Get the entry with the highest intersection ratio, or the first one if ratios are similar
+          const mostVisible = visibleEntries.reduce((prev, current) => {
+            if (Math.abs(current.intersectionRatio - prev.intersectionRatio) < 0.1) {
+              // If intersection ratios are very close, prefer the earlier section in the page
+              const prevIndex = metricNames.findIndex(name => 
+                name.replace(/\s+/g, '-').toLowerCase() === prev.target.id.replace('metric-', '')
+              );
+              const currentIndex = metricNames.findIndex(name => 
+                name.replace(/\s+/g, '-').toLowerCase() === current.target.id.replace('metric-', '')
+              );
+              return prevIndex < currentIndex ? prev : current;
+            }
+            return current.intersectionRatio > prev.intersectionRatio ? current : prev;
+          });
           
           const id = mostVisible.target.id;
           if (id.startsWith('metric-')) {
-            // Find the exact matching metric name from our list
             const idWithoutPrefix = id.replace('metric-', '');
             const matchingMetric = metricNames.find(name => 
               name.replace(/\s+/g, '-').toLowerCase() === idWithoutPrefix
@@ -114,7 +123,7 @@ export default function Dashboard() {
             }
           }
         }
-      }, 100);
+      }, 50);
     };
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
