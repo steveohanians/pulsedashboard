@@ -55,7 +55,7 @@ export function setupAuth(app: Express) {
         return done(null, false);
       } else {
         // Update last login timestamp
-        await storage.updateUser(user.id, {});
+        await storage.updateUser(user.id, { lastLogin: new Date() });
         return done(null, user);
       }
     }),
