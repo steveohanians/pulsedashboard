@@ -392,7 +392,6 @@ export default function AdminPanel() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="SMB">SMB</SelectItem>
                                           <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
                                           <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
                                           <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
@@ -550,7 +549,6 @@ export default function AdminPanel() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="SMB">SMB</SelectItem>
                                           <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
                                           <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
                                           <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
