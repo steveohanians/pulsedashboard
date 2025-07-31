@@ -464,19 +464,17 @@ export default function AdminPanel() {
   };
 
   const SortableHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (
-    <TableHead 
-      className="cursor-pointer hover:bg-gray-50 transition-colors"
+    <div 
+      className="flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors p-2 -m-2 rounded"
       onClick={() => handleSort(sortKey)}
     >
-      <div className="flex items-center justify-between">
-        {label}
-        {sortConfig?.key === sortKey ? (
-          sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-        ) : (
-          <ArrowUpDown className="h-4 w-4 opacity-50" />
-        )}
-      </div>
-    </TableHead>
+      {label}
+      {sortConfig?.key === sortKey ? (
+        sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+      ) : (
+        <ArrowUpDown className="h-4 w-4 opacity-50" />
+      )}
+    </div>
   );
 
   const handleDeleteUser = (id: string) => {
@@ -637,12 +635,12 @@ export default function AdminPanel() {
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
-                          <SortableHeader label="Name" sortKey="name" />
-                          <SortableHeader label="Email" sortKey="email" />
+                          <TableHead><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead><SortableHeader label="Email" sortKey="email" /></TableHead>
                           <TableHead className="hidden sm:table-cell">
                             <SortableHeader label="Client" sortKey="clientId" />
                           </TableHead>
-                          <SortableHeader label="Role" sortKey="role" />
+                          <TableHead><SortableHeader label="Role" sortKey="role" /></TableHead>
                           <TableHead className="hidden md:table-cell">Status</TableHead>
                           <TableHead className="hidden lg:table-cell">
                             <SortableHeader label="Last Login" sortKey="lastLogin" />
@@ -1202,11 +1200,11 @@ export default function AdminPanel() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <SortableHeader label="Name" sortKey="name" />
-                        <SortableHeader label="Website" sortKey="websiteUrl" />
-                        <SortableHeader label="Industry" sortKey="industryVertical" />
-                        <SortableHeader label="Business Size" sortKey="businessSize" />
-                        <SortableHeader label="Verified" sortKey="sourceVerified" />
+                        <TableHead><SortableHeader label="Name" sortKey="name" /></TableHead>
+                        <TableHead><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                        <TableHead><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                        <TableHead><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                        <TableHead><SortableHeader label="Verified" sortKey="sourceVerified" /></TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>

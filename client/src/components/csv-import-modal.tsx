@@ -238,14 +238,17 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
                   <div key={field} className="space-y-2">
                     <Label htmlFor={field}>{fieldLabels[field] || field}</Label>
                     <Select
-                      value={columnMapping[field] || ''}
-                      onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [field]: value }))}
+                      value={columnMapping[field] || '__none__'}
+                      onValueChange={(value) => setColumnMapping(prev => ({ 
+                        ...prev, 
+                        [field]: value === '__none__' ? '' : value 
+                      }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select CSV column" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {previewData.headers.map((header) => (
                           <SelectItem key={header} value={header}>
                             {header}
