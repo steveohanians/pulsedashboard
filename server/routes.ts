@@ -198,8 +198,67 @@ export function registerRoutes(app: Express): Server {
       }
 
       const competitor = await storage.createCompetitor(validatedData);
+      
+      // Generate sample data for the new competitor across all time periods
+      const timePeriods = ["2025-06", "2024-Q4", "2024-01"];
+      const metricNames = [
+        "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
+        "Traffic Channels", "Device Distribution"
+      ];
+      
+      for (const period of timePeriods) {
+        for (const metricName of metricNames) {
+          let sampleValue: any;
+          
+          if (metricName === "Traffic Channels") {
+            sampleValue = [
+              { name: "Organic Search", value: Math.floor(Math.random() * 20) + 35, percentage: 0, color: "#10b981" },
+              { name: "Direct", value: Math.floor(Math.random() * 15) + 20, percentage: 0, color: "#3b82f6" },
+              { name: "Social Media", value: Math.floor(Math.random() * 10) + 15, percentage: 0, color: "#8b5cf6" },
+              { name: "Paid Search", value: Math.floor(Math.random() * 8) + 10, percentage: 0, color: "#f59e0b" },
+              { name: "Email", value: Math.floor(Math.random() * 5) + 5, percentage: 0, color: "#ec4899" }
+            ];
+            // Calculate percentages
+            const total = sampleValue.reduce((sum: number, item: any) => sum + item.value, 0);
+            sampleValue = sampleValue.map((item: any) => ({
+              ...item,
+              percentage: Math.round((item.value / total) * 100)
+            }));
+          } else if (metricName === "Device Distribution") {
+            const desktop = Math.floor(Math.random() * 20) + 45;
+            const mobile = Math.floor(Math.random() * 15) + 35;
+            const tablet = Math.floor(Math.random() * 8) + 8;
+            const other = 100 - (desktop + mobile + tablet);
+            sampleValue = [
+              { name: "Desktop", value: desktop, percentage: desktop, color: "#3b82f6" },
+              { name: "Mobile", value: mobile, percentage: mobile, color: "#10b981" },
+              { name: "Tablet", value: tablet, percentage: tablet, color: "#8b5cf6" },
+              { name: "Other", value: other, percentage: other, color: "#6b7280" }
+            ];
+          } else {
+            // Generate realistic values for other metrics
+            const baseValues = {
+              "Bounce Rate": Math.floor(Math.random() * 20) + 40,
+              "Session Duration": Math.floor(Math.random() * 60) + 120,
+              "Pages per Session": (Math.random() * 1.5 + 1.8).toFixed(1),
+              "Sessions per User": (Math.random() * 0.8 + 1.2).toFixed(1)
+            };
+            sampleValue = baseValues[metricName as keyof typeof baseValues];
+          }
+          
+          await storage.createMetric({
+            competitorId: competitor.id,
+            metricName,
+            value: sampleValue,
+            timePeriod: period,
+            sourceType: "Competitor"
+          });
+        }
+      }
+      
       res.status(201).json(competitor);
     } catch (error) {
+      console.error("Error creating competitor:", error);
       res.status(400).json({ message: "Invalid data" });
     }
   });
