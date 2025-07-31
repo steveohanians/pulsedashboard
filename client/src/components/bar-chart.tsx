@@ -189,15 +189,15 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                           height: '8px', 
                           backgroundColor: entry.color, 
                           marginRight: '6px',
-                          borderRadius: '2px'
+                          borderRadius: '50%'
                         }} 
                       />
                       <span style={{ 
-                        fontWeight: entry.dataKey === clientKey ? 'bold' : 'normal',
-                        color: entry.dataKey === clientKey ? colors[clientKey] : '#9ca3af'
+                        color: '#374151',
+                        fontSize: '11px'
                       }}>
                         {entry.dataKey === clientKey ? (
-                          <strong>{entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}</strong>
+                          <strong style={{ color: colors[clientKey] }}>{entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}</strong>
                         ) : (
                           `${entry.dataKey}: ${Math.round(entry.value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`
                         )}
