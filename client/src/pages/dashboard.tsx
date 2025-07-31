@@ -463,7 +463,7 @@ export default function Dashboard() {
               <Card 
                 key={metricName} 
                 id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
-                className="border-slate-200/60 shadow-lg hover:shadow-[0_0_25px_rgba(255,20,147,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
+                className="border-slate-200/60 hover:shadow-[0_0_25px_rgba(255,20,147,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
               >
                 <CardHeader className="pb-4 lg:pb-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
