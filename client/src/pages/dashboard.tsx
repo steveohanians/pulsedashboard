@@ -108,13 +108,25 @@ export default function Dashboard() {
 
     const result = [];
 
+    // Helper function to deduplicate metrics by channel
+    const deduplicateByChannel = (sourceMetrics: any[]) => {
+      const channelMap = new Map();
+      sourceMetrics.forEach(metric => {
+        if (!channelMap.has(metric.channel)) {
+          channelMap.set(metric.channel, metric);
+        }
+      });
+      return Array.from(channelMap.values());
+    };
+
     // Client data
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
     if (clientMetrics.length > 0) {
+      const uniqueClientMetrics = deduplicateByChannel(clientMetrics);
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        channels: clientMetrics.map(m => ({
+        channels: uniqueClientMetrics.map(m => ({
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),
@@ -126,10 +138,11 @@ export default function Dashboard() {
     // CD Average data
     const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
     if (cdMetrics.length > 0) {
+      const uniqueCdMetrics = deduplicateByChannel(cdMetrics);
       result.push({
         sourceType: 'CD_Avg',
         label: 'CD Client Avg',
-        channels: cdMetrics.map(m => ({
+        channels: uniqueCdMetrics.map(m => ({
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),
@@ -141,10 +154,11 @@ export default function Dashboard() {
     // Industry Average data
     const industryMetrics = trafficMetrics.filter(m => m.sourceType === 'Industry_Avg');
     if (industryMetrics.length > 0) {
+      const uniqueIndustryMetrics = deduplicateByChannel(industryMetrics);
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
-        channels: industryMetrics.map(m => ({
+        channels: uniqueIndustryMetrics.map(m => ({
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),

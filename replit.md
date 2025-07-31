@@ -164,11 +164,13 @@ The system uses a comprehensive schema with the following core entities:
 ✓ Implemented horizontal stacked percentage bar chart for Traffic Channels
 ✓ Each row shows Client, CD Client Avg, Industry Avg, and competitors with percentage breakdown
 ✓ Added comprehensive traffic channel data (Organic Search, Direct, Social Media, Paid Search, Email)
-✓ Company names display on left side of bars with Client name in bold pink styling
-✓ Fixed competitor data duplication and layout issues
+✓ Company names display on left side of bars with Client name in bold primary color styling
+✓ Fixed competitor data duplication issues with channel-based deduplication logic
 ✓ Added colored legend with proper channel identification
 ✓ Removed performance display for Traffic Channels section
 ✓ Clean horizontal layout with proper spacing and no overlapping elements
+✓ Applied deduplication logic to all data sources (Client, CD_Avg, Industry_Avg, Competitors)
+✓ Fixed database duplicate entries causing repeated percentage displays in chart bars
 
 **Header and UI Improvements (July 31, 2025 - Late Morning)**
 ✓ Fixed client name display in dashboard header - now shows actual client name instead of blank

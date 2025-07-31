@@ -31,7 +31,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     <div className="w-full h-full space-y-4">
       <div className="space-y-3">
         {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-4">
+          <div key={`${item.sourceType}-${index}`} className="flex items-center gap-4">
             <div className="w-32 flex-shrink-0">
               <span className={`text-sm truncate block ${
                 item.sourceType === 'Client' 
