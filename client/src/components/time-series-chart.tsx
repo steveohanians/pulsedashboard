@@ -1,4 +1,5 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState } from 'react';
 
 // Custom diamond dot component
 const DiamondDot = (props: any) => {
@@ -104,9 +105,30 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Additional colors for competitors
   const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
 
+  // State for toggling lines
+  const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {
+      'Client': true,
+      'Industry Avg': true,
+      'CD Client Avg': true,
+    };
+    competitors.forEach(comp => {
+      initial[comp.label] = true;
+    });
+    return initial;
+  });
+
+  const toggleLine = (lineKey: string) => {
+    setVisibleLines(prev => ({
+      ...prev,
+      [lineKey]: !prev[lineKey]
+    }));
+  };
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height="85%">
+        <LineChart data={data} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
@@ -140,14 +162,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           ]}
           labelStyle={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}
         />
-        <Legend 
-          wrapperStyle={{ paddingTop: '12px', fontSize: '9px', color: '#64748b' }}
-          iconType="rect"
-          layout="horizontal"
-          verticalAlign="bottom"
-          align="center"
-          iconSize={8}
-        />
+
         
         {/* Client line (primary pink) */}
         <Line 
@@ -191,7 +206,109 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             strokeOpacity={0.8}
           />
         ))}
-      </LineChart>
-    </ResponsiveContainer>
+        </LineChart>
+      </ResponsiveContainer>
+      
+      {/* Custom Interactive Legend */}
+      <div className="flex flex-wrap justify-center gap-3 pt-3 pb-1">
+        {/* Client checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleLines['Client']}
+            onChange={() => toggleLine('Client')}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleLines['Client'] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+            }`}
+            style={{ backgroundColor: visibleLines['Client'] ? colors.Client : 'transparent' }}
+          >
+            {visibleLines['Client'] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700">Client</span>
+        </label>
+
+        {/* Industry Average checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleLines['Industry Avg']}
+            onChange={() => toggleLine('Industry Avg')}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleLines['Industry Avg'] ? 'border-gray-400' : 'border-gray-300'
+            }`}
+            style={{ backgroundColor: visibleLines['Industry Avg'] ? colors['Industry Avg'] : 'transparent' }}
+          >
+            {visibleLines['Industry Avg'] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700">Industry Avg</span>
+        </label>
+
+        {/* CD Client Average checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleLines['CD Client Avg']}
+            onChange={() => toggleLine('CD Client Avg')}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleLines['CD Client Avg'] ? 'border-gray-500' : 'border-gray-300'
+            }`}
+            style={{ backgroundColor: visibleLines['CD Client Avg'] ? colors['CD Client Avg'] : 'transparent' }}
+          >
+            {visibleLines['CD Client Avg'] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700">CD Client Avg</span>
+        </label>
+
+        {/* Competitor checkboxes */}
+        {competitors.map((competitor, index) => (
+          <label key={competitor.id} className="flex items-center cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={visibleLines[competitor.label]}
+              onChange={() => toggleLine(competitor.label)}
+              className="sr-only"
+            />
+            <div 
+              className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+                visibleLines[competitor.label] ? 'border-gray-400' : 'border-gray-300'
+              }`}
+              style={{ 
+                backgroundColor: visibleLines[competitor.label] 
+                  ? competitorColors[index % competitorColors.length] 
+                  : 'transparent' 
+              }}
+            >
+              {visibleLines[competitor.label] && (
+                <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            <span className="text-slate-700">{competitor.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
