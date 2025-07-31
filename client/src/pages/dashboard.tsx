@@ -17,6 +17,7 @@ import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.p
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const [timePeriod, setTimePeriod] = useState("Last Month");
+  const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
@@ -355,6 +356,7 @@ export default function Dashboard() {
                   setShowDatePicker(true);
                 } else {
                   setTimePeriod(value);
+                  setCustomDateRange("");
                 }
               }}>
                 <SelectTrigger>
@@ -366,6 +368,14 @@ export default function Dashboard() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Display custom date range below dropdown */}
+              {timePeriod === "Custom Date Range" && customDateRange && (
+                <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-medium text-slate-600">Selected Range:</p>
+                  <p className="text-sm font-semibold text-slate-800">{customDateRange}</p>
+                </div>
+              )}
               
               {/* Custom Date Range Dialog */}
               <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
@@ -404,8 +414,9 @@ export default function Dashboard() {
                       <Button 
                         onClick={() => {
                           if (startDate && endDate) {
-                            const formattedRange = `Custom: ${startDate} to ${endDate}`;
-                            setTimePeriod(formattedRange);
+                            const formattedRange = `${startDate} to ${endDate}`;
+                            setCustomDateRange(formattedRange);
+                            setTimePeriod("Custom Date Range");
                             setShowDatePicker(false);
                           }
                         }}
