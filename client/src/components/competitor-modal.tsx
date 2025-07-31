@@ -27,7 +27,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard", clientId] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`)
+      });
       setDomain("");
       setLabel("");
       toast({
@@ -49,7 +52,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       await apiRequest("DELETE", `/api/competitors/${competitorId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard", clientId] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`)
+      });
       toast({
         title: "Competitor removed",
         description: "The competitor has been successfully removed.",
