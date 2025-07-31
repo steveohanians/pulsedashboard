@@ -187,7 +187,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                         style={{ 
                           width: '8px', 
                           height: '8px', 
-                          backgroundColor: entry.color, 
+                          backgroundColor: colors[entry.dataKey] || entry.color, 
                           marginRight: '6px',
                           borderRadius: '50%'
                         }} 
