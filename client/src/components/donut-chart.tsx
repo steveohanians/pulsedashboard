@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload }: any) => {
       padding: '8px 12px',
       fontSize: '12px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
         <div 
           style={{ 
             width: '8px', 
