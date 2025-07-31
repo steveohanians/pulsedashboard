@@ -71,9 +71,7 @@ export default function Dashboard() {
   const competitors = dashboardData?.competitors || [];
   const insights = dashboardData?.insights || [];
 
-  // Debug logging
-  console.log('Dashboard data:', dashboardData);
-  console.log('Client data:', client);
+
 
   // Group metrics by name for chart display
   const groupedMetrics = metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
@@ -238,7 +236,22 @@ export default function Dashboard() {
             />
             <div>
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-              <p className="text-sm font-medium text-slate-600 mt-0.5">{client?.name}</p>
+              <div className="text-sm font-medium text-slate-600 mt-0.5">
+                {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
+                {client?.websiteUrl && (
+                  <>
+                    {" | "}
+                    <a 
+                      href={client.websiteUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-pink-600 hover:text-pink-700 underline"
+                    >
+                      {client.websiteUrl.replace(/^https?:\/\//, '')}
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-6">
