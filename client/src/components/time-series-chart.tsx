@@ -147,7 +147,11 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     return initial;
   });
 
+  // Track if this is the initial render to allow animation only once
+  const [isInitialRender, setIsInitialRender] = useState(true);
+
   const toggleLine = (lineKey: string) => {
+    setIsInitialRender(false); // Disable animation after first interaction
     setVisibleLines(prev => ({
       ...prev,
       [lineKey]: !prev[lineKey]
@@ -157,7 +161,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   return (
     <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="85%">
-        <LineChart data={data} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
+        <LineChart 
+          data={data} 
+          margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+        >
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
@@ -203,6 +210,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             strokeWidth={3}
             dot={{ fill: colors.Client, r: 3 }}
             activeDot={{ r: 5, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
+            animationDuration={isInitialRender ? 800 : 0}
           />
         )}
         
@@ -215,6 +223,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             strokeWidth={2}
             dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
             strokeDasharray="5 5"
+            animationDuration={isInitialRender ? 800 : 0}
           />
         )}
         
@@ -227,6 +236,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             strokeWidth={2}
             dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
+            animationDuration={isInitialRender ? 800 : 0}
           />
         )}
         
@@ -240,6 +250,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
               stroke={competitorColors[index % competitorColors.length]}
               strokeWidth={2}
               dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
+              animationDuration={isInitialRender ? 800 : 0}
             />
           )
         ))}
