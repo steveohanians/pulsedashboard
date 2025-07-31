@@ -178,22 +178,25 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-50">
         {/* Header Skeleton */}
-        <div className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-200 px-6 py-4">
+        <div className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-40">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="h-10 w-32 bg-slate-200 rounded animate-pulse"></div>
-              <div>
-                <div className="h-5 w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
-                <div className="h-3 w-24 bg-slate-200 rounded animate-pulse"></div>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="h-8 w-24 sm:h-10 sm:w-32 bg-slate-200 rounded animate-pulse"></div>
+              <div className="hidden sm:block">
+                <div className="h-4 w-32 sm:h-5 sm:w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
+                <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded animate-pulse"></div>
               </div>
             </div>
-            <div className="h-8 w-20 bg-slate-200 rounded animate-pulse"></div>
+            <div className="flex items-center space-x-2">
+              <div className="h-8 w-8 bg-slate-200 rounded animate-pulse lg:hidden"></div>
+              <div className="h-8 w-16 sm:w-20 bg-slate-200 rounded animate-pulse"></div>
+            </div>
           </div>
         </div>
         
         <div className="flex">
-          {/* Navigation Skeleton */}
-          <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4">
+          {/* Desktop Navigation Skeleton */}
+          <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4 hidden lg:block">
             <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -203,22 +206,44 @@ export default function Dashboard() {
           </div>
           
           {/* Content Skeleton */}
-          <div className="flex-1 ml-64 p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
+            {/* Mobile-specific client info */}
+            <div className="block sm:hidden mb-4">
+              <div className="h-4 w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-24 bg-slate-200 rounded animate-pulse"></div>
+            </div>
+
+            {/* Filter section skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                  <div className="h-5 w-32 bg-slate-200 rounded animate-pulse mb-4"></div>
-                  <div className="h-10 bg-slate-200 rounded animate-pulse"></div>
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                  <div className="h-4 w-24 sm:h-5 sm:w-32 bg-slate-200 rounded animate-pulse mb-3 sm:mb-4"></div>
+                  <div className="h-8 sm:h-10 bg-slate-200 rounded animate-pulse"></div>
                 </div>
               ))}
             </div>
             
             {/* Metric Cards Skeleton */}
-            <div className="space-y-12">
+            <div className="space-y-8 sm:space-y-10 lg:space-y-12">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-                  <div className="h-6 w-48 bg-slate-200 rounded animate-pulse mb-6"></div>
-                  <div className="h-64 bg-slate-200 rounded-lg animate-pulse"></div>
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm">
+                  <div className="h-5 w-32 sm:h-6 sm:w-48 bg-slate-200 rounded animate-pulse mb-4 sm:mb-6"></div>
+                  <div className="h-48 sm:h-56 lg:h-64 bg-slate-200 rounded-lg animate-pulse mb-4 sm:mb-6"></div>
+                  {/* AI Insights skeleton */}
+                  <div className="bg-slate-100 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center mb-3">
+                      <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse mr-3"></div>
+                      <div>
+                        <div className="h-4 w-24 bg-slate-200 rounded animate-pulse mb-1"></div>
+                        <div className="h-3 w-32 bg-slate-200 rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-slate-200 rounded animate-pulse"></div>
+                      <div className="h-3 w-3/4 bg-slate-200 rounded animate-pulse"></div>
+                      <div className="h-3 w-5/6 bg-slate-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
