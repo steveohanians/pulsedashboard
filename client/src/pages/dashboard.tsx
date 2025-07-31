@@ -86,6 +86,7 @@ export default function Dashboard() {
     if (isLoading) return;
     
     let isThrottled = false;
+    let lastActiveSection = activeSection;
     
     const handleScroll = () => {
       if (isThrottled) return;
@@ -110,9 +111,14 @@ export default function Dashboard() {
           }
         });
         
-        setActiveSection(closestSection);
+        // Only update if the section actually changed to prevent flashing
+        if (closestSection !== lastActiveSection) {
+          setActiveSection(closestSection);
+          lastActiveSection = closestSection;
+        }
+        
         isThrottled = false;
-      }, 300); // Throttle to 300ms
+      }, 400); // Increased throttle to 400ms for stability
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
