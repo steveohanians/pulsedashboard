@@ -233,7 +233,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                       fontWeight: entry.name === clientKey ? 'bold' : 'normal',
                       color: entry.name === clientKey ? colors[clientKey] : '#374151'
                     }}>
-                      {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : ''}
+                      {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Pages per Session') ? ' pages' : ''}
                     </span>
                   </div>
                 ))}
