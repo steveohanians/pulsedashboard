@@ -7,8 +7,9 @@ interface MetricsChartProps {
 
 const COLORS = {
   Client: '#2563eb',
-  CD_Avg: '#64748b',
-  Industry: '#f59e0b',
+  CD_Avg: '#4b5563', // Dark grey
+  Industry_Avg: '#9ca3af', // Light grey  
+  Industry: '#9ca3af', // Light grey (fallback)
   Competitor: '#10b981'
 };
 
@@ -42,7 +43,6 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
             outerRadius="70%"
             dataKey="value"
             label={({ name, value }) => `${name}: ${value}%`}
-            labelStyle={{ fontSize: '10px' }}
           >
             {pieData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />
