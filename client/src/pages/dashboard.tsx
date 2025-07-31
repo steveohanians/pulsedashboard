@@ -23,7 +23,8 @@ export default function Dashboard() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [activeSection, setActiveSection] = useState<string>("");
+  // Remove activeSection state entirely - navigation will work without highlighting
+  const [clickedSection, setClickedSection] = useState<string>("");
 
   interface DashboardData {
     client: any;
@@ -75,9 +76,8 @@ export default function Dashboard() {
     }
   };
 
-  // Handle manual navigation clicks (no automatic scroll highlighting)
+  // Handle manual navigation clicks (no highlighting)
   const handleNavigationClick = (metricName: string) => {
-    setActiveSection(metricName);
     scrollToMetric(metricName);
   };
 
@@ -139,11 +139,7 @@ export default function Dashboard() {
                 <li key={metricName}>
                   <button
                     onClick={() => handleNavigationClick(metricName)}
-                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
-                      activeSection === metricName
-                        ? 'bg-slate-100 text-primary'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
-                    }`}
+                    className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
                   >
                     {metricName}
                   </button>
