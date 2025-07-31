@@ -117,14 +117,14 @@ export function registerRoutes(app: Express): Server {
                 value: avgValue.toString(),
                 sourceType: 'Competitor',
                 competitorId,
-                timePeriod: period as string
+                timePeriod: periodsToQuery[0]
               });
             } else {
               processedMetrics.push({
                 metricName,
                 value: avgValue.toString(),
                 sourceType,
-                timePeriod: period as string
+                timePeriod: periodsToQuery[0]
               });
             }
           }
