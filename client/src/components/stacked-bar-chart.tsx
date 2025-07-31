@@ -27,6 +27,22 @@ const CHANNEL_COLORS = {
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
+  // Check if we have any valid data
+  const hasData = data && data.length > 0;
+  
+  // Show no data state if no valid data
+  if (!hasData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📊</div>
+          <div className="text-sm">No data available</div>
+          <div className="text-xs text-slate-400 mt-1">Channel data will appear here once collected</div>
+        </div>
+      </div>
+    );
+  }
+  
   // Calculate the maximum label width needed
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
   const labelWidth = Math.min(Math.max(maxLabelLength * 8, 120), 200); // 8px per char, min 120px, max 200px
