@@ -105,13 +105,11 @@ export function registerRoutes(app: Express): Server {
       } else {
         // For multi-period queries, return time-series data
         const timeSeriesData: Record<string, Array<{
-          timePeriod: string;
-          metrics: Array<{
-            metricName: string;
-            value: string;
-            sourceType: string;
-            competitorId?: string;
-          }>;
+          metricName: string;
+          value: string;
+          sourceType: string;
+          competitorId?: string;
+          channel?: string; // Include channel for traffic channels
         }>> = {};
         
         // Process each time period separately
@@ -126,6 +124,7 @@ export function registerRoutes(app: Express): Server {
               metricName: m.metricName,
               value: m.value,
               sourceType: m.sourceType,
+              channel: m.channel, // Preserve channel information
               timePeriod
             })),
             ...periodCompetitorMetrics.map(m => ({
@@ -133,6 +132,7 @@ export function registerRoutes(app: Express): Server {
               value: m.value,
               sourceType: 'Competitor',
               competitorId: m.competitorId,
+              channel: m.channel, // Preserve channel information
               timePeriod
             }))
           ];
