@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { ChartLine, LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Lightbulb, Info, TrendingUp, Clock } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
+  // Date picker state (currently unused but preserved for future custom date range feature)
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -27,10 +28,27 @@ export default function Dashboard() {
   const [manualClick, setManualClick] = useState<boolean>(false);
 
   interface DashboardData {
-    client: any;
-    metrics: any[];
-    competitors: any[];
-    insights: any[];
+    client: {
+      id: string;
+      name: string;
+      websiteUrl: string;
+    };
+    metrics: Array<{
+      metricName: string;
+      value: string;
+      sourceType: string;
+    }>;
+    competitors: Array<{
+      id: string;
+      name: string;
+      websiteUrl: string;
+    }>;
+    insights: Array<{
+      metricName: string;
+      context: string;
+      insight: string;
+      recommendation: string;
+    }>;
   }
 
   interface FiltersData {
@@ -54,21 +72,32 @@ export default function Dashboard() {
   const insights = dashboardData?.insights || [];
 
   // Group metrics by name for chart display
-  const groupedMetrics = metrics.reduce((acc: any, metric: any) => {
+  const groupedMetrics = metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
     if (!acc[metric.metricName]) {
       acc[metric.metricName] = {};
     }
     acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
     return acc;
-  }, {});
+  }, {} as Record<string, Record<string, number>>);
 
-  const metricNames = ["Bounce Rate", "Avg Session Duration", "Pages per Session", "Sessions per User", "Traffic Channels", "Device Distribution"];
+  const metricNames = [
+    "Bounce Rate", 
+    "Avg Session Duration", 
+    "Pages per Session", 
+    "Sessions per User", 
+    "Traffic Channels", 
+    "Device Distribution"
+  ] as const;
 
   const scrollToMetric = (metricName: string) => {
-    const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+    const elementId = `metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`;
+    const element = document.getElementById(elementId);
+    
     if (element) {
-      const headerHeight = 64; // Height of sticky header
-      const elementPosition = element.offsetTop - headerHeight - 20; // Extra 20px padding
+      const HEADER_HEIGHT = 64;
+      const PADDING_OFFSET = 20;
+      const elementPosition = element.offsetTop - HEADER_HEIGHT - PADDING_OFFSET;
+      
       window.scrollTo({
         top: elementPosition,
         behavior: 'smooth'
@@ -88,9 +117,12 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  // Simple scroll-based highlighting with throttling
+  // Scroll-based section highlighting with throttling and manual click protection
   useEffect(() => {
     if (isLoading) return;
+    
+    const THROTTLE_DELAY = 400;
+    const TRIGGER_OFFSET = 200;
     
     let isThrottled = false;
     let lastActiveSection = activeSection;
@@ -101,14 +133,15 @@ export default function Dashboard() {
       
       setTimeout(() => {
         const scrollY = window.scrollY;
-        const triggerPoint = scrollY + 200; // Simple trigger point
+        const triggerPoint = scrollY + TRIGGER_OFFSET;
         
-        // Find active section by checking which section's top is closest to trigger point
-        let closestSection = "Bounce Rate";
+        let closestSection = metricNames[0]; // Default to first section
         let closestDistance = Infinity;
         
         metricNames.forEach(metricName => {
-          const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+          const elementId = `metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`;
+          const element = document.getElementById(elementId);
+          
           if (element) {
             const distance = Math.abs(element.offsetTop - triggerPoint);
             if (distance < closestDistance) {
@@ -125,12 +158,12 @@ export default function Dashboard() {
         }
         
         isThrottled = false;
-      }, 400); // Increased throttle to 400ms for stability
+      }, THROTTLE_DELAY);
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLoading, metricNames]);
+  }, [isLoading, metricNames, activeSection, manualClick]);
 
 
 
