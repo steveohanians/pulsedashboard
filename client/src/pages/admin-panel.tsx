@@ -876,7 +876,7 @@ export default function AdminPanel() {
                           <Input 
                             id="client-gaPropertyId"
                             name="gaPropertyId" 
-                            placeholder="412345678901"
+                            placeholder="ex: 412345678901"
                             className="font-mono"
                           />
                           <p className="text-xs text-slate-500 mt-1">
@@ -982,7 +982,7 @@ export default function AdminPanel() {
                                         id="gaPropertyId" 
                                         name="gaPropertyId"
                                         defaultValue={client.gaPropertyId || ""} 
-                                        placeholder="412345678901"
+                                        placeholder="ex: 412345678901"
                                         className="font-mono"
                                       />
                                       <p className="text-xs text-slate-500 mt-1">
