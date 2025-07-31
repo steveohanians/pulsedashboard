@@ -75,7 +75,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       padding: '8px 12px',
                       fontSize: '12px'
                     }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div 
                         style={{ 
                           width: '8px', 
@@ -85,12 +85,10 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                           borderRadius: '50%'
                         }} 
                       />
-                      <span style={{ color: '#374151', fontWeight: 'normal' }}>
+                      <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
                         {channel.name}: {channel.value}%
                       </span>
                     </div>
-                    {/* Tooltip arrow */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-slate-200"></div>
                   </div>
                   </div>
                 );
