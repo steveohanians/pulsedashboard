@@ -85,40 +85,43 @@ export default function Dashboard() {
       clearTimeout(timeoutId);
       
       timeoutId = setTimeout(() => {
-        const headerHeight = 100; // Account for sticky header
-        const scrollPosition = window.scrollY + headerHeight + 50; // Add small offset
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
+        const headerHeight = 80; // Account for sticky header
+        const viewportTop = window.scrollY + headerHeight;
+        const viewportCenter = viewportTop + (window.innerHeight / 3); // Use upper third of viewport
         
-        // If we're near the bottom of the page, highlight the last section
-        if (window.scrollY + windowHeight >= documentHeight - 100) {
-          const lastSection = metricNames[metricNames.length - 1];
-          if (lastSection !== activeSection) {
-            setActiveSection(lastSection);
-          }
-          return;
-        }
-        
-        // Find which section is currently in view
-        let currentSection = metricNames[0]; // Default to first section
+        // Find the section that's most prominently in view
+        let bestMatch = metricNames[0];
+        let bestScore = -1;
         
         for (const metricName of metricNames) {
           const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
           if (element) {
+            const rect = element.getBoundingClientRect();
             const elementTop = element.offsetTop;
             const elementBottom = elementTop + element.offsetHeight;
             
-            if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
-              currentSection = metricName;
-              break;
+            // Calculate how much of the element is visible in the viewport
+            const visibleTop = Math.max(viewportTop, elementTop);
+            const visibleBottom = Math.min(viewportTop + window.innerHeight, elementBottom);
+            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+            
+            // Prefer sections that are well-positioned in the upper part of the viewport
+            let score = visibleHeight;
+            if (viewportCenter >= elementTop && viewportCenter <= elementBottom) {
+              score += 1000; // Bonus for containing the center point
+            }
+            
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = metricName;
             }
           }
         }
         
-        if (currentSection !== activeSection) {
-          setActiveSection(currentSection);
+        if (bestMatch !== activeSection) {
+          setActiveSection(bestMatch);
         }
-      }, 100);
+      }, 150);
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
