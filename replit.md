@@ -149,6 +149,8 @@ The system uses a comprehensive schema with the following core entities:
 ✓ Added competitor count indicator (1/3, 2/3, 3/3) in manage modal
 ✓ Enhanced modal with maximum limit warning when 3 competitors reached
 ✓ Consistent height styling between competitor entries and manage button
+✓ Replaced page reloads with React Query refetch for smooth data updates
+✓ Time period changes, competitor management, and AI insights now update seamlessly
 
 ### Data Sources
 - **Google Analytics 4**: Client website performance metrics
