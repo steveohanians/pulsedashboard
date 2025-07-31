@@ -245,7 +245,7 @@ export default function Dashboard() {
                       href={client.websiteUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-pink-600 underline inline-flex items-center gap-1 group"
+                      className="text-primary underline inline-flex items-center gap-1 group"
                     >
                       {client.websiteUrl.replace(/^https?:\/\//, '')}
                       <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
