@@ -38,34 +38,29 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
   let format: string = '';
   
   if (timePeriod === "Last Month") {
-    // Show last 6 data points for the month (weekly)
-    format = 'MMM dd';
+    // Show June 2025 data points (ending in June)
+    const endDate = new Date(2025, 5, 30); // June 30, 2025 (month is 0-indexed)
     for (let i = 5; i >= 0; i--) {
-      const date = new Date(now);
+      const date = new Date(endDate);
       date.setDate(date.getDate() - (i * 5)); // Every 5 days
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
   } else if (timePeriod === "Last Quarter") {
-    // Show last 3 months
-    format = 'MMM yy';
-    for (let i = 2; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(date.getMonth() - i);
-      dates.push(date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
-    }
+    // Show Q2 2025 (Apr, May, Jun) - ending in June 2025
+    dates = ["Apr 25", "May 25", "Jun 25"];
   } else if (timePeriod === "Last Year") {
-    // Show last 6 months
-    format = 'MMM yy';
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(date.getMonth() - i);
-      dates.push(date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
-    }
+    // Show 12 months ending June 2025 (July 2024 - June 2025)
+    const months = [
+      "Jul 24", "Aug 24", "Sep 24", "Oct 24", "Nov 24", "Dec 24",
+      "Jan 25", "Feb 25", "Mar 25", "Apr 25", "May 25", "Jun 25"
+    ];
+    // Take every other month for display clarity (6 points)
+    dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
   } else {
-    // Custom date range - show 6 points
-    format = 'MMM dd';
+    // Custom date range - show 6 points ending in June 2025
+    const endDate = new Date(2025, 5, 30); // June 30, 2025
     for (let i = 5; i >= 0; i--) {
-      const date = new Date(now);
+      const date = new Date(endDate);
       date.setDate(date.getDate() - (i * 7)); // Weekly
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
