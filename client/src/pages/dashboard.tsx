@@ -478,27 +478,19 @@ export default function Dashboard() {
       const originalElement = document.getElementById('dashboard-content');
       if (!originalElement) throw new Error('Dashboard content not found');
       
-      // Create a hidden clone for background processing
-      const clone = originalElement.cloneNode(true) as HTMLElement;
-      clone.id = 'pdf-clone';
-      clone.style.cssText = `
-        position: absolute;
-        left: -9999px;
-        top: 0;
-        visibility: hidden;
-        pointer-events: none;
-        background-color: #ffffff;
-        width: ${originalElement.scrollWidth}px;
-        opacity: 0;
-        z-index: -1000;
-      `;
+      // Hide PDF-hide elements temporarily on original element
+      const elementsToHide = originalElement.querySelectorAll('.pdf-hide');
+      const originalDisplayValues: string[] = [];
       
-      // Remove all PDF-hide elements from the clone
-      const elementsToRemove = clone.querySelectorAll('.pdf-hide');
-      elementsToRemove.forEach(el => el.remove());
+      elementsToHide.forEach((el, index) => {
+        const htmlEl = el as HTMLElement;
+        originalDisplayValues[index] = htmlEl.style.display;
+        htmlEl.style.display = 'none';
+      });
       
-      // Add PDF header to clone
+      // Add PDF header to original element temporarily
       const pdfHeader = document.createElement('div');
+      pdfHeader.id = 'temp-pdf-header';
       pdfHeader.style.cssText = `
         padding: 20px 0;
         border-bottom: 2px solid #e5e7eb;
@@ -522,29 +514,35 @@ export default function Dashboard() {
         </div>
       `;
       
-      clone.insertBefore(pdfHeader, clone.firstChild);
+      originalElement.insertBefore(pdfHeader, originalElement.firstChild);
       
-      // Append clone to body for rendering (but hidden)
-      document.body.appendChild(clone);
+      // Wait for any layout changes
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Wait for styles and charts to render
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Capture the clone
-      const canvas = await html2canvas(clone, {
+      // Capture the original element with hidden elements
+      const canvas = await html2canvas(originalElement, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: clone.scrollWidth,
-        height: clone.scrollHeight,
+        width: originalElement.scrollWidth,
+        height: originalElement.scrollHeight,
         scrollX: 0,
         scrollY: 0,
         logging: false
       });
       
-      // Remove the clone immediately after capture
-      document.body.removeChild(clone);
+      // Restore original state
+      const headerToRemove = document.getElementById('temp-pdf-header');
+      if (headerToRemove) {
+        originalElement.removeChild(headerToRemove);
+      }
+      
+      // Restore visibility of hidden elements
+      elementsToHide.forEach((el, index) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = originalDisplayValues[index] || '';
+      });
       
       // Create PDF with improved pagination
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -602,11 +600,20 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error('Error generating PDF:', error);
-      // Clean up any remaining clones
-      const remainingClone = document.getElementById('pdf-clone');
-      if (remainingClone) {
-        document.body.removeChild(remainingClone);
+      // Clean up in case of error
+      const headerToRemove = document.getElementById('temp-pdf-header');
+      if (headerToRemove && originalElement?.contains(headerToRemove)) {
+        originalElement.removeChild(headerToRemove);
       }
+      
+      // Restore visibility of any hidden elements
+      const elementsToRestore = document.querySelectorAll('.pdf-hide');
+      elementsToRestore.forEach(el => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.style.display === 'none') {
+          htmlEl.style.display = '';
+        }
+      });
     } finally {
       setIsExportingPDF(false);
     }
