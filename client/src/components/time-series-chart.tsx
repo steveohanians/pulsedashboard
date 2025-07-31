@@ -106,7 +106,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 20, right: 15, left: 10, bottom: 5 }}>
+      <LineChart data={data} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
@@ -124,7 +124,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           axisLine={{ stroke: '#cbd5e1' }}
           domain={['dataMin - 5', 'dataMax + 5']}
           tickFormatter={(value) => Math.round(value).toString()}
-          width={40}
+          width={35}
         />
         <Tooltip 
           contentStyle={{ 

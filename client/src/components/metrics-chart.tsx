@@ -80,7 +80,7 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 20, right: 15, left: 10, bottom: 5 }}>
+      <BarChart data={chartData} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="name" 
@@ -96,7 +96,7 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
           fontSize={10}
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
-          width={40}
+          width={35}
         />
         <Tooltip 
           contentStyle={{ 
