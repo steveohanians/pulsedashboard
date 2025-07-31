@@ -52,10 +52,10 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       <div className="flex flex-wrap justify-center gap-8">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
-            <h4 className={`text-sm font-medium ${
+            <h4 className={`text-sm ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
-                : 'text-gray-700'
+                : 'font-medium text-gray-700'
             }`}>
               {item.label}
             </h4>
@@ -84,6 +84,19 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Centered legend */}
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-6 mt-6 border-t border-gray-200">
+        {Object.entries(DEVICE_COLORS).map(([device, color]) => (
+          <div key={device} className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-sm"
+              style={{ backgroundColor: color }}
+            />
+            <span className="text-xs text-gray-600">{device}</span>
           </div>
         ))}
       </div>
