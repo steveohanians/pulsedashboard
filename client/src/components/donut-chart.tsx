@@ -28,7 +28,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-xl text-sm">
+      <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-xl text-sm flex items-center justify-center">
         <div className="flex items-center gap-2">
           <div 
             className="w-3 h-3 rounded-sm"
@@ -48,11 +48,11 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const labelWidth = Math.min(Math.max(maxLabelLength * 8, 120), 200); // 8px per char, min 120px, max 200px
 
   return (
-    <div className="w-full h-full space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="w-full h-full">
+      <div className="flex flex-wrap justify-center gap-4">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
-            <h4 className={`text-sm font-medium ${
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
+            <h4 className={`text-xs font-medium ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
                 : 'text-gray-700'
@@ -60,16 +60,16 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
               {item.label}
             </h4>
             
-            <div className="w-40 h-40">
+            <div className="w-24 h-24">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    paddingAngle={2}
+                    innerRadius={25}
+                    outerRadius={40}
+                    paddingAngle={1}
                     dataKey="value"
                   >
                     {item.devices.map((device, deviceIndex) => (
@@ -84,32 +84,6 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
-            {/* Device percentages in center */}
-            <div className="text-center space-y-1">
-              {item.devices.map((device, deviceIndex) => (
-                <div key={deviceIndex} className="flex items-center justify-center gap-2 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-sm"
-                    style={{ backgroundColor: device.color }}
-                  />
-                  <span className="text-gray-600">{device.name}: {device.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Centered legend */}
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
-        {Object.entries(DEVICE_COLORS).map(([device, color]) => (
-          <div key={device} className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-sm"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-xs text-gray-600">{device}</span>
           </div>
         ))}
       </div>
