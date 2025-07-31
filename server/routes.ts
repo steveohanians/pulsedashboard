@@ -473,9 +473,10 @@ export function registerRoutes(app: Express): Server {
         const existingMetrics = await storage.getMetricsByCompetitors(clientId, "2025-06");
         const competitorHasData = existingMetrics.some(m => m.competitorId === competitor.id);
         
-        if (!competitorHasData) {
+        // Always regenerate data for competitors (remove the check)
+        {
           // Generate sample data for this competitor
-          const timePeriods = ["2025-06", "2024-Q4", "2024-01"];
+          const timePeriods = ["2024-01", "2024-Q4", "2025-04", "2025-05", "2025-06"];
           const metricNames = [
             "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
             "Traffic Channels", "Device Distribution"
@@ -486,18 +487,27 @@ export function registerRoutes(app: Express): Server {
               let sampleValue: any;
               
               if (metricName === "Traffic Channels") {
-                sampleValue = [
-                  { name: "Organic Search", value: Math.floor(Math.random() * 20) + 35, percentage: 0, color: "#10b981" },
-                  { name: "Direct", value: Math.floor(Math.random() * 15) + 20, percentage: 0, color: "#3b82f6" },
-                  { name: "Social Media", value: Math.floor(Math.random() * 10) + 15, percentage: 0, color: "#8b5cf6" },
-                  { name: "Paid Search", value: Math.floor(Math.random() * 8) + 10, percentage: 0, color: "#f59e0b" },
-                  { name: "Email", value: Math.floor(Math.random() * 5) + 5, percentage: 0, color: "#ec4899" }
+                // Generate individual channel entries like client data
+                const channels = [
+                  { name: "Organic Search", baseValue: 35 + Math.floor(Math.random() * 20) },
+                  { name: "Direct", baseValue: 20 + Math.floor(Math.random() * 15) },
+                  { name: "Social Media", baseValue: 15 + Math.floor(Math.random() * 10) },
+                  { name: "Paid Search", baseValue: 10 + Math.floor(Math.random() * 8) },
+                  { name: "Email", baseValue: 5 + Math.floor(Math.random() * 5) }
                 ];
-                const total = sampleValue.reduce((sum: number, item: any) => sum + item.value, 0);
-                sampleValue = sampleValue.map((item: any) => ({
-                  ...item,
-                  percentage: Math.round((item.value / total) * 100)
-                }));
+                
+                // Create separate metrics for each channel
+                for (const channel of channels) {
+                  await storage.createMetric({
+                    competitorId: competitor.id,
+                    metricName: "Traffic Channels",
+                    value: channel.baseValue.toString(),
+                    timePeriod: period,
+                    sourceType: "Competitor",
+                    channel: channel.name
+                  });
+                }
+                continue; // Skip the regular metric creation for Traffic Channels
               } else if (metricName === "Device Distribution") {
                 const desktop = Math.floor(Math.random() * 20) + 45;
                 const mobile = Math.floor(Math.random() * 15) + 35;
