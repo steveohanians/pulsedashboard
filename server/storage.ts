@@ -203,6 +203,10 @@ export class DatabaseStorage implements IStorage {
     return metric;
   }
 
+  async clearMetricsByName(metricName: string): Promise<void> {
+    await db.delete(metrics).where(eq(metrics.metricName, metricName));
+  }
+
   async getMetricsByCompetitors(clientId: string, timePeriod: string): Promise<Metric[]> {
     // Get all competitors for this client, then get their metrics
     const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));

@@ -16,26 +16,32 @@ export async function generatePagesPerSessionData() {
   };
   
   try {
+    // Clear existing pages per session data
+    await storage.clearMetricsByName("Pages per Session");
+    
     for (const timePeriod of timePeriods) {
-      // Create time-based variance (seasonal effects)
+      // Create time-based variance with stronger seasonal effects
       const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length;
-      const seasonalFactor = Math.sin(periodSeed * 0.12) * 0.2; // ±0.2 pages seasonal variation
+      const seasonalFactor = Math.sin(periodSeed * 0.18) * 0.3; // ±0.3 pages seasonal variation
+      
+      // Add year-over-year improvement trend
+      const yearTrend = timePeriod.includes('2024') ? -0.2 : 0.1;
       
       for (const sourceType of sourceTypes) {
         const range = pagesPerSessionRanges[sourceType as keyof typeof pagesPerSessionRanges];
         
-        // Generate realistic varied pages per session with time-based changes
+        // Generate realistic varied pages per session with enhanced time-based changes
         const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 2;
         const randomFactor = (Math.sin(sourceSeed * 1.456) + 1) / 2; // 0-1 range
         
-        // Add time period specific variation (older periods slightly lower)
-        const timeVariation = timePeriod.includes('2024') ? -0.1 : 0;
+        // Add quarterly variations (Q4 typically higher engagement)
+        const quarterVariation = timePeriod === '2024-Q4' ? 0.2 : 0;
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));
-        let finalValue = baseValue + seasonalFactor + timeVariation;
+        let finalValue = baseValue + seasonalFactor + yearTrend + quarterVariation;
         
-        // Ensure realistic bounds (1.5 - 3.5 pages per session)
-        finalValue = Math.max(1.5, Math.min(3.5, finalValue));
+        // Ensure realistic bounds (1.4 - 3.5 pages per session)
+        finalValue = Math.max(1.4, Math.min(3.5, finalValue));
         
         // Round to 1 decimal place for realistic precision
         finalValue = Math.round(finalValue * 10) / 10;

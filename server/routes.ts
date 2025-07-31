@@ -382,6 +382,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate sessions per user sample data
+  app.post("/api/generate-sessions-per-user-data", requireAuth, async (req, res) => {
+    try {
+      const { generateSessionsPerUserData } = await import("./sessionsPerUserDataGenerator");
+      const result = await generateSessionsPerUserData();
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating sessions per user data:", error);
+      res.status(500).json({ message: "Failed to generate sessions per user data" });
+    }
+  });
+
   // Generate comprehensive sample data
   app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
     try {
