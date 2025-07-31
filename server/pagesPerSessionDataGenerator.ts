@@ -8,11 +8,11 @@ export async function generatePagesPerSessionData() {
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
-  // Base pages per session ranges (realistic engagement metrics)
+  // Base pages per session ranges with more variation (realistic engagement metrics)
   const pagesPerSessionRanges = {
-    "Client": { min: 2.1, max: 2.8 },        // 2.1-2.8 pages (good engagement)
-    "Industry_Avg": { min: 1.8, max: 2.3 },  // 1.8-2.3 pages (industry average)
-    "CD_Avg": { min: 2.0, max: 2.6 }         // 2.0-2.6 pages (CD client average)
+    "Client": { min: 2.2, max: 3.1 },        // 2.2-3.1 pages (good client performance)
+    "Industry_Avg": { min: 1.6, max: 2.2 },  // 1.6-2.2 pages (industry baseline)
+    "CD_Avg": { min: 2.4, max: 2.9 }         // 2.4-2.9 pages (CD portfolio avg)
   };
   
   try {
