@@ -36,10 +36,12 @@ const CustomTooltip = ({ active, payload }: any) => {
       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
       padding: '8px 12px',
       fontSize: '12px',
-      display: 'inline-block',
-      whiteSpace: 'nowrap'
+      textAlign: 'center',
+      transform: 'translateX(-50%)',
+      position: 'relative',
+      left: '50%'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center' }}>
         <div 
           style={{ 
             width: '8px', 
