@@ -33,7 +33,13 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         {data.map((item, index) => (
           <div key={index} className="flex items-center gap-4">
             <div className="w-32 flex-shrink-0">
-              <span className="text-sm font-medium text-gray-700 truncate block">{item.label}</span>
+              <span className={`text-sm truncate block ${
+                item.sourceType === 'Client' 
+                  ? 'font-bold text-pink-600' 
+                  : 'font-medium text-gray-700'
+              }`}>
+                {item.label}
+              </span>
             </div>
             
             <div className="flex-1 h-7 flex rounded-md overflow-hidden bg-gray-100">
