@@ -105,6 +105,22 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
 }
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: TimeSeriesChartProps) {
+  // Check if we have any valid data
+  const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
+  
+  // Show no data state if no valid data
+  if (!hasData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📈</div>
+          <div className="text-sm">No data available</div>
+          <div className="text-xs text-slate-400 mt-1">Trend data will appear here once metrics are collected</div>
+        </div>
+      </div>
+    );
+  }
+  
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
     generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
