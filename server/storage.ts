@@ -153,6 +153,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(competitors).where(eq(competitors.id, id));
   }
 
+  async deleteCompetitor(id: string): Promise<void> {
+    await db.delete(competitors).where(eq(competitors.id, id));
+  }
+
   // Benchmark Companies
   async getBenchmarkCompanies(): Promise<BenchmarkCompany[]> {
     return await db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));

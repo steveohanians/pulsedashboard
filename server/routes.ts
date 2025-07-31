@@ -207,10 +207,15 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteCompetitor(id);
+      console.log('Attempting to delete competitor with ID:', id);
+      
+      const deleted = await storage.deleteCompetitor(id);
+      console.log('Delete result:', deleted);
+      
       res.sendStatus(204);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error('Error deleting competitor:', error);
+      res.status(500).json({ message: "Internal server error", error: error.message });
     }
   });
 
