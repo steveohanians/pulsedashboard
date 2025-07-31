@@ -30,7 +30,7 @@ export function registerRoutes(app: Express): Server {
       const { clientId } = req.params;
       let { period = "2024-01" } = req.query;
       
-      // Convert display period to database periods for averaging
+      // Convert display period to database periods - return time-series data instead of averaging
       const periodMapping: Record<string, string[]> = {
         "Last Month": ["2025-06"], // Single month
         "Last Quarter": ["2025-04", "2025-05", "2025-06"], // Q2 2025
@@ -71,68 +71,122 @@ export function registerRoutes(app: Express): Server {
         storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
       ]);
 
-      // Flatten and calculate averages for metrics
-      const allMetrics = allMetricsArrays.flat();
-      const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
-      
-      // Calculate averages by metric name and source type
-      const avgMetrics: Record<string, Record<string, number[]>> = {};
-      
-      // Process client and benchmark metrics
-      allMetrics.forEach(metric => {
-        if (!avgMetrics[metric.metricName]) {
-          avgMetrics[metric.metricName] = {};
-        }
-        if (!avgMetrics[metric.metricName][metric.sourceType]) {
-          avgMetrics[metric.metricName][metric.sourceType] = [];
-        }
-        avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value));
-      });
-      
-      // Process competitor metrics
-      allCompetitorMetrics.forEach(metric => {
-        if (!avgMetrics[metric.metricName]) {
-          avgMetrics[metric.metricName] = {};
-        }
-        const key = `Competitor_${metric.competitorId}`;
-        if (!avgMetrics[metric.metricName][key]) {
-          avgMetrics[metric.metricName][key] = [];
-        }
-        avgMetrics[metric.metricName][key].push(parseFloat(metric.value));
-      });
-      
-      // Convert to averaged metrics
-      const processedMetrics = [];
-      for (const [metricName, sourceData] of Object.entries(avgMetrics)) {
-        for (const [sourceType, values] of Object.entries(sourceData)) {
-          const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
-          
-          if (sourceType.startsWith('Competitor_')) {
-            const competitorId = sourceType.replace('Competitor_', '');
-            processedMetrics.push({
-              metricName,
-              value: avgValue.toString(),
-              sourceType: 'Competitor',
-              competitorId,
-              timePeriod: period as string
-            });
-          } else {
-            processedMetrics.push({
-              metricName,
-              value: avgValue.toString(),
-              sourceType,
-              timePeriod: period as string
-            });
+      // For single period queries, return current behavior (averaged data)
+      if (periodsToQuery.length === 1) {
+        // Flatten and calculate averages for metrics
+        const allMetrics = allMetricsArrays.flat();
+        const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
+        
+        // Calculate averages by metric name and source type
+        const avgMetrics: Record<string, Record<string, number[]>> = {};
+        
+        // Process client and benchmark metrics
+        allMetrics.forEach(metric => {
+          if (!avgMetrics[metric.metricName]) {
+            avgMetrics[metric.metricName] = {};
+          }
+          if (!avgMetrics[metric.metricName][metric.sourceType]) {
+            avgMetrics[metric.metricName][metric.sourceType] = [];
+          }
+          avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value));
+        });
+        
+        // Process competitor metrics
+        allCompetitorMetrics.forEach(metric => {
+          if (!avgMetrics[metric.metricName]) {
+            avgMetrics[metric.metricName] = {};
+          }
+          const key = `Competitor_${metric.competitorId}`;
+          if (!avgMetrics[metric.metricName][key]) {
+            avgMetrics[metric.metricName][key] = [];
+          }
+          avgMetrics[metric.metricName][key].push(parseFloat(metric.value));
+        });
+        
+        // Convert to averaged metrics
+        const processedMetrics = [];
+        for (const [metricName, sourceData] of Object.entries(avgMetrics)) {
+          for (const [sourceType, values] of Object.entries(sourceData)) {
+            const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+            
+            if (sourceType.startsWith('Competitor_')) {
+              const competitorId = sourceType.replace('Competitor_', '');
+              processedMetrics.push({
+                metricName,
+                value: avgValue.toString(),
+                sourceType: 'Competitor',
+                competitorId,
+                timePeriod: period as string
+              });
+            } else {
+              processedMetrics.push({
+                metricName,
+                value: avgValue.toString(),
+                sourceType,
+                timePeriod: period as string
+              });
+            }
           }
         }
+        
+        res.json({
+          client,
+          metrics: processedMetrics,
+          competitors,
+          insights,
+          isTimeSeries: false
+        });
+      } else {
+        // For multi-period queries, return time-series data
+        const timeSeriesData: Record<string, Array<{
+          timePeriod: string;
+          metrics: Array<{
+            metricName: string;
+            value: string;
+            sourceType: string;
+            competitorId?: string;
+          }>;
+        }>> = {};
+        
+        // Process each time period separately
+        periodsToQuery.forEach((timePeriod, index) => {
+          const periodMetrics = allMetricsArrays[index] || [];
+          const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
+          
+          const metrics = [
+            ...periodMetrics.map(m => ({
+              metricName: m.metricName,
+              value: m.value,
+              sourceType: m.sourceType,
+              timePeriod
+            })),
+            ...periodCompetitorMetrics.map(m => ({
+              metricName: m.metricName,
+              value: m.value,
+              sourceType: 'Competitor',
+              competitorId: m.competitorId,
+              timePeriod
+            }))
+          ];
+          
+          if (!timeSeriesData[timePeriod]) {
+            timeSeriesData[timePeriod] = [];
+          }
+          
+          timeSeriesData[timePeriod] = metrics;
+        });
+        
+        res.json({
+          client,
+          timeSeriesData,
+          competitors,
+          insights,
+          isTimeSeries: true,
+          periods: periodsToQuery
+        });
       }
 
-      res.json({
-        client,
-        metrics: processedMetrics,
-        competitors,
-        insights
-      });
+
     } catch (error) {
       console.error("Dashboard error:", error);
       res.status(500).json({ message: "Internal server error" });

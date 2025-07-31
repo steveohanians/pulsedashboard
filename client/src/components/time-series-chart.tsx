@@ -28,6 +28,13 @@ interface TimeSeriesChartProps {
     label: string;
     value: number;
   }>;
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string;
+    sourceType: string;
+    competitorId?: string;
+  }>>;
+  periods?: string[];
 }
 
 // Generate deterministic seeded random number
@@ -36,8 +43,78 @@ function seededRandom(seed: number): number {
   return x - Math.floor(x);
 }
 
-// Generate stable time series data based on the selected time period
-function generateTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
+// Generate time series data from database or fallback to current behavior
+function generateTimeSeriesData(
+  timePeriod: string, 
+  clientData: number, 
+  industryAvg: number, 
+  cdAvg: number, 
+  competitors: any[], 
+  clientUrl?: string,
+  timeSeriesData?: Record<string, any[]>,
+  periods?: string[]
+): any[] {
+  // If we have actual time-series data, use it
+  if (timeSeriesData && periods && periods.length > 1) {
+    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, timePeriod);
+  }
+  
+  // Otherwise, fallback to single-point data (current behavior for single periods)
+  return generateFallbackTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
+}
+
+// Generate real time-series data from database
+function generateRealTimeSeriesData(
+  timeSeriesData: Record<string, any[]>,
+  periods: string[],
+  competitors: any[],
+  clientUrl?: string,
+  metricName?: string
+): any[] {
+  const data: any[] = [];
+  
+  // Map period codes to display labels
+  const periodLabels: Record<string, string> = {
+    "2024-01": "Jan 24",
+    "2024-Q4": "Q4 24",
+    "2025-04": "Apr 25",
+    "2025-05": "May 25",
+    "2025-06": "Jun 25"
+  };
+  
+  const clientKey = clientUrl || 'Client';
+  
+  periods.forEach(period => {
+    const periodData = timeSeriesData[period] || [];
+    const dataPoint: any = {
+      date: periodLabels[period] || period
+    };
+    
+    // Find data for each source type - filter by metric name too
+    const clientMetric = periodData.find(m => m.sourceType === 'Client' && m.metricName === metricName);
+    const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
+    const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
+    
+    dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
+    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
+    dataPoint['CD Client Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    
+    // Add competitor data
+    competitors.forEach(competitor => {
+      const competitorMetric = periodData.find(m => 
+        m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
+      );
+      dataPoint[competitor.label] = competitorMetric ? Math.round(parseFloat(competitorMetric.value) * 10) / 10 : 0;
+    });
+    
+    data.push(dataPoint);
+  });
+  
+  return data;
+}
+
+// Generate fallback time series data (current behavior)
+function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
   const data: any[] = [];
   
   // Determine the date range and intervals based on time period
@@ -94,7 +171,11 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
   return data;
 }
 
-export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: TimeSeriesChartProps) {
+export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
+  
+  // Debug log to see what data we're getting
+  console.log('TimeSeriesChart received:', { metricName, timePeriod, timeSeriesData, periods });
+  
   // Check if we have any valid data
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
   
@@ -113,8 +194,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
-    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl]
+    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods]
   );
 
   const clientKey = clientUrl || 'Client';

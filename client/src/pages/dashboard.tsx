@@ -40,13 +40,19 @@ export default function Dashboard() {
       name: string;
       websiteUrl: string;
     };
-    metrics: Array<{
+    metrics?: Array<{
       metricName: string;
       value: string;
       sourceType: string;
       channel?: string;
       competitorId?: string;
     }>;
+    timeSeriesData?: Record<string, Array<{
+      metricName: string;
+      value: string;
+      sourceType: string;
+      competitorId?: string;
+    }>>;
     competitors: Array<{
       id: string;
       domain: string;
@@ -58,6 +64,8 @@ export default function Dashboard() {
       insightText: string;
       recommendationText: string;
     }>;
+    isTimeSeries?: boolean;
+    periods?: string[];
   }
 
   interface FiltersData {
@@ -79,6 +87,9 @@ export default function Dashboard() {
 
   const client = dashboardData?.client;
   const metrics = dashboardData?.metrics || [];
+  const timeSeriesData = dashboardData?.timeSeriesData;
+  const isTimeSeries = dashboardData?.isTimeSeries;
+  const periods = dashboardData?.periods;
   const competitors = dashboardData?.competitors || [];
   const insights = dashboardData?.insights || [];
 
@@ -1005,6 +1016,8 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
                             };
                           })}
+                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
+                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Device Distribution" ? (
                         <DonutChart 
