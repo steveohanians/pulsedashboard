@@ -236,12 +236,14 @@ export function registerRoutes(app: Express): Server {
               { name: "Other", value: other, percentage: other, color: "#6b7280" }
             ];
           } else {
-            // Generate realistic values for other metrics
+            // Generate realistic values for other metrics with competitor-specific variance
+            const competitorId = competitor.id;
+            const seed = competitorId.length + period.charCodeAt(0);
             const baseValues = {
-              "Bounce Rate": Math.floor(Math.random() * 20) + 40,
-              "Session Duration": Math.floor(Math.random() * 60) + 120,
-              "Pages per Session": (Math.random() * 1.5 + 1.8).toFixed(1),
-              "Sessions per User": (Math.random() * 0.8 + 1.2).toFixed(1)
+              "Bounce Rate": Math.floor(40 + (Math.sin(seed * 1.1) * 15)) + Math.floor(Math.random() * 10),
+              "Session Duration": Math.floor(150 + (Math.sin(seed * 2.2) * 90)) + Math.floor(Math.random() * 30),
+              "Pages per Session": parseFloat((1.8 + (Math.sin(seed * 3.3) * 1.2) + Math.random() * 0.5).toFixed(1)),
+              "Sessions per User": parseFloat((1.2 + (Math.sin(seed * 4.4) * 0.6) + Math.random() * 0.3).toFixed(1))
             };
             sampleValue = baseValues[metricName as keyof typeof baseValues];
           }
@@ -275,6 +277,18 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error deleting competitor:', error);
       res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+    }
+  });
+
+  // Generate comprehensive sample data
+  app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
+    try {
+      const { generateComprehensiveSampleData } = await import("./sampleDataGenerator");
+      const result = await generateComprehensiveSampleData();
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating comprehensive data:", error);
+      res.status(500).json({ message: "Failed to generate sample data" });
     }
   });
 
