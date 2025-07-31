@@ -118,20 +118,61 @@ export default function Dashboard() {
   const processTrafficChannelData = useCallback(() => {
     const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
     const result = [];
+    
+    // Helper function to aggregate channel data across multiple periods
+    const aggregateChannelData = (sourceMetrics: any[]) => {
+      const channelMap = new Map();
+      
+      sourceMetrics.forEach(metric => {
+        const channelName = metric.channel || 'Other';
+        const value = parseFloat(metric.value);
+        
+        if (channelMap.has(channelName)) {
+          channelMap.set(channelName, channelMap.get(channelName) + value);
+        } else {
+          channelMap.set(channelName, value);
+        }
+      });
+      
+      // Convert to array and calculate averages
+      const channels = Array.from(channelMap.entries()).map(([name, totalValue]) => {
+        const averageValue = totalValue / (periods?.length || 1);
+        return {
+          name,
+          value: Math.round(averageValue),
+          percentage: Math.round(averageValue),
+          color: CHART_COLORS.TRAFFIC_CHANNELS[name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+        };
+      });
+      
+      // Ensure percentages add up to 100%
+      const total = channels.reduce((sum, channel) => sum + channel.value, 0);
+      if (total > 0) {
+        let runningTotal = 0;
+        channels.forEach((channel, index) => {
+          if (index === channels.length - 1) {
+            // Last channel gets the remainder
+            channel.value = 100 - runningTotal;
+            channel.percentage = 100 - runningTotal;
+          } else {
+            const normalizedValue = Math.round((channel.value / total) * 100);
+            channel.value = normalizedValue;
+            channel.percentage = normalizedValue;
+            runningTotal += normalizedValue;
+          }
+        });
+      }
+      
+      return channels;
+    };
 
     // Client data
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    
     if (clientMetrics.length > 0) {
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        channels: clientMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-        }))
+        channels: aggregateChannelData(clientMetrics)
       });
     }
 
@@ -141,12 +182,7 @@ export default function Dashboard() {
       result.push({
         sourceType: 'CD_Avg',
         label: 'CD Client Avg',
-        channels: cdMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-        }))
+        channels: aggregateChannelData(cdMetrics)
       });
     }
 
@@ -156,12 +192,7 @@ export default function Dashboard() {
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
-        channels: industryMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-        }))
+        channels: aggregateChannelData(industryMetrics)
       });
     }
 
@@ -176,12 +207,7 @@ export default function Dashboard() {
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
-          channels: competitorMetrics.map(m => ({
-            name: m.channel || 'Other',
-            value: parseFloat(m.value),
-            percentage: parseFloat(m.value),
-            color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-          }))
+          channels: aggregateChannelData(competitorMetrics)
         });
       } else {
         // Fallback if no data - generate consistent but varied data
@@ -221,7 +247,7 @@ export default function Dashboard() {
     });
 
     return result;
-  }, [metrics, competitors, client?.name]);
+  }, [metrics, competitors, client?.name, periods]);
 
   // Process device distribution data for donut charts
   const processDeviceDistributionData = useCallback(() => {
