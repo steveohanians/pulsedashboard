@@ -52,7 +52,8 @@ function generateTimeSeriesData(
   competitors: any[], 
   clientUrl?: string,
   timeSeriesData?: Record<string, any[]>,
-  periods?: string[]
+  periods?: string[],
+  metricName?: string
 ): any[] {
   // If we have actual time-series data, use it
   if (timeSeriesData && periods && periods.length > 1) {
@@ -190,8 +191,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
-    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods]
+    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]
   );
 
   const clientKey = clientUrl || 'Client';
