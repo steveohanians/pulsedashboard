@@ -925,8 +925,11 @@ export default function Dashboard() {
 {metricName !== "Traffic Channels" && metricName !== "Device Distribution" && (
                     <div className="text-left sm:text-right">
                       <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
-                        {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
-                        {metricName.includes("Rate") ? "%" : metricName.includes("Session Duration") ? " min" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}
+                        {metricData.Client ? (
+                          metricName.includes("Session Duration") 
+                            ? `${Math.round((metricData.Client / 60) * 10) / 10} min`
+                            : `${Math.round(metricData.Client * 10) / 10}${metricName.includes("Rate") ? "%" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}`
+                        ) : "N/A"}
                       </span>
                       <span className="text-sm text-slate-500 font-medium">Your Performance</span>
                     </div>

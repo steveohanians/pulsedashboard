@@ -117,9 +117,8 @@ export function formatMetricValue(value: number, metricName: string): string {
   }
   
   if (metricName === "Session Duration") {
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.round(value % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const minutes = Math.round((value / 60) * 10) / 10;
+    return `${minutes} min`;
   }
   
   return value.toFixed(1);
