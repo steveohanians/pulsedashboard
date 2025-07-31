@@ -72,30 +72,20 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
     }
   }
 
-  // Generate stable variance around the base values with consistent trends
+  // Use actual averaged values for all data points (no artificial variance for tooltips)
   dates.forEach((date, index) => {
-    const variance = 0.1; // 10% variance for more realistic data
-    const trendFactor = (index / dates.length) * 0.1; // Small trend over time
-    
-    // Use seeded random based on date and metric for consistent values
-    const seed1 = date.charCodeAt(0) + clientData;
-    const seed2 = date.charCodeAt(1) + industryAvg;
-    const seed3 = date.charCodeAt(2) + cdAvg;
-    
     const clientKey = clientUrl || 'Client';
     const point: any = {
       date,
-      [clientKey]: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
-      'Industry Avg': Math.round((industryAvg + (seededRandom(seed2) - 0.5) * industryAvg * variance) * 10) / 10,
-      'CD Client Avg': Math.round((cdAvg + (seededRandom(seed3) - 0.5) * cdAvg * variance) * 10) / 10,
+      [clientKey]: Math.round(clientData * 10) / 10,
+      'Industry Avg': Math.round(industryAvg * 10) / 10,
+      'CD Client Avg': Math.round(cdAvg * 10) / 10,
     };
 
-    // Add competitor data with distinct performance patterns
+    // Add competitor data with actual values
     competitors.forEach((competitor, compIndex) => {
-      const baseValue = competitor.value || (clientData + 10 + compIndex * 5);
-      const competitorVariance = variance * (1 + compIndex * 0.2); // Different variance per competitor
-      const competitorSeed = date.charCodeAt(0) + baseValue + compIndex * 100;
-      point[competitor.label] = Math.round((baseValue + (seededRandom(competitorSeed) - 0.5) * baseValue * competitorVariance) * 10) / 10;
+      const baseValue = competitor.value || clientData;
+      point[competitor.label] = Math.round(baseValue * 10) / 10;
     });
 
     data.push(point);

@@ -107,14 +107,6 @@ export function registerRoutes(app: Express): Server {
         for (const [sourceType, values] of Object.entries(sourceData)) {
           const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
           
-          // Debug logging for Session Duration
-          if (metricName === "Session Duration" && sourceType === "Client") {
-            console.log(`Session Duration averaging for ${period}:`);
-            console.log(`Periods queried: ${periodsToQuery.join(', ')}`);
-            console.log(`Values found: ${values.join(', ')} seconds`);
-            console.log(`Average: ${avgValue} seconds = ${Math.round((avgValue / 60) * 10) / 10} minutes`);
-          }
-          
           if (sourceType.startsWith('Competitor_')) {
             const competitorId = sourceType.replace('Competitor_', '');
             processedMetrics.push({
