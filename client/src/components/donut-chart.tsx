@@ -35,7 +35,9 @@ const CustomTooltip = ({ active, payload }: any) => {
       borderRadius: '6px',
       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
       padding: '8px 12px',
-      fontSize: '12px'
+      fontSize: '12px',
+      display: 'inline-block',
+      whiteSpace: 'nowrap'
     }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div 
@@ -43,7 +45,7 @@ const CustomTooltip = ({ active, payload }: any) => {
             width: '8px', 
             height: '8px', 
             backgroundColor: data.color, 
-            marginRight: '8px',
+            marginRight: '6px',
             borderRadius: '50%',
             flexShrink: 0
           }} 
