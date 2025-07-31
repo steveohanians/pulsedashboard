@@ -25,21 +25,34 @@ const DEVICE_COLORS = {
 };
 
 const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0];
-    return (
-      <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-xl text-sm flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-sm"
-            style={{ backgroundColor: data.color }}
-          />
-          <span className="font-medium">{data.name}: {data.value}%</span>
-        </div>
+  if (!active || !payload || !payload.length) return null;
+  
+  const data = payload[0];
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      border: '1px solid #e2e8f0',
+      borderRadius: '6px',
+      boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+      padding: '8px 12px',
+      fontSize: '12px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+        <div 
+          style={{ 
+            width: '8px', 
+            height: '8px', 
+            backgroundColor: data.color, 
+            marginRight: '6px',
+            borderRadius: '50%'
+          }} 
+        />
+        <span style={{ color: '#374151', fontWeight: 'normal' }}>
+          {data.name}: {data.value}%
+        </span>
       </div>
-    );
-  }
-  return null;
+    </div>
+  );
 };
 
 export function DonutChart({ data, title, description }: DonutChartProps) {

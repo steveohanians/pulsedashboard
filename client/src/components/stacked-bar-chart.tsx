@@ -65,17 +65,32 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   >
                   {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   
-                  {/* Custom Tooltip - Always visible for small segments */}
-                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]">
-                    <div className="flex items-center gap-2">
+                  {/* Custom Tooltip matching bounce rate style */}
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
+                    style={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px',
+                      fontSize: '12px'
+                    }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
                       <div 
-                        className="w-3 h-3 rounded-sm border border-white/30"
-                        style={{ backgroundColor: channel.color }}
+                        style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          backgroundColor: channel.color, 
+                          marginRight: '6px',
+                          borderRadius: '50%'
+                        }} 
                       />
-                      <span className="font-medium">{channel.name}: {channel.value}%</span>
+                      <span style={{ color: '#374151', fontWeight: 'normal' }}>
+                        {channel.name}: {channel.value}%
+                      </span>
                     </div>
                     {/* Tooltip arrow */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-gray-900"></div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-slate-200"></div>
                   </div>
                   </div>
                 );
