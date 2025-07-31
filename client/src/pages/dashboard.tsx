@@ -263,19 +263,19 @@ export default function Dashboard() {
       </header>
 
       <div className="flex">
-        {/* Enhanced Left Navigation */}
-        <nav className="w-64 bg-white/95 backdrop-blur-sm border-r border-slate-200/60 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto shadow-lg hidden lg:block">
-          <div className="p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Metrics</h2>
-            <ul className="space-y-1">
+        {/* Left Navigation */}
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+          <div className="p-4">
+            <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
+            <ul className="space-y-2">
               {metricNames.map((metricName) => (
                 <li key={metricName}>
                   <button
                     onClick={() => handleNavigationClick(metricName)}
-                    className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
+                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
                       activeSection === metricName
-                        ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm scale-[1.02] transform'
-                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-primary hover:scale-[1.01] transform'
+                        ? 'bg-slate-100 text-primary'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
                     }`}
                   >
                     {metricName}
@@ -290,7 +290,7 @@ export default function Dashboard() {
         <div className="flex-1 lg:ml-64 p-4 lg:p-8 max-w-7xl mx-auto">
         {/* Enhanced Filters Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 lg:mb-12">
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
                 <Filter className="h-5 w-5 mr-3 text-primary" />
@@ -327,7 +327,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
                 <Clock className="h-5 w-5 mr-3 text-primary" />
@@ -405,7 +405,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
                 <Building2 className="h-5 w-5 mr-3 text-primary" />
@@ -415,7 +415,7 @@ export default function Dashboard() {
             <CardContent>
               <Button
                 onClick={() => setShowCompetitorModal(true)}
-                className="w-full mb-3 hover:scale-[1.02] transition-all duration-200"
+                className="w-full mb-3 hover:shadow-[0_0_15px_rgba(255,20,147,0.25)] transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Manage Competitors
@@ -425,9 +425,6 @@ export default function Dashboard() {
 
 
         </div>
-
-        {/* Section Divider */}
-        <div className="border-t border-slate-200/60 my-12"></div>
 
         {/* AI Insights Generation */}
         <div className="mb-12">
@@ -446,12 +443,15 @@ export default function Dashboard() {
                 console.error('Error generating insights:', error);
               }
             }}
-            className="w-full h-14 text-base font-semibold shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"
+            className="w-full h-14 text-base font-semibold hover:shadow-[0_0_20px_rgba(255,20,147,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"
           >
             <Lightbulb className="h-5 w-5 mr-3" />
             Generate AI Insights for All Metrics
           </Button>
         </div>
+
+        {/* Section Divider */}
+        <div className="border-t border-slate-200/60 my-12"></div>
 
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
@@ -463,7 +463,7 @@ export default function Dashboard() {
               <Card 
                 key={metricName} 
                 id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
-                className="border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
+                className="border-slate-200/60 shadow-lg hover:shadow-[0_0_25px_rgba(255,20,147,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
               >
                 <CardHeader className="pb-4 lg:pb-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -565,7 +565,7 @@ export default function Dashboard() {
 
         {/* Enhanced Admin Panel Link */}
         {user?.role === "Admin" && (
-          <Card className="mt-16 border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
+          <Card className="mt-16 border-slate-200/60 shadow-lg hover:shadow-[0_0_25px_rgba(255,20,147,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-lg font-bold">
                 <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-3">
@@ -576,7 +576,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <Link href="/admin-panel">
-                <Button className="w-full h-14 flex items-center justify-center text-base font-semibold shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90">
+                <Button className="w-full h-14 flex items-center justify-center text-base font-semibold shadow-md hover:shadow-[0_0_20px_rgba(255,20,147,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90">
                   <Settings className="h-5 w-5 mr-3" />
                   <span>Go to Admin Panel</span>
                 </Button>
