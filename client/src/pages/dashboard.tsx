@@ -464,9 +464,41 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {competitors.length > 0 ? (
+                <div className="space-y-3">
+                  {competitors.map((competitor: any) => (
+                    <div
+                      key={competitor.id}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{competitor.label}</p>
+                          <p className="text-xs text-slate-500">{competitor.domain}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        competitor.status === 'Active' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {competitor.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-slate-500 py-4">
+                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No competitors added yet</p>
+                </div>
+              )}
               <Button
                 onClick={() => setShowCompetitorModal(true)}
-                className="w-full mb-3 hover:shadow-[0_0_15px_rgba(255,20,147,0.25)] transition-all duration-200"
+                className="w-full mt-3 hover:shadow-[0_0_15px_rgba(255,20,147,0.25)] transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Manage Competitors
