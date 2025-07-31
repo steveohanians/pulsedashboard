@@ -123,7 +123,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Additional colors for competitors
   const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
 
-  // Calculate fixed Y-axis domain based on all data (regardless of visibility)
+  // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];
   data.forEach(point => {
     allValues.push(point[clientKey], point['Industry Avg'], point['CD Client Avg']);
@@ -135,8 +135,25 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   });
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
-  const padding = (maxValue - minValue) * 0.15; // 15% padding
-  const yAxisDomain = [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
+  
+  // For metrics like Pages per Session with small ranges, use tighter bounds
+  let yMin, yMax;
+  if (metricName === "Pages per Session" || metricName === "Sessions per User") {
+    // Use 20% padding for better visualization of small changes
+    const padding = (maxValue - minValue) * 0.2;
+    yMin = Math.max(0, minValue - padding);
+    yMax = maxValue + padding;
+    // Round to 1 decimal place for cleaner axis
+    yMin = Math.floor(yMin * 10) / 10;
+    yMax = Math.ceil(yMax * 10) / 10;
+  } else {
+    // Default padding for other metrics
+    const padding = (maxValue - minValue) * 0.15;
+    yMin = Math.floor(minValue - padding);
+    yMax = Math.ceil(maxValue + padding);
+  }
+  
+  const yAxisDomain = [yMin, yMax];
 
   // State for toggling lines - ensure all competitors are visible by default
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
