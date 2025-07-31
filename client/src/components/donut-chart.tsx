@@ -69,13 +69,8 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   
   return (
     <div className="w-full h-full">
-      {/* Responsive grid layout for better spacing */}
-      <div className={`grid gap-x-8 gap-y-6 place-items-center mb-4 ${
-        totalItems <= 3 ? 'grid-cols-3' :
-        totalItems <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-        totalItems <= 6 ? 'grid-cols-3 md:grid-cols-6' :
-        'grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
-      }`}>
+      {/* Grid layout with max 3 columns */}
+      <div className="grid grid-cols-3 gap-x-8 gap-y-6 place-items-center mb-4">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
             <h4 className={`text-xs text-center leading-tight ${
