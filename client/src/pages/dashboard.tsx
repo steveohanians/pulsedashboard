@@ -58,7 +58,7 @@ export default function Dashboard() {
   }
 
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/${user?.clientId}`, { period: timePeriod }],
+    queryKey: [`/api/dashboard/${user?.clientId}?period=${encodeURIComponent(timePeriod)}`],
     enabled: !!user?.clientId,
   });
 
@@ -70,6 +70,10 @@ export default function Dashboard() {
   const metrics = dashboardData?.metrics || [];
   const competitors = dashboardData?.competitors || [];
   const insights = dashboardData?.insights || [];
+
+  // Debug logging
+  console.log('Dashboard data:', dashboardData);
+  console.log('Client data:', client);
 
   // Group metrics by name for chart display
   const groupedMetrics = metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
