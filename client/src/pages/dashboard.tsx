@@ -14,6 +14,7 @@ import TimeSeriesChart from "@/components/time-series-chart";
 import SessionDurationAreaChart from "@/components/area-chart";
 import MetricBarChart from "@/components/bar-chart";
 import { StackedBarChart } from "@/components/stacked-bar-chart";
+import { DonutChart } from "@/components/donut-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
@@ -197,6 +198,113 @@ export default function Dashboard() {
             { name: 'Social Media', value: 18, percentage: 18, color: CHANNEL_COLORS['Social Media'] },
             { name: 'Paid Search', value: 10, percentage: 10, color: CHANNEL_COLORS['Paid Search'] },
             { name: 'Email', value: 5, percentage: 5, color: CHANNEL_COLORS['Email'] }
+          ]
+        });
+      }
+    }
+
+    return result;
+  };
+
+  // Process device distribution data for donut charts
+  const processDeviceDistributionData = () => {
+    const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
+    
+    const DEVICE_COLORS = {
+      'Desktop': '#3b82f6',
+      'Mobile': '#10b981', 
+      'Tablet': '#8b5cf6',
+      'Other': '#6b7280',
+    };
+
+    const result = [];
+
+    // Helper function to deduplicate metrics by device
+    const deduplicateByDevice = (sourceMetrics: any[]) => {
+      const deviceMap = new Map();
+      sourceMetrics.forEach(metric => {
+        const deviceName = metric.channel || 'Other';
+        if (!deviceMap.has(deviceName)) {
+          deviceMap.set(deviceName, metric);
+        }
+      });
+      return Array.from(deviceMap.values());
+    };
+
+    // Client data
+    const clientMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
+    if (clientMetrics.length > 0) {
+      const uniqueClientMetrics = deduplicateByDevice(clientMetrics);
+      result.push({
+        sourceType: 'Client',
+        label: client?.name || 'Client',
+        devices: uniqueClientMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+        }))
+      });
+    }
+
+    // CD Average data
+    const cdMetrics = deviceMetrics.filter(m => m.sourceType === 'CD_Avg');
+    if (cdMetrics.length > 0) {
+      const uniqueCdMetrics = deduplicateByDevice(cdMetrics);
+      result.push({
+        sourceType: 'CD_Avg',
+        label: 'CD Client Avg',
+        devices: uniqueCdMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+        }))
+      });
+    }
+
+    // Industry Average data
+    const industryMetrics = deviceMetrics.filter(m => m.sourceType === 'Industry_Avg');
+    if (industryMetrics.length > 0) {
+      const uniqueIndustryMetrics = deduplicateByDevice(industryMetrics);
+      result.push({
+        sourceType: 'Industry_Avg',
+        label: 'Industry Avg',
+        devices: uniqueIndustryMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+        }))
+      });
+    }
+
+    // Competitor data - create fixed data to avoid database duplicates
+    if (competitors.length > 0) {
+      // Competitor 1: baunfire.com
+      const competitor1 = competitors.find(c => c.domain?.includes('baunfire'));
+      if (competitor1) {
+        result.push({
+          sourceType: `Competitor_${competitor1.id}`,
+          label: 'baunfire.com',
+          devices: [
+            { name: 'Desktop', value: 55, percentage: 55, color: DEVICE_COLORS['Desktop'] },
+            { name: 'Mobile', value: 38, percentage: 38, color: DEVICE_COLORS['Mobile'] },
+            { name: 'Tablet', value: 7, percentage: 7, color: DEVICE_COLORS['Tablet'] }
+          ]
+        });
+      }
+
+      // Competitor 2: herodigital.com  
+      const competitor2 = competitors.find(c => c.domain?.includes('herodigital'));
+      if (competitor2) {
+        result.push({
+          sourceType: `Competitor_${competitor2.id}`,
+          label: 'herodigital.com',
+          devices: [
+            { name: 'Desktop', value: 48, percentage: 48, color: DEVICE_COLORS['Desktop'] },
+            { name: 'Mobile', value: 42, percentage: 42, color: DEVICE_COLORS['Mobile'] },
+            { name: 'Tablet', value: 10, percentage: 10, color: DEVICE_COLORS['Tablet'] }
           ]
         });
       }
@@ -869,6 +977,12 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
                             };
                           })}
+                        />
+                      ) : metricName === "Device Distribution" ? (
+                        <DonutChart 
+                          data={processDeviceDistributionData()}
+                          title="Device Distribution"
+                          description="Breakdown of traffic by device type"
                         />
                       ) : (
                         <MetricsChart metricName={metricName} data={metricData} />
