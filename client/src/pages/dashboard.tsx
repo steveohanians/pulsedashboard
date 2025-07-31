@@ -558,20 +558,32 @@ export default function Dashboard() {
       const imgWidth = (canvasWidth / 2) * ratio;
       const imgHeight = (canvasHeight / 2) * ratio;
       
-      // Add content to PDF (split into multiple pages if needed)
+      // Calculate proper scaling and pagination
       const imgData = canvas.toDataURL('image/png');
-      let yPosition = 0;
-      let pageHeight = pdfHeight;
+      const margin = 10; // 10mm margin
+      const usableWidth = pdfWidth - (margin * 2);
+      const usableHeight = pdfHeight - (margin * 2);
       
-      while (yPosition < imgHeight) {
-        if (yPosition > 0) {
+      // Calculate scale to fit width while maintaining aspect ratio
+      const scaleRatio = usableWidth / (canvasWidth / 2);
+      const scaledWidth = usableWidth;
+      const scaledHeight = (canvasHeight / 2) * scaleRatio;
+      
+      // Calculate how many pages we need
+      const pageContentHeight = usableHeight;
+      let currentY = 0;
+      
+      while (currentY < scaledHeight) {
+        if (currentY > 0) {
           pdf.addPage();
         }
         
-        const sourceY = (yPosition / ratio) * 2;
-        const sourceHeight = Math.min((pageHeight / ratio) * 2, canvasHeight - sourceY);
+        // Calculate which part of the canvas to show on this page
+        const sourceY = (currentY / scaleRatio) * 2;
+        const sourceHeight = Math.min((pageContentHeight / scaleRatio) * 2, canvasHeight - sourceY);
+        const targetHeight = Math.min(pageContentHeight, scaledHeight - currentY);
         
-        if (sourceHeight > 0) {
+        if (sourceHeight > 0 && targetHeight > 0) {
           // Create a temporary canvas for this page section
           const pageCanvas = document.createElement('canvas');
           pageCanvas.width = canvasWidth;
@@ -579,13 +591,15 @@ export default function Dashboard() {
           const pageCtx = pageCanvas.getContext('2d');
           
           if (pageCtx) {
+            pageCtx.fillStyle = '#ffffff';
+            pageCtx.fillRect(0, 0, canvasWidth, sourceHeight);
             pageCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
             const pageImgData = pageCanvas.toDataURL('image/png');
-            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, (sourceHeight / 2) * ratio);
+            pdf.addImage(pageImgData, 'PNG', margin, margin, scaledWidth, targetHeight);
           }
         }
         
-        yPosition += pageHeight;
+        currentY += pageContentHeight;
       }
       
       // Clean up: restore hidden elements
@@ -781,27 +795,6 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              {/* PDF Export Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToPDF}
-                disabled={isExportingPDF}
-                className="export-button pdf-hide hover:bg-primary hover:text-white transition-all duration-200 text-xs sm:text-sm"
-              >
-                {isExportingPDF ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    <span className="hidden sm:inline">Exporting...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-1 sm:space-x-2">
-                    <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Export PDF</span>
-                  </div>
-                )}
-              </Button>
-              
               <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
                 <span className="text-xs sm:text-sm font-bold text-primary">
                   {user?.name?.charAt(0) || "U"}
@@ -809,6 +802,27 @@ export default function Dashboard() {
               </div>
               <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
             </div>
+            
+            {/* PDF Export Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToPDF}
+              disabled={isExportingPDF}
+              className="export-button pdf-hide hover:bg-primary hover:text-white transition-all duration-200 text-xs sm:text-sm"
+            >
+              {isExportingPDF ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Exporting...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Export PDF</span>
+                </div>
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
