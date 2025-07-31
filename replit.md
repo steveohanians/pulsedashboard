@@ -132,6 +132,15 @@ The system uses a comprehensive schema with the following core entities:
 ✓ Eliminated all visual flashing and navigation instability issues
 ✓ Navigation now provides perfect stability with accurate real-time highlighting
 
+**Header and UI Improvements (July 31, 2025 - Late Morning)**
+✓ Fixed client name display in dashboard header - now shows actual client name instead of blank
+✓ Added website URL next to client name with pink link and external icon hover effect
+✓ Implemented admin-only display for users without specific client assignment
+✓ Enhanced custom date range functionality with proper American date format
+✓ Added smart period display showing actual dates (June 2025, Q2 2025, June 2024 - June 2025)
+✓ Applied consistent light grey background styling to all AI insight boxes
+✓ Cleaned up header layout by removing duplicate URL display
+
 ### Data Sources
 - **Google Analytics 4**: Client website performance metrics
 - **SEMrush**: SEO and competitive intelligence data  
