@@ -218,28 +218,27 @@ export default function AuthPage() {
             </div>
           </div>
           <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 lg:mb-4">
-            Transform Your Analytics with AI-Powered Insights
+            AI Command Center That Reveals Your Analytics Pulse
           </h3>
           <p className="text-sm sm:text-base lg:text-lg text-slate-600 mb-4 sm:mb-5 lg:mb-6">
-            Compare your performance against industry benchmarks, track competitor metrics, 
-            and get AI-generated recommendations to improve your digital presence.
+            Activate industry benchmarks, track competitors, and unlock laser-focused AI playbooks in real time.
           </p>
           <div className="grid grid-cols-1 gap-3 lg:gap-4 text-xs sm:text-sm text-slate-600">
             <div className="flex items-center">
               <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-              <span>Real-time performance benchmarking</span>
+              <span>Instant Industry Benchmarking</span>
             </div>
             <div className="flex items-center">
               <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-              <span>AI-powered insights and recommendations</span>
+              <span>Live Competitor Intel</span>
             </div>
             <div className="flex items-center">
               <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-              <span>Competitor analysis and tracking</span>
+              <span>Tailored Sector Insights</span>
             </div>
             <div className="flex items-center">
               <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-              <span>Industry-specific analytics</span>
+              <span>Actionable AI Recommendations</span>
             </div>
           </div>
           </div>
