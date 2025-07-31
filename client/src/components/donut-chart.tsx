@@ -49,10 +49,10 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
 
   return (
     <div className="w-full h-full">
-      <div className="flex flex-wrap justify-center gap-4">
+      <div className="flex flex-wrap justify-center gap-8">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
-            <h4 className={`text-xs font-medium ${
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
+            <h4 className={`text-sm font-medium ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
                 : 'text-gray-700'
@@ -60,16 +60,16 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
               {item.label}
             </h4>
             
-            <div className="w-24 h-24">
+            <div className="w-32 h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
-                    paddingAngle={1}
+                    innerRadius={35}
+                    outerRadius={55}
+                    paddingAngle={2}
                     dataKey="value"
                   >
                     {item.devices.map((device, deviceIndex) => (
