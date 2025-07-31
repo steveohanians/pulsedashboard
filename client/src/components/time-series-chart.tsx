@@ -117,8 +117,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   });
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
-  const padding = (maxValue - minValue) * 0.1; // 10% padding
-  const yAxisDomain = [Math.max(0, minValue - padding), maxValue + padding];
+  const padding = (maxValue - minValue) * 0.15; // 15% padding
+  const yAxisDomain = [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
 
   // State for toggling lines
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
@@ -162,6 +162,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           domain={yAxisDomain}
           tickFormatter={(value) => Math.round(value).toString()}
           width={35}
+          type="number"
         />
         <Tooltip 
           contentStyle={{ 
@@ -225,7 +226,6 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
               stroke={competitorColors[index % competitorColors.length]}
               strokeWidth={2}
               dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
-              strokeDasharray="3 3"
             />
           )
         ))}
