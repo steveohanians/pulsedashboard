@@ -104,31 +104,27 @@ export function registerRoutes(app: Express): Server {
           avgMetrics[metric.metricName][key].push(parseFloat(metric.value as string));
         });
         
-        // Convert to averaged metrics
-        const processedMetrics = [];
-        for (const [metricName, sourceData] of Object.entries(avgMetrics)) {
-          for (const [sourceType, values] of Object.entries(sourceData)) {
-            const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
-            
-            if (sourceType.startsWith('Competitor_')) {
-              const competitorId = sourceType.replace('Competitor_', '');
-              processedMetrics.push({
-                metricName,
-                value: avgValue.toString(),
-                sourceType: 'Competitor',
-                competitorId,
-                timePeriod: periodsToQuery[0]
-              });
-            } else {
-              processedMetrics.push({
-                metricName,
-                value: avgValue.toString(),
-                sourceType,
-                timePeriod: periodsToQuery[0]
-              });
-            }
-          }
-        }
+        // For single period queries, return the raw metrics directly to preserve channel information
+        const allMetrics = allMetricsArrays.flat();
+        const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
+        
+        const processedMetrics = [
+          ...allMetrics.map(m => ({
+            metricName: m.metricName,
+            value: m.value,
+            sourceType: m.sourceType,
+            timePeriod: m.timePeriod,
+            channel: m.channel // Preserve channel information for Traffic Channels
+          })),
+          ...allCompetitorMetrics.map(m => ({
+            metricName: m.metricName,
+            value: m.value,
+            sourceType: 'Competitor',
+            competitorId: m.competitorId,
+            timePeriod: m.timePeriod,
+            channel: m.channel // Preserve channel information for Traffic Channels
+          }))
+        ];
         
         res.json({
           client,

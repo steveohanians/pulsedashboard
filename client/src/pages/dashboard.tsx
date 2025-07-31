@@ -121,6 +121,7 @@ export default function Dashboard() {
 
     // Client data
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+    
     if (clientMetrics.length > 0) {
       result.push({
         sourceType: 'Client',
