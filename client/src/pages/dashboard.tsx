@@ -11,6 +11,7 @@ import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Ligh
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
+import SessionDurationAreaChart from "@/components/area-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
@@ -671,14 +672,34 @@ export default function Dashboard() {
                           cdAvg={metricData.CD_Avg || 0}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           competitors={competitors.map((comp: any) => {
-                            // Find bounce rate metric for this competitor
+                            // Find metric for this competitor
                             const competitorMetric = metrics.find((m: any) => 
-                              m.competitorId === comp.id && m.metricName === 'Bounce Rate'
+                              m.competitorId === comp.id && m.metricName === metricName
                             );
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
                               value: competitorMetric ? parseFloat(competitorMetric.value) : 42.3
+                            };
+                          })}
+                        />
+                      ) : metricName === "Avg Session Duration" ? (
+                        <SessionDurationAreaChart 
+                          metricName={metricName}
+                          timePeriod={timePeriod}
+                          clientData={metricData.Client || 0}
+                          industryAvg={metricData.Industry_Avg || 0}
+                          cdAvg={metricData.CD_Avg || 0}
+                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                          competitors={competitors.map((comp: any) => {
+                            // Find metric for this competitor
+                            const competitorMetric = metrics.find((m: any) => 
+                              m.competitorId === comp.id && m.metricName === metricName
+                            );
+                            return {
+                              id: comp.id,
+                              label: comp.domain.replace('https://', '').replace('http://', ''),
+                              value: competitorMetric ? parseFloat(competitorMetric.value) : 3.2
                             };
                           })}
                         />

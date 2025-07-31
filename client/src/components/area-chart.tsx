@@ -1,0 +1,417 @@
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useMemo, useEffect } from 'react';
+
+// Custom diamond dot component
+const DiamondDot = (props: any) => {
+  const { cx, cy, fill, stroke, strokeWidth } = props;
+  const size = 3;
+  
+  return (
+    <polygon
+      points={`${cx},${cy-size} ${cx+size},${cy} ${cx},${cy+size} ${cx-size},${cy}`}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+    />
+  );
+};
+
+interface AreaChartProps {
+  metricName: string;
+  timePeriod: string;
+  clientData: number;
+  industryAvg: number;
+  cdAvg: number;
+  clientUrl?: string;
+  competitors: Array<{
+    id: string;
+    label: string;
+    value: number;
+  }>;
+}
+
+// Generate deterministic seeded random number
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+// Generate stable time series data for area chart
+function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
+  const data: any[] = [];
+  
+  // Determine the date range based on time period
+  let dates: string[] = [];
+  
+  if (timePeriod === "Last Month") {
+    const endDate = new Date(2025, 5, 30); // June 30, 2025 (month is 0-indexed)
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(endDate);
+      date.setDate(date.getDate() - (i * 5)); // Every 5 days
+      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
+  } else if (timePeriod === "Last Quarter") {
+    dates = ["Apr 25", "May 25", "Jun 25"];
+  } else if (timePeriod === "Last Year") {
+    const months = [
+      "Jul 24", "Aug 24", "Sep 24", "Oct 24", "Nov 24", "Dec 24",
+      "Jan 25", "Feb 25", "Mar 25", "Apr 25", "May 25", "Jun 25"
+    ];
+    dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
+  } else {
+    const endDate = new Date(2025, 5, 30); // June 30, 2025
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(endDate);
+      date.setDate(date.getDate() - (i * 7)); // Weekly
+      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
+  }
+
+  // Generate stable variance around the base values
+  dates.forEach((date, index) => {
+    const variance = 0.12; // Slightly higher variance for session duration
+    const trendFactor = (index / dates.length) * 0.08; // Small upward trend for session duration
+    
+    // Use seeded random based on date and metric for consistent values
+    const seed1 = date.charCodeAt(0) + clientData * 100;
+    const seed2 = date.charCodeAt(1) + industryAvg * 100;
+    const seed3 = date.charCodeAt(2) + cdAvg * 100;
+    
+    const clientKey = clientUrl || 'Client';
+    const point: any = {
+      date,
+      [clientKey]: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance + trendFactor * clientData) * 100) / 100,
+      'Industry Avg': Math.round((industryAvg + (seededRandom(seed2) - 0.5) * industryAvg * variance) * 100) / 100,
+      'CD Client Avg': Math.round((cdAvg + (seededRandom(seed3) - 0.5) * cdAvg * variance) * 100) / 100,
+    };
+
+    // Add competitor data
+    competitors.forEach((competitor, compIndex) => {
+      const baseValue = competitor.value || (clientData + 0.5 + compIndex * 0.3);
+      const competitorVariance = variance * (1 + compIndex * 0.1);
+      const competitorSeed = date.charCodeAt(0) + baseValue * 100 + compIndex * 1000;
+      point[competitor.label] = Math.round((baseValue + (seededRandom(competitorSeed) - 0.5) * baseValue * competitorVariance) * 100) / 100;
+    });
+
+    data.push(point);
+  });
+
+  return data;
+}
+
+export default function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: AreaChartProps) {
+  // Memoize data generation to prevent re-calculation on every render
+  const data = useMemo(() => 
+    generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl]
+  );
+
+  const clientKey = clientUrl || 'Client';
+  
+  // Define colors for each area
+  const colors: Record<string, string> = {
+    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
+    'Industry Avg': '#9ca3af', // Light grey
+    'CD Client Avg': '#4b5563', // Dark grey
+  };
+
+  // Additional colors for competitors
+  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+
+  // Calculate fixed Y-axis domain based on all data
+  const allValues: number[] = [];
+  data.forEach(point => {
+    allValues.push(point[clientKey], point['Industry Avg'], point['CD Client Avg']);
+    competitors.forEach(comp => {
+      if (point[comp.label] !== undefined) {
+        allValues.push(point[comp.label]);
+      }
+    });
+  });
+  const minValue = Math.min(...allValues);
+  const maxValue = Math.max(...allValues);
+  const padding = (maxValue - minValue) * 0.15;
+  const yAxisDomain = [Math.max(0, Math.floor(minValue - padding)), Math.ceil(maxValue + padding)];
+
+  // State for toggling areas
+  const [visibleAreas, setVisibleAreas] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {
+      [clientKey]: true,
+      'Industry Avg': true,
+      'CD Client Avg': true,
+    };
+    competitors.forEach(comp => {
+      initial[comp.label] = true;
+    });
+    return initial;
+  });
+
+  // Update visible areas whenever competitors change
+  useEffect(() => {
+    setVisibleAreas(prev => {
+      const updated = { ...prev };
+      competitors.forEach(comp => {
+        if (!(comp.label in updated)) {
+          updated[comp.label] = true;
+        }
+      });
+      return updated;
+    });
+  }, [competitors]);
+
+  // Track if this is the initial render for animation
+  const [isInitialRender, setIsInitialRender] = useState(true);
+
+  const toggleArea = (areaKey: string) => {
+    setIsInitialRender(false);
+    setVisibleAreas(prev => ({
+      ...prev,
+      [areaKey]: !prev[areaKey]
+    }));
+  };
+
+  return (
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height="85%">
+        <AreaChart 
+          data={data} 
+          margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+        >
+        <defs>
+          <linearGradient id="clientGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={colors[clientKey]} stopOpacity={0.8}/>
+            <stop offset="95%" stopColor={colors[clientKey]} stopOpacity={0.1}/>
+          </linearGradient>
+          <linearGradient id="industryGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.6}/>
+            <stop offset="95%" stopColor="#9ca3af" stopOpacity={0.1}/>
+          </linearGradient>
+          <linearGradient id="cdGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#4b5563" stopOpacity={0.6}/>
+            <stop offset="95%" stopColor="#4b5563" stopOpacity={0.1}/>
+          </linearGradient>
+          {competitorColors.map((color, index) => (
+            <linearGradient key={index} id={`competitorGradient${index}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.6}/>
+              <stop offset="95%" stopColor={color} stopOpacity={0.1}/>
+            </linearGradient>
+          ))}
+        </defs>
+        
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <XAxis 
+          dataKey="date" 
+          fontSize={9} 
+          tick={{ fill: '#64748b' }}
+          axisLine={{ stroke: '#cbd5e1' }}
+          angle={-45}
+          textAnchor="end"
+          height={60}
+        />
+        <YAxis 
+          fontSize={9}
+          tick={{ fill: '#64748b' }}
+          axisLine={{ stroke: '#cbd5e1' }}
+          domain={yAxisDomain}
+          tickFormatter={(value) => `${Math.round(value * 10) / 10}min`}
+          width={45}
+          type="number"
+        />
+        <Tooltip 
+          content={({ active, payload, label }) => {
+            if (!active || !payload || !label) return null;
+            
+            return (
+              <div style={{
+                backgroundColor: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                padding: '8px 12px',
+                fontSize: '12px'
+              }}>
+                <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                  {label}
+                </div>
+                {payload.map((entry: any, index: number) => (
+                  <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                    <div 
+                      style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        backgroundColor: entry.color, 
+                        marginRight: '6px',
+                        borderRadius: '50%'
+                      }} 
+                    />
+                    <span style={{ 
+                      fontWeight: entry.name === clientKey ? 'bold' : 'normal',
+                      color: entry.name === clientKey ? colors[clientKey] : '#374151'
+                    }}>
+                      {entry.name}: {Math.round(entry.value * 100) / 100} min
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          }}
+        />
+
+        {/* Client area (primary pink with gradient) */}
+        {visibleAreas[clientKey] && (
+          <Area 
+            type="monotone" 
+            dataKey={clientKey} 
+            stroke={colors[clientKey]}
+            strokeWidth={3}
+            fill="url(#clientGradient)"
+            dot={{ fill: colors[clientKey], r: 3 }}
+            activeDot={{ r: 5, stroke: colors[clientKey], strokeWidth: 2, fill: 'white' }}
+            animationDuration={isInitialRender ? 800 : 0}
+          />
+        )}
+        
+        {/* Industry Average area */}
+        {visibleAreas['Industry Avg'] && (
+          <Area 
+            type="monotone" 
+            dataKey="Industry Avg" 
+            stroke={colors['Industry Avg']}
+            strokeWidth={2}
+            fill="url(#industryGradient)"
+            dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+            strokeDasharray="5 5"
+            animationDuration={isInitialRender ? 800 : 0}
+          />
+        )}
+        
+        {/* CD Client Average area */}
+        {visibleAreas['CD Client Avg'] && (
+          <Area 
+            type="monotone" 
+            dataKey="CD Client Avg" 
+            stroke={colors['CD Client Avg']}
+            strokeWidth={2}
+            fill="url(#cdGradient)"
+            dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
+            strokeDasharray="8 4"
+            animationDuration={isInitialRender ? 800 : 0}
+          />
+        )}
+        
+        {/* Competitor areas */}
+        {competitors.map((competitor, index) => (
+          visibleAreas[competitor.label] && (
+            <Area 
+              key={competitor.id}
+              type="monotone" 
+              dataKey={competitor.label} 
+              stroke={competitorColors[index % competitorColors.length]}
+              strokeWidth={2}
+              fill={`url(#competitorGradient${index % competitorColors.length})`}
+              dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
+              animationDuration={isInitialRender ? 800 : 0}
+            />
+          )
+        ))}
+        </AreaChart>
+      </ResponsiveContainer>
+      
+      {/* Interactive Legend */}
+      <div className="flex flex-wrap justify-center gap-3 pt-3 pb-1">
+        {/* Client checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleAreas[clientKey] || false}
+            onChange={() => toggleArea(clientKey)}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleAreas[clientKey] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+            }`}
+            style={{ backgroundColor: visibleAreas[clientKey] ? colors[clientKey] : 'transparent' }}
+          >
+            {visibleAreas[clientKey] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700 font-medium">{clientKey}</span>
+        </label>
+
+        {/* Industry Average checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleAreas['Industry Avg']}
+            onChange={() => toggleArea('Industry Avg')}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleAreas['Industry Avg'] ? 'bg-gray-400 border-gray-400' : 'border-gray-300'
+            }`}
+          >
+            {visibleAreas['Industry Avg'] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700">Industry Avg</span>
+        </label>
+
+        {/* CD Client Average checkbox */}
+        <label className="flex items-center cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={visibleAreas['CD Client Avg']}
+            onChange={() => toggleArea('CD Client Avg')}
+            className="sr-only"
+          />
+          <div 
+            className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
+              visibleAreas['CD Client Avg'] ? 'bg-gray-600 border-gray-600' : 'border-gray-300'
+            }`}
+          >
+            {visibleAreas['CD Client Avg'] && (
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <span className="text-slate-700">CD Client Avg</span>
+        </label>
+
+        {/* Competitor checkboxes */}
+        {competitors.map((competitor, index) => (
+          <label key={competitor.id} className="flex items-center cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={visibleAreas[competitor.label]}
+              onChange={() => toggleArea(competitor.label)}
+              className="sr-only"
+            />
+            <div 
+              className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors`}
+              style={{ 
+                backgroundColor: visibleAreas[competitor.label] ? competitorColors[index % competitorColors.length] : 'transparent',
+                borderColor: visibleAreas[competitor.label] ? competitorColors[index % competitorColors.length] : '#d1d5db'
+              }}
+            >
+              {visibleAreas[competitor.label] && (
+                <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            <span className="text-slate-700">{competitor.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
