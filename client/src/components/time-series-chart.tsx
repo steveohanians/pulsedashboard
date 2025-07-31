@@ -105,6 +105,21 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Additional colors for competitors
   const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
 
+  // Calculate fixed Y-axis domain based on all data (regardless of visibility)
+  const allValues: number[] = [];
+  data.forEach(point => {
+    allValues.push(point.Client, point['Industry Avg'], point['CD Client Avg']);
+    competitors.forEach(comp => {
+      if (point[comp.label] !== undefined) {
+        allValues.push(point[comp.label]);
+      }
+    });
+  });
+  const minValue = Math.min(...allValues);
+  const maxValue = Math.max(...allValues);
+  const padding = (maxValue - minValue) * 0.1; // 10% padding
+  const yAxisDomain = [Math.max(0, minValue - padding), maxValue + padding];
+
   // State for toggling lines
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
@@ -144,7 +159,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           fontSize={9}
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
-          domain={['dataMin - 5', 'dataMax + 5']}
+          domain={yAxisDomain}
           tickFormatter={(value) => Math.round(value).toString()}
           width={35}
         />
