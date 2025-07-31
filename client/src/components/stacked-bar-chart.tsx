@@ -35,7 +35,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             <div className="w-32 flex-shrink-0">
               <span className={`text-sm truncate block ${
                 item.sourceType === 'Client' 
-                  ? 'font-bold text-pink-600' 
+                  ? 'font-bold text-primary' 
                   : 'font-medium text-gray-700'
               }`}>
                 {item.label}
@@ -53,7 +53,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   }}
                   title={`${channel.name}: ${channel.value}%`}
                 >
-                  {channel.percentage > 8 && `${channel.value}%`}
+                  {channel.percentage > 5 && `${channel.value}%`}
                 </div>
               ))}
             </div>
