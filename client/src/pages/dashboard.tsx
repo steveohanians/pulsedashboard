@@ -87,6 +87,17 @@ export default function Dashboard() {
       timeoutId = setTimeout(() => {
         const headerHeight = 100; // Account for sticky header
         const scrollPosition = window.scrollY + headerHeight + 50; // Add small offset
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        // If we're near the bottom of the page, highlight the last section
+        if (window.scrollY + windowHeight >= documentHeight - 100) {
+          const lastSection = metricNames[metricNames.length - 1];
+          if (lastSection !== activeSection) {
+            setActiveSection(lastSection);
+          }
+          return;
+        }
         
         // Find which section is currently in view
         let currentSection = metricNames[0]; // Default to first section
