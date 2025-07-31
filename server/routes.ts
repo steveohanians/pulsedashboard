@@ -89,7 +89,7 @@ export function registerRoutes(app: Express): Server {
           if (!avgMetrics[metric.metricName][metric.sourceType]) {
             avgMetrics[metric.metricName][metric.sourceType] = [];
           }
-          avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value));
+          avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
         });
         
         // Process competitor metrics
@@ -101,7 +101,7 @@ export function registerRoutes(app: Express): Server {
           if (!avgMetrics[metric.metricName][key]) {
             avgMetrics[metric.metricName][key] = [];
           }
-          avgMetrics[metric.metricName][key].push(parseFloat(metric.value));
+          avgMetrics[metric.metricName][key].push(parseFloat(metric.value as string));
         });
         
         // Convert to averaged metrics
@@ -179,13 +179,39 @@ export function registerRoutes(app: Express): Server {
           timeSeriesData[timePeriod] = metrics;
         });
         
+        // Calculate averaged performance values for "Your Performance" display
+        const groupedMetrics: Record<string, Record<string, number[]>> = {};
+        
+        // Collect all values for each metric and source type across all periods
+        Object.values(timeSeriesData).forEach((periodMetrics: any[]) => {
+          periodMetrics.forEach((metric: any) => {
+            if (!groupedMetrics[metric.metricName]) {
+              groupedMetrics[metric.metricName] = {};
+            }
+            if (!groupedMetrics[metric.metricName][metric.sourceType]) {
+              groupedMetrics[metric.metricName][metric.sourceType] = [];
+            }
+            groupedMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
+          });
+        });
+        
+        // Calculate averages for each metric and source type
+        const averagedMetrics: Record<string, Record<string, number>> = {};
+        Object.entries(groupedMetrics).forEach(([metricName, sources]) => {
+          averagedMetrics[metricName] = {};
+          Object.entries(sources).forEach(([sourceType, values]) => {
+            averagedMetrics[metricName][sourceType] = values.reduce((sum, val) => sum + val, 0) / values.length;
+          });
+        });
+        
         res.json({
           client,
           timeSeriesData,
           competitors,
           insights,
           isTimeSeries: true,
-          periods: periodsToQuery
+          periods: periodsToQuery,
+          metrics: averagedMetrics // Add averaged metrics for "Your Performance" display
         });
       }
 
@@ -869,16 +895,16 @@ export function registerRoutes(app: Express): Server {
         
         switch (metric.sourceType) {
           case "Client":
-            metricGroups[metric.metricName].client = parseFloat(metric.value);
+            metricGroups[metric.metricName].client = parseFloat(metric.value as string);
             break;
           case "CD_Avg":
-            metricGroups[metric.metricName].cdAvg = parseFloat(metric.value);
+            metricGroups[metric.metricName].cdAvg = parseFloat(metric.value as string);
             break;
           case "Industry":
-            metricGroups[metric.metricName].industry = parseFloat(metric.value);
+            metricGroups[metric.metricName].industry = parseFloat(metric.value as string);
             break;
           case "Competitor":
-            metricGroups[metric.metricName].competitors.push(parseFloat(metric.value));
+            metricGroups[metric.metricName].competitors.push(parseFloat(metric.value as string));
             break;
         }
       });

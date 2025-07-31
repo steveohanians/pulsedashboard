@@ -46,7 +46,7 @@ export default function Dashboard() {
       sourceType: string;
       channel?: string;
       competitorId?: string;
-    }>;
+    }> | Record<string, Record<string, number>>;
     timeSeriesData?: Record<string, Array<{
       metricName: string;
       value: string;
@@ -86,7 +86,9 @@ export default function Dashboard() {
   });
 
   const client = dashboardData?.client;
-  const metrics = dashboardData?.metrics || [];
+  const rawMetrics = dashboardData?.metrics || [];
+  const metrics = Array.isArray(rawMetrics) ? rawMetrics : [];
+  const averagedMetrics = !Array.isArray(rawMetrics) ? rawMetrics : {};
   const timeSeriesData = dashboardData?.timeSeriesData;
   const isTimeSeries = dashboardData?.isTimeSeries;
   const periods = dashboardData?.periods;
@@ -95,8 +97,14 @@ export default function Dashboard() {
 
 
 
-  // Group metrics by name for chart display
+  // Group metrics by name for chart display - use averaged metrics for multi-period queries
   const groupedMetrics = useMemo(() => {
+    if (isTimeSeries && Object.keys(averagedMetrics).length > 0) {
+      // Use pre-calculated averages for multi-period queries
+      return averagedMetrics as Record<string, Record<string, number>>;
+    }
+    
+    // Use regular metrics for single-period queries
     return metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
       if (!acc[metric.metricName]) {
         acc[metric.metricName] = {};
@@ -104,7 +112,7 @@ export default function Dashboard() {
       acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
       return acc;
     }, {} as Record<string, Record<string, number>>);
-  }, [metrics]);
+  }, [metrics, averagedMetrics, isTimeSeries]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = useCallback(() => {
