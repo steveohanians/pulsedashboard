@@ -34,7 +34,7 @@ export function registerRoutes(app: Express): Server {
       const periodMapping: Record<string, string[]> = {
         "Last Month": ["2025-06"], // Single month
         "Last Quarter": ["2025-04", "2025-05", "2025-06"], // Q2 2025
-        "Last Year": ["2024-01", "2024-Q4", "2025-04", "2025-05", "2025-06"], // Multiple periods for year
+        "Last Year": ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"], // Multiple periods for year
         "Custom Date Range": ["2025-06"] // Default to current data for custom ranges
       };
       
