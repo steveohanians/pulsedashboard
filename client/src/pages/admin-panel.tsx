@@ -12,11 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3 } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
+import { CSVImportModal } from "@/components/csv-import-modal";
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCSVImportOpen, setIsCSVImportOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1092,19 +1094,27 @@ export default function AdminPanel() {
               <TabsContent value="benchmark">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <h2 className="text-base sm:text-lg font-semibold text-slate-900">Benchmark Companies</h2>
-                  <Dialog open={isDialogOpen && editingItem?.type === 'add-company'} onOpenChange={(open) => {
-                    setIsDialogOpen(open);
-                    if (!open) setEditingItem(null);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => {
-                        setEditingItem({ type: 'add-company' });
-                        setIsDialogOpen(true);
-                      }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Company
-                      </Button>
-                    </DialogTrigger>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setIsCSVImportOpen(true)}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import CSV
+                    </Button>
+                    <Dialog open={isDialogOpen && editingItem?.type === 'add-company'} onOpenChange={(open) => {
+                      setIsDialogOpen(open);
+                      if (!open) setEditingItem(null);
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button onClick={() => {
+                          setEditingItem({ type: 'add-company' });
+                          setIsDialogOpen(true);
+                        }}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Company
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Add Benchmark Company</DialogTitle>
@@ -1186,6 +1196,7 @@ export default function AdminPanel() {
                       </form>
                     </DialogContent>
                   </Dialog>
+                  </div>
                 </div>
                 <div className="rounded-md border">
                   <Table>
@@ -1534,6 +1545,15 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
         </Tabs>
+
+        {/* CSV Import Modal */}
+        <CSVImportModal 
+          open={isCSVImportOpen}
+          onOpenChange={setIsCSVImportOpen}
+          onImportComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+          }}
+        />
       </div>
       <Footer />
     </div>

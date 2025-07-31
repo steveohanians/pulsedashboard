@@ -4,6 +4,8 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema } from "@shared/schema";
+import multer from "multer";
+import { parse } from "csv-parse/sync";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -23,6 +25,21 @@ function requireAdmin(req: any, res: any, next: any) {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Configure multer for CSV file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only CSV files are allowed'));
+      }
+    }
+  });
 
   // Dashboard endpoint
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
@@ -830,6 +847,124 @@ export function registerRoutes(app: Express): Server {
       res.sendStatus(204);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // CSV Upload endpoint - parse CSV and return column headers for mapping
+  app.post("/api/admin/benchmark-companies/csv-preview", requireAdmin, upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const records = parse(csvData, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      });
+
+      if (records.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
+      }
+
+      // Extract headers from the first record
+      const headers = Object.keys(records[0]);
+      
+      // Return preview data (first 5 rows) and available headers
+      const preview = records.slice(0, 5);
+      
+      res.json({
+        headers,
+        preview,
+        totalRows: records.length,
+        availableFields: [
+          'name',
+          'websiteUrl', 
+          'industryVertical',
+          'businessSize',
+          'sourceVerified',
+          'active'
+        ]
+      });
+    } catch (error) {
+      console.error("Error previewing CSV:", error);
+      res.status(400).json({ message: "Failed to parse CSV file" });
+    }
+  });
+
+  // CSV Import endpoint - import data with column mapping
+  app.post("/api/admin/benchmark-companies/csv-import", requireAdmin, upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file || !req.body.columnMapping) {
+        return res.status(400).json({ message: "CSV file and column mapping required" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const columnMapping = JSON.parse(req.body.columnMapping);
+      
+      const records = parse(csvData, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      });
+
+      const importResults = {
+        successful: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const record = records[i];
+          
+          // Map CSV columns to database fields
+          const mappedData: any = {};
+          
+          Object.entries(columnMapping).forEach(([dbField, csvColumn]) => {
+            if (csvColumn && record[csvColumn as string] !== undefined) {
+              let value = record[csvColumn as string];
+              
+              // Handle boolean fields
+              if (dbField === 'sourceVerified' || dbField === 'active') {
+                value = ['true', '1', 'yes', 'y'].includes(value.toLowerCase());
+              }
+              
+              mappedData[dbField] = value;
+            }
+          });
+
+          // Set defaults for required fields if not mapped
+          if (!mappedData.sourceVerified) mappedData.sourceVerified = false;
+          if (!mappedData.active) mappedData.active = true;
+          
+          // Validate required fields
+          if (!mappedData.name || !mappedData.websiteUrl || !mappedData.industryVertical || !mappedData.businessSize) {
+            throw new Error(`Row ${i + 1}: Missing required fields (name, websiteUrl, industryVertical, businessSize)`);
+          }
+
+          // Validate the data against schema
+          const validatedData = insertBenchmarkCompanySchema.parse(mappedData);
+          
+          // Create the benchmark company
+          await storage.createBenchmarkCompany(validatedData);
+          importResults.successful++;
+          
+        } catch (error) {
+          importResults.failed++;
+          importResults.errors.push(`Row ${i + 1}: ${(error as Error).message}`);
+        }
+      }
+
+      res.json({
+        message: `Import completed. ${importResults.successful} successful, ${importResults.failed} failed.`,
+        results: importResults
+      });
+      
+    } catch (error) {
+      console.error("Error importing CSV:", error);
+      res.status(500).json({ message: "Failed to import CSV data" });
     }
   });
 
