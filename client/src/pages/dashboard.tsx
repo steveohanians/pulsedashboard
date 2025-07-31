@@ -551,56 +551,58 @@ export default function Dashboard() {
                         recommendation={insight.recommendation}
                       />
                     ) : (
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
-                            <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-3">
-                              <Info className="h-3 w-3 text-primary" />
-                            </div>
-                            Context
-                          </h4>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {metricName} is a key performance indicator that measures {
-                              metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
-                              metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
-                              metricName === "Pages per Session" ? "the average number of pages viewed during a single session" :
-                              metricName === "Sessions per User" ? "how frequently users return to your website" :
-                              metricName === "Traffic Channels" ? "how visitors find and reach your website" :
-                              "user engagement and device preferences"
-                            }. This metric is crucial for understanding user engagement and optimizing your digital strategy.
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
-                            <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
-                              <Lightbulb className="h-3 w-3 text-yellow-600" />
-                            </div>
-                            Insight
-                          </h4>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            Your current {metricName.toLowerCase()} of {metricData.Client || "N/A"} 
-                            {metricName.includes("Rate") ? "%" : ""} shows {
-                              metricData.Client > (metricData.Industry_Avg || 0) ? "above-average" : "below-average"
-                            } performance compared to industry benchmarks. This indicates {
-                              metricData.Client > (metricData.Industry_Avg || 0) ? 
-                              "strong user engagement and effective content strategy" :
-                              "opportunities for improvement in user experience and content optimization"
-                            }.
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
-                            <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
-                              <TrendingUp className="h-3 w-3 text-green-600" />
-                            </div>
-                            Recommendation
-                          </h4>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {metricData.Client > (metricData.Industry_Avg || 0) ? 
-                              `Continue your current strategy while exploring advanced optimization techniques. Consider A/B testing new approaches to maintain your competitive advantage.` :
-                              `Focus on improving ${metricName.toLowerCase()} through targeted optimization. Consider analyzing user behavior, improving page load times, and enhancing content relevance.`
-                            } Monitor this metric weekly and implement data-driven improvements.
-                          </p>
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
+                              <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-3">
+                                <Info className="h-3 w-3 text-primary" />
+                              </div>
+                              Context
+                            </h4>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {metricName} is a key performance indicator that measures {
+                                metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
+                                metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
+                                metricName === "Pages per Session" ? "the average number of pages viewed during a single session" :
+                                metricName === "Sessions per User" ? "how frequently users return to your website" :
+                                metricName === "Traffic Channels" ? "how visitors find and reach your website" :
+                                "user engagement and device preferences"
+                              }. This metric is crucial for understanding user engagement and optimizing your digital strategy.
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
+                              <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
+                                <Lightbulb className="h-3 w-3 text-yellow-600" />
+                              </div>
+                              Insight
+                            </h4>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              Your current {metricName.toLowerCase()} of {metricData.Client || "N/A"} 
+                              {metricName.includes("Rate") ? "%" : ""} shows {
+                                metricData.Client > (metricData.Industry_Avg || 0) ? "above-average" : "below-average"
+                              } performance compared to industry benchmarks. This indicates {
+                                metricData.Client > (metricData.Industry_Avg || 0) ? 
+                                "strong user engagement and effective content strategy" :
+                                "opportunities for improvement in user experience and content optimization"
+                              }.
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
+                              <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
+                                <TrendingUp className="h-3 w-3 text-green-600" />
+                              </div>
+                              Recommendation
+                            </h4>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {metricData.Client > (metricData.Industry_Avg || 0) ? 
+                                `Continue your current strategy while exploring advanced optimization techniques. Consider A/B testing new approaches to maintain your competitive advantage.` :
+                                `Focus on improving ${metricName.toLowerCase()} through targeted optimization. Consider analyzing user behavior, improving page load times, and enhancing content relevance.`
+                              } Monitor this metric weekly and implement data-driven improvements.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )}
