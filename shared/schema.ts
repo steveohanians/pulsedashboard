@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -67,7 +67,7 @@ export const metrics = pgTable("metrics", {
   clientId: varchar("client_id").references(() => clients.id),
   competitorId: varchar("competitor_id").references(() => competitors.id),
   metricName: text("metric_name").notNull(),
-  value: decimal("value", { precision: 10, scale: 4 }).notNull(),
+  value: jsonb("value").notNull(), // Changed to jsonb to support complex data structures
   sourceType: sourceTypeEnum("source_type").notNull(),
   timePeriod: text("time_period").notNull(), // YYYY-MM format
   channel: varchar("channel", { length: 50 }), // For traffic channels breakdown
