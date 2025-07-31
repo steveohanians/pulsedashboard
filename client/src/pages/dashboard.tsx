@@ -135,7 +135,7 @@ export default function Dashboard() {
         const scrollY = window.scrollY;
         const triggerPoint = scrollY + TRIGGER_OFFSET;
         
-        let closestSection = metricNames[0]; // Default to first section
+        let closestSection = metricNames[0] as string; // Default to first section
         let closestDistance = Infinity;
         
         metricNames.forEach(metricName => {
@@ -169,16 +169,62 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-slate-50">
+        {/* Header Skeleton */}
+        <div className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-10 w-32 bg-slate-200 rounded animate-pulse"></div>
+              <div>
+                <div className="h-5 w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
+                <div className="h-3 w-24 bg-slate-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="h-8 w-20 bg-slate-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        
+        <div className="flex">
+          {/* Navigation Skeleton */}
+          <div className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 p-4">
+            <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-8 bg-slate-200 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Content Skeleton */}
+          <div className="flex-1 ml-64 p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                  <div className="h-5 w-32 bg-slate-200 rounded animate-pulse mb-4"></div>
+                  <div className="h-10 bg-slate-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Metric Cards Skeleton */}
+            <div className="space-y-12">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+                  <div className="h-6 w-48 bg-slate-200 rounded animate-pulse mb-6"></div>
+                  <div className="h-64 bg-slate-200 rounded-lg animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Sticky Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-20">
+      {/* Enhanced Header with Gradient */}
+      <header className="bg-gradient-to-r from-white via-white to-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-6 py-5 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <img 
@@ -187,25 +233,28 @@ export default function Dashboard() {
               className="h-10 w-auto"
             />
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Pulse Dashboard™</h1>
-              <p className="text-xs text-slate-600">{client?.name || "Client Name"}</p>
+              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+              <p className="text-sm font-medium text-slate-600 mt-0.5">{client?.name || "Client Name"}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-xs text-slate-600">{client?.websiteUrl}</span>
-            <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center">
-                <span className="text-xs font-medium text-slate-700">
+          <div className="flex items-center space-x-6">
+            <span className="text-sm font-medium text-slate-600 bg-slate-100/60 px-3 py-1.5 rounded-full">
+              {client?.websiteUrl}
+            </span>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
+                <span className="text-sm font-bold text-primary">
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-xs font-bold text-slate-700">{user?.name}</span>
+              <span className="text-sm font-semibold text-slate-700">{user?.name}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
+              className="hover:bg-slate-100 transition-all duration-200 hover:scale-105"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -214,19 +263,19 @@ export default function Dashboard() {
       </header>
 
       <div className="flex">
-        {/* Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto">
-          <div className="p-4">
-            <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
-            <ul className="space-y-2">
+        {/* Enhanced Left Navigation */}
+        <nav className="w-64 bg-white/95 backdrop-blur-sm border-r border-slate-200/60 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto shadow-lg hidden lg:block">
+          <div className="p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Metrics</h2>
+            <ul className="space-y-1">
               {metricNames.map((metricName) => (
                 <li key={metricName}>
                   <button
                     onClick={() => handleNavigationClick(metricName)}
-                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
                       activeSection === metricName
-                        ? 'bg-slate-100 text-primary'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
+                        ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm scale-[1.02] transform'
+                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-primary hover:scale-[1.01] transform'
                     }`}
                   >
                     {metricName}
@@ -237,18 +286,18 @@ export default function Dashboard() {
           </div>
         </nav>
 
-        {/* Main Content */}
-        <div className="flex-1 ml-64 p-6 max-w-7xl mx-auto">
-        {/* Filters Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-sm">
-                <Filter className="h-4 w-4 mr-2" />
+        {/* Enhanced Main Content */}
+        <div className="flex-1 lg:ml-64 p-4 lg:p-8 max-w-7xl mx-auto">
+        {/* Enhanced Filters Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 lg:mb-12">
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-base font-semibold">
+                <Filter className="h-5 w-5 mr-3 text-primary" />
                 Industry Filters
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
@@ -278,10 +327,10 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-sm">
-                <Clock className="h-4 w-4 mr-2" />
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-base font-semibold">
+                <Clock className="h-5 w-5 mr-3 text-primary" />
                 Time Period
               </CardTitle>
             </CardHeader>
@@ -356,17 +405,17 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-sm">
-                <Building2 className="h-4 w-4 mr-2" />
+          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-base font-semibold">
+                <Building2 className="h-5 w-5 mr-3 text-primary" />
                 Competitors
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={() => setShowCompetitorModal(true)}
-                className="w-full mb-3"
+                className="w-full mb-3 hover:scale-[1.02] transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Manage Competitors
@@ -377,8 +426,11 @@ export default function Dashboard() {
 
         </div>
 
+        {/* Section Divider */}
+        <div className="border-t border-slate-200/60 my-12"></div>
+
         {/* AI Insights Generation */}
-        <div className="mb-6">
+        <div className="mb-12">
           <Button
             onClick={async () => {
               try {
@@ -394,55 +446,72 @@ export default function Dashboard() {
                 console.error('Error generating insights:', error);
               }
             }}
-            className="w-full h-12"
+            className="w-full h-14 text-base font-semibold shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"
           >
-            <Lightbulb className="h-5 w-5 mr-2" />
+            <Lightbulb className="h-5 w-5 mr-3" />
             Generate AI Insights for All Metrics
           </Button>
         </div>
 
-        {/* Metrics Grid - Full Width */}
-        <div className="grid grid-cols-1 gap-8">
+        {/* Enhanced Metrics Grid */}
+        <div className="space-y-8 lg:space-y-16">
           {metricNames.map((metricName) => {
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
             return (
-              <Card key={metricName} id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{metricName}</CardTitle>
-                    <span className="text-xl font-bold text-primary">
-                      {metricData.Client || "N/A"}
-                      {metricName.includes("Rate") ? "%" : ""}
-                    </span>
+              <Card 
+                key={metricName} 
+                id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
+                className="border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
+              >
+                <CardHeader className="pb-4 lg:pb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight">{metricName}</CardTitle>
+                    <div className="text-left sm:text-right">
+                      <span className="text-2xl lg:text-3xl font-extrabold text-primary block">
+                        {metricData.Client || "N/A"}
+                        {metricName.includes("Rate") ? "%" : ""}
+                      </span>
+                      <span className="text-sm text-slate-500 font-medium">Current Value</span>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-64 mb-6">
-                    <MetricsChart metricName={metricName} data={metricData} />
+                <CardContent className="space-y-6 lg:space-y-8">
+                  {/* Enhanced Chart Container */}
+                  <div className="bg-slate-50/50 rounded-xl p-4 lg:p-6 mb-6 lg:mb-8">
+                    <div className="h-64 lg:h-72">
+                      <MetricsChart metricName={metricName} data={metricData} />
+                    </div>
                   </div>
                   
-                  {/* Mandatory AI-Generated Insights */}
-                  <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
-                    <div className="flex items-center mb-3">
-                      <Lightbulb className="h-5 w-5 text-primary mr-2" />
-                      <h3 className="text-sm font-bold text-primary">Pulse™ AI Insight</h3>
+                  {/* Enhanced AI-Generated Insights */}
+                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border-2 border-primary/20 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center mr-4">
+                        <Lightbulb className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
+                        <p className="text-sm text-slate-600">AI-powered analysis and recommendations</p>
+                      </div>
                     </div>
                     {insight ? (
                       <AIInsights
-                        context={insight.contextText}
-                        insight={insight.insightText}
-                        recommendation={insight.recommendationText}
+                        context={insight.context}
+                        insight={insight.insight}
+                        recommendation={insight.recommendation}
                       />
                     ) : (
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-                            <Info className="h-3 w-3 mr-2 text-primary" />
+                      <div className="space-y-6">
+                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
+                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                            <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-3">
+                              <Info className="h-3 w-3 text-primary" />
+                            </div>
                             Context
                           </h4>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             {metricName} is a key performance indicator that measures {
                               metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
                               metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
@@ -453,12 +522,14 @@ export default function Dashboard() {
                             }. This metric is crucial for understanding user engagement and optimizing your digital strategy.
                           </p>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-                            <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
+                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
+                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                            <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
+                              <Lightbulb className="h-3 w-3 text-yellow-600" />
+                            </div>
                             Insight
                           </h4>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             Your current {metricName.toLowerCase()} of {metricData.Client || "N/A"} 
                             {metricName.includes("Rate") ? "%" : ""} shows {
                               metricData.Client > (metricData.Industry_Avg || 0) ? "above-average" : "below-average"
@@ -469,12 +540,14 @@ export default function Dashboard() {
                             }.
                           </p>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-                            <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
+                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
+                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                            <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
+                              <TrendingUp className="h-3 w-3 text-green-600" />
+                            </div>
                             Recommendation
                           </h4>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             {metricData.Client > (metricData.Industry_Avg || 0) ? 
                               `Continue your current strategy while exploring advanced optimization techniques. Consider A/B testing new approaches to maintain your competitive advantage.` :
                               `Focus on improving ${metricName.toLowerCase()} through targeted optimization. Consider analyzing user behavior, improving page load times, and enhancing content relevance.`
@@ -490,20 +563,22 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Admin Panel Link */}
+        {/* Enhanced Admin Panel Link */}
         {user?.role === "Admin" && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center text-sm">
-                <Settings className="h-4 w-4 mr-2" />
+          <Card className="mt-16 border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-lg font-bold">
+                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-3">
+                  <Settings className="h-4 w-4 text-primary" />
+                </div>
                 Admin Panel
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Link href="/admin-panel">
-                <Button className="w-full h-12 flex items-center justify-center">
-                  <Settings className="h-4 w-4 mr-2" />
-                  <span className="text-sm font-medium">Go to Admin Panel</span>
+                <Button className="w-full h-14 flex items-center justify-center text-base font-semibold shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90">
+                  <Settings className="h-5 w-5 mr-3" />
+                  <span>Go to Admin Panel</span>
                 </Button>
               </Link>
             </CardContent>
