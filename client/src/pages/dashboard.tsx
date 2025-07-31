@@ -131,7 +131,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 h-screen sticky top-16 z-10 overflow-y-auto">
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
@@ -150,7 +150,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Main Content */}
-        <div className="flex-1 p-6 max-w-7xl mx-auto">
+        <div className="flex-1 ml-64 p-6 max-w-7xl mx-auto">
         {/* Filters Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card>
