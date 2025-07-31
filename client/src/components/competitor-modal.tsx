@@ -110,34 +110,48 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
         <DialogHeader>
           <DialogTitle>Manage Competitors</DialogTitle>
           <DialogDescription>
-            Add and manage competitor websites for benchmarking analysis
+            Add and manage competitor websites for benchmarking analysis (maximum 3 competitors)
           </DialogDescription>
         </DialogHeader>
         
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* Add Competitor Form */}
-          <div className="mb-6 p-4 bg-slate-50 rounded-lg">
-            <h3 className="font-medium text-slate-900 mb-4">Add New Competitor</h3>
-            <div className="flex gap-4">
-              <Input
-                placeholder="Enter competitor URL (e.g., https://competitor.com)"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleAddCompetitor}
-                disabled={addCompetitorMutation.isPending}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
+          {competitors.length < 3 ? (
+            <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+              <h3 className="font-medium text-slate-900 mb-4">Add New Competitor</h3>
+              <div className="flex gap-4">
+                <Input
+                  placeholder="Enter competitor URL (e.g., https://competitor.com)"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAddCompetitor}
+                  disabled={addCompetitorMutation.isPending}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="font-medium text-yellow-800 mb-2">Maximum Competitors Reached</h3>
+              <p className="text-sm text-yellow-700">
+                You can track up to 3 competitors. Remove a competitor to add a new one.
+              </p>
+            </div>
+          )}
 
           {/* Current Competitors */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-slate-900">Current Competitors</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-slate-900">Current Competitors</h3>
+              <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                {competitors.length}/3
+              </span>
+            </div>
             {competitors.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
