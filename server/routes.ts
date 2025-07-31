@@ -292,6 +292,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate session duration sample data
+  app.post("/api/generate-session-duration-data", requireAuth, async (req, res) => {
+    try {
+      const { generateSessionDurationData } = await import("./sessionDurationDataGenerator");
+      const result = await generateSessionDurationData();
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating session duration data:", error);
+      res.status(500).json({ message: "Failed to generate session duration data" });
+    }
+  });
+
   // Generate comprehensive sample data
   app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
     try {
