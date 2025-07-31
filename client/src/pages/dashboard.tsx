@@ -1028,7 +1028,7 @@ export default function Dashboard() {
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
                   <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6 mb-4 sm:mb-6 lg:mb-8">
-                    <div className="h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72">
+                    <div className="h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 relative overflow-hidden">
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
@@ -1114,7 +1114,7 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Enhanced AI-Generated Insights */}
-                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm">
+                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm mt-6 sm:mt-8 lg:mt-12">
                     <div className="flex items-center mb-4 sm:mb-6">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
                         <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -1131,8 +1131,8 @@ export default function Dashboard() {
                         recommendation={insight.recommendationText}
                       />
                     ) : (
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="space-y-4">
+                      <div className="p-3 sm:p-4 bg-slate-50 rounded-lg border border-slate-200 min-h-[120px] sm:min-h-[140px]">
+                        <div className="space-y-3 sm:space-y-4">
                           <div>
                             <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
                               <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-3">
