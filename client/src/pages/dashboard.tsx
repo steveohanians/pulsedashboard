@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -245,9 +245,10 @@ export default function Dashboard() {
                       href={client.websiteUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-pink-600 hover:text-pink-700 underline"
+                      className="text-pink-600 underline inline-flex items-center gap-1 group"
                     >
                       {client.websiteUrl.replace(/^https?:\/\//, '')}
+                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     </a>
                   </>
                 )}
