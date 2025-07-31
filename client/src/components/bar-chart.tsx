@@ -77,7 +77,9 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             content={({ active, payload, label }) => {
               if (!active || !payload || !label) return null;
               
-              const data = payload[0];
+              const data = payload[0]?.payload;
+              if (!data) return null;
+              
               return (
                 <div style={{
                   backgroundColor: 'white',

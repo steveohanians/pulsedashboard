@@ -71,7 +71,8 @@ export default function MetricRadialChart({ metricName, timePeriod, clientData, 
               content={({ active, payload }) => {
                 if (!active || !payload || !payload[0]) return null;
                 
-                const data = payload[0];
+                const data = payload[0].payload;
+                if (!data) return null;
                 const percentage = ((data.value / total) * 100).toFixed(1);
                 
                 return (

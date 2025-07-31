@@ -90,8 +90,8 @@ export default function MetricGaugeChart({ metricName, timePeriod, clientData, i
         
         {/* Needle overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <svg width="100%" height="100%" className="absolute">
-            <Needle cx="50%" cy="80%" angle={needleAngle} />
+          <svg width="100%" height="100%" className="absolute" viewBox="0 0 200 160">
+            <Needle cx={100} cy={128} angle={needleAngle} />
           </svg>
         </div>
       </div>
