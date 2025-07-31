@@ -33,9 +33,9 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
 
   return (
     <div className="w-full h-full space-y-4">
-      <div className="space-y-3">
+      <div className="space-y-3 relative">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex items-center gap-4">
+          <div key={`${item.sourceType}-${index}`} className="flex items-center gap-4 relative">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
               <span className={`text-sm block ${
                 item.sourceType === 'Client' 
@@ -46,28 +46,30 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
               </span>
             </div>
             
-            <div className="flex-1 h-7 flex rounded-md overflow-hidden bg-gray-100">
+            <div className="flex-1 h-7 flex rounded-md bg-gray-100 relative overflow-visible">
               {item.channels.map((channel, channelIndex) => (
                 <div
                   key={channelIndex}
-                  className="flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group"
+                  className="flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group overflow-visible"
                   style={{
                     width: `${channel.percentage}%`,
                     backgroundColor: channel.color
                   }}
+                  title={`${channel.name}: ${channel.value}%`}
                 >
                   {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  {/* Custom Tooltip - Always visible for small segments */}
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]">
                     <div className="flex items-center gap-2">
                       <div 
-                        className="w-2 h-2 rounded-sm"
+                        className="w-3 h-3 rounded-sm border border-white/30"
                         style={{ backgroundColor: channel.color }}
                       />
-                      <span>{channel.name}: {channel.value}%</span>
+                      <span className="font-medium">{channel.name}: {channel.value}%</span>
                     </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    {/* Tooltip arrow */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-gray-900"></div>
                   </div>
                 </div>
               ))}
