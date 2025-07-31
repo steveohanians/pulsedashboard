@@ -56,20 +56,23 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
     }
   }
 
-  // Generate realistic variance around the base values
+  // Generate realistic variance around the base values with consistent trends
   dates.forEach((date, index) => {
-    const variance = 0.15; // 15% variance
+    const variance = 0.1; // 10% variance for more realistic data
+    const trendFactor = (index / dates.length) * 0.1; // Small trend over time
+    
     const point: any = {
       date,
-      Client: clientData + (Math.random() - 0.5) * clientData * variance,
-      'Industry Avg': industryAvg + (Math.random() - 0.5) * industryAvg * variance,
-      'CD Client Avg': cdAvg + (Math.random() - 0.5) * cdAvg * variance,
+      Client: Math.round((clientData + (Math.random() - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
+      'Industry Avg': Math.round((industryAvg + (Math.random() - 0.5) * industryAvg * variance) * 10) / 10,
+      'CD Client Avg': Math.round((cdAvg + (Math.random() - 0.5) * cdAvg * variance) * 10) / 10,
     };
 
-    // Add competitor data
+    // Add competitor data with distinct performance patterns
     competitors.forEach((competitor, compIndex) => {
-      const baseValue = competitor.value || (clientData + (Math.random() - 0.5) * clientData * 0.3);
-      point[competitor.label] = baseValue + (Math.random() - 0.5) * baseValue * variance;
+      const baseValue = competitor.value || (clientData + 10 + compIndex * 5);
+      const competitorVariance = variance * (1 + compIndex * 0.2); // Different variance per competitor
+      point[competitor.label] = Math.round((baseValue + (Math.random() - 0.5) * baseValue * competitorVariance) * 10) / 10;
     });
 
     data.push(point);
@@ -97,15 +100,16 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          fontSize={12} 
+          fontSize={11} 
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
         />
         <YAxis 
-          fontSize={12}
+          fontSize={11}
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
-          domain={['dataMin - 10', 'dataMax + 10']}
+          domain={['dataMin - 5', 'dataMax + 5']}
+          tickFormatter={(value) => Math.round(value).toString()}
         />
         <Tooltip 
           contentStyle={{ 
@@ -121,8 +125,9 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           labelStyle={{ color: '#374151', fontWeight: 'medium' }}
         />
         <Legend 
-          wrapperStyle={{ paddingTop: '20px' }}
+          wrapperStyle={{ paddingTop: '15px' }}
           iconType="line"
+          textStyle={{ fontSize: '11px', color: '#64748b' }}
         />
         
         {/* Client line (primary pink) */}
