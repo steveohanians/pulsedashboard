@@ -827,6 +827,18 @@ export default function AdminPanel() {
                           />
                         </div>
                         <div>
+                          <Label htmlFor="client-gaPropertyId">GA4 Property ID</Label>
+                          <Input 
+                            id="client-gaPropertyId"
+                            name="gaPropertyId" 
+                            placeholder="123456789"
+                            className="font-mono"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">
+                            Google Analytics 4 property ID for data collection
+                          </p>
+                        </div>
+                        <div>
                           <Label htmlFor="client-industryVertical">Industry Vertical *</Label>
                           <Select name="industryVertical" required>
                             <SelectTrigger>
@@ -860,12 +872,16 @@ export default function AdminPanel() {
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="client-ga4PropertyId">GA4 Property ID</Label>
+                          <Label htmlFor="client-gaPropertyId">GA4 Property ID</Label>
                           <Input 
-                            id="client-ga4PropertyId"
-                            name="ga4PropertyId" 
-                            placeholder="GA4-XXXXXXXX (optional)"
+                            id="client-gaPropertyId"
+                            name="gaPropertyId" 
+                            placeholder="123456789"
+                            className="font-mono"
                           />
+                          <p className="text-xs text-slate-500 mt-1">
+                            Google Analytics 4 property ID for data collection
+                          </p>
                         </div>
                         <div className="flex justify-end space-x-2">
                           <Button 
@@ -895,6 +911,7 @@ export default function AdminPanel() {
                       <TableRow>
                         <SortableHeader label="Name" sortKey="name" />
                         <SortableHeader label="Website" sortKey="websiteUrl" />
+                        <SortableHeader label="GA4 Property" sortKey="gaPropertyId" />
                         <SortableHeader label="Industry" sortKey="industryVertical" />
                         <SortableHeader label="Business Size" sortKey="businessSize" />
                         <TableHead>Status</TableHead>
@@ -906,6 +923,7 @@ export default function AdminPanel() {
                         <TableRow key={client.id}>
                           <TableCell className="font-medium">{client.name}</TableCell>
                           <TableCell>{client.websiteUrl}</TableCell>
+                          <TableCell className="font-mono text-sm">{client.gaPropertyId || "Not set"}</TableCell>
                           <TableCell>{client.industryVertical}</TableCell>
                           <TableCell>{client.businessSize}</TableCell>
                           <TableCell>
@@ -957,6 +975,19 @@ export default function AdminPanel() {
                                         defaultValue={client.websiteUrl} 
                                         required
                                       />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="gaPropertyId">GA4 Property ID</Label>
+                                      <Input 
+                                        id="gaPropertyId" 
+                                        name="gaPropertyId"
+                                        defaultValue={client.gaPropertyId || ""} 
+                                        placeholder="123456789"
+                                        className="font-mono"
+                                      />
+                                      <p className="text-xs text-slate-500 mt-1">
+                                        Google Analytics 4 property ID for data collection
+                                      </p>
                                     </div>
                                     <div>
                                       <Label htmlFor="industry">Industry</Label>
