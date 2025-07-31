@@ -153,22 +153,26 @@ export default function Dashboard() {
       });
     }
 
-    // Competitor data - one entry per competitor
+    // Competitor data - group by competitor ID to avoid duplicates
+    const processedCompetitors = new Set();
     competitors.forEach(competitor => {
-      const competitorMetrics = trafficMetrics.filter(m => 
-        m.sourceType === 'Competitor' && m.competitorId === competitor.id
-      );
-      if (competitorMetrics.length > 0) {
-        result.push({
-          sourceType: `Competitor_${competitor.id}`,
-          label: competitor.domain?.replace(/https?:\/\//, '') || 'Competitor',
-          channels: competitorMetrics.map(m => ({
-            name: m.channel || 'Other',
-            value: parseFloat(m.value),
-            percentage: parseFloat(m.value),
-            color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
-          }))
-        });
+      if (!processedCompetitors.has(competitor.id)) {
+        processedCompetitors.add(competitor.id);
+        const competitorMetrics = trafficMetrics.filter(m => 
+          m.sourceType === 'Competitor' && m.competitorId === competitor.id
+        );
+        if (competitorMetrics.length > 0) {
+          result.push({
+            sourceType: `Competitor_${competitor.id}`,
+            label: competitor.domain?.replace(/https?:\/\//, '') || 'Competitor',
+            channels: competitorMetrics.map(m => ({
+              name: m.channel || 'Other',
+              value: parseFloat(m.value),
+              percentage: parseFloat(m.value),
+              color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+            }))
+          });
+        }
       }
     });
 
