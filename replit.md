@@ -142,6 +142,24 @@ The system uses a comprehensive schema with the following core entities:
 ✓ Disabled animations after first user interaction for smoother experience
 ✓ Enhanced tooltip consistency with proper colored indicators for all chart entries
 
+**Enhanced User Experience Improvements (July 31, 2025 - Late Morning)**
+✓ Fixed client name display in dashboard header - now shows actual client name instead of blank
+✓ Added website URL next to client name with pink link and external icon hover effect
+✓ Implemented admin-only display for users without specific client assignment
+✓ Enhanced custom date range functionality with proper American date format
+✓ Added smart period display showing actual dates (June 2025, Q2 2025, June 2024 - June 2025)
+✓ Applied consistent light grey background styling to all AI insight boxes
+✓ Cleaned up header layout by removing duplicate URL display
+
+**Final Chart and Data Improvements (July 31, 2025 - Early Night)**
+✓ Changed Sessions per User to line chart matching Pages per Session visualization
+✓ Added "sessions" unit display for Sessions per User performance values and tooltips
+✓ Added comprehensive sample data for Sessions per User across all time periods
+✓ Added competitor data for both Pages per Session and Sessions per User metrics
+✓ Added filter information display below metric headers with clock and filter icons
+✓ Made filter text smaller (text-xs) and icons smaller (h-3 w-3) for better fit
+✓ Both line chart metrics now show proper trend data with realistic engagement values
+
 **Header and UI Improvements (July 31, 2025 - Late Morning)**
 ✓ Fixed client name display in dashboard header - now shows actual client name instead of blank
 ✓ Added website URL next to client name with pink link and external icon hover effect

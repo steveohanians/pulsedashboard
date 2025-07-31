@@ -676,7 +676,7 @@ export default function Dashboard() {
                     <div className="text-left sm:text-right">
                       <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
                         {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
-                        {metricName.includes("Rate") ? "%" : metricName.includes("Session Duration") ? " min" : metricName.includes("Pages per Session") ? " pages" : ""}
+                        {metricName.includes("Rate") ? "%" : metricName.includes("Session Duration") ? " min" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}
                       </span>
                       <span className="text-sm text-slate-500 font-medium">Your Performance</span>
                     </div>
@@ -726,7 +726,7 @@ export default function Dashboard() {
                             };
                           })}
                         />
-                      ) : metricName === "Pages per Session" ? (
+                      ) : metricName === "Pages per Session" || metricName === "Sessions per User" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
                           timePeriod={timePeriod}
@@ -742,7 +742,7 @@ export default function Dashboard() {
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseFloat(competitorMetric.value) : 2.8
+                              value: competitorMetric ? parseFloat(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
                             };
                           })}
                         />
