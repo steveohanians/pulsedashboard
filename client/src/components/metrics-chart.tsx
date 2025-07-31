@@ -39,15 +39,24 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
             data={pieData}
             cx="50%"
             cy="50%"
-            outerRadius={80}
+            outerRadius="70%"
             dataKey="value"
             label={({ name, value }) => `${name}: ${value}%`}
+            labelStyle={{ fontSize: '10px' }}
           >
             {pieData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'white', 
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              fontSize: '12px'
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -71,17 +80,42 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" fontSize={12} />
-        <YAxis fontSize={12} />
+      <BarChart data={chartData} margin={{ top: 20, right: 15, left: 10, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <XAxis 
+          dataKey="name" 
+          fontSize={10} 
+          tick={{ fill: '#64748b' }}
+          axisLine={{ stroke: '#cbd5e1' }}
+          angle={-45}
+          textAnchor="end"
+          height={60}
+          interval={0}
+        />
+        <YAxis 
+          fontSize={10}
+          tick={{ fill: '#64748b' }}
+          axisLine={{ stroke: '#cbd5e1' }}
+          width={40}
+        />
         <Tooltip 
+          contentStyle={{ 
+            backgroundColor: 'white', 
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            fontSize: '12px'
+          }}
           formatter={(value: number) => [
-            `${value}${metricName.includes('Rate') ? '%' : ''}`,
+            `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : ''}`,
             'Value'
           ]}
         />
-        <Bar dataKey="value" />
+        <Bar 
+          dataKey="value" 
+          fill="#FF1493" 
+          radius={[4, 4, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

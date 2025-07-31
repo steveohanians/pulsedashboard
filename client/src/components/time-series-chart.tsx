@@ -111,20 +111,25 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      <LineChart data={data} margin={{ top: 20, right: 15, left: 10, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          fontSize={10} 
+          fontSize={9} 
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
+          interval="preserveStartEnd"
+          angle={-45}
+          textAnchor="end"
+          height={60}
         />
         <YAxis 
-          fontSize={10}
+          fontSize={9}
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
           domain={['dataMin - 5', 'dataMax + 5']}
           tickFormatter={(value) => Math.round(value).toString()}
+          width={40}
         />
         <Tooltip 
           contentStyle={{ 
@@ -141,8 +146,12 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           labelStyle={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}
         />
         <Legend 
-          wrapperStyle={{ paddingTop: '12px', fontSize: '10px', color: '#64748b' }}
+          wrapperStyle={{ paddingTop: '12px', fontSize: '9px', color: '#64748b' }}
           iconType="rect"
+          layout="horizontal"
+          verticalAlign="bottom"
+          align="center"
+          iconSize={8}
         />
         
         {/* Client line (primary pink) */}

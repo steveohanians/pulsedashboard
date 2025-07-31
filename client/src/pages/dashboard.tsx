@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [endDate, setEndDate] = useState("");
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
   const [manualClick, setManualClick] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   interface DashboardData {
     client: {
@@ -229,45 +230,55 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Enhanced Header with Gradient */}
-      <header className="bg-gradient-to-r from-white via-white to-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-6 py-5 sticky top-0 z-20 shadow-sm">
+      {/* Enhanced Header with Gradient - Responsive */}
+      <header className="bg-gradient-to-r from-white via-white to-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-4 sm:px-6 py-3 sm:py-5 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
             <img 
               src={clearLogoPath} 
               alt="Clear Digital Logo" 
-              className="h-10 w-auto"
+              className="h-6 sm:h-8 md:h-10 w-auto flex-shrink-0"
             />
-            <div>
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-              <div className="text-sm font-medium text-slate-600 mt-0.5">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+              <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
                 {client?.websiteUrl && (
                   <>
-                    {" | "}
-                    <a 
-                      href={client.websiteUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline inline-flex items-center gap-1 group"
-                    >
-                      {client.websiteUrl.replace(/^https?:\/\//, '')}
-                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    </a>
+                    <span className="hidden sm:inline"> | </span>
+                    <span className="block sm:inline">
+                      <a 
+                        href={client.websiteUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary underline inline-flex items-center gap-1 group"
+                      >
+                        <span className="truncate max-w-32 sm:max-w-none">{client.websiteUrl.replace(/^https?:\/\//, '')}</span>
+                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
+                      </a>
+                    </span>
                   </>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
-                <span className="text-sm font-bold text-primary">
+          <div className="flex items-center space-x-2 sm:space-x-6">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
+                <span className="text-xs sm:text-sm font-bold text-primary">
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-sm font-semibold text-slate-700">{user?.name}</span>
+              <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block">{user?.name}</span>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden hover:bg-slate-100 transition-all duration-200"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -281,8 +292,56 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+          <nav className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900">Analytics Menu</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="hover:bg-slate-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Metrics</h3>
+              <ul className="space-y-2">
+                {metricNames.map((metricName) => (
+                  <li key={metricName}>
+                    <button
+                      onClick={() => {
+                        handleNavigationClick(metricName);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 ${
+                        activeSection === metricName
+                          ? 'bg-primary/10 text-primary font-semibold border-l-4 border-primary shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="flex items-center justify-between">
+                        {metricName}
+                        <TrendingUp className={`w-4 h-4 transition-all duration-200 ${
+                          activeSection === metricName ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-50'
+                        }`} />
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </nav>
+        </div>
+      )}
+
       <div className="flex">
-        {/* Left Navigation */}
+        {/* Desktop Left Navigation */}
         <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
@@ -305,10 +364,10 @@ export default function Dashboard() {
           </div>
         </nav>
 
-        {/* Enhanced Main Content */}
-        <div className="flex-1 lg:ml-64 p-4 lg:p-8 max-w-7xl mx-auto">
-        {/* Enhanced Filters Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 lg:mb-12">
+        {/* Enhanced Main Content - Responsive */}
+        <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Enhanced Filters Section - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
           <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
@@ -576,8 +635,8 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
-                  <div className="bg-slate-50/50 rounded-xl p-4 lg:p-6 mb-6 lg:mb-8">
-                    <div className="h-64 lg:h-72">
+                  <div className="bg-slate-50/50 rounded-xl p-3 sm:p-4 lg:p-6 mb-6 lg:mb-8">
+                    <div className="h-48 sm:h-64 lg:h-72">
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
@@ -604,14 +663,14 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Enhanced AI-Generated Insights */}
-                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-6 shadow-sm">
-                    <div className="flex items-center mb-6">
-                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center mr-4">
-                        <Lightbulb className="h-5 w-5 text-primary" />
+                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm">
+                    <div className="flex items-center mb-4 sm:mb-6">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
+                        <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
-                        <p className="text-sm text-slate-600">AI-powered analysis and recommendations</p>
+                      <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
+                        <p className="text-xs sm:text-sm text-slate-600">AI-powered analysis and recommendations</p>
                       </div>
                     </div>
                     {insight ? (
