@@ -24,7 +24,7 @@ const DEVICE_COLORS = {
   'Other': '#6b7280', // gray-500
 };
 
-const CustomTooltip = ({ active, payload, coordinate }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
   
   const data = payload[0];
@@ -35,23 +35,16 @@ const CustomTooltip = ({ active, payload, coordinate }: any) => {
       borderRadius: '6px',
       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
       padding: '8px 12px',
-      fontSize: '12px',
-      position: 'fixed',
-      transform: 'translate(-50%, -100%)',
-      left: coordinate?.x || 0,
-      top: (coordinate?.y || 0) - 10,
-      zIndex: 1000,
-      pointerEvents: 'none'
+      fontSize: '12px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <div 
           style={{ 
             width: '8px', 
             height: '8px', 
             backgroundColor: data.color, 
-            marginRight: '6px',
-            borderRadius: '50%',
-            flexShrink: 0
+            marginRight: '8px',
+            borderRadius: '50%'
           }} 
         />
         <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
