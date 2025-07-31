@@ -220,6 +220,8 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               dataKey={clientKey} 
               fill={colors[clientKey]}
               radius={[2, 2, 0, 0]}
+              stroke="transparent"
+              strokeWidth={1}
             />
           )}
           
@@ -232,7 +234,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               strokeWidth={2}
               strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="5,5" />}
+              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="5,5" hideBottomBorder={true} />}
             />
           )}
           
@@ -245,7 +247,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               strokeWidth={2}
               strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke="#4b5563" strokeDasharray="8,4" />}
+              shape={(props: any) => <DashedBar {...props} stroke="#4b5563" strokeDasharray="8,4" hideBottomBorder={true} />}
             />
           )}
           
@@ -259,7 +261,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                 stroke={competitorColors[index % competitorColors.length]}
                 strokeWidth={2}
                 radius={[2, 2, 0, 0]}
-                shape={(props: any) => <DashedBar {...props} stroke={competitorColors[index % competitorColors.length]} strokeDasharray="none" />}
+                shape={(props: any) => <DashedBar {...props} stroke={competitorColors[index % competitorColors.length]} strokeDasharray="none" hideBottomBorder={true} />}
               />
             )
           ))}
