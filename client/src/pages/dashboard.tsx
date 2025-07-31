@@ -369,13 +369,33 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               
-              {/* Display custom date range below dropdown */}
-              {timePeriod === "Custom Date Range" && customDateRange && (
-                <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-xs font-medium text-slate-600">Selected Range:</p>
-                  <p className="text-sm font-semibold text-slate-800">{customDateRange}</p>
-                </div>
-              )}
+              {/* Display time period details below dropdown */}
+              {(() => {
+                let displayText = "";
+                if (timePeriod === "Custom Date Range" && customDateRange) {
+                  displayText = customDateRange;
+                } else if (timePeriod === "Last Month") {
+                  const lastMonth = new Date();
+                  lastMonth.setMonth(lastMonth.getMonth() - 1);
+                  displayText = lastMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                } else if (timePeriod === "Last Quarter") {
+                  const now = new Date();
+                  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+                  const lastQuarter = currentQuarter === 1 ? 4 : currentQuarter - 1;
+                  const lastQuarterYear = currentQuarter === 1 ? now.getFullYear() - 1 : now.getFullYear();
+                  displayText = `Q${lastQuarter} ${lastQuarterYear}`;
+                } else if (timePeriod === "Last Year") {
+                  const lastYear = new Date().getFullYear() - 1;
+                  displayText = `${lastYear}`;
+                }
+                
+                return displayText ? (
+                  <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs font-medium text-slate-600">Selected Period:</p>
+                    <p className="text-sm font-semibold text-slate-800">{displayText}</p>
+                  </div>
+                ) : null;
+              })()}
               
               {/* Custom Date Range Dialog */}
               <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
@@ -414,7 +434,9 @@ export default function Dashboard() {
                       <Button 
                         onClick={() => {
                           if (startDate && endDate) {
-                            const formattedRange = `${startDate} to ${endDate}`;
+                            const start = new Date(startDate);
+                            const end = new Date(endDate);
+                            const formattedRange = `${start.toLocaleDateString('en-US')} to ${end.toLocaleDateString('en-US')}`;
                             setCustomDateRange(formattedRange);
                             setTimePeriod("Custom Date Range");
                             setShowDatePicker(false);
