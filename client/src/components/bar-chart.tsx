@@ -14,12 +14,74 @@ interface BarChartProps {
     label: string;
     value: number;
   }>;
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string;
+    sourceType: string;
+    competitorId?: string;
+  }>>;
+  periods?: string[];
 }
 
 // Generate deterministic seeded random number
 function seededRandom(seed: number): number {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
+}
+
+// Process time-series data for bar chart display
+function processTimeSeriesForBar(
+  timeSeriesData: Record<string, Array<{
+    metricName: string;
+    value: string;
+    sourceType: string;
+    competitorId?: string;
+  }>>,
+  periods: string[],
+  competitors: any[],
+  clientUrl?: string,
+  metricName?: string
+): any[] {
+  const data: any[] = [];
+  
+  // Map period codes to display labels
+  const periodLabels: Record<string, string> = {
+    "2024-01": "Jan 24",
+    "2024-Q4": "Q4 24",
+    "2025-04": "Apr 25",
+    "2025-05": "May 25",
+    "2025-06": "Jun 25"
+  };
+  
+  const clientKey = clientUrl || 'Client';
+  
+  periods.forEach(period => {
+    const periodData = timeSeriesData[period] || [];
+    const dataPoint: any = {
+      period: periodLabels[period] || period
+    };
+    
+    // Find data for each source type - filter by metric name too
+    const clientMetric = periodData.find(m => m.sourceType === 'Client' && m.metricName === metricName);
+    const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
+    const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
+    
+    dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
+    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
+    dataPoint['CD Client Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    
+    // Add competitor data
+    competitors.forEach(competitor => {
+      const competitorMetric = periodData.find(m => 
+        m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
+      );
+      dataPoint[competitor.label] = competitorMetric ? Math.round(parseFloat(competitorMetric.value) * 10) / 10 : 0;
+    });
+    
+    data.push(dataPoint);
+  });
+  
+  return data;
 }
 
 // Generate stable time series data for bar chart
@@ -80,7 +142,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   return data;
 }
 
-export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: BarChartProps) {
+export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
   
   // Check if we have any valid data
@@ -99,11 +161,13 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     );
   }
   
-  // Memoize data generation to prevent re-calculation on every render
-  const data = useMemo(() => 
-    generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl]
-  );
+  // Use real time-series data if available, otherwise generate fallback data
+  const data = useMemo(() => {
+    if (timeSeriesData && periods && periods.length > 1) {
+      return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+    }
+    return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
+  }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 
   // Define colors for each bar series
   const colors: Record<string, string> = {

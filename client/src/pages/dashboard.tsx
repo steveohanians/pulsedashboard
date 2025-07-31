@@ -992,6 +992,8 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : 3.2
                             };
                           })}
+                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
+                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Traffic Channels" ? (
                         <StackedBarChart 
