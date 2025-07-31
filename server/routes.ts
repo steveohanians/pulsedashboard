@@ -72,39 +72,8 @@ export function registerRoutes(app: Express): Server {
         storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
       ]);
 
-      // For single period queries, return current behavior (averaged data)
+      // For single period queries, return raw metrics to preserve channel information
       if (periodsToQuery.length === 1) {
-        // Flatten and calculate averages for metrics
-        const allMetrics = allMetricsArrays.flat();
-        const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
-        
-        // Calculate averages by metric name and source type
-        const avgMetrics: Record<string, Record<string, number[]>> = {};
-        
-        // Process client and benchmark metrics
-        allMetrics.forEach(metric => {
-          if (!avgMetrics[metric.metricName]) {
-            avgMetrics[metric.metricName] = {};
-          }
-          if (!avgMetrics[metric.metricName][metric.sourceType]) {
-            avgMetrics[metric.metricName][metric.sourceType] = [];
-          }
-          avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
-        });
-        
-        // Process competitor metrics
-        allCompetitorMetrics.forEach(metric => {
-          if (!avgMetrics[metric.metricName]) {
-            avgMetrics[metric.metricName] = {};
-          }
-          const key = `Competitor_${metric.competitorId}`;
-          if (!avgMetrics[metric.metricName][key]) {
-            avgMetrics[metric.metricName][key] = [];
-          }
-          avgMetrics[metric.metricName][key].push(parseFloat(metric.value as string));
-        });
-        
-        // For single period queries, return the raw metrics directly to preserve channel information
         const allMetrics = allMetricsArrays.flat();
         const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
         
