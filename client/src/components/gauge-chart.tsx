@@ -100,7 +100,12 @@ export default function MetricGaugeChart({ metricName, timePeriod, clientData, i
       <div className="w-full px-4">
         <div className="text-center mb-4">
           <div className="text-2xl font-bold text-primary">
-            {Math.round(clientData * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? ' min' : ''}
+            {metricName.includes('Rate') 
+              ? `${Math.round(clientData * 10) / 10}%`
+              : metricName.includes('Duration')
+                ? `${Math.round((clientData / 60) * 10) / 10} min`
+                : `${Math.round(clientData * 10) / 10}`
+            }
           </div>
           <div className="text-sm text-slate-600">{clientKey}</div>
         </div>
@@ -110,13 +115,23 @@ export default function MetricGaugeChart({ metricName, timePeriod, clientData, i
           <div className="text-center">
             <div className="font-medium text-slate-700">Industry Avg</div>
             <div className="text-slate-600">
-              {Math.round(industryAvg * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? 'min' : ''}
+              {metricName.includes('Rate') 
+                ? `${Math.round(industryAvg * 10) / 10}%`
+                : metricName.includes('Duration')
+                  ? `${Math.round((industryAvg / 60) * 10) / 10} min`
+                  : `${Math.round(industryAvg * 10) / 10}`
+              }
             </div>
           </div>
           <div className="text-center">
             <div className="font-medium text-slate-700">CD Client Avg</div>
             <div className="text-slate-600">
-              {Math.round(cdAvg * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? 'min' : ''}
+              {metricName.includes('Rate') 
+                ? `${Math.round(cdAvg * 10) / 10}%`
+                : metricName.includes('Duration')
+                  ? `${Math.round((cdAvg / 60) * 10) / 10} min`
+                  : `${Math.round(cdAvg * 10) / 10}`
+              }
             </div>
           </div>
         </div>
