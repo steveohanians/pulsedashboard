@@ -1,5 +1,20 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
+// Custom diamond dot component
+const DiamondDot = (props: any) => {
+  const { cx, cy, fill, stroke, strokeWidth } = props;
+  const size = 3;
+  
+  return (
+    <polygon
+      points={`${cx},${cy-size} ${cx+size},${cy} ${cx},${cy+size} ${cx-size},${cy}`}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+    />
+  );
+};
+
 interface TimeSeriesChartProps {
   metricName: string;
   timePeriod: string;
@@ -146,7 +161,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           dataKey="Industry Avg" 
           stroke={colors['Industry Avg']}
           strokeWidth={2}
-          dot={{ fill: colors['Industry Avg'], r: 2, strokeWidth: 0 }}
+          dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
           strokeDasharray="5 5"
         />
         
@@ -156,7 +171,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           dataKey="CD Client Avg" 
           stroke={colors['CD Client Avg']}
           strokeWidth={2}
-          dot={{ fill: colors['CD Client Avg'], r: 2, strokeWidth: 0 }}
+          dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
           strokeDasharray="8 4"
         />
         
