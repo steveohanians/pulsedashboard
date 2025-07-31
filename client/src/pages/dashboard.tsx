@@ -75,72 +75,51 @@ export default function Dashboard() {
     }
   };
 
-  // Track active section with Intersection Observer
+  // Track active section with scroll-based detection
   useEffect(() => {
     if (isLoading) return;
     
     let timeoutId: NodeJS.Timeout;
     
-    const observerOptions = {
-      root: null,
-      rootMargin: '-100px 0px -60% 0px',
-      threshold: 0.1
-    };
-
-    const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      // Clear any pending timeout
+    const handleScroll = () => {
       clearTimeout(timeoutId);
       
-      // Debounce the update by 50ms to prevent excessive flashing while keeping responsiveness
       timeoutId = setTimeout(() => {
-        const visibleEntries = entries.filter(entry => entry.isIntersecting);
+        const headerHeight = 100; // Account for sticky header
+        const scrollPosition = window.scrollY + headerHeight + 50; // Add small offset
         
-        if (visibleEntries.length > 0) {
-          // Get the entry with the highest intersection ratio, or the first one if ratios are similar
-          const mostVisible = visibleEntries.reduce((prev, current) => {
-            if (Math.abs(current.intersectionRatio - prev.intersectionRatio) < 0.1) {
-              // If intersection ratios are very close, prefer the earlier section in the page
-              const prevIndex = metricNames.findIndex(name => 
-                name.replace(/\s+/g, '-').toLowerCase() === prev.target.id.replace('metric-', '')
-              );
-              const currentIndex = metricNames.findIndex(name => 
-                name.replace(/\s+/g, '-').toLowerCase() === current.target.id.replace('metric-', '')
-              );
-              return prevIndex < currentIndex ? prev : current;
-            }
-            return current.intersectionRatio > prev.intersectionRatio ? current : prev;
-          });
-          
-          const id = mostVisible.target.id;
-          if (id.startsWith('metric-')) {
-            const idWithoutPrefix = id.replace('metric-', '');
-            const matchingMetric = metricNames.find(name => 
-              name.replace(/\s+/g, '-').toLowerCase() === idWithoutPrefix
-            );
+        // Find which section is currently in view
+        let currentSection = metricNames[0]; // Default to first section
+        
+        for (const metricName of metricNames) {
+          const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+          if (element) {
+            const elementTop = element.offsetTop;
+            const elementBottom = elementTop + element.offsetHeight;
             
-            if (matchingMetric && matchingMetric !== activeSection) {
-              setActiveSection(matchingMetric);
+            if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
+              currentSection = metricName;
+              break;
             }
           }
         }
-      }, 50);
+        
+        if (currentSection !== activeSection) {
+          setActiveSection(currentSection);
+        }
+      }, 100);
     };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-
-    // Observe all metric sections
-    metricNames.forEach((metricName: string) => {
-      const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Set initial state
+    
     return () => {
       clearTimeout(timeoutId);
-      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
     };
-  }, [metricNames, isLoading, activeSection]);
+  }, [isLoading, metricNames, activeSection]);
+
+
 
   if (isLoading) {
     return (
