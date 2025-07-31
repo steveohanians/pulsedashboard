@@ -256,9 +256,6 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center space-x-6">
-            <span className="text-sm font-medium text-slate-600 bg-slate-100/60 px-3 py-1.5 rounded-full">
-              {client?.websiteUrl}
-            </span>
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
                 <span className="text-sm font-bold text-primary">
