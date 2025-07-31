@@ -28,7 +28,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      let { period = "2024-01" } = req.query;
+      let { timePeriod = "Last Month" } = req.query;
       
       // Convert display period to database periods - return time-series data instead of averaging
       const periodMapping: Record<string, string[]> = {
@@ -39,10 +39,11 @@ export function registerRoutes(app: Express): Server {
       };
       
       let periodsToQuery: string[];
-      if (typeof period === 'string' && periodMapping[period]) {
-        periodsToQuery = periodMapping[period];
+      if (typeof timePeriod === 'string' && periodMapping[timePeriod]) {
+        periodsToQuery = periodMapping[timePeriod];
       } else {
-        periodsToQuery = [period as string];
+        // Default fallback to Last Month if unknown period
+        periodsToQuery = periodMapping["Last Month"];
       }
       
       // Verify user has access to this client

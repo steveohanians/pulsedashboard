@@ -75,7 +75,7 @@ export default function Dashboard() {
   }
 
   const dashboardQuery = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/${user?.clientId}?period=${encodeURIComponent(timePeriod)}`],
+    queryKey: [`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(timePeriod)}`],
     enabled: !!user?.clientId,
   });
   
