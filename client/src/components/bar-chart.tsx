@@ -30,13 +30,13 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
+    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
   } else if (timePeriod === "Last Quarter") {
-    dates = ["2024-01", "2024-Q4", "2025-01"];
+    dates = ["2025-01", "2024-Q4", "2024-01"];
   } else if (timePeriod === "Last Year") {
-    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
+    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
   } else {
-    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
+    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
   }
 
   // Generate stable variance around the base values
@@ -142,7 +142,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             fontSize={9}
             tick={{ fill: '#64748b' }}
             axisLine={{ stroke: '#cbd5e1' }}
-            tickFormatter={(value) => `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? 'min' : ''}`}
+            tickFormatter={(value) => `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`}
             width={45}
           />
           <Tooltip 
@@ -176,7 +176,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                         fontWeight: entry.dataKey === clientKey ? 'bold' : 'normal',
                         color: entry.dataKey === clientKey ? colors[clientKey] : '#374151'
                       }}>
-                        {entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? 'min' : ''}
+                        {entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}
                       </span>
                     </div>
                   ))}

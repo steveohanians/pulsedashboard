@@ -91,7 +91,7 @@ export default function Dashboard() {
 
   const metricNames = [
     "Bounce Rate", 
-    "Avg Session Duration", 
+    "Session Duration", 
     "Pages per Session", 
     "Sessions per User", 
     "Traffic Channels", 
@@ -684,7 +684,7 @@ export default function Dashboard() {
                             };
                           })}
                         />
-                      ) : metricName === "Avg Session Duration" ? (
+                      ) : metricName === "Session Duration" ? (
                         <MetricBarChart 
                           metricName={metricName}
                           timePeriod={timePeriod}
