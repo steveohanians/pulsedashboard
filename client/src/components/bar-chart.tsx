@@ -170,7 +170,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             width={45}
           />
           <Tooltip 
-            cursor={{ fill: '#9ca3af', fillOpacity: 0.3 }}
+            cursor={{ fill: '#d1d5db', fillOpacity: 0.3 }}
             content={({ active, payload, label }) => {
               if (!active || !payload || !label) return null;
               
