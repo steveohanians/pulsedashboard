@@ -215,7 +215,12 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
           domain={yAxisDomain}
-          tickFormatter={(value) => Math.round(value).toString()}
+          tickFormatter={(value) => {
+            if (metricName === "Pages per Session" || metricName === "Sessions per User") {
+              return value.toFixed(1);
+            }
+            return Math.round(value).toString();
+          }}
           width={35}
           type="number"
         />
