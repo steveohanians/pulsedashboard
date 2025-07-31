@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { DonutChart } from "@/components/donut-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
+import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
@@ -26,7 +27,6 @@ export default function Dashboard() {
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
-  // Date picker state (currently unused but preserved for future custom date range feature)
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -49,15 +49,14 @@ export default function Dashboard() {
     }>;
     competitors: Array<{
       id: string;
-      name: string;
-      websiteUrl: string;
       domain: string;
+      label: string;
     }>;
     insights: Array<{
       metricName: string;
-      context: string;
-      insight: string;
-      recommendation: string;
+      contextText: string;
+      insightText: string;
+      recommendationText: string;
     }>;
   }
 
@@ -86,39 +85,21 @@ export default function Dashboard() {
 
 
   // Group metrics by name for chart display
-  const groupedMetrics = metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
-    if (!acc[metric.metricName]) {
-      acc[metric.metricName] = {};
-    }
-    acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
-    return acc;
-  }, {} as Record<string, Record<string, number>>);
+  const groupedMetrics = useMemo(() => {
+    return metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
+      if (!acc[metric.metricName]) {
+        acc[metric.metricName] = {};
+      }
+      acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+  }, [metrics]);
 
   // Process traffic channel data for stacked bar chart
-  const processTrafficChannelData = () => {
+  const processTrafficChannelData = useCallback(() => {
     const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-    
-    const CHANNEL_COLORS = {
-      'Organic Search': '#10b981',
-      'Direct': '#3b82f6', 
-      'Social Media': '#8b5cf6',
-      'Paid Search': '#f59e0b',
-      'Email': '#ec4899',
-      'Other': '#6b7280',
-    };
 
     const result = [];
-
-    // Helper function to deduplicate metrics by channel
-    const deduplicateByChannel = (sourceMetrics: any[]) => {
-      const channelMap = new Map();
-      sourceMetrics.forEach(metric => {
-        if (!channelMap.has(metric.channel)) {
-          channelMap.set(metric.channel, metric);
-        }
-      });
-      return Array.from(channelMap.values());
-    };
 
     // Client data
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
@@ -131,7 +112,7 @@ export default function Dashboard() {
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),
-          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
         }))
       });
     }
@@ -147,7 +128,7 @@ export default function Dashboard() {
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),
-          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
         }))
       });
     }
@@ -163,7 +144,7 @@ export default function Dashboard() {
           name: m.channel || 'Other',
           value: parseFloat(m.value),
           percentage: parseFloat(m.value),
-          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+          color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
         }))
       });
     }
@@ -177,11 +158,11 @@ export default function Dashboard() {
           sourceType: `Competitor_${competitor1.id}`,
           label: 'baunfire.com',
           channels: [
-            { name: 'Organic Search', value: 40, percentage: 40, color: CHANNEL_COLORS['Organic Search'] },
-            { name: 'Direct', value: 25, percentage: 25, color: CHANNEL_COLORS['Direct'] },
-            { name: 'Social Media', value: 20, percentage: 20, color: CHANNEL_COLORS['Social Media'] },
-            { name: 'Paid Search', value: 12, percentage: 12, color: CHANNEL_COLORS['Paid Search'] },
-            { name: 'Email', value: 3, percentage: 3, color: CHANNEL_COLORS['Email'] }
+            { name: 'Organic Search', value: 40, percentage: 40, color: CHART_COLORS.TRAFFIC_CHANNELS['Organic Search'] },
+            { name: 'Direct', value: 25, percentage: 25, color: CHART_COLORS.TRAFFIC_CHANNELS['Direct'] },
+            { name: 'Social Media', value: 20, percentage: 20, color: CHART_COLORS.TRAFFIC_CHANNELS['Social Media'] },
+            { name: 'Paid Search', value: 12, percentage: 12, color: CHART_COLORS.TRAFFIC_CHANNELS['Paid Search'] },
+            { name: 'Email', value: 3, percentage: 3, color: CHART_COLORS.TRAFFIC_CHANNELS['Email'] }
           ]
         });
       }
@@ -193,18 +174,18 @@ export default function Dashboard() {
           sourceType: `Competitor_${competitor2.id}`,
           label: 'herodigital.com',
           channels: [
-            { name: 'Organic Search', value: 45, percentage: 45, color: CHANNEL_COLORS['Organic Search'] },
-            { name: 'Direct', value: 22, percentage: 22, color: CHANNEL_COLORS['Direct'] },
-            { name: 'Social Media', value: 18, percentage: 18, color: CHANNEL_COLORS['Social Media'] },
-            { name: 'Paid Search', value: 10, percentage: 10, color: CHANNEL_COLORS['Paid Search'] },
-            { name: 'Email', value: 5, percentage: 5, color: CHANNEL_COLORS['Email'] }
+            { name: 'Organic Search', value: 45, percentage: 45, color: CHART_COLORS.TRAFFIC_CHANNELS['Organic Search'] },
+            { name: 'Direct', value: 22, percentage: 22, color: CHART_COLORS.TRAFFIC_CHANNELS['Direct'] },
+            { name: 'Social Media', value: 18, percentage: 18, color: CHART_COLORS.TRAFFIC_CHANNELS['Social Media'] },
+            { name: 'Paid Search', value: 10, percentage: 10, color: CHART_COLORS.TRAFFIC_CHANNELS['Paid Search'] },
+            { name: 'Email', value: 5, percentage: 5, color: CHART_COLORS.TRAFFIC_CHANNELS['Email'] }
           ]
         });
       }
     }
 
     return result;
-  };
+  }, [metrics, competitors, client?.name]);
 
   // Process device distribution data for donut charts
   const processDeviceDistributionData = () => {
@@ -1036,9 +1017,9 @@ export default function Dashboard() {
                     </div>
                     {insight ? (
                       <AIInsights
-                        context={insight.context}
-                        insight={insight.insight}
-                        recommendation={insight.recommendation}
+                        context={insight.contextText}
+                        insight={insight.insightText}
+                        recommendation={insight.recommendationText}
                       />
                     ) : (
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
