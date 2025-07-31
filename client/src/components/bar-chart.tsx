@@ -202,7 +202,16 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             tick={{ fill: '#64748b' }}
             axisLine={{ stroke: '#cbd5e1' }}
             domain={yAxisDomain}
-            tickFormatter={(value) => `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`}
+            tickFormatter={(value) => {
+              if (metricName.includes('Rate')) {
+                return `${Math.round(value * 10) / 10}%`;
+              } else if (metricName.includes('Session Duration')) {
+                // Convert seconds to minutes for display
+                const minutes = Math.round((value / 60) * 10) / 10;
+                return `${minutes}min`;
+              }
+              return `${Math.round(value * 10) / 10}`;
+            }}
             width={45}
             type="number"
           />
@@ -239,9 +248,23 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                         fontSize: '11px'
                       }}>
                         {entry.dataKey === clientKey ? (
-                          <strong style={{ color: colors[clientKey] }}>{entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}</strong>
+                          <strong style={{ color: colors[clientKey] }}>
+                            {entry.dataKey}: {
+                              metricName.includes('Rate') 
+                                ? `${Math.round(entry.value * 10) / 10}%`
+                                : metricName.includes('Session Duration')
+                                  ? `${Math.round((entry.value / 60) * 10) / 10} min`
+                                  : `${Math.round(entry.value * 10) / 10}`
+                            }
+                          </strong>
                         ) : (
-                          `${entry.dataKey}: ${Math.round(entry.value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`
+                          `${entry.dataKey}: ${
+                            metricName.includes('Rate') 
+                              ? `${Math.round(entry.value * 10) / 10}%`
+                              : metricName.includes('Session Duration')
+                                ? `${Math.round((entry.value / 60) * 10) / 10} min`
+                                : `${Math.round(entry.value * 10) / 10}`
+                          }`
                         )}
                       </span>
                     </div>
