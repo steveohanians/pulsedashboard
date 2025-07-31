@@ -20,28 +20,37 @@ export async function generatePagesPerSessionData() {
     await storage.clearMetricsByName("Pages per Session");
     
     for (const timePeriod of timePeriods) {
-      // Create time-based variance with stronger seasonal effects
-      const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length;
-      const seasonalFactor = Math.sin(periodSeed * 0.18) * 0.3; // ±0.3 pages seasonal variation
+      // Create significant time-based variance for better chart visualization
+      const periodIndex = timePeriods.indexOf(timePeriod);
+      const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length + periodIndex * 100;
       
-      // Add year-over-year improvement trend
-      const yearTrend = timePeriod.includes('2024') ? -0.2 : 0.1;
+      // Strong seasonal effects with period-specific variations
+      const seasonalFactor = Math.sin(periodSeed * 0.3) * 0.5; // ±0.5 pages significant variation
+      
+      // Clear year-over-year and monthly trends
+      const yearTrend = timePeriod.includes('2024') ? -0.4 : 0.3;
+      const monthTrend = periodIndex * 0.1; // Progressive change over time
       
       for (const sourceType of sourceTypes) {
         const range = pagesPerSessionRanges[sourceType as keyof typeof pagesPerSessionRanges];
         
-        // Generate realistic varied pages per session with enhanced time-based changes
-        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 2;
-        const randomFactor = (Math.sin(sourceSeed * 1.456) + 1) / 2; // 0-1 range
+        // Enhanced variation with period-specific seeds
+        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 7 + periodIndex * 50;
+        const randomFactor = (Math.sin(sourceSeed * 2.345) + 1) / 2; // 0-1 range
         
-        // Add quarterly variations (Q4 typically higher engagement)
-        const quarterVariation = timePeriod === '2024-Q4' ? 0.2 : 0;
+        // Period-specific variations for clear differentiation
+        let periodVariation = 0;
+        if (timePeriod === '2025-06') periodVariation = 0.3;
+        if (timePeriod === '2025-05') periodVariation = 0.1;
+        if (timePeriod === '2025-04') periodVariation = -0.1;
+        if (timePeriod === '2024-Q4') periodVariation = 0.2;
+        if (timePeriod === '2024-01') periodVariation = -0.5;
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));
-        let finalValue = baseValue + seasonalFactor + yearTrend + quarterVariation;
+        let finalValue = baseValue + seasonalFactor + yearTrend + monthTrend + periodVariation;
         
-        // Ensure realistic bounds (1.4 - 3.5 pages per session)
-        finalValue = Math.max(1.4, Math.min(3.5, finalValue));
+        // Ensure realistic bounds (1.2 - 3.8 pages per session)
+        finalValue = Math.max(1.2, Math.min(3.8, finalValue));
         
         // Round to 1 decimal place for realistic precision
         finalValue = Math.round(finalValue * 10) / 10;
