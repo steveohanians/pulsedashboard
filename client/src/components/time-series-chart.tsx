@@ -152,24 +152,9 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
   
-  // For metrics like Pages per Session with small ranges, use tighter bounds
-  let yMin, yMax;
-  if (metricName === "Pages per Session" || metricName === "Sessions per User") {
-    // Use 20% padding for better visualization of small changes
-    const padding = (maxValue - minValue) * 0.2;
-    yMin = Math.max(0, minValue - padding);
-    yMax = maxValue + padding;
-    // Round to 1 decimal place for cleaner axis
-    yMin = Math.floor(yMin * 10) / 10;
-    yMax = Math.ceil(yMax * 10) / 10;
-  } else {
-    // Default padding for other metrics
-    const padding = (maxValue - minValue) * 0.15;
-    yMin = Math.floor(minValue - padding);
-    yMax = Math.ceil(maxValue + padding);
-  }
-  
-  const yAxisDomain = [yMin, yMax];
+  // Always start from 0 for better visual context and comparison
+  const padding = maxValue * 0.1; // 10% padding from top
+  const yAxisDomain = [0, Math.ceil(maxValue + padding)];
 
   // State for toggling lines - ensure all competitors are visible by default
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {

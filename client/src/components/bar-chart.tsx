@@ -140,10 +140,9 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
       }
     });
   });
-  const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
-  const padding = (maxValue - minValue) * 0.15; // 15% padding
-  const yAxisDomain = [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
+  const padding = maxValue * 0.1; // 10% padding from top
+  const yAxisDomain = [0, Math.ceil(maxValue + padding)];
 
   // State for toggling bars - ensure all competitors are visible by default
   const [visibleBars, setVisibleBars] = useState<Record<string, boolean>>(() => {
