@@ -23,8 +23,7 @@ export default function Dashboard() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  // Remove activeSection state entirely - navigation will work without highlighting
-  const [clickedSection, setClickedSection] = useState<string>("");
+  const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
 
   interface DashboardData {
     client: any;
@@ -76,10 +75,49 @@ export default function Dashboard() {
     }
   };
 
-  // Handle manual navigation clicks (no highlighting)
+  // Handle manual navigation clicks with highlighting
   const handleNavigationClick = (metricName: string) => {
+    setActiveSection(metricName);
     scrollToMetric(metricName);
   };
+
+  // Simple scroll-based highlighting with throttling
+  useEffect(() => {
+    if (isLoading) return;
+    
+    let isThrottled = false;
+    
+    const handleScroll = () => {
+      if (isThrottled) return;
+      isThrottled = true;
+      
+      setTimeout(() => {
+        const scrollY = window.scrollY;
+        const triggerPoint = scrollY + 200; // Simple trigger point
+        
+        // Find active section by checking which section's top is closest to trigger point
+        let closestSection = "Bounce Rate";
+        let closestDistance = Infinity;
+        
+        metricNames.forEach(metricName => {
+          const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
+          if (element) {
+            const distance = Math.abs(element.offsetTop - triggerPoint);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestSection = metricName;
+            }
+          }
+        });
+        
+        setActiveSection(closestSection);
+        isThrottled = false;
+      }, 300); // Throttle to 300ms
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoading, metricNames]);
 
 
 
@@ -139,7 +177,11 @@ export default function Dashboard() {
                 <li key={metricName}>
                   <button
                     onClick={() => handleNavigationClick(metricName)}
-                    className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
+                      activeSection === metricName
+                        ? 'bg-slate-100 text-primary'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
+                    }`}
                   >
                     {metricName}
                   </button>
