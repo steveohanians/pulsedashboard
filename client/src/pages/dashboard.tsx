@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu, Globe, Building } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -649,8 +649,30 @@ export default function Dashboard() {
                 className="border-slate-200/60 hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
               >
                 <CardHeader className="pb-4 lg:pb-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight">{metricName}</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">{metricName}</CardTitle>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {timePeriod === 'Last Month' ? 'Last Month' :
+                             timePeriod === 'Last Quarter' ? 'Last Quarter' :
+                             timePeriod === 'Last Year' ? 'Last Year' :
+                             timePeriod === 'Custom' ? `${formatPeriodDisplay(customStartDate, customEndDate)}` :
+                             timePeriod}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Globe className="h-4 w-4" />
+                          <span>{industryFilter === 'All' ? 'All Industries' : industryFilter}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Building className="h-4 w-4" />
+                          <span>{businessSizeFilter === 'All' ? 'All Sizes' : businessSizeFilter}</span>
+                        </div>
+                      </div>
+                    </div>
                     <div className="text-left sm:text-right">
                       <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
                         {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
