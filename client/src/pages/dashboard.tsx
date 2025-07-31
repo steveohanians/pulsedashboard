@@ -467,45 +467,38 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  // PDF Export function that hides navigation and UI elements
+  // PDF Export function that processes in background without visual flash
   const exportToPDF = async () => {
     if (!client?.name) return;
     
     setIsExportingPDF(true);
     
     try {
-      // Hide navigation and UI elements for PDF export
-      const elementsToHide = [
-        '.pdf-hide', // Class for elements to hide
-        'nav',
-        'header',
-        '.mobile-menu',
-        '.export-button',
-        '.logout-button',
-        '.add-competitor-button',
-        '.filters-section'
-      ];
-      
-      const hiddenElements: HTMLElement[] = [];
-      
-      elementsToHide.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          if (htmlEl.style.display !== 'none') {
-            hiddenElements.push(htmlEl);
-            htmlEl.style.display = 'none';
-          }
-        });
-      });
-      
       // Get the main dashboard content
-      const dashboardContent = document.getElementById('dashboard-content');
-      if (!dashboardContent) throw new Error('Dashboard content not found');
+      const originalElement = document.getElementById('dashboard-content');
+      if (!originalElement) throw new Error('Dashboard content not found');
       
-      // Add PDF header with logo and title
+      // Create a hidden clone for background processing
+      const clone = originalElement.cloneNode(true) as HTMLElement;
+      clone.id = 'pdf-clone';
+      clone.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        visibility: hidden;
+        pointer-events: none;
+        background-color: #ffffff;
+        width: ${originalElement.scrollWidth}px;
+        opacity: 0;
+        z-index: -1000;
+      `;
+      
+      // Remove all PDF-hide elements from the clone
+      const elementsToRemove = clone.querySelectorAll('.pdf-hide');
+      elementsToRemove.forEach(el => el.remove());
+      
+      // Add PDF header to clone
       const pdfHeader = document.createElement('div');
-      pdfHeader.id = 'pdf-header';
       pdfHeader.style.cssText = `
         padding: 20px 0;
         border-bottom: 2px solid #e5e7eb;
@@ -529,37 +522,38 @@ export default function Dashboard() {
         </div>
       `;
       
-      dashboardContent.insertBefore(pdfHeader, dashboardContent.firstChild);
+      clone.insertBefore(pdfHeader, clone.firstChild);
       
-      // Wait for any pending renders
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Append clone to body for rendering (but hidden)
+      document.body.appendChild(clone);
       
-      // Capture the dashboard content
-      const canvas = await html2canvas(dashboardContent, {
+      // Wait for styles and charts to render
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Capture the clone
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: dashboardContent.scrollWidth,
-        height: dashboardContent.scrollHeight,
+        width: clone.scrollWidth,
+        height: clone.scrollHeight,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        logging: false
       });
       
-      // Create PDF
+      // Remove the clone immediately after capture
+      document.body.removeChild(clone);
+      
+      // Create PDF with improved pagination
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
       
-      // Calculate scaling to fit content on page(s)
-      const ratio = Math.min(pdfWidth / (canvasWidth / 2), pdfHeight / (canvasHeight / 2));
-      const imgWidth = (canvasWidth / 2) * ratio;
-      const imgHeight = (canvasHeight / 2) * ratio;
-      
       // Calculate proper scaling and pagination
-      const imgData = canvas.toDataURL('image/png');
       const margin = 10; // 10mm margin
       const usableWidth = pdfWidth - (margin * 2);
       const usableHeight = pdfHeight - (margin * 2);
@@ -602,29 +596,17 @@ export default function Dashboard() {
         currentY += pageContentHeight;
       }
       
-      // Clean up: restore hidden elements
-      hiddenElements.forEach(el => {
-        el.style.display = '';
-      });
-      
-      // Remove PDF header
-      const headerToRemove = document.getElementById('pdf-header');
-      if (headerToRemove) {
-        headerToRemove.remove();
-      }
-      
       // Save the PDF
       const fileName = `${client.name.replace(/[^a-zA-Z0-9]/g, '_')}_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
-      // Restore any hidden elements in case of error
-      const elementsToRestore = document.querySelectorAll('[style*="display: none"]');
-      elementsToRestore.forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.display = '';
-      });
+      // Clean up any remaining clones
+      const remainingClone = document.getElementById('pdf-clone');
+      if (remainingClone) {
+        document.body.removeChild(remainingClone);
+      }
     } finally {
       setIsExportingPDF(false);
     }
