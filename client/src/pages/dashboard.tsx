@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu, Globe, BarChart3 } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -654,7 +654,7 @@ export default function Dashboard() {
                       <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">{metricName}</CardTitle>
                       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
+                          <Clock className="h-4 w-4" />
                           <span>
                             {timePeriod === 'Last Month' ? 'Last Month' :
                              timePeriod === 'Last Quarter' ? 'Last Quarter' :
@@ -664,11 +664,11 @@ export default function Dashboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Globe className="h-4 w-4" />
+                          <Filter className="h-4 w-4" />
                           <span>{industryVertical === 'All' ? 'All Industries' : industryVertical}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <BarChart3 className="h-4 w-4" />
+                          <Filter className="h-4 w-4" />
                           <span>{businessSize === 'All' ? 'All Sizes' : businessSize}</span>
                         </div>
                       </div>
