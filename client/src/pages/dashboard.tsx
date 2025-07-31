@@ -75,7 +75,7 @@ export default function Dashboard() {
     }
   };
 
-  // Track active section with scroll-based detection
+  // Track active section with simple threshold-based detection
   useEffect(() => {
     if (isLoading) return;
     
@@ -85,43 +85,25 @@ export default function Dashboard() {
       clearTimeout(timeoutId);
       
       timeoutId = setTimeout(() => {
-        const headerHeight = 80; // Account for sticky header
-        const viewportTop = window.scrollY + headerHeight;
-        const viewportCenter = viewportTop + (window.innerHeight / 3); // Use upper third of viewport
+        const scrollTop = window.scrollY;
+        const triggerPoint = scrollTop + 150; // Fixed trigger point
         
-        // Find the section that's most prominently in view
-        let bestMatch = metricNames[0];
-        let bestScore = -1;
+        // Find the first section whose top is still below our trigger point
+        let newActiveSection = activeSection;
         
-        for (const metricName of metricNames) {
+        for (let i = metricNames.length - 1; i >= 0; i--) {
+          const metricName = metricNames[i];
           const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
-          if (element) {
-            const rect = element.getBoundingClientRect();
-            const elementTop = element.offsetTop;
-            const elementBottom = elementTop + element.offsetHeight;
-            
-            // Calculate how much of the element is visible in the viewport
-            const visibleTop = Math.max(viewportTop, elementTop);
-            const visibleBottom = Math.min(viewportTop + window.innerHeight, elementBottom);
-            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-            
-            // Prefer sections that are well-positioned in the upper part of the viewport
-            let score = visibleHeight;
-            if (viewportCenter >= elementTop && viewportCenter <= elementBottom) {
-              score += 1000; // Bonus for containing the center point
-            }
-            
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatch = metricName;
-            }
+          if (element && element.offsetTop <= triggerPoint) {
+            newActiveSection = metricName;
+            break;
           }
         }
         
-        if (bestMatch !== activeSection) {
-          setActiveSection(bestMatch);
+        if (newActiveSection !== activeSection) {
+          setActiveSection(newActiveSection);
         }
-      }, 150);
+      }, 200);
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
