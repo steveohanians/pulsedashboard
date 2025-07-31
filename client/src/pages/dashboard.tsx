@@ -659,17 +659,17 @@ export default function Dashboard() {
                             {timePeriod === 'Last Month' ? 'Last Month' :
                              timePeriod === 'Last Quarter' ? 'Last Quarter' :
                              timePeriod === 'Last Year' ? 'Last Year' :
-                             timePeriod === 'Custom' ? `${formatPeriodDisplay(customStartDate, customEndDate)}` :
+                             timePeriod === 'Custom' ? `${startDate} - ${endDate}` :
                              timePeriod}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Globe className="h-4 w-4" />
-                          <span>{industryFilter === 'All' ? 'All Industries' : industryFilter}</span>
+                          <span>{industryVertical === 'All' ? 'All Industries' : industryVertical}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Building className="h-4 w-4" />
-                          <span>{businessSizeFilter === 'All' ? 'All Sizes' : businessSizeFilter}</span>
+                          <span>{businessSize === 'All' ? 'All Sizes' : businessSize}</span>
                         </div>
                       </div>
                     </div>
