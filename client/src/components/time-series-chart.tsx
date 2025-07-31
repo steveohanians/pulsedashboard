@@ -101,7 +101,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   
   // Define colors for each line
   const colors = {
-    'Client': '#FF1493', // Primary pink color
+    'Client': 'hsl(318, 97%, 50%)', // Primary pink color (exact match to CSS variable)
     'Industry Avg': '#9ca3af', // Light grey
     'CD Client Avg': '#4b5563', // Dark grey
   };
