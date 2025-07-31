@@ -30,13 +30,13 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    dates = ["Week 1", "Week 2", "Week 3", "Week 4"];
+    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
   } else if (timePeriod === "Last Quarter") {
-    dates = ["Month 1", "Month 2", "Month 3"];
+    dates = ["2024-01", "2024-Q4", "2025-01"];
   } else if (timePeriod === "Last Year") {
-    dates = ["Q1", "Q2", "Q3", "Q4"];
+    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
   } else {
-    dates = ["Period 1", "Period 2", "Period 3", "Period 4"];
+    dates = ["2024-01", "2024-Q4", "2025-01", "2025-06"];
   }
 
   // Generate stable variance around the base values
@@ -129,6 +129,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
         <BarChart 
           data={data} 
           margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
+          barCategoryGap="20%"
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
           <XAxis 
@@ -219,14 +220,17 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             />
           )}
           
-          {/* Competitor bars */}
+          {/* Competitor bars - solid outline with no fill */}
           {competitors.map((competitor, index) => (
             visibleBars[competitor.label] && (
               <Bar 
                 key={competitor.id}
                 dataKey={competitor.label} 
-                fill={competitorColors[index % competitorColors.length]}
+                fill="none"
+                stroke={competitorColors[index % competitorColors.length]}
+                strokeWidth={2}
                 radius={[2, 2, 0, 0]}
+                shape={(props: any) => <DashedBar {...props} stroke={competitorColors[index % competitorColors.length]} strokeDasharray="none" />}
               />
             )
           ))}

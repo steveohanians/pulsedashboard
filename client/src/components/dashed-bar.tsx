@@ -30,7 +30,7 @@ export const DashedBar: React.FC<DashedBarProps> = ({
       fill={fill}
       stroke={stroke}
       strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray}
+      strokeDasharray={strokeDasharray === 'none' ? undefined : strokeDasharray}
       rx={2}
       ry={2}
     />
