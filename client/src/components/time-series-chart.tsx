@@ -56,7 +56,7 @@ function generateTimeSeriesData(
 ): any[] {
   // If we have actual time-series data, use it
   if (timeSeriesData && periods && periods.length > 1) {
-    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, timePeriod);
+    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
   // Otherwise, fallback to single-point data (current behavior for single periods)
@@ -172,10 +172,6 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
 }
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
-  
-  // Debug log to see what data we're getting
-  console.log('TimeSeriesChart received:', { metricName, timePeriod, timeSeriesData, periods });
-  
   // Check if we have any valid data
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
   
