@@ -116,7 +116,15 @@ export default function Dashboard() {
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = useCallback(() => {
-    const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+    let trafficMetrics = [];
+    
+    if (isTimeSeries && timeSeriesData) {
+      // For multi-period queries, flatten all time-series data
+      trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
+    } else {
+      // For single-period queries, use regular metrics
+      trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+    }
     const result = [];
     
     // Helper function to aggregate channel data across multiple periods
@@ -247,7 +255,7 @@ export default function Dashboard() {
     });
 
     return result;
-  }, [metrics, competitors, client?.name, periods]);
+  }, [metrics, timeSeriesData, isTimeSeries, competitors, client?.name, periods]);
 
   // Process device distribution data for donut charts
   const processDeviceDistributionData = useCallback(() => {
