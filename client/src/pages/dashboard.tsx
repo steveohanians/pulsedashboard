@@ -13,6 +13,7 @@ import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
 import SessionDurationAreaChart from "@/components/area-chart";
 import MetricBarChart from "@/components/bar-chart";
+import { StackedBarChart } from "@/components/stacked-bar-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
@@ -42,11 +43,14 @@ export default function Dashboard() {
       metricName: string;
       value: string;
       sourceType: string;
+      channel?: string;
+      competitorId?: string;
     }>;
     competitors: Array<{
       id: string;
       name: string;
       websiteUrl: string;
+      domain: string;
     }>;
     insights: Array<{
       metricName: string;
@@ -88,6 +92,59 @@ export default function Dashboard() {
     acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
     return acc;
   }, {} as Record<string, Record<string, number>>);
+
+  // Process traffic channel data for stacked bar chart
+  const processTrafficChannelData = () => {
+    const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+    const sourceTypes = ['Client', 'CD_Avg', 'Industry_Avg'];
+    
+    // Add competitor data
+    const competitorData = trafficMetrics.filter(m => m.sourceType === 'Competitor');
+    const competitorSources = competitors.map((comp, index) => `Competitor ${index + 1}`);
+
+    const CHANNEL_COLORS = {
+      'Organic Search': '#10b981',
+      'Direct': '#3b82f6', 
+      'Social Media': '#8b5cf6',
+      'Paid Search': '#f59e0b',
+      'Email': '#ec4899',
+      'Other': '#6b7280',
+    };
+
+    const allSources = [...sourceTypes, ...competitorSources];
+    
+    return allSources.map((sourceType, index) => {
+      let sourceMetrics;
+      let label;
+      
+      if (sourceType.startsWith('Competitor')) {
+        const competitorIndex = parseInt(sourceType.split(' ')[1]) - 1;
+        const competitor = competitors[competitorIndex];
+        sourceMetrics = trafficMetrics.filter(m => 
+          m.sourceType === 'Competitor' && m.competitorId === competitor?.id
+        );
+        label = competitor?.domain?.replace(/https?:\/\//, '') || sourceType;
+      } else {
+        sourceMetrics = trafficMetrics.filter(m => m.sourceType === sourceType);
+        label = sourceType === 'Client' ? client?.name || 'Client' :
+               sourceType === 'CD_Avg' ? 'CD Client Avg' :
+               'Industry Avg';
+      }
+
+      const channels = sourceMetrics.map(m => ({
+        name: m.channel || 'Other',
+        value: parseFloat(m.value),
+        percentage: parseFloat(m.value),
+        color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+      }));
+
+      return {
+        sourceType,
+        label,
+        channels
+      };
+    }).filter(item => item.channels.length > 0);
+  };
 
   const metricNames = [
     "Bounce Rate", 
@@ -726,6 +783,12 @@ export default function Dashboard() {
                             };
                           })}
                         />
+                      ) : metricName === "Traffic Channels" ? (
+                        <StackedBarChart 
+                          data={processTrafficChannelData()}
+                          title="Traffic Channel Distribution"
+                          description="Percentage breakdown of traffic sources"
+                        />
                       ) : metricName === "Pages per Session" || metricName === "Sessions per User" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
@@ -782,7 +845,7 @@ export default function Dashboard() {
                             <p className="text-sm text-slate-600 leading-relaxed">
                               {metricName} is a key performance indicator that measures {
                                 metricName === "Bounce Rate" ? "the percentage of visitors who leave your site after viewing only one page" :
-                                metricName === "Avg Session Duration" ? "how long users spend on your website during a single visit" :
+                                metricName === "Session Duration" ? "how long users spend on your website during a single visit" :
                                 metricName === "Pages per Session" ? "the average number of pages viewed during a single session" :
                                 metricName === "Sessions per User" ? "how frequently users return to your website" :
                                 metricName === "Traffic Channels" ? "how visitors find and reach your website" :

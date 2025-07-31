@@ -70,6 +70,7 @@ export const metrics = pgTable("metrics", {
   value: decimal("value", { precision: 10, scale: 4 }).notNull(),
   sourceType: sourceTypeEnum("source_type").notNull(),
   timePeriod: text("time_period").notNull(), // YYYY-MM format
+  channel: varchar("channel", { length: 50 }), // For traffic channels breakdown
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
