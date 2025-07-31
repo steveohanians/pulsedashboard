@@ -8,44 +8,63 @@ export async function generateSessionDurationData() {
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
-  // Base session duration ranges in seconds (3-5 minutes)
+  // Base session duration ranges (in seconds) with enhanced variation
   const sessionDurationRanges = {
-    "Client": { min: 240, max: 320 },      // 4-5.3 minutes (good engagement)
-    "Industry_Avg": { min: 180, max: 270 }, // 3-4.5 minutes (average)
-    "CD_Avg": { min: 200, max: 290 }       // 3.3-4.8 minutes (CD client average)
+    "Client": { min: 200, max: 320 },      // 3.3-5.3 minutes (good client engagement)
+    "Industry_Avg": { min: 150, max: 240 }, // 2.5-4 minutes (industry baseline)
+    "CD_Avg": { min: 170, max: 290 }        // 2.8-4.8 minutes (CD portfolio average)
   };
   
   try {
+    // Clear existing session duration data
+    await storage.clearMetricsByName("Session Duration");
+    
     for (const timePeriod of timePeriods) {
-      // Create time-based variance (seasonal effects)
-      const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length;
-      const seasonalFactor = Math.sin(periodSeed * 0.15) * 20; // ±20 seconds seasonal variation
+      // Create significant time-based variance for better chart visualization
+      const periodIndex = timePeriods.indexOf(timePeriod);
+      const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length + periodIndex * 150;
+      
+      // Strong seasonal effects with period-specific variations
+      const seasonalFactor = Math.sin(periodSeed * 0.25) * 45; // ±45 seconds significant variation
+      
+      // Clear year-over-year and monthly trends
+      const yearTrend = timePeriod.includes('2024') ? -15 : 10; // 2024 lower engagement
+      const monthTrend = periodIndex * 3; // Progressive improvement over time
       
       for (const sourceType of sourceTypes) {
         const range = sessionDurationRanges[sourceType as keyof typeof sessionDurationRanges];
         
-        // Generate realistic varied session duration with time-based changes
-        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 3;
-        const randomFactor = (Math.sin(sourceSeed * 1.234) + 1) / 2; // 0-1 range
+        // Enhanced variation with period-specific seeds
+        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 7 + periodIndex * 80;
+        const randomFactor = (Math.sin(sourceSeed * 3.456) + 1) / 2; // 0-1 range
         
-        // Add time period specific variation
-        const timeVariation = timePeriod.includes('2024') ? -15 : 
-                            timePeriod.includes('-04') ? 10 : 
-                            timePeriod.includes('-05') ? 5 : 0;
+        // Period-specific variations for clear differentiation
+        let periodVariation = 0;
+        if (timePeriod === '2025-06') periodVariation = 20; // Best recent performance
+        if (timePeriod === '2025-05') periodVariation = 10;
+        if (timePeriod === '2025-04') periodVariation = 0;
+        if (timePeriod === '2024-Q4') periodVariation = -10;
+        if (timePeriod === '2024-01') periodVariation = -25; // Worst historical performance
         
-        const baseValue = range.min + (range.max - range.min) * randomFactor;
-        const finalValue = Math.max(120, Math.min(400, Math.round(baseValue + seasonalFactor + timeVariation)));
+        const baseValue = range.min + (randomFactor * (range.max - range.min));
+        let finalValue = baseValue + seasonalFactor + yearTrend + monthTrend + periodVariation;
+        
+        // Ensure realistic bounds (2-7 minutes = 120-420 seconds)
+        finalValue = Math.max(120, Math.min(420, finalValue));
+        
+        // Round to whole seconds
+        finalValue = Math.round(finalValue);
         
         await storage.createMetric({
           clientId,
           metricName: "Session Duration",
-          value: finalValue,
+          value: finalValue.toString(),
           sourceType: sourceType as "Client" | "Industry_Avg" | "CD_Avg",
           timePeriod
         });
         
         const minutes = Math.round((finalValue / 60) * 10) / 10;
-        console.log(`Created session duration: ${sourceType} ${timePeriod} = ${finalValue}s (${minutes} min)`);
+        console.log(`Generated Session Duration: ${sourceType} ${timePeriod} = ${finalValue}s (${minutes} min)`);
       }
     }
     
