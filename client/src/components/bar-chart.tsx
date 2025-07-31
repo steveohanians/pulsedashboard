@@ -58,30 +58,20 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     }
   }
 
-  // Generate stable variance around the base values
+  // Use actual averaged values for all data points (no artificial variance for tooltips)
   dates.forEach((period, index) => {
-    const variance = 0.15;
-    const trendFactor = (index / dates.length) * 0.1;
-    
-    // Use seeded random based on period and metric for consistent values
-    const seed1 = period.charCodeAt(0) + clientData * 100;
-    const seed2 = period.charCodeAt(1) + industryAvg * 100;
-    const seed3 = period.charCodeAt(2) + cdAvg * 100;
-    
     const clientKey = clientUrl || 'Client';
     const point: any = {
       period,
-      [clientKey]: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance + trendFactor * clientData) * 10) / 10,
-      'Industry Avg': Math.round((industryAvg + (seededRandom(seed2) - 0.5) * industryAvg * variance) * 10) / 10,
-      'CD Client Avg': Math.round((cdAvg + (seededRandom(seed3) - 0.5) * cdAvg * variance) * 10) / 10,
+      [clientKey]: Math.round(clientData * 10) / 10,
+      'Industry Avg': Math.round(industryAvg * 10) / 10,
+      'CD Client Avg': Math.round(cdAvg * 10) / 10,
     };
 
-    // Add competitor data
+    // Add competitor data with actual values
     competitors.forEach((competitor, compIndex) => {
-      const baseValue = competitor.value || (clientData + 0.2 + compIndex * 0.1);
-      const competitorVariance = variance * (1 + compIndex * 0.05);
-      const competitorSeed = period.charCodeAt(0) + baseValue * 100 + compIndex * 1000;
-      point[competitor.label] = Math.round((baseValue + (seededRandom(competitorSeed) - 0.5) * baseValue * competitorVariance) * 10) / 10;
+      const baseValue = competitor.value || clientData;
+      point[competitor.label] = Math.round(baseValue * 10) / 10;
     });
 
     data.push(point);
