@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu, Download } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -20,6 +20,8 @@ import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
@@ -34,6 +36,7 @@ export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
 
   interface DashboardData {
     client: {
@@ -464,6 +467,155 @@ export default function Dashboard() {
     }, 1000);
   };
 
+  // PDF Export function that hides navigation and UI elements
+  const exportToPDF = async () => {
+    if (!client?.name) return;
+    
+    setIsExportingPDF(true);
+    
+    try {
+      // Hide navigation and UI elements for PDF export
+      const elementsToHide = [
+        '.pdf-hide', // Class for elements to hide
+        'nav',
+        'header',
+        '.mobile-menu',
+        '.export-button',
+        '.logout-button',
+        '.add-competitor-button',
+        '.filters-section'
+      ];
+      
+      const hiddenElements: HTMLElement[] = [];
+      
+      elementsToHide.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+          const htmlEl = el as HTMLElement;
+          if (htmlEl.style.display !== 'none') {
+            hiddenElements.push(htmlEl);
+            htmlEl.style.display = 'none';
+          }
+        });
+      });
+      
+      // Get the main dashboard content
+      const dashboardContent = document.getElementById('dashboard-content');
+      if (!dashboardContent) throw new Error('Dashboard content not found');
+      
+      // Add PDF header with logo and title
+      const pdfHeader = document.createElement('div');
+      pdfHeader.id = 'pdf-header';
+      pdfHeader.style.cssText = `
+        padding: 20px 0;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      `;
+      
+      pdfHeader.innerHTML = `
+        <div style="display: flex; align-items: center;">
+          <img src="${clearLogoPath}" alt="Clear Digital" style="height: 40px; margin-right: 20px;" />
+          <div>
+            <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #1f2937;">Pulse Dashboard™</h1>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">Analytics Report for ${client.name}</p>
+          </div>
+        </div>
+        <div style="text-align: right; color: #6b7280; font-size: 12px;">
+          <p style="margin: 0;">Generated: ${new Date().toLocaleDateString()}</p>
+          <p style="margin: 0;">Period: ${timePeriod}</p>
+        </div>
+      `;
+      
+      dashboardContent.insertBefore(pdfHeader, dashboardContent.firstChild);
+      
+      // Wait for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Capture the dashboard content
+      const canvas = await html2canvas(dashboardContent, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: dashboardContent.scrollWidth,
+        height: dashboardContent.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+      
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      // Calculate scaling to fit content on page(s)
+      const ratio = Math.min(pdfWidth / (canvasWidth / 2), pdfHeight / (canvasHeight / 2));
+      const imgWidth = (canvasWidth / 2) * ratio;
+      const imgHeight = (canvasHeight / 2) * ratio;
+      
+      // Add content to PDF (split into multiple pages if needed)
+      const imgData = canvas.toDataURL('image/png');
+      let yPosition = 0;
+      let pageHeight = pdfHeight;
+      
+      while (yPosition < imgHeight) {
+        if (yPosition > 0) {
+          pdf.addPage();
+        }
+        
+        const sourceY = (yPosition / ratio) * 2;
+        const sourceHeight = Math.min((pageHeight / ratio) * 2, canvasHeight - sourceY);
+        
+        if (sourceHeight > 0) {
+          // Create a temporary canvas for this page section
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvasWidth;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          if (pageCtx) {
+            pageCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
+            const pageImgData = pageCanvas.toDataURL('image/png');
+            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, (sourceHeight / 2) * ratio);
+          }
+        }
+        
+        yPosition += pageHeight;
+      }
+      
+      // Clean up: restore hidden elements
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+      });
+      
+      // Remove PDF header
+      const headerToRemove = document.getElementById('pdf-header');
+      if (headerToRemove) {
+        headerToRemove.remove();
+      }
+      
+      // Save the PDF
+      const fileName = `${client.name.replace(/[^a-zA-Z0-9]/g, '_')}_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Restore any hidden elements in case of error
+      const elementsToRestore = document.querySelectorAll('[style*="display: none"]');
+      elementsToRestore.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = '';
+      });
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
   // Scroll-based section highlighting with throttling and manual click protection
   useEffect(() => {
     if (isLoading) return;
@@ -629,6 +781,27 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
+              {/* PDF Export Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToPDF}
+                disabled={isExportingPDF}
+                className="export-button pdf-hide hover:bg-primary hover:text-white transition-all duration-200 text-xs sm:text-sm"
+              >
+                {isExportingPDF ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <span className="hidden sm:inline">Exporting...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Export PDF</span>
+                  </div>
+                )}
+              </Button>
+              
               <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
                 <span className="text-xs sm:text-sm font-bold text-primary">
                   {user?.name?.charAt(0) || "U"}
@@ -640,7 +813,7 @@ export default function Dashboard() {
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden hover:bg-slate-100 transition-all duration-200 p-1 sm:p-2"
+              className="lg:hidden hover:bg-slate-100 transition-all duration-200 p-1 sm:p-2 pdf-hide"
             >
               <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -649,7 +822,7 @@ export default function Dashboard() {
               size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
-              className="hover:bg-slate-100 transition-all duration-200 hover:scale-105 p-1 sm:p-2"
+              className="logout-button pdf-hide hover:bg-slate-100 transition-all duration-200 hover:scale-105 p-1 sm:p-2"
             >
               <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -659,7 +832,7 @@ export default function Dashboard() {
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 mobile-menu pdf-hide" onClick={() => setMobileMenuOpen(false)}>
           <nav className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
@@ -707,7 +880,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Desktop Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block pdf-hide">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
@@ -730,9 +903,9 @@ export default function Dashboard() {
         </nav>
 
         {/* Enhanced Main Content - Responsive */}
-        <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto" id="dashboard-content">
         {/* Enhanced Filters Section - Responsive */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
+        <div className="filters-section pdf-hide grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
           <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
@@ -934,7 +1107,7 @@ export default function Dashboard() {
               {competitors.length < 3 && (
                 <Button
                   onClick={() => setShowCompetitorModal(true)}
-                  className={`w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
+                  className={`add-competitor-button pdf-hide w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
                     competitors.length > 0 ? 'mt-2' : 'mt-3'
                   }`}
                 >
