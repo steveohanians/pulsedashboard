@@ -370,6 +370,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate pages per session sample data
+  app.post("/api/generate-pages-per-session-data", requireAuth, async (req, res) => {
+    try {
+      const { generatePagesPerSessionData } = await import("./pagesPerSessionDataGenerator");
+      const result = await generatePagesPerSessionData();
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating pages per session data:", error);
+      res.status(500).json({ message: "Failed to generate pages per session data" });
+    }
+  });
+
   // Generate comprehensive sample data
   app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
     try {
