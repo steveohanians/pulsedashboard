@@ -10,9 +10,11 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
   if (!context && !insight && !recommendation) {
     return (
       <div className="space-y-4 border-t border-slate-200 pt-4">
-        <div className="text-center text-slate-500 py-4">
-          <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-xs">AI insights will appear here once data is analyzed</p>
+        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="text-center text-slate-500 py-4">
+            <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-xs">AI insights will appear here once data is analyzed</p>
+          </div>
         </div>
       </div>
     );
