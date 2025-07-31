@@ -24,7 +24,7 @@ const DEVICE_COLORS = {
   'Other': '#6b7280', // gray-500
 };
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, coordinate }: any) => {
   if (!active || !payload || !payload.length) return null;
   
   const data = payload[0];
@@ -36,12 +36,14 @@ const CustomTooltip = ({ active, payload }: any) => {
       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
       padding: '8px 12px',
       fontSize: '12px',
-      textAlign: 'center',
-      transform: 'translateX(-50%)',
-      position: 'relative',
-      left: '50%'
+      position: 'fixed',
+      transform: 'translate(-50%, -100%)',
+      left: coordinate?.x || 0,
+      top: (coordinate?.y || 0) - 10,
+      zIndex: 1000,
+      pointerEvents: 'none'
     }}>
-      <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div 
           style={{ 
             width: '8px', 
@@ -98,7 +100,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
                       />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={CustomTooltip} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
