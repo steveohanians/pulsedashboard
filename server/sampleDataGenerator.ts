@@ -43,7 +43,7 @@ const METRIC_CONFIGS: MetricConfig[] = [
   }
 ];
 
-const TIME_PERIODS = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
+const TIME_PERIODS = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
 const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
 
 // Generate realistic variance around base value

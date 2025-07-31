@@ -47,7 +47,7 @@ function processTimeSeriesForBar(
   // Map period codes to display labels
   const periodLabels: Record<string, string> = {
     "2024-01": "Jan 24",
-    "2024-Q4": "Q4 24",
+    "2024-10": "Oct 24",
     "2025-04": "Apr 25",
     "2025-05": "May 25",
     "2025-06": "Jun 25"

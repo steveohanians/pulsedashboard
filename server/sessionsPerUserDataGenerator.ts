@@ -5,7 +5,7 @@ export async function generateSessionsPerUserData() {
   console.log("Generating sessions per user sample data...");
   
   const clientId = "demo-client-id";
-  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
+  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
   // Base sessions per user ranges with significant variation (realistic engagement metrics)
@@ -43,7 +43,7 @@ export async function generateSessionsPerUserData() {
         if (timePeriod === '2025-06') periodVariation = 0.5;
         if (timePeriod === '2025-05') periodVariation = 0.2;
         if (timePeriod === '2025-04') periodVariation = -0.2;
-        if (timePeriod === '2024-Q4') periodVariation = 0.4;
+        if (timePeriod === '2024-10') periodVariation = 0.4;
         if (timePeriod === '2024-01') periodVariation = -0.8;
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));

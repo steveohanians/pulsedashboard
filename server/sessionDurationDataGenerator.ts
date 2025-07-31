@@ -5,7 +5,7 @@ export async function generateSessionDurationData() {
   console.log("Generating session duration sample data...");
   
   const clientId = "demo-client-id";
-  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
+  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
   // Base session duration ranges (in seconds) with enhanced variation
@@ -43,7 +43,7 @@ export async function generateSessionDurationData() {
         if (timePeriod === '2025-06') periodVariation = 20; // Best recent performance
         if (timePeriod === '2025-05') periodVariation = 10;
         if (timePeriod === '2025-04') periodVariation = 0;
-        if (timePeriod === '2024-Q4') periodVariation = -10;
+        if (timePeriod === '2024-10') periodVariation = -10;
         if (timePeriod === '2024-01') periodVariation = -25; // Worst historical performance
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));

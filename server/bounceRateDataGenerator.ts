@@ -5,7 +5,7 @@ export async function generateBounceRateData() {
   console.log("Generating bounce rate sample data...");
   
   const clientId = "demo-client-id";
-  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-Q4", "2024-01"];
+  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
   // Base bounce rate ranges (percentages) with enhanced variation
@@ -43,7 +43,7 @@ export async function generateBounceRateData() {
         if (timePeriod === '2025-06') periodVariation = -3; // Best recent performance
         if (timePeriod === '2025-05') periodVariation = -1;
         if (timePeriod === '2025-04') periodVariation = 1;
-        if (timePeriod === '2024-Q4') periodVariation = 3;
+        if (timePeriod === '2024-10') periodVariation = 3;
         if (timePeriod === '2024-01') periodVariation = 5; // Worst historical performance
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));

@@ -314,7 +314,7 @@ export function registerRoutes(app: Express): Server {
       const competitor = await storage.createCompetitor(validatedData);
       
       // Generate sample data for the new competitor across all time periods
-      const timePeriods = ["2025-06", "2024-Q4", "2024-01"];
+      const timePeriods = ["2025-06", "2024-10", "2024-01"];
       const metricNames = [
         "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
         "Traffic Channels", "Device Distribution"
@@ -476,7 +476,7 @@ export function registerRoutes(app: Express): Server {
         // Always regenerate data for competitors (remove the check)
         {
           // Generate sample data for this competitor
-          const timePeriods = ["2024-01", "2024-Q4", "2025-04", "2025-05", "2025-06"];
+          const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
           const metricNames = [
             "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
             "Traffic Channels", "Device Distribution"

@@ -12,7 +12,7 @@ export async function generateTrafficChannelData(clientId: string) {
     'Email'
   ];
   
-  const timePeriods = ['2024-01', '2024-Q4', '2025-04', '2025-05', '2025-06'];
+  const timePeriods = ['2024-01', '2024-10', '2025-04', '2025-05', '2025-06'];
   
   for (const period of timePeriods) {
     // Client data - realistic distribution with some variation per period
@@ -28,7 +28,7 @@ export async function generateTrafficChannelData(clientId: string) {
     const periodVariance = period === '2025-06' ? 0 : 
                           period === '2025-05' ? -2 : 
                           period === '2025-04' ? 3 :
-                          period === '2024-Q4' ? -1 : 2;
+                          period === '2024-10' ? -1 : 2;
     
     let clientChannels = Object.entries(clientBaseDistribution).map(([channel, base]) => {
       let value = base;
@@ -128,7 +128,7 @@ export async function generateCompetitorTrafficChannelData(competitorId: string,
     'Email'
   ];
   
-  const timePeriods = ['2024-01', '2024-Q4', '2025-04', '2025-05', '2025-06'];
+  const timePeriods = ['2024-01', '2024-10', '2025-04', '2025-05', '2025-06'];
   
   // Use competitor ID to create consistent but varied data
   const seed = competitorId.charCodeAt(0) + competitorId.length;
