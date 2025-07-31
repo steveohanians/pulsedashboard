@@ -215,7 +215,7 @@ export function registerRoutes(app: Express): Server {
       res.sendStatus(204);
     } catch (error) {
       console.error('Error deleting competitor:', error);
-      res.status(500).json({ message: "Internal server error", error: error.message });
+      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
     }
   });
 

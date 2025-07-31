@@ -150,12 +150,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCompetitor(id: string): Promise<void> {
+    // First delete all metrics associated with this competitor
+    await db.delete(metrics).where(eq(metrics.competitorId, id));
+    
+    // Then delete the competitor
     await db.delete(competitors).where(eq(competitors.id, id));
   }
 
-  async deleteCompetitor(id: string): Promise<void> {
-    await db.delete(competitors).where(eq(competitors.id, id));
-  }
+
 
   // Benchmark Companies
   async getBenchmarkCompanies(): Promise<BenchmarkCompany[]> {
