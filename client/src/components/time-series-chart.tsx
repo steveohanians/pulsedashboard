@@ -183,7 +183,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             dataKey={competitor.label} 
             stroke={competitorColors[index % competitorColors.length]}
             strokeWidth={2}
-            dot={{ fill: competitorColors[index % competitorColors.length], r: 2 }}
+            dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
             strokeOpacity={0.8}
           />
         ))}

@@ -35,7 +35,7 @@ export function registerRoutes(app: Express): Server {
         "Last Month": "2025-01",
         "Last Quarter": "2024-Q4", 
         "Last Year": "2024-01",
-        "Custom Date Range": "2025-01"
+        "Custom Date Range": "2025-01" // Default to current data for custom ranges
       };
       
       if (typeof period === 'string' && periodMap[period]) {
