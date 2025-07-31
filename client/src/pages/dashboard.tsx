@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
+  const [manualClick, setManualClick] = useState<boolean>(false);
 
   interface DashboardData {
     client: any;
@@ -77,8 +78,14 @@ export default function Dashboard() {
 
   // Handle manual navigation clicks with highlighting
   const handleNavigationClick = (metricName: string) => {
+    setManualClick(true);
     setActiveSection(metricName);
     scrollToMetric(metricName);
+    
+    // Allow scroll handler to resume after scroll animation completes
+    setTimeout(() => {
+      setManualClick(false);
+    }, 1000);
   };
 
   // Simple scroll-based highlighting with throttling
@@ -89,7 +96,7 @@ export default function Dashboard() {
     let lastActiveSection = activeSection;
     
     const handleScroll = () => {
-      if (isThrottled) return;
+      if (isThrottled || manualClick) return;
       isThrottled = true;
       
       setTimeout(() => {
