@@ -213,7 +213,7 @@ export default function Dashboard() {
     if (cdMetrics.length > 0) {
       result.push({
         sourceType: 'CD_Avg',
-        label: 'CD Client Avg',
+        label: 'Clear Digital Clients Avg',
         channels: aggregateChannelData(cdMetrics)
       });
     }
@@ -339,7 +339,7 @@ export default function Dashboard() {
       const uniqueCdMetrics = deduplicateByDevice(cdMetrics);
       result.push({
         sourceType: 'CD_Avg',
-        label: 'CD Client Avg',
+        label: 'Clear Digital Clients Avg',
         devices: uniqueCdMetrics.map(m => ({
           name: m.channel || 'Other',
           value: parseFloat(m.value),
@@ -351,7 +351,7 @@ export default function Dashboard() {
       // Fallback data for CD average
       result.push({
         sourceType: 'CD_Avg',
-        label: 'CD Client Avg',
+        label: 'Clear Digital Clients Avg',
         devices: [
           { name: 'Desktop', value: 50, percentage: 50, color: DEVICE_COLORS['Desktop'] },
           { name: 'Mobile', value: 43, percentage: 43, color: DEVICE_COLORS['Mobile'] },

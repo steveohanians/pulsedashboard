@@ -124,7 +124,7 @@ export default function MetricGaugeChart({ metricName, timePeriod, clientData, i
             </div>
           </div>
           <div className="text-center">
-            <div className="font-medium text-slate-700">CD Client Avg</div>
+            <div className="font-medium text-slate-700">Clear Digital Clients Avg</div>
             <div className="text-slate-600">
               {metricName.includes('Rate') 
                 ? `${Math.round(cdAvg * 10) / 10}%`

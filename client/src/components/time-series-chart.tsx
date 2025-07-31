@@ -98,7 +98,7 @@ function generateRealTimeSeriesData(
     
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
-    dataPoint['CD Client Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    dataPoint['Clear Digital Clients Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
     
     // Add competitor data
     competitors.forEach(competitor => {
@@ -157,7 +157,7 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
       date,
       [clientKey]: Math.round(clientData * 10) / 10,
       'Industry Avg': Math.round(industryAvg * 10) / 10,
-      'CD Client Avg': Math.round(cdAvg * 10) / 10,
+      'Clear Digital Clients Avg': Math.round(cdAvg * 10) / 10,
     };
 
     // Add competitor data with actual values
@@ -203,7 +203,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   const colors: Record<string, string> = {
     [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color (exact match to CSS variable)
     'Industry Avg': '#9ca3af', // Light grey
-    'CD Client Avg': '#4b5563', // Dark grey
+    'Clear Digital Clients Avg': '#4b5563', // Dark grey
   };
 
   // Additional colors for competitors
@@ -212,7 +212,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point[clientKey], point['Industry Avg'], point['CD Client Avg']);
+    allValues.push(point[clientKey], point['Industry Avg'], point['Clear Digital Clients Avg']);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
         allValues.push(point[comp.label]);
@@ -231,7 +231,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     const initial: Record<string, boolean> = {
       [clientKey]: true,
       'Industry Avg': true,
-      'CD Client Avg': true,
+      'Clear Digital Clients Avg': true,
     };
     competitors.forEach(comp => {
       initial[comp.label] = true;
@@ -440,27 +440,27 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           <span className="text-slate-700">Industry Avg</span>
         </label>
 
-        {/* CD Client Average checkbox */}
+        {/* Clear Digital Clients Average checkbox */}
         <label className="flex items-center cursor-pointer text-xs">
           <input
             type="checkbox"
-            checked={visibleLines['CD Client Avg']}
-            onChange={() => toggleLine('CD Client Avg')}
+            checked={visibleLines['Clear Digital Clients Avg']}
+            onChange={() => toggleLine('Clear Digital Clients Avg')}
             className="sr-only"
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleLines['CD Client Avg'] ? 'border-gray-500' : 'border-gray-300'
+              visibleLines['Clear Digital Clients Avg'] ? 'border-gray-500' : 'border-gray-300'
             }`}
-            style={{ backgroundColor: visibleLines['CD Client Avg'] ? colors['CD Client Avg'] : 'transparent' }}
+            style={{ backgroundColor: visibleLines['Clear Digital Clients Avg'] ? colors['Clear Digital Clients Avg'] : 'transparent' }}
           >
-            {visibleLines['CD Client Avg'] && (
+            {visibleLines['Clear Digital Clients Avg'] && (
               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
           </div>
-          <span className="text-slate-700">CD Client Avg</span>
+          <span className="text-slate-700">Clear Digital Clients Avg</span>
         </label>
 
         {/* Competitor checkboxes */}
