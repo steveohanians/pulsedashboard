@@ -669,7 +669,7 @@ export default function Dashboard() {
                           clientData={metricData.Client || 0}
                           industryAvg={metricData.Industry_Avg || 0}
                           cdAvg={metricData.CD_Avg || 0}
-                          clientUrl={dashboardData?.client?.url?.replace('https://', '').replace('http://', '')}
+                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           competitors={competitors.map((comp: any) => {
                             // Find bounce rate metric for this competitor
                             const competitorMetric = metrics.find((m: any) => 
