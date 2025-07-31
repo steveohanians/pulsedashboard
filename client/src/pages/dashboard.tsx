@@ -559,7 +559,9 @@ export default function Dashboard() {
               console.log("Bounce Rate Debug:", {
                 metricName,
                 metricData,
+                timePeriod,
                 allMetrics: metrics.filter(m => m.metricName === "Bounce Rate"),
+                allMetricsRaw: metrics,
                 groupedMetrics: groupedMetrics
               });
             }

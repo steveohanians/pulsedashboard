@@ -28,7 +28,19 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      const { period = "2024-01" } = req.query;
+      let { period = "2024-01" } = req.query;
+      
+      // Convert display period to database format
+      const periodMap: Record<string, string> = {
+        "Last Month": "2025-01",
+        "Last Quarter": "2024-Q4", 
+        "Last Year": "2024-01",
+        "Custom Date Range": "2025-01"
+      };
+      
+      if (typeof period === 'string' && periodMap[period]) {
+        period = periodMap[period];
+      }
       
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
