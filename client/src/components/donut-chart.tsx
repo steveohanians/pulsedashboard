@@ -67,10 +67,10 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   return (
     <div className="w-full h-full">
       {/* First row: Client, CD Client Avg, Industry Avg */}
-      <div className="flex justify-center gap-12 mb-4">
+      <div className="flex justify-between items-center mb-2 px-4">
         {nonCompetitors.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
-            <h4 className={`text-sm ${
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
+            <h4 className={`text-xs ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
                 : 'font-medium text-gray-700'
@@ -78,16 +78,16 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
               {item.label}
             </h4>
             
-            <div className="w-32 h-32">
+            <div className="w-24 h-24">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={35}
-                    outerRadius={55}
-                    paddingAngle={2}
+                    innerRadius={25}
+                    outerRadius={40}
+                    paddingAngle={1}
                     dataKey="value"
                   >
                     {item.devices.map((device, deviceIndex) => (
@@ -108,23 +108,23 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
 
       {/* Second row: Competitors */}
       {competitors.length > 0 && (
-        <div className="flex justify-center gap-12">
+        <div className="flex justify-center gap-16 px-4">
           {competitors.map((item, index) => (
-            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
-              <h4 className="text-sm font-medium text-gray-700">
+            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
+              <h4 className="text-xs font-medium text-gray-700">
                 {item.label}
               </h4>
               
-              <div className="w-32 h-32">
+              <div className="w-24 h-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={item.devices}
                       cx="50%"
                       cy="50%"
-                      innerRadius={35}
-                      outerRadius={55}
-                      paddingAngle={2}
+                      innerRadius={25}
+                      outerRadius={40}
+                      paddingAngle={1}
                       dataKey="value"
                     >
                       {item.devices.map((device, deviceIndex) => (
@@ -145,11 +145,11 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       )}
       
       {/* Centered legend */}
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-6 mt-6 border-t border-gray-200">
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-3 mt-3 border-t border-gray-200">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
-          <div key={device} className="flex items-center gap-2">
+          <div key={device} className="flex items-center gap-1">
             <div 
-              className="w-3 h-3 rounded-sm"
+              className="w-2 h-2 rounded-sm"
               style={{ backgroundColor: color }}
             />
             <span className="text-xs text-gray-600">{device}</span>
