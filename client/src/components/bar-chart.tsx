@@ -1,4 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
 
 interface BarChartProps {
@@ -192,21 +193,29 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             />
           )}
           
-          {/* Industry Average bars */}
+          {/* Industry Average bars - dashed outline */}
           {visibleBars['Industry Avg'] && (
             <Bar 
               dataKey="Industry Avg" 
-              fill={colors['Industry Avg']}
+              fill="none"
+              stroke={colors['Industry Avg']}
+              strokeWidth={2}
+              strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
+              shape={(props: any) => <DashedBar {...props} stroke={colors['Industry Avg']} strokeDasharray="5,5" />}
             />
           )}
           
-          {/* CD Client Average bars */}
+          {/* CD Client Average bars - dashed outline */}
           {visibleBars['CD Client Avg'] && (
             <Bar 
               dataKey="CD Client Avg" 
-              fill={colors['CD Client Avg']}
+              fill="none"
+              stroke={colors['CD Client Avg']}
+              strokeWidth={2}
+              strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
+              shape={(props: any) => <DashedBar {...props} stroke={colors['CD Client Avg']} strokeDasharray="8,4" />}
             />
           )}
           

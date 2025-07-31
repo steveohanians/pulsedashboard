@@ -685,7 +685,7 @@ export default function Dashboard() {
                           })}
                         />
                       ) : metricName === "Avg Session Duration" ? (
-                        <SessionDurationAreaChart 
+                        <MetricBarChart 
                           metricName={metricName}
                           timePeriod={timePeriod}
                           clientData={metricData.Client || 0}
