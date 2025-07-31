@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import AIInsights from "@/components/ai-insights";
@@ -465,28 +465,35 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {competitors.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {competitors.map((competitor: any) => (
                     <div
                       key={competitor.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                      className="flex items-center justify-between h-10 px-3 bg-slate-50 rounded-lg border border-slate-200"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{competitor.label}</p>
-                          <p className="text-xs text-slate-500">{competitor.domain}</p>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        competitor.status === 'Active' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {competitor.status}
+                      <span className="text-sm text-slate-900 truncate flex-1 mr-2">
+                        {competitor.domain.replace('https://', '').replace('http://', '')}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/competitors/${competitor.id}`, {
+                              method: 'DELETE',
+                              credentials: 'include'
+                            });
+                            if (response.ok) {
+                              window.location.reload();
+                            }
+                          } catch (error) {
+                            console.error('Error deleting competitor:', error);
+                          }
+                        }}
+                        className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -496,13 +503,17 @@ export default function Dashboard() {
                   <p className="text-xs">No competitors added yet</p>
                 </div>
               )}
-              <Button
-                onClick={() => setShowCompetitorModal(true)}
-                className="w-full mt-3 hover:shadow-[0_0_15px_rgba(255,20,147,0.25)] transition-all duration-200"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Manage Competitors
-              </Button>
+              {competitors.length < 3 && (
+                <Button
+                  onClick={() => setShowCompetitorModal(true)}
+                  className={`w-full h-10 hover:shadow-[0_0_15px_rgba(255,20,147,0.25)] transition-all duration-200 ${
+                    competitors.length > 0 ? 'mt-2' : 'mt-3'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Manage Competitors
+                </Button>
+              )}
             </CardContent>
           </Card>
 
