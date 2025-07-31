@@ -132,13 +132,37 @@ export default function Dashboard() {
       const channelMap = new Map();
       
       sourceMetrics.forEach(metric => {
-        const channelName = metric.channel || 'Other';
-        const value = parseFloat(metric.value);
-        
-        if (channelMap.has(channelName)) {
-          channelMap.set(channelName, channelMap.get(channelName) + value);
+        // Handle both individual channel records and legacy JSON format
+        if (metric.channel) {
+          // Individual channel record (new format)
+          const channelName = metric.channel;
+          const value = parseFloat(metric.value);
+          
+          if (channelMap.has(channelName)) {
+            channelMap.set(channelName, channelMap.get(channelName) + value);
+          } else {
+            channelMap.set(channelName, value);
+          }
         } else {
-          channelMap.set(channelName, value);
+          // Legacy JSON format - parse and aggregate
+          try {
+            const channelData = JSON.parse(metric.value);
+            if (Array.isArray(channelData)) {
+              channelData.forEach((channel: any) => {
+                const channelName = channel.name;
+                const value = parseFloat(channel.value);
+                
+                if (channelMap.has(channelName)) {
+                  channelMap.set(channelName, channelMap.get(channelName) + value);
+                } else {
+                  channelMap.set(channelName, value);
+                }
+              });
+            }
+          } catch (e) {
+            // Fallback for invalid JSON
+            console.warn('Invalid traffic channel data:', metric.value);
+          }
         }
       });
       
