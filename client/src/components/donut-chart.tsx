@@ -60,10 +60,15 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
   const labelWidth = Math.min(Math.max(maxLabelLength * 8, 120), 200); // 8px per char, min 120px, max 200px
 
+  // Group data into non-competitors and competitors
+  const nonCompetitors = data.filter(item => !item.sourceType.startsWith('Competitor'));
+  const competitors = data.filter(item => item.sourceType.startsWith('Competitor'));
+
   return (
     <div className="w-full h-full">
-      <div className="flex flex-wrap justify-center gap-8">
-        {data.map((item, index) => (
+      {/* First row: Client, CD Client Avg, Industry Avg */}
+      <div className="flex flex-wrap justify-center gap-8 mb-8">
+        {nonCompetitors.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
             <h4 className={`text-sm ${
               item.sourceType === 'Client' 
@@ -100,6 +105,44 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
           </div>
         ))}
       </div>
+
+      {/* Second row: Competitors */}
+      {competitors.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-8">
+          {competitors.map((item, index) => (
+            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
+              <h4 className="text-sm font-medium text-gray-700">
+                {item.label}
+              </h4>
+              
+              <div className="w-32 h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={item.devices}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={35}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {item.devices.map((device, deviceIndex) => (
+                        <Cell 
+                          key={`cell-${deviceIndex}`} 
+                          fill={device.color}
+                          className="hover:brightness-110 transition-all cursor-pointer"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={CustomTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       
       {/* Centered legend */}
       <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-6 mt-6 border-t border-gray-200">
