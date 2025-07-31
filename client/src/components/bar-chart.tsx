@@ -30,13 +30,13 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
+    dates = ["Mar 25", "Apr 25", "May 25", "Jun 25"];
   } else if (timePeriod === "Last Quarter") {
-    dates = ["2025-01", "2024-Q4", "2024-01"];
+    dates = ["Apr 25", "May 25", "Jun 25"];
   } else if (timePeriod === "Last Year") {
-    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
+    dates = ["Q2 24", "Q3 24", "Q4 24", "Q1 25"];
   } else {
-    dates = ["2025-01", "2024-Q4", "2024-01", "2025-06"];
+    dates = ["Mar 25", "Apr 25", "May 25", "Jun 25"];
   }
 
   // Generate stable variance around the base values
