@@ -362,14 +362,14 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           />
         )}
         
-        {/* CD Client Average line */}
-        {visibleLines['CD Client Avg'] && (
+        {/* Clear Digital Clients Average line */}
+        {visibleLines['Clear Digital Clients Avg'] && (
           <Line 
             type="monotone" 
-            dataKey="CD Client Avg" 
-            stroke={colors['CD Client Avg']}
+            dataKey="Clear Digital Clients Avg" 
+            stroke={colors['Clear Digital Clients Avg']}
             strokeWidth={2}
-            dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
+            dot={<DiamondDot fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
           />

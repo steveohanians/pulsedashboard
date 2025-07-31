@@ -275,15 +275,15 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
           />
         )}
         
-        {/* CD Client Average area */}
-        {visibleAreas['CD Client Avg'] && (
+        {/* Clear Digital Clients Average area */}
+        {visibleAreas['Clear Digital Clients Avg'] && (
           <Area 
             type="monotone" 
-            dataKey="CD Client Avg" 
-            stroke={colors['CD Client Avg']}
+            dataKey="Clear Digital Clients Avg" 
+            stroke={colors['Clear Digital Clients Avg']}
             strokeWidth={2}
             fill="url(#cdGradient)"
-            dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
+            dot={<DiamondDot fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
           />

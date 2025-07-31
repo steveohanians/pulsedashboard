@@ -353,10 +353,10 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             />
           )}
           
-          {/* CD Client Average bars - dashed outline */}
-          {visibleBars['CD Client Avg'] && (
+          {/* Clear Digital Clients Average bars - dashed outline */}
+          {visibleBars['Clear Digital Clients Avg'] && (
             <Bar 
-              dataKey="CD Client Avg" 
+              dataKey="Clear Digital Clients Avg" 
               fill="none"
               stroke="#4b5563"
               strokeWidth={2}
