@@ -153,26 +153,38 @@ export default function Dashboard() {
       });
     }
 
-    // Competitor data - group by competitor ID to avoid duplicates
-    const processedCompetitors = new Set();
+    // Competitor data - deduplicate by creating a map first
+    const competitorMap = new Map();
+    trafficMetrics.filter(m => m.sourceType === 'Competitor').forEach(m => {
+      const key = `${m.competitorId}_${m.channel}`;
+      if (!competitorMap.has(key)) {
+        competitorMap.set(key, m);
+      }
+    });
+
+    // Group deduplicated data by competitor
+    const competitorGroups = new Map();
+    Array.from(competitorMap.values()).forEach(m => {
+      if (!competitorGroups.has(m.competitorId)) {
+        competitorGroups.set(m.competitorId, []);
+      }
+      competitorGroups.get(m.competitorId).push(m);
+    });
+
+    // Add competitor data to results
     competitors.forEach(competitor => {
-      if (!processedCompetitors.has(competitor.id)) {
-        processedCompetitors.add(competitor.id);
-        const competitorMetrics = trafficMetrics.filter(m => 
-          m.sourceType === 'Competitor' && m.competitorId === competitor.id
-        );
-        if (competitorMetrics.length > 0) {
-          result.push({
-            sourceType: `Competitor_${competitor.id}`,
-            label: competitor.domain?.replace(/https?:\/\//, '') || 'Competitor',
-            channels: competitorMetrics.map(m => ({
-              name: m.channel || 'Other',
-              value: parseFloat(m.value),
-              percentage: parseFloat(m.value),
-              color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
-            }))
-          });
-        }
+      const competitorMetrics = competitorGroups.get(competitor.id) || [];
+      if (competitorMetrics.length > 0) {
+        result.push({
+          sourceType: `Competitor_${competitor.id}`,
+          label: competitor.domain?.replace(/https?:\/\//, '') || 'Competitor',
+          channels: competitorMetrics.map(m => ({
+            name: m.channel || 'Other',
+            value: parseFloat(m.value),
+            percentage: parseFloat(m.value),
+            color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+          }))
+        });
       }
     });
 
