@@ -103,11 +103,16 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   const colors: Record<string, string> = {
     [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
     'Industry Avg': '#9ca3af', // Light grey
-    'CD Client Avg': '#9ca3af', // Light grey (changed from dark grey)
+    'CD Client Avg': '#4b5563', // Dark grey (matching bounce rate chart)
   };
 
   // Additional colors for competitors
   const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+  
+  // Add competitor colors to the main colors object
+  competitors.forEach((comp, index) => {
+    colors[comp.label] = competitorColors[index % competitorColors.length];
+  });
   
   // State for toggling bars
   const [visibleBars, setVisibleBars] = useState<Record<string, boolean>>(() => {
@@ -236,11 +241,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             <Bar 
               dataKey="CD Client Avg" 
               fill="none"
-              stroke="#9ca3af"
+              stroke="#4b5563"
               strokeWidth={2}
               strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="8,4" />}
+              shape={(props: any) => <DashedBar {...props} stroke="#4b5563" strokeDasharray="8,4" />}
             />
           )}
           
