@@ -75,45 +75,11 @@ export default function Dashboard() {
     }
   };
 
-  // Track active section with simple threshold-based detection
-  useEffect(() => {
-    if (isLoading) return;
-    
-    let timeoutId: NodeJS.Timeout;
-    
-    const handleScroll = () => {
-      clearTimeout(timeoutId);
-      
-      timeoutId = setTimeout(() => {
-        const scrollTop = window.scrollY;
-        const triggerPoint = scrollTop + 150; // Fixed trigger point
-        
-        // Find the first section whose top is still below our trigger point
-        let newActiveSection = activeSection;
-        
-        for (let i = metricNames.length - 1; i >= 0; i--) {
-          const metricName = metricNames[i];
-          const element = document.getElementById(`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`);
-          if (element && element.offsetTop <= triggerPoint) {
-            newActiveSection = metricName;
-            break;
-          }
-        }
-        
-        if (newActiveSection !== activeSection) {
-          setActiveSection(newActiveSection);
-        }
-      }, 200);
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Set initial state
-    
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [isLoading, metricNames, activeSection]);
+  // Handle manual navigation clicks (no automatic scroll highlighting)
+  const handleNavigationClick = (metricName: string) => {
+    setActiveSection(metricName);
+    scrollToMetric(metricName);
+  };
 
 
 
@@ -172,7 +138,7 @@ export default function Dashboard() {
               {metricNames.map((metricName) => (
                 <li key={metricName}>
                   <button
-                    onClick={() => scrollToMetric(metricName)}
+                    onClick={() => handleNavigationClick(metricName)}
                     className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
                       activeSection === metricName
                         ? 'bg-slate-100 text-primary'
