@@ -54,10 +54,11 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 py-8 lg:py-0">
-        <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Left side - Form */}
+        <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 py-8 lg:py-0">
+          <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <div className="mx-auto mb-6">
               <img 
@@ -199,12 +200,12 @@ export default function AuthPage() {
               </Button>
             </CardContent>
           </Card>
+          </div>
         </div>
-      </div>
 
-      {/* Right side - Hero */}
-      <div className="lg:flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 sm:p-6 lg:p-12">
-        <div className="max-w-lg text-center w-full">
+        {/* Right side - Hero */}
+        <div className="lg:flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 sm:p-6 lg:p-12">
+          <div className="max-w-lg text-center w-full">
           <div className="flex justify-center space-x-3 sm:space-x-4 mb-6 lg:mb-8">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
               <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
@@ -240,6 +241,7 @@ export default function AuthPage() {
               <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
               <span>Industry-specific analytics</span>
             </div>
+          </div>
           </div>
         </div>
       </div>
