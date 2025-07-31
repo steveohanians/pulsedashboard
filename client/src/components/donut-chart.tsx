@@ -67,9 +67,9 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   return (
     <div className="w-full h-full">
       {/* First row: Client, CD Client Avg, Industry Avg */}
-      <div className="flex flex-wrap justify-center gap-8 mb-8">
+      <div className="flex justify-center gap-12 mb-4">
         {nonCompetitors.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
             <h4 className={`text-sm ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
@@ -108,9 +108,9 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
 
       {/* Second row: Competitors */}
       {competitors.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-8">
+        <div className="flex justify-center gap-12">
           {competitors.map((item, index) => (
-            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-3">
+            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
               <h4 className="text-sm font-medium text-gray-700">
                 {item.label}
               </h4>
