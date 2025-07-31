@@ -64,17 +64,25 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const nonCompetitors = data.filter(item => !item.sourceType.startsWith('Competitor'));
   const competitors = data.filter(item => item.sourceType.startsWith('Competitor'));
 
+  // Create a balanced grid layout
+  const totalItems = data.length;
+  
   return (
     <div className="w-full h-full">
-      {/* First row: Client, CD Client Avg, Industry Avg */}
-      <div className="flex justify-evenly items-center mb-2">
-        {nonCompetitors.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
-            <h4 className={`text-xs ${
+      {/* Responsive grid layout for better spacing */}
+      <div className={`grid gap-x-8 gap-y-6 place-items-center mb-4 ${
+        totalItems <= 3 ? 'grid-cols-3' :
+        totalItems <= 4 ? 'grid-cols-2 md:grid-cols-4' :
+        totalItems <= 6 ? 'grid-cols-3 md:grid-cols-6' :
+        'grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
+      }`}>
+        {data.map((item, index) => (
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
+            <h4 className={`text-xs text-center leading-tight ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
                 : 'font-medium text-gray-700'
-            }`}>
+            } max-w-[100px]`}>
               {item.label}
             </h4>
             
@@ -105,44 +113,6 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
           </div>
         ))}
       </div>
-
-      {/* Second row: Competitors */}
-      {competitors.length > 0 && (
-        <div className="flex justify-center items-center gap-32">
-          {competitors.map((item, index) => (
-            <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
-              <h4 className="text-xs font-medium text-gray-700">
-                {item.label}
-              </h4>
-              
-              <div className="w-24 h-24">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={item.devices}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={25}
-                      outerRadius={40}
-                      paddingAngle={1}
-                      dataKey="value"
-                    >
-                      {item.devices.map((device, deviceIndex) => (
-                        <Cell 
-                          key={`cell-${deviceIndex}`} 
-                          fill={device.color}
-                          className="hover:brightness-110 transition-all cursor-pointer"
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip content={CustomTooltip} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       
       {/* Centered legend */}
       <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-3 mt-3 border-t border-gray-200">
