@@ -186,7 +186,7 @@ export default function Dashboard() {
         
         <div className="flex">
           {/* Navigation Skeleton */}
-          <div className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 p-4">
+          <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4">
             <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -264,7 +264,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 fixed top-16 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
