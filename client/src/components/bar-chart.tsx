@@ -165,19 +165,20 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             width={45}
           />
           <Tooltip 
+            cursor={{ fill: '#9ca3af', fillOpacity: 0.3 }}
             content={({ active, payload, label }) => {
               if (!active || !payload || !label) return null;
               
               return (
                 <div style={{
-                  backgroundColor: '#9ca3af',
-                  border: '1px solid #6b7280',
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '6px',
                   boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                   padding: '8px 12px',
                   fontSize: '12px'
                 }}>
-                  <div style={{ color: 'white', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                  <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
                     {label}
                   </div>
                   {payload.map((entry: any, index: number) => (
@@ -193,7 +194,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                       />
                       <span style={{ 
                         fontWeight: entry.dataKey === clientKey ? 'bold' : 'normal',
-                        color: entry.dataKey === clientKey ? colors[clientKey] : 'white'
+                        color: entry.dataKey === clientKey ? colors[clientKey] : '#9ca3af'
                       }}>
                         {entry.dataKey === clientKey ? (
                           <strong>{entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}</strong>
