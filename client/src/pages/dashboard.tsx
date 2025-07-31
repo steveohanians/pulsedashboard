@@ -503,9 +503,9 @@ export default function Dashboard() {
                         recommendation={insight.recommendation}
                       />
                     ) : (
-                      <div className="space-y-6">
-                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
-                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
                             <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-3">
                               <Info className="h-3 w-3 text-primary" />
                             </div>
@@ -522,8 +522,8 @@ export default function Dashboard() {
                             }. This metric is crucial for understanding user engagement and optimizing your digital strategy.
                           </p>
                         </div>
-                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
-                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
                             <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
                               <Lightbulb className="h-3 w-3 text-yellow-600" />
                             </div>
@@ -540,8 +540,8 @@ export default function Dashboard() {
                             }.
                           </p>
                         </div>
-                        <div className="bg-white/60 rounded-xl p-4 border border-slate-200/60">
-                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center">
                             <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
                               <TrendingUp className="h-3 w-3 text-green-600" />
                             </div>
