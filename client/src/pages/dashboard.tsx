@@ -168,45 +168,60 @@ export default function Dashboard() {
       });
     }
 
-    // Dynamic competitor data - generate realistic data for each competitor
-    competitors.forEach((competitor, index) => {
+    // Dynamic competitor data - use actual database data
+    competitors.forEach((competitor) => {
       const competitorLabel = cleanDomainName(competitor.domain);
+      const competitorMetrics = trafficMetrics.filter(m => 
+        m.sourceType === 'Competitor' && m.competitorId === competitor.id
+      );
       
-      // Generate varied but realistic traffic channel data
-      const baseData = [
-        { name: 'Organic Search', base: 45, variance: 10 },
-        { name: 'Direct', base: 25, variance: 8 },
-        { name: 'Social Media', base: 15, variance: 10 },
-        { name: 'Paid Search', base: 10, variance: 6 },
-        { name: 'Email', base: 5, variance: 3 }
-      ];
+      if (competitorMetrics.length > 0) {
+        const uniqueCompetitorMetrics = deduplicateByChannel(competitorMetrics);
+        result.push({
+          sourceType: `Competitor_${competitor.id}`,
+          label: competitorLabel,
+          channels: uniqueCompetitorMetrics.map(m => ({
+            name: m.channel || 'Other',
+            value: parseFloat(m.value),
+            percentage: parseFloat(m.value),
+            color: CHART_COLORS.TRAFFIC_CHANNELS[m.channel as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+          }))
+        });
+      } else {
+        // Fallback if no data - generate consistent but varied data
+        const baseData = [
+          { name: 'Organic Search', base: 40 + (competitor.id.length % 10), variance: 5 },
+          { name: 'Direct', base: 25 + (competitor.id.length % 6), variance: 4 },
+          { name: 'Social Media', base: 15 + (competitor.id.length % 8), variance: 6 },
+          { name: 'Paid Search', base: 12 + (competitor.id.length % 4), variance: 3 },
+          { name: 'Email', base: 3 + (competitor.id.length % 3), variance: 2 }
+        ];
 
-      const channels = baseData.map(channel => {
-        // Use competitor index to create consistent but varied data
-        const seed = competitor.id.length + index;
-        const variance = (seed % (channel.variance * 2)) - channel.variance;
-        const value = Math.max(1, channel.base + variance);
-        
-        return {
-          name: channel.name,
-          value: value,
-          percentage: value,
-          color: CHART_COLORS.TRAFFIC_CHANNELS[channel.name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-        };
-      });
+        let channels = baseData.map(channel => {
+          const variance = (competitor.id.charCodeAt(0) % (channel.variance * 2)) - channel.variance;
+          const value = Math.max(1, channel.base + variance);
+          return {
+            name: channel.name,
+            value: value,
+            percentage: value,
+            color: CHART_COLORS.TRAFFIC_CHANNELS[channel.name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+          };
+        });
 
-      // Normalize to 100%
-      const total = channels.reduce((sum, channel) => sum + channel.value, 0);
-      channels.forEach(channel => {
-        channel.value = Math.round((channel.value / total) * 100);
-        channel.percentage = channel.value;
-      });
+        // Normalize to 100%
+        const total = channels.reduce((sum, channel) => sum + channel.value, 0);
+        channels = channels.map(channel => ({
+          ...channel,
+          value: Math.round((channel.value / total) * 100),
+          percentage: Math.round((channel.value / total) * 100)
+        }));
 
-      result.push({
-        sourceType: `Competitor_${competitor.id}`,
-        label: competitorLabel,
-        channels: channels
-      });
+        result.push({
+          sourceType: `Competitor_${competitor.id}`,
+          label: competitorLabel,
+          channels: channels
+        });
+      }
     });
 
     return result;
