@@ -22,6 +22,7 @@ interface TimeSeriesChartProps {
   clientData: number;
   industryAvg: number;
   cdAvg: number;
+  clientUrl?: string;
   competitors: Array<{
     id: string;
     label: string;
@@ -36,7 +37,7 @@ function seededRandom(seed: number): number {
 }
 
 // Generate stable time series data based on the selected time period
-function generateTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[]): any[] {
+function generateTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
   const data: any[] = [];
   
   // Determine the date range and intervals based on time period
@@ -81,9 +82,10 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
     const seed2 = date.charCodeAt(1) + industryAvg;
     const seed3 = date.charCodeAt(2) + cdAvg;
     
+    const clientKey = clientUrl || 'Client';
     const point: any = {
       date,
-      Client: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
+      [clientKey]: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
       'Industry Avg': Math.round((industryAvg + (seededRandom(seed2) - 0.5) * industryAvg * variance) * 10) / 10,
       'CD Client Avg': Math.round((cdAvg + (seededRandom(seed3) - 0.5) * cdAvg * variance) * 10) / 10,
     };
@@ -102,16 +104,18 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
   return data;
 }
 
-export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, competitors }: TimeSeriesChartProps) {
+export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: TimeSeriesChartProps) {
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
-    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors]
+    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl]
   );
+
+  const clientKey = clientUrl || 'Client';
   
   // Define colors for each line
-  const colors = {
-    'Client': 'hsl(318, 97%, 50%)', // Primary pink color (exact match to CSS variable)
+  const colors: Record<string, string> = {
+    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color (exact match to CSS variable)
     'Industry Avg': '#9ca3af', // Light grey
     'CD Client Avg': '#4b5563', // Dark grey
   };
@@ -122,7 +126,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Calculate fixed Y-axis domain based on all data (regardless of visibility)
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point.Client, point['Industry Avg'], point['CD Client Avg']);
+    allValues.push(point[clientKey], point['Industry Avg'], point['CD Client Avg']);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
         allValues.push(point[comp.label]);
@@ -137,7 +141,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // State for toggling lines - ensure all competitors are visible by default
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
-      'Client': true,
+      [clientKey]: true,
       'Industry Avg': true,
       'CD Client Avg': true,
     };
@@ -210,19 +214,61 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : ''}`,
             name
           ]}
-          labelStyle={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}
+          labelFormatter={(label) => (
+            <span style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}>
+              {label}
+            </span>
+          )}
+          itemSorter={(item) => item.name === clientKey ? -1 : 0} // Client appears first
+          contentCustom={(props) => {
+            if (!props.active || !props.payload || !props.label) return null;
+            
+            return (
+              <div style={{
+                backgroundColor: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                padding: '8px 12px',
+                fontSize: '12px'
+              }}>
+                <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                  {props.label}
+                </div>
+                {props.payload.map((entry: any, index: number) => (
+                  <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                    <div 
+                      style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        backgroundColor: entry.color, 
+                        marginRight: '6px',
+                        borderRadius: '50%'
+                      }} 
+                    />
+                    <span style={{ 
+                      fontWeight: entry.name === clientKey ? 'bold' : 'normal',
+                      color: entry.name === clientKey ? colors[clientKey] : '#374151'
+                    }}>
+                      {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          }}
         />
 
         
         {/* Client line (primary pink) */}
-        {visibleLines['Client'] && (
+        {visibleLines[clientKey] && (
           <Line 
             type="monotone" 
-            dataKey="Client" 
-            stroke={colors.Client}
+            dataKey={clientKey} 
+            stroke={colors[clientKey]}
             strokeWidth={3}
-            dot={{ fill: colors.Client, r: 3 }}
-            activeDot={{ r: 5, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
+            dot={{ fill: colors[clientKey], r: 3 }}
+            activeDot={{ r: 5, stroke: colors[clientKey], strokeWidth: 2, fill: 'white' }}
             animationDuration={isInitialRender ? 800 : 0}
           />
         )}
@@ -276,23 +322,23 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
         <label className="flex items-center cursor-pointer text-xs">
           <input
             type="checkbox"
-            checked={visibleLines['Client']}
-            onChange={() => toggleLine('Client')}
+            checked={visibleLines[clientKey] || false}
+            onChange={() => toggleLine(clientKey)}
             className="sr-only"
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleLines['Client'] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+              visibleLines[clientKey] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
             }`}
-            style={{ backgroundColor: visibleLines['Client'] ? colors.Client : 'transparent' }}
+            style={{ backgroundColor: visibleLines[clientKey] ? colors[clientKey] : 'transparent' }}
           >
-            {visibleLines['Client'] && (
+            {visibleLines[clientKey] && (
               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
           </div>
-          <span className="text-slate-700">Client</span>
+          <span className="text-slate-700 font-medium">{clientKey}</span>
         </label>
 
         {/* Industry Average checkbox */}
