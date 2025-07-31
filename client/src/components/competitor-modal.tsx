@@ -29,7 +29,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         predicate: (query) => 
-          query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`)
+          Boolean(query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`))
       });
       setDomain("");
       setLabel("");
@@ -54,7 +54,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         predicate: (query) => 
-          query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`)
+          Boolean(query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`))
       });
       toast({
         title: "Competitor removed",

@@ -10,7 +10,7 @@ import {
   type PasswordResetToken, type InsertPasswordResetToken
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, isNull } from "drizzle-orm";
+import { eq, and, or, isNull, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -195,6 +195,23 @@ export class DatabaseStorage implements IStorage {
       .values(insertMetric)
       .returning();
     return metric;
+  }
+
+  async getMetricsByCompetitors(clientId: string, timePeriod: string): Promise<Metric[]> {
+    // Get all competitors for this client, then get their metrics
+    const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
+    const competitorIds = clientCompetitors.map(c => c.id);
+    
+    if (competitorIds.length === 0) {
+      return [];
+    }
+    
+    return await db.select().from(metrics).where(
+      and(
+        inArray(metrics.competitorId, competitorIds),
+        eq(metrics.timePeriod, timePeriod)
+      )
+    );
   }
 
   // Benchmarks

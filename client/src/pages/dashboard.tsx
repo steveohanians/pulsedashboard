@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
+import TimeSeriesChart from "@/components/time-series-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
@@ -575,7 +576,28 @@ export default function Dashboard() {
                   {/* Enhanced Chart Container */}
                   <div className="bg-slate-50/50 rounded-xl p-4 lg:p-6 mb-6 lg:mb-8">
                     <div className="h-64 lg:h-72">
-                      <MetricsChart metricName={metricName} data={metricData} />
+                      {metricName === "Bounce Rate" ? (
+                        <TimeSeriesChart 
+                          metricName={metricName}
+                          timePeriod={timePeriod}
+                          clientData={metricData.Client || 0}
+                          industryAvg={metricData.Industry_Avg || 0}
+                          cdAvg={metricData.CD_Avg || 0}
+                          competitors={competitors.map((comp: any) => {
+                            // Find bounce rate metric for this competitor
+                            const competitorMetric = metrics.find((m: any) => 
+                              m.competitorId === comp.id && m.metricName === 'Bounce Rate'
+                            );
+                            return {
+                              id: comp.id,
+                              label: comp.domain.replace('https://', '').replace('http://', ''),
+                              value: competitorMetric ? parseFloat(competitorMetric.value) : 42.3
+                            };
+                          })}
+                        />
+                      ) : (
+                        <MetricsChart metricName={metricName} data={metricData} />
+                      )}
                     </div>
                   </div>
                   

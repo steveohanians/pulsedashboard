@@ -40,15 +40,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const [metrics, competitors, insights] = await Promise.all([
+      const [metrics, competitors, competitorMetrics, insights] = await Promise.all([
         storage.getMetricsByClient(clientId, period as string),
         storage.getCompetitorsByClient(clientId),
+        storage.getMetricsByCompetitors(clientId, period as string),
         storage.getAIInsights(clientId, period as string)
       ]);
 
+      // Combine client metrics with competitor metrics
+      const allMetrics = [...metrics, ...competitorMetrics];
+
       res.json({
         client,
-        metrics,
+        metrics: allMetrics,
         competitors,
         insights
       });
