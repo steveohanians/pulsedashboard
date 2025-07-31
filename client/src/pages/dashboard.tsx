@@ -450,9 +450,6 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Section Divider */}
-        <div className="border-t border-slate-200/60 my-12"></div>
-
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
           {metricNames.map((metricName) => {
