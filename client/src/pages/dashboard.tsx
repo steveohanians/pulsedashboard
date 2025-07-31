@@ -96,12 +96,7 @@ export default function Dashboard() {
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
     const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-    const sourceTypes = ['Client', 'CD_Avg', 'Industry_Avg'];
     
-    // Add competitor data
-    const competitorData = trafficMetrics.filter(m => m.sourceType === 'Competitor');
-    const competitorSources = competitors.map((comp, index) => `Competitor ${index + 1}`);
-
     const CHANNEL_COLORS = {
       'Organic Search': '#10b981',
       'Direct': '#3b82f6', 
@@ -111,39 +106,73 @@ export default function Dashboard() {
       'Other': '#6b7280',
     };
 
-    const allSources = [...sourceTypes, ...competitorSources];
-    
-    return allSources.map((sourceType, index) => {
-      let sourceMetrics;
-      let label;
-      
-      if (sourceType.startsWith('Competitor')) {
-        const competitorIndex = parseInt(sourceType.split(' ')[1]) - 1;
-        const competitor = competitors[competitorIndex];
-        sourceMetrics = trafficMetrics.filter(m => 
-          m.sourceType === 'Competitor' && m.competitorId === competitor?.id
-        );
-        label = competitor?.domain?.replace(/https?:\/\//, '') || sourceType;
-      } else {
-        sourceMetrics = trafficMetrics.filter(m => m.sourceType === sourceType);
-        label = sourceType === 'Client' ? client?.name || 'Client' :
-               sourceType === 'CD_Avg' ? 'CD Client Avg' :
-               'Industry Avg';
+    const result = [];
+
+    // Client data
+    const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+    if (clientMetrics.length > 0) {
+      result.push({
+        sourceType: 'Client',
+        label: client?.name || 'Client',
+        channels: clientMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+        }))
+      });
+    }
+
+    // CD Average data
+    const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
+    if (cdMetrics.length > 0) {
+      result.push({
+        sourceType: 'CD_Avg',
+        label: 'CD Client Avg',
+        channels: cdMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+        }))
+      });
+    }
+
+    // Industry Average data
+    const industryMetrics = trafficMetrics.filter(m => m.sourceType === 'Industry_Avg');
+    if (industryMetrics.length > 0) {
+      result.push({
+        sourceType: 'Industry_Avg',
+        label: 'Industry Avg',
+        channels: industryMetrics.map(m => ({
+          name: m.channel || 'Other',
+          value: parseFloat(m.value),
+          percentage: parseFloat(m.value),
+          color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+        }))
+      });
+    }
+
+    // Competitor data - one entry per competitor
+    competitors.forEach(competitor => {
+      const competitorMetrics = trafficMetrics.filter(m => 
+        m.sourceType === 'Competitor' && m.competitorId === competitor.id
+      );
+      if (competitorMetrics.length > 0) {
+        result.push({
+          sourceType: `Competitor_${competitor.id}`,
+          label: competitor.domain?.replace(/https?:\/\//, '') || 'Competitor',
+          channels: competitorMetrics.map(m => ({
+            name: m.channel || 'Other',
+            value: parseFloat(m.value),
+            percentage: parseFloat(m.value),
+            color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
+          }))
+        });
       }
+    });
 
-      const channels = sourceMetrics.map(m => ({
-        name: m.channel || 'Other',
-        value: parseFloat(m.value),
-        percentage: parseFloat(m.value),
-        color: CHANNEL_COLORS[m.channel as keyof typeof CHANNEL_COLORS] || CHANNEL_COLORS.Other
-      }));
-
-      return {
-        sourceType,
-        label,
-        channels
-      };
-    }).filter(item => item.channels.length > 0);
+    return result;
   };
 
   const metricNames = [

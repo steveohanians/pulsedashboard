@@ -28,13 +28,15 @@ const CHANNEL_COLORS = {
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
   return (
-    <div className="w-full h-full space-y-6">
-      <div className="space-y-4">
+    <div className="w-full h-full space-y-4">
+      <div className="space-y-3">
         {data.map((item, index) => (
-          <div key={index} className="space-y-2">
-            <span className="text-sm font-medium text-gray-700">{item.label}</span>
+          <div key={index} className="flex items-center gap-4">
+            <div className="w-32 flex-shrink-0">
+              <span className="text-sm font-medium text-gray-700 truncate block">{item.label}</span>
+            </div>
             
-            <div className="w-full h-8 flex rounded-md overflow-hidden bg-gray-100">
+            <div className="flex-1 h-7 flex rounded-md overflow-hidden bg-gray-100">
               {item.channels.map((channel, channelIndex) => (
                 <div
                   key={channelIndex}
@@ -53,7 +55,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 pt-4 border-t border-gray-200">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-2">
             <div 
