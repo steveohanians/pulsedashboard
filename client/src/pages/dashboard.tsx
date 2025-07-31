@@ -17,6 +17,7 @@ import { StackedBarChart } from "@/components/stacked-bar-chart";
 import { DonutChart } from "@/components/donut-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
+import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 
@@ -1223,6 +1224,7 @@ export default function Dashboard() {
           clientId={user?.clientId || ""}
         />
       </div>
+      <Footer />
     </div>
   );
 }

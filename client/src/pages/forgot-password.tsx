@@ -8,6 +8,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function ForgotPasswordPage() {
@@ -124,6 +125,7 @@ export default function ForgotPasswordPage() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 }

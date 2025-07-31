@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartLine, TrendingUp, BarChart3, PieChart, Bug } from "lucide-react";
+import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function AuthPage() {
@@ -242,6 +243,7 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

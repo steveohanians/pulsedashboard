@@ -16,6 +16,7 @@ import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Footer from "@/components/Footer";
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -1509,6 +1510,7 @@ export default function AdminPanel() {
               </TabsContent>
         </Tabs>
       </div>
+      <Footer />
     </div>
   );
 }
