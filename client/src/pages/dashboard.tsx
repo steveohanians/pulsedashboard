@@ -652,9 +652,9 @@ export default function Dashboard() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1">
                       <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">{metricName}</CardTitle>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                         <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
+                          <Clock className="h-3 w-3" />
                           <span>
                             {timePeriod === 'Last Month' ? 'Last Month' :
                              timePeriod === 'Last Quarter' ? 'Last Quarter' :
@@ -664,11 +664,11 @@ export default function Dashboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Filter className="h-4 w-4" />
+                          <Filter className="h-3 w-3" />
                           <span>{industryVertical === 'All' ? 'All Industries' : industryVertical}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Filter className="h-4 w-4" />
+                          <Filter className="h-3 w-3" />
                           <span>{businessSize === 'All' ? 'All Sizes' : businessSize}</span>
                         </div>
                       </div>
