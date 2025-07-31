@@ -203,25 +203,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           type="number"
         />
         <Tooltip 
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
-            fontSize: '12px'
-          }}
-          formatter={(value: number, name: string) => [
-            `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : ''}`,
-            name
-          ]}
-          labelFormatter={(label) => (
-            <span style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}>
-              {label}
-            </span>
-          )}
-          itemSorter={(item) => item.name === clientKey ? -1 : 0} // Client appears first
-          contentCustom={(props) => {
-            if (!props.active || !props.payload || !props.label) return null;
+          content={({ active, payload, label }) => {
+            if (!active || !payload || !label) return null;
             
             return (
               <div style={{
@@ -233,9 +216,9 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                 fontSize: '12px'
               }}>
                 <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
-                  {props.label}
+                  {label}
                 </div>
-                {props.payload.map((entry: any, index: number) => (
+                {payload.map((entry: any, index: number) => (
                   <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
                     <div 
                       style={{ 
