@@ -114,7 +114,22 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     colors[comp.label] = competitorColors[index % competitorColors.length];
   });
   
-  // State for toggling bars
+  // Calculate fixed Y-axis domain based on all data (regardless of visibility)
+  const allValues: number[] = [];
+  data.forEach(point => {
+    allValues.push(point[clientKey], point['Industry Avg'], point['CD Client Avg']);
+    competitors.forEach(comp => {
+      if (point[comp.label] !== undefined) {
+        allValues.push(point[comp.label]);
+      }
+    });
+  });
+  const minValue = Math.min(...allValues);
+  const maxValue = Math.max(...allValues);
+  const padding = (maxValue - minValue) * 0.15; // 15% padding
+  const yAxisDomain = [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
+
+  // State for toggling bars - ensure all competitors are visible by default
   const [visibleBars, setVisibleBars] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
       [clientKey]: true,
@@ -140,7 +155,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     });
   }, [competitors]);
 
+  // Track if this is the initial render to allow animation only once
+  const [isInitialRender, setIsInitialRender] = useState(true);
+
   const toggleBar = (barKey: string) => {
+    setIsInitialRender(false); // Disable animation after first interaction
     setVisibleBars(prev => ({
       ...prev,
       [barKey]: !prev[barKey]
@@ -166,8 +185,10 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             fontSize={9}
             tick={{ fill: '#64748b' }}
             axisLine={{ stroke: '#cbd5e1' }}
+            domain={yAxisDomain}
             tickFormatter={(value) => `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`}
             width={45}
+            type="number"
           />
           <Tooltip 
             cursor={{ fill: '#d1d5db', fillOpacity: 0.3 }}
@@ -222,6 +243,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               radius={[2, 2, 0, 0]}
               stroke="transparent"
               strokeWidth={1}
+              isAnimationActive={isInitialRender}
             />
           )}
           
@@ -235,6 +257,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
               shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="5,5" hideBottomBorder={true} />}
+              isAnimationActive={isInitialRender}
             />
           )}
           
@@ -248,6 +271,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
               shape={(props: any) => <DashedBar {...props} stroke="#4b5563" strokeDasharray="8,4" hideBottomBorder={true} />}
+              isAnimationActive={isInitialRender}
             />
           )}
           
@@ -262,6 +286,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                 strokeWidth={2}
                 radius={[2, 2, 0, 0]}
                 shape={(props: any) => <DashedBar {...props} stroke={competitorColors[index % competitorColors.length]} strokeDasharray="none" hideBottomBorder={true} />}
+                isAnimationActive={isInitialRender}
               />
             )
           ))}
