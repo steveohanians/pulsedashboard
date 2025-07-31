@@ -165,46 +165,54 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
 
         
         {/* Client line (primary pink) */}
-        <Line 
-          type="monotone" 
-          dataKey="Client" 
-          stroke={colors.Client}
-          strokeWidth={3}
-          dot={{ fill: colors.Client, r: 3 }}
-          activeDot={{ r: 5, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
-        />
+        {visibleLines['Client'] && (
+          <Line 
+            type="monotone" 
+            dataKey="Client" 
+            stroke={colors.Client}
+            strokeWidth={3}
+            dot={{ fill: colors.Client, r: 3 }}
+            activeDot={{ r: 5, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
+          />
+        )}
         
         {/* Industry Average line */}
-        <Line 
-          type="monotone" 
-          dataKey="Industry Avg" 
-          stroke={colors['Industry Avg']}
-          strokeWidth={2}
-          dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
-          strokeDasharray="5 5"
-        />
+        {visibleLines['Industry Avg'] && (
+          <Line 
+            type="monotone" 
+            dataKey="Industry Avg" 
+            stroke={colors['Industry Avg']}
+            strokeWidth={2}
+            dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+            strokeDasharray="5 5"
+          />
+        )}
         
         {/* CD Client Average line */}
-        <Line 
-          type="monotone" 
-          dataKey="CD Client Avg" 
-          stroke={colors['CD Client Avg']}
-          strokeWidth={2}
-          dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
-          strokeDasharray="8 4"
-        />
+        {visibleLines['CD Client Avg'] && (
+          <Line 
+            type="monotone" 
+            dataKey="CD Client Avg" 
+            stroke={colors['CD Client Avg']}
+            strokeWidth={2}
+            dot={<DiamondDot fill={colors['CD Client Avg']} stroke={colors['CD Client Avg']} strokeWidth={1} />}
+            strokeDasharray="8 4"
+          />
+        )}
         
         {/* Competitor lines */}
         {competitors.map((competitor, index) => (
-          <Line 
-            key={competitor.id}
-            type="monotone" 
-            dataKey={competitor.label} 
-            stroke={competitorColors[index % competitorColors.length]}
-            strokeWidth={2}
-            dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
-            strokeOpacity={0.8}
-          />
+          visibleLines[competitor.label] && (
+            <Line 
+              key={competitor.id}
+              type="monotone" 
+              dataKey={competitor.label} 
+              stroke={competitorColors[index % competitorColors.length]}
+              strokeWidth={2}
+              dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
+              strokeDasharray="3 3"
+            />
+          )
         ))}
         </LineChart>
       </ResponsiveContainer>
