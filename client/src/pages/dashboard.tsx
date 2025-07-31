@@ -1136,7 +1136,7 @@ export default function Dashboard() {
         </div>
 
         {/* AI Insights Generation */}
-        <div className="mb-12">
+        <div className="mb-12 pdf-hide">
           <Button
             onClick={async () => {
               try {
