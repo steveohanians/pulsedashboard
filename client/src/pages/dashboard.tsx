@@ -58,10 +58,12 @@ export default function Dashboard() {
     timePeriods: string[];
   }
 
-  const { data: dashboardData, isLoading } = useQuery<DashboardData>({
+  const dashboardQuery = useQuery<DashboardData>({
     queryKey: [`/api/dashboard/${user?.clientId}?period=${encodeURIComponent(timePeriod)}`],
     enabled: !!user?.clientId,
   });
+  
+  const { data: dashboardData, isLoading } = dashboardQuery;
 
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: ["/api/filters"],
@@ -484,7 +486,8 @@ export default function Dashboard() {
                               credentials: 'include'
                             });
                             if (response.ok) {
-                              window.location.reload();
+                              // Use React Query to refetch data instead of page reload
+                              dashboardQuery.refetch();
                             }
                           } catch (error) {
                             console.error('Error deleting competitor:', error);
@@ -531,7 +534,7 @@ export default function Dashboard() {
                 });
                 if (response.ok) {
                   // Refresh dashboard data to show new insights
-                  window.location.reload();
+                  dashboardQuery.refetch();
                 }
               } catch (error) {
                 console.error('Error generating insights:', error);
