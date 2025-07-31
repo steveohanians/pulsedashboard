@@ -87,8 +87,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Define colors for each line
   const colors = {
     'Client': '#FF1493', // Primary pink color
-    'Industry Avg': '#10b981', // Green
-    'CD Client Avg': '#f59e0b', // Orange/yellow
+    'Industry Avg': '#6b7280', // Grey
+    'CD Client Avg': '#6b7280', // Grey
   };
 
   // Additional colors for competitors
@@ -100,12 +100,12 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          fontSize={11} 
+          fontSize={10} 
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
         />
         <YAxis 
-          fontSize={11}
+          fontSize={10}
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
           domain={['dataMin - 5', 'dataMax + 5']}
@@ -115,19 +115,19 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           contentStyle={{ 
             backgroundColor: 'white', 
             border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            borderRadius: '6px',
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+            fontSize: '12px'
           }}
           formatter={(value: number, name: string) => [
             `${Math.round(value * 10) / 10}${metricName.includes('Rate') ? '%' : ''}`,
             name
           ]}
-          labelStyle={{ color: '#374151', fontWeight: 'medium' }}
+          labelStyle={{ color: '#374151', fontWeight: 'medium', fontSize: '11px' }}
         />
         <Legend 
-          wrapperStyle={{ paddingTop: '15px' }}
-          iconType="line"
-          textStyle={{ fontSize: '11px', color: '#64748b' }}
+          wrapperStyle={{ paddingTop: '12px', fontSize: '10px', color: '#64748b' }}
+          iconType="rect"
         />
         
         {/* Client line (primary pink) */}
@@ -136,8 +136,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           dataKey="Client" 
           stroke={colors.Client}
           strokeWidth={3}
-          dot={{ fill: colors.Client, r: 4 }}
-          activeDot={{ r: 6, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
+          dot={{ fill: colors.Client, r: 3 }}
+          activeDot={{ r: 5, stroke: colors.Client, strokeWidth: 2, fill: 'white' }}
         />
         
         {/* Industry Average line */}
@@ -146,7 +146,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           dataKey="Industry Avg" 
           stroke={colors['Industry Avg']}
           strokeWidth={2}
-          dot={{ fill: colors['Industry Avg'], r: 3 }}
+          dot={{ fill: colors['Industry Avg'], r: 2, strokeWidth: 0 }}
           strokeDasharray="5 5"
         />
         
@@ -156,7 +156,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           dataKey="CD Client Avg" 
           stroke={colors['CD Client Avg']}
           strokeWidth={2}
-          dot={{ fill: colors['CD Client Avg'], r: 3 }}
+          dot={{ fill: colors['CD Client Avg'], r: 2, strokeWidth: 0 }}
           strokeDasharray="8 4"
         />
         
@@ -168,7 +168,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             dataKey={competitor.label} 
             stroke={competitorColors[index % competitorColors.length]}
             strokeWidth={2}
-            dot={{ fill: competitorColors[index % competitorColors.length], r: 3 }}
+            dot={{ fill: competitorColors[index % competitorColors.length], r: 2 }}
             strokeOpacity={0.8}
           />
         ))}

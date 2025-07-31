@@ -554,17 +554,7 @@ export default function Dashboard() {
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
-            // Debug logging for bounce rate
-            if (metricName === "Bounce Rate") {
-              console.log("Bounce Rate Debug:", {
-                metricName,
-                metricData,
-                timePeriod,
-                allMetrics: metrics.filter(m => m.metricName === "Bounce Rate"),
-                allMetricsRaw: metrics,
-                groupedMetrics: groupedMetrics
-              });
-            }
+
             
             return (
               <Card 
@@ -580,7 +570,7 @@ export default function Dashboard() {
                         {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
                         {metricName.includes("Rate") ? "%" : ""}
                       </span>
-                      <span className="text-sm text-slate-500 font-medium">Current Value</span>
+                      <span className="text-sm text-slate-500 font-medium">Your Performance</span>
                     </div>
                   </div>
                 </CardHeader>
