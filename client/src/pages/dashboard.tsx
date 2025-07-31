@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu, Globe, Building } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Lightbulb, Info, TrendingUp, ExternalLink, X, Menu, Globe, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -668,7 +668,7 @@ export default function Dashboard() {
                           <span>{industryVertical === 'All' ? 'All Industries' : industryVertical}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Building className="h-4 w-4" />
+                          <BarChart3 className="h-4 w-4" />
                           <span>{businessSize === 'All' ? 'All Sizes' : businessSize}</span>
                         </div>
                       </div>
