@@ -730,6 +730,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
+{metricName !== "Traffic Channels" && (
                     <div className="text-left sm:text-right">
                       <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
                         {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
@@ -737,6 +738,7 @@ export default function Dashboard() {
                       </span>
                       <span className="text-sm text-slate-500 font-medium">Your Performance</span>
                     </div>
+                  )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6 lg:space-y-8">
