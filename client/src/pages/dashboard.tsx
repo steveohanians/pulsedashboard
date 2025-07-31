@@ -627,31 +627,31 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-6">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
+          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
+            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
                 <span className="text-xs sm:text-sm font-bold text-primary">
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block">{user?.name}</span>
+              <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden hover:bg-slate-100 transition-all duration-200"
+              className="lg:hidden hover:bg-slate-100 transition-all duration-200 p-1 sm:p-2"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
-              className="hover:bg-slate-100 transition-all duration-200 hover:scale-105"
+              className="hover:bg-slate-100 transition-all duration-200 hover:scale-105 p-1 sm:p-2"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </div>
@@ -1027,8 +1027,8 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
-                  <div className="bg-slate-50/50 rounded-xl p-3 sm:p-4 lg:p-6 mb-6 lg:mb-8">
-                    <div className="h-48 sm:h-64 lg:h-72">
+                  <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6 mb-4 sm:mb-6 lg:mb-8">
+                    <div className="h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72">
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
                           metricName={metricName}

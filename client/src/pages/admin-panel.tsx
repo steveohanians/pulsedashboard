@@ -495,38 +495,51 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-4">
+      <nav className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center">
-              <Settings className="text-white text-lg" />
+          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
+              <Settings className="text-white text-sm sm:text-base lg:text-lg" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">Admin Panel</h1>
-              <p className="text-sm text-slate-600">System Management</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">Admin Panel</h1>
+              <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">System Management</p>
             </div>
           </div>
           <Link href="/">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+            <Button variant="outline" size="sm" className="flex-shrink-0">
+              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </Link>
         </div>
       </nav>
 
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="users">Users Manager</TabsTrigger>
-            <TabsTrigger value="clients">Clients Manager</TabsTrigger>
-            <TabsTrigger value="benchmark">Benchmark Companies</TabsTrigger>
-            <TabsTrigger value="filters">Filters Editor</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 text-xs sm:text-sm">
+            <TabsTrigger value="users" className="px-2 sm:px-3">
+              <span className="hidden sm:inline">Users Manager</span>
+              <span className="sm:hidden">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="clients" className="px-2 sm:px-3">
+              <span className="hidden sm:inline">Clients Manager</span>
+              <span className="sm:hidden">Clients</span>
+            </TabsTrigger>
+            <TabsTrigger value="benchmark" className="px-2 sm:px-3">
+              <span className="hidden sm:inline">Benchmark Companies</span>
+              <span className="sm:hidden">Benchmark</span>
+            </TabsTrigger>
+            <TabsTrigger value="filters" className="px-2 sm:px-3">
+              <span className="hidden sm:inline">Filters Editor</span>
+              <span className="sm:hidden">Filters</span>
+            </TabsTrigger>
           </TabsList>
               {/* Users Manager */}
               <TabsContent value="users">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-slate-900">Users Management</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Users Management</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'invite-user'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
@@ -617,36 +630,46 @@ export default function AdminPanel() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <SortableHeader label="Name" sortKey="name" />
-                        <SortableHeader label="Email" sortKey="email" />
-                        <SortableHeader label="Client" sortKey="clientId" />
-                        <SortableHeader label="Role" sortKey="role" />
-                        <TableHead>Status</TableHead>
-                        <SortableHeader label="Last Login" sortKey="lastLogin" />
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <div className="rounded-md border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <SortableHeader label="Name" sortKey="name" />
+                          <SortableHeader label="Email" sortKey="email" />
+                          <TableHead className="hidden sm:table-cell">
+                            <SortableHeader label="Client" sortKey="clientId" />
+                          </TableHead>
+                          <SortableHeader label="Role" sortKey="role" />
+                          <TableHead className="hidden md:table-cell">Status</TableHead>
+                          <TableHead className="hidden lg:table-cell">
+                            <SortableHeader label="Last Login" sortKey="lastLogin" />
+                          </TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                       {sortedData(users, 'users')?.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
-                          <TableCell>
-                            <Badge variant={user.role === "Admin" ? "default" : "secondary"}>
+                          <TableCell className="font-medium min-w-32">
+                            <div>
+                              <div className="font-medium">{user.name}</div>
+                              <div className="text-xs text-gray-500 sm:hidden">{user.email}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell min-w-48">{user.email}</TableCell>
+                          <TableCell className="hidden sm:table-cell min-w-32">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
+                          <TableCell className="min-w-20">
+                            <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
                               {user.role}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">Active</Badge>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="secondary" className="text-xs">Active</Badge>
                           </TableCell>
-                          <TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
+                          <TableCell className="hidden lg:table-cell min-w-36 text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
+                          <TableCell className="min-w-24">
+                            <div className="flex space-x-1 sm:space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === user.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) setEditingItem(null);
@@ -655,12 +678,13 @@ export default function AdminPanel() {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
+                                    className="h-8 w-8 p-0"
                                     onClick={() => {
                                       setEditingItem(user);
                                       setIsDialogOpen(true);
                                     }}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -778,15 +802,16 @@ export default function AdminPanel() {
                           </TableCell>
                         </TableRow>
                       ))}
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </TabsContent>
 
               {/* Clients Manager */}
               <TabsContent value="clients">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-slate-900">Clients Management</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Clients Management</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'add-client'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
@@ -1065,8 +1090,8 @@ export default function AdminPanel() {
 
               {/* Benchmark Companies */}
               <TabsContent value="benchmark">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-slate-900">Benchmark Companies</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Benchmark Companies</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'add-company'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
@@ -1316,8 +1341,8 @@ export default function AdminPanel() {
 
               {/* Filters Editor */}
               <TabsContent value="filters">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-slate-900">Filters Configuration</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Filters Configuration</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'add-filter'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);

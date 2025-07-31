@@ -54,9 +54,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 py-8 lg:py-0">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <div className="mx-auto mb-6">
@@ -203,42 +203,42 @@ export default function AuthPage() {
       </div>
 
       {/* Right side - Hero */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary/10 to-primary/5 items-center justify-center p-12">
-        <div className="max-w-lg text-center">
-          <div className="flex justify-center space-x-4 mb-8">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <TrendingUp className="h-8 w-8 text-primary" />
+      <div className="lg:flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 sm:p-6 lg:p-12">
+        <div className="max-w-lg text-center w-full">
+          <div className="flex justify-center space-x-3 sm:space-x-4 mb-6 lg:mb-8">
+            <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
+              <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
             </div>
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <BarChart3 className="h-8 w-8 text-primary" />
+            <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
+              <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
             </div>
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <PieChart className="h-8 w-8 text-primary" />
+            <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
+              <PieChart className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-4">
+          <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 lg:mb-4">
             Transform Your Analytics with AI-Powered Insights
           </h3>
-          <p className="text-lg text-slate-600 mb-6">
+          <p className="text-sm sm:text-base lg:text-lg text-slate-600 mb-4 sm:mb-5 lg:mb-6">
             Compare your performance against industry benchmarks, track competitor metrics, 
             and get AI-generated recommendations to improve your digital presence.
           </p>
-          <div className="grid grid-cols-1 gap-4 text-sm text-slate-600">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 text-xs sm:text-sm text-slate-600">
             <div className="flex items-center">
-              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-              Real-time performance benchmarking
+              <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
+              <span>Real-time performance benchmarking</span>
             </div>
             <div className="flex items-center">
-              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-              AI-powered insights and recommendations
+              <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
+              <span>AI-powered insights and recommendations</span>
             </div>
             <div className="flex items-center">
-              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-              Competitor analysis and tracking
+              <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
+              <span>Competitor analysis and tracking</span>
             </div>
             <div className="flex items-center">
-              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-              Industry-specific analytics
+              <div className="w-2 h-2 bg-primary rounded-full mr-3 flex-shrink-0"></div>
+              <span>Industry-specific analytics</span>
             </div>
           </div>
         </div>

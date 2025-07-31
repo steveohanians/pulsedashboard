@@ -48,12 +48,12 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.min(Math.max(maxLabelLength * 8, 120), 200); // 8px per char, min 120px, max 200px
 
   return (
-    <div className="w-full h-full space-y-4">
-      <div className="space-y-3 relative">
+    <div className="w-full h-full space-y-3 sm:space-y-4">
+      <div className="space-y-2 sm:space-y-3 relative">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex items-center gap-4 relative">
-            <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
-              <span className={`text-sm block ${
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
+            <div className="flex-shrink-0 sm:w-auto" style={{ minWidth: `${Math.min(labelWidth, 150)}px` }}>
+              <span className={`text-xs sm:text-sm block ${
                 item.sourceType === 'Client' 
                   ? 'font-bold text-primary' 
                   : 'font-medium text-gray-700'
@@ -62,7 +62,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
               </span>
             </div>
             
-            <div className="flex-1 h-7 flex rounded-md bg-gray-100 relative overflow-visible">
+            <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative overflow-visible min-w-0">
               {item.channels.map((channel, channelIndex) => {
                 const isFirst = channelIndex === 0;
                 const isLast = channelIndex === item.channels.length - 1;

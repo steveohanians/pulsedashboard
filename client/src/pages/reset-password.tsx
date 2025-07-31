@@ -84,8 +84,8 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md space-y-8">
+      <div className="min-h-screen flex flex-col justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-md mx-auto space-y-6 sm:space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="text-center text-red-600">Invalid Reset Link</CardTitle>
@@ -111,8 +111,8 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex flex-col justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-md mx-auto space-y-6 sm:space-y-8">
         <div className="text-center">
           <div className="mx-auto mb-6">
             <img 
