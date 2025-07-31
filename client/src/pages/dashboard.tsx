@@ -705,7 +705,7 @@ export default function Dashboard() {
                           })}
                         />
                       ) : metricName === "Pages per Session" ? (
-                        <MetricBarChart 
+                        <TimeSeriesChart 
                           metricName={metricName}
                           timePeriod={timePeriod}
                           clientData={metricData.Client || 0}
