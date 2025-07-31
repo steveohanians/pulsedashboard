@@ -7,7 +7,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center mb-6">
           <p className="text-sm text-gray-600">
-            © {currentYear} Clear Digital. All rights reserved.
+            © {currentYear} Clear Digital, Inc. All rights reserved.
           </p>
         </div>
 

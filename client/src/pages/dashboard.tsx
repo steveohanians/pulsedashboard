@@ -1224,7 +1224,11 @@ export default function Dashboard() {
           clientId={user?.clientId || ""}
         />
       </div>
-      <Footer />
+      
+      {/* Footer positioned to account for left navigation */}
+      <div className="lg:ml-64">
+        <Footer />
+      </div>
     </div>
   );
 }
