@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // Custom diamond dot component
 const DiamondDot = (props: any) => {
@@ -134,7 +134,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   const padding = (maxValue - minValue) * 0.15; // 15% padding
   const yAxisDomain = [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
 
-  // State for toggling lines
+  // State for toggling lines - ensure all competitors are visible by default
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
       'Client': true,
@@ -146,6 +146,19 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     });
     return initial;
   });
+
+  // Update visible lines whenever competitors change to include new ones
+  useEffect(() => {
+    setVisibleLines(prev => {
+      const updated = { ...prev };
+      competitors.forEach(comp => {
+        if (!(comp.label in updated)) {
+          updated[comp.label] = true; // Default new competitors to visible
+        }
+      });
+      return updated;
+    });
+  }, [competitors]);
 
   // Track if this is the initial render to allow animation only once
   const [isInitialRender, setIsInitialRender] = useState(true);
