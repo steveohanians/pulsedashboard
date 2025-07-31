@@ -37,14 +37,15 @@ const CustomTooltip = ({ active, payload }: any) => {
       padding: '8px 12px',
       fontSize: '12px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <div 
           style={{ 
             width: '8px', 
             height: '8px', 
             backgroundColor: data.color, 
-            marginRight: '6px',
-            borderRadius: '50%'
+            marginRight: '8px',
+            borderRadius: '50%',
+            flexShrink: 0
           }} 
         />
         <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
