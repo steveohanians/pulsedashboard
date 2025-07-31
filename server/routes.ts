@@ -32,10 +32,10 @@ export function registerRoutes(app: Express): Server {
       
       // Convert display period to database format
       const periodMap: Record<string, string> = {
-        "Last Month": "2025-01",
+        "Last Month": "2025-06", // June 2025 data
         "Last Quarter": "2024-Q4", 
         "Last Year": "2024-01",
-        "Custom Date Range": "2025-01" // Default to current data for custom ranges
+        "Custom Date Range": "2025-06" // Default to current data for custom ranges
       };
       
       if (typeof period === 'string' && periodMap[period]) {
