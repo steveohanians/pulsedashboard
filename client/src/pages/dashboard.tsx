@@ -483,7 +483,7 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Enhanced AI-Generated Insights */}
-                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border-2 border-primary/20 rounded-2xl p-6 shadow-sm">
+                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-center mb-6">
                       <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center mr-4">
                         <Lightbulb className="h-5 w-5 text-primary" />
