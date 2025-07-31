@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // Custom diamond dot component
 const DiamondDot = (props: any) => {
@@ -29,14 +29,18 @@ interface TimeSeriesChartProps {
   }>;
 }
 
-// Generate mock time series data based on the selected time period
+// Generate deterministic seeded random number
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+// Generate stable time series data based on the selected time period
 function generateTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[]): any[] {
   const data: any[] = [];
-  const now = new Date();
   
   // Determine the date range and intervals based on time period
   let dates: string[] = [];
-  let format: string = '';
   
   if (timePeriod === "Last Month") {
     // Show June 2025 data points (ending in June)
@@ -67,23 +71,29 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
     }
   }
 
-  // Generate realistic variance around the base values with consistent trends
+  // Generate stable variance around the base values with consistent trends
   dates.forEach((date, index) => {
     const variance = 0.1; // 10% variance for more realistic data
     const trendFactor = (index / dates.length) * 0.1; // Small trend over time
     
+    // Use seeded random based on date and metric for consistent values
+    const seed1 = date.charCodeAt(0) + clientData;
+    const seed2 = date.charCodeAt(1) + industryAvg;
+    const seed3 = date.charCodeAt(2) + cdAvg;
+    
     const point: any = {
       date,
-      Client: Math.round((clientData + (Math.random() - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
-      'Industry Avg': Math.round((industryAvg + (Math.random() - 0.5) * industryAvg * variance) * 10) / 10,
-      'CD Client Avg': Math.round((cdAvg + (Math.random() - 0.5) * cdAvg * variance) * 10) / 10,
+      Client: Math.round((clientData + (seededRandom(seed1) - 0.5) * clientData * variance - trendFactor * clientData) * 10) / 10,
+      'Industry Avg': Math.round((industryAvg + (seededRandom(seed2) - 0.5) * industryAvg * variance) * 10) / 10,
+      'CD Client Avg': Math.round((cdAvg + (seededRandom(seed3) - 0.5) * cdAvg * variance) * 10) / 10,
     };
 
     // Add competitor data with distinct performance patterns
     competitors.forEach((competitor, compIndex) => {
       const baseValue = competitor.value || (clientData + 10 + compIndex * 5);
       const competitorVariance = variance * (1 + compIndex * 0.2); // Different variance per competitor
-      point[competitor.label] = Math.round((baseValue + (Math.random() - 0.5) * baseValue * competitorVariance) * 10) / 10;
+      const competitorSeed = date.charCodeAt(0) + baseValue + compIndex * 100;
+      point[competitor.label] = Math.round((baseValue + (seededRandom(competitorSeed) - 0.5) * baseValue * competitorVariance) * 10) / 10;
     });
 
     data.push(point);
@@ -93,7 +103,11 @@ function generateTimeSeriesData(timePeriod: string, clientData: number, industry
 }
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, competitors }: TimeSeriesChartProps) {
-  const data = generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors);
+  // Memoize data generation to prevent re-calculation on every render
+  const data = useMemo(() => 
+    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors]
+  );
   
   // Define colors for each line
   const colors = {
