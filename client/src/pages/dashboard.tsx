@@ -970,6 +970,8 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : 42.3
                             };
                           })}
+                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
+                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Session Duration" ? (
                         <MetricBarChart 

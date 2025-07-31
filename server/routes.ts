@@ -154,6 +154,8 @@ export function registerRoutes(app: Express): Server {
           const periodMetrics = allMetricsArrays[index] || [];
           const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
           
+
+          
           const metrics = [
             ...periodMetrics.map(m => ({
               metricName: m.metricName,

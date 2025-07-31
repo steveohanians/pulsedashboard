@@ -173,6 +173,8 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
 }
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
+
+
   // Check if we have any valid data
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
   
