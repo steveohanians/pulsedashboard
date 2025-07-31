@@ -30,16 +30,19 @@ export function registerRoutes(app: Express): Server {
       const { clientId } = req.params;
       let { period = "2024-01" } = req.query;
       
-      // Convert display period to database format
-      const periodMap: Record<string, string> = {
-        "Last Month": "2025-06", // June 2025 data
-        "Last Quarter": "2024-Q4", 
-        "Last Year": "2024-01",
-        "Custom Date Range": "2025-06" // Default to current data for custom ranges
+      // Convert display period to database periods for averaging
+      const periodMapping: Record<string, string[]> = {
+        "Last Month": ["2025-06"], // Single month
+        "Last Quarter": ["2025-04", "2025-05", "2025-06"], // Q2 2025
+        "Last Year": ["2024-01", "2024-Q4", "2025-04", "2025-05", "2025-06"], // Multiple periods for year
+        "Custom Date Range": ["2025-06"] // Default to current data for custom ranges
       };
       
-      if (typeof period === 'string' && periodMap[period]) {
-        period = periodMap[period];
+      let periodsToQuery: string[];
+      if (typeof period === 'string' && periodMapping[period]) {
+        periodsToQuery = periodMapping[period];
+      } else {
+        periodsToQuery = [period as string];
       }
       
       // Verify user has access to this client
@@ -52,23 +55,86 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const [metrics, competitors, competitorMetrics, insights] = await Promise.all([
-        storage.getMetricsByClient(clientId, period as string),
+      // Fetch data for all relevant periods
+      const allMetricsPromises = periodsToQuery.map(p => storage.getMetricsByClient(clientId, p));
+      const allCompetitorMetricsPromises = periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p));
+      
+      const [
+        allMetricsArrays,
+        competitors,
+        allCompetitorMetricsArrays,
+        insights
+      ] = await Promise.all([
+        Promise.all(allMetricsPromises),
         storage.getCompetitorsByClient(clientId),
-        storage.getMetricsByCompetitors(clientId, period as string),
-        storage.getAIInsights(clientId, period as string)
+        Promise.all(allCompetitorMetricsPromises),
+        storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
       ]);
 
-      // Combine client metrics with competitor metrics
-      const allMetrics = [...metrics, ...competitorMetrics];
+      // Flatten and calculate averages for metrics
+      const allMetrics = allMetricsArrays.flat();
+      const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
+      
+      // Calculate averages by metric name and source type
+      const avgMetrics: Record<string, Record<string, number[]>> = {};
+      
+      // Process client and benchmark metrics
+      allMetrics.forEach(metric => {
+        if (!avgMetrics[metric.metricName]) {
+          avgMetrics[metric.metricName] = {};
+        }
+        if (!avgMetrics[metric.metricName][metric.sourceType]) {
+          avgMetrics[metric.metricName][metric.sourceType] = [];
+        }
+        avgMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value));
+      });
+      
+      // Process competitor metrics
+      allCompetitorMetrics.forEach(metric => {
+        if (!avgMetrics[metric.metricName]) {
+          avgMetrics[metric.metricName] = {};
+        }
+        const key = `Competitor_${metric.competitorId}`;
+        if (!avgMetrics[metric.metricName][key]) {
+          avgMetrics[metric.metricName][key] = [];
+        }
+        avgMetrics[metric.metricName][key].push(parseFloat(metric.value));
+      });
+      
+      // Convert to averaged metrics
+      const processedMetrics = [];
+      for (const [metricName, sourceData] of Object.entries(avgMetrics)) {
+        for (const [sourceType, values] of Object.entries(sourceData)) {
+          const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+          
+          if (sourceType.startsWith('Competitor_')) {
+            const competitorId = sourceType.replace('Competitor_', '');
+            processedMetrics.push({
+              metricName,
+              value: avgValue.toString(),
+              sourceType: 'Competitor',
+              competitorId,
+              timePeriod: period as string
+            });
+          } else {
+            processedMetrics.push({
+              metricName,
+              value: avgValue.toString(),
+              sourceType,
+              timePeriod: period as string
+            });
+          }
+        }
+      }
 
       res.json({
         client,
-        metrics: allMetrics,
+        metrics: processedMetrics,
         competitors,
         insights
       });
     } catch (error) {
+      console.error("Dashboard error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

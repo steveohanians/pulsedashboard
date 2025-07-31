@@ -24,12 +24,17 @@ export async function generateSessionDurationData() {
       for (const sourceType of sourceTypes) {
         const range = sessionDurationRanges[sourceType as keyof typeof sessionDurationRanges];
         
-        // Generate consistent but varied session duration
-        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 2;
-        const randomFactor = (Math.sin(sourceSeed * 1.567) + 1) / 2; // 0-1 range
+        // Generate realistic varied session duration with time-based changes
+        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 3;
+        const randomFactor = (Math.sin(sourceSeed * 1.234) + 1) / 2; // 0-1 range
+        
+        // Add time period specific variation
+        const timeVariation = timePeriod.includes('2024') ? -15 : 
+                            timePeriod.includes('-04') ? 10 : 
+                            timePeriod.includes('-05') ? 5 : 0;
         
         const baseValue = range.min + (range.max - range.min) * randomFactor;
-        const finalValue = Math.max(120, Math.min(400, Math.round(baseValue + seasonalFactor)));
+        const finalValue = Math.max(120, Math.min(400, Math.round(baseValue + seasonalFactor + timeVariation)));
         
         await storage.createMetric({
           clientId,
