@@ -20,35 +20,37 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
 
   return (
     <div className="space-y-4 border-t border-slate-200 pt-4">
-      {context && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-            <Info className="h-3 w-3 mr-2 text-primary" />
-            Context
-          </h4>
-          <p className="text-xs text-slate-600">{context}</p>
-        </div>
-      )}
-      
-      {insight && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-            <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
-            Insight
-          </h4>
-          <p className="text-xs text-slate-600">{insight}</p>
-        </div>
-      )}
-      
-      {recommendation && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
-            <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
-            Recommendation
-          </h4>
-          <p className="text-xs text-slate-600">{recommendation}</p>
-        </div>
-      )}
+      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+        {context && (
+          <div className="mb-3">
+            <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
+              <Info className="h-3 w-3 mr-2 text-primary" />
+              Context
+            </h4>
+            <p className="text-xs text-slate-600">{context}</p>
+          </div>
+        )}
+        
+        {insight && (
+          <div className="mb-3">
+            <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
+              <Lightbulb className="h-3 w-3 mr-2 text-yellow-500" />
+              Insight
+            </h4>
+            <p className="text-xs text-slate-600">{insight}</p>
+          </div>
+        )}
+        
+        {recommendation && (
+          <div>
+            <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center">
+              <TrendingUp className="h-3 w-3 mr-2 text-green-500" />
+              Recommendation
+            </h4>
+            <p className="text-xs text-slate-600">{recommendation}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

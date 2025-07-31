@@ -385,8 +385,11 @@ export default function Dashboard() {
                   const lastQuarterYear = currentQuarter === 1 ? now.getFullYear() - 1 : now.getFullYear();
                   displayText = `Q${lastQuarter} ${lastQuarterYear}`;
                 } else if (timePeriod === "Last Year") {
-                  const lastYear = new Date().getFullYear() - 1;
-                  displayText = `${lastYear}`;
+                  const endDate = new Date();
+                  endDate.setMonth(endDate.getMonth() - 1); // Last month
+                  const startDate = new Date(endDate);
+                  startDate.setFullYear(startDate.getFullYear() - 1); // 12 months ago
+                  displayText = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
                 }
                 
                 return displayText ? (
