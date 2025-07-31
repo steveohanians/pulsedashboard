@@ -314,7 +314,7 @@ export function registerRoutes(app: Express): Server {
       const competitor = await storage.createCompetitor(validatedData);
       
       // Generate sample data for the new competitor across all time periods
-      const timePeriods = ["2025-06", "2024-10", "2024-01"];
+      const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
       const metricNames = [
         "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
         "Traffic Channels", "Device Distribution"
@@ -325,30 +325,45 @@ export function registerRoutes(app: Express): Server {
           let sampleValue: any;
           
           if (metricName === "Traffic Channels") {
-            sampleValue = [
-              { name: "Organic Search", value: Math.floor(Math.random() * 20) + 35, percentage: 0, color: "#10b981" },
-              { name: "Direct", value: Math.floor(Math.random() * 15) + 20, percentage: 0, color: "#3b82f6" },
-              { name: "Social Media", value: Math.floor(Math.random() * 10) + 15, percentage: 0, color: "#8b5cf6" },
-              { name: "Paid Search", value: Math.floor(Math.random() * 8) + 10, percentage: 0, color: "#f59e0b" },
-              { name: "Email", value: Math.floor(Math.random() * 5) + 5, percentage: 0, color: "#ec4899" }
-            ];
-            // Calculate percentages
-            const total = sampleValue.reduce((sum: number, item: any) => sum + item.value, 0);
-            sampleValue = sampleValue.map((item: any) => ({
-              ...item,
-              percentage: Math.round((item.value / total) * 100)
-            }));
+            // Generate individual channel metrics with proper database structure
+            const channels = ["Organic Search", "Direct", "Social Media", "Paid Search", "Email"];
+            const baseValues = [40, 25, 15, 12, 8];
+            
+            for (let i = 0; i < channels.length; i++) {
+              const variance = (competitor.id.charCodeAt(i % competitor.id.length) % 10) - 5;
+              const channelValue = Math.max(5, baseValues[i] + variance);
+              
+              await storage.createMetric({
+                clientId: validatedData.clientId,
+                competitorId: competitor.id,
+                metricName,
+                value: channelValue.toString(),
+                sourceType: "Competitor",
+                timePeriod: period,
+                channel: channels[i]
+              });
+            }
+            continue; // Skip the general metric creation for Traffic Channels
           } else if (metricName === "Device Distribution") {
-            const desktop = Math.floor(Math.random() * 20) + 45;
-            const mobile = Math.floor(Math.random() * 15) + 35;
-            const tablet = Math.floor(Math.random() * 8) + 8;
-            const other = 100 - (desktop + mobile + tablet);
-            sampleValue = [
-              { name: "Desktop", value: desktop, percentage: desktop, color: "#3b82f6" },
-              { name: "Mobile", value: mobile, percentage: mobile, color: "#10b981" },
-              { name: "Tablet", value: tablet, percentage: tablet, color: "#8b5cf6" },
-              { name: "Other", value: other, percentage: other, color: "#6b7280" }
-            ];
+            // Generate individual device metrics with proper database structure
+            const devices = ["Desktop", "Mobile", "Tablet"];
+            const baseDeviceValues = [50, 42, 8];
+            
+            for (let i = 0; i < devices.length; i++) {
+              const variance = (competitor.id.charCodeAt((i + 1) % competitor.id.length) % 8) - 4;
+              const deviceValue = Math.max(5, baseDeviceValues[i] + variance);
+              
+              await storage.createMetric({
+                clientId: validatedData.clientId,
+                competitorId: competitor.id,
+                metricName,
+                value: deviceValue.toString(),
+                sourceType: "Competitor",
+                timePeriod: period,
+                channel: devices[i]
+              });
+            }
+            continue; // Skip the general metric creation for Device Distribution
           } else {
             // Generate realistic values for other metrics with competitor-specific variance
             const competitorId = competitor.id;
@@ -363,11 +378,12 @@ export function registerRoutes(app: Express): Server {
           }
           
           await storage.createMetric({
+            clientId: validatedData.clientId,
             competitorId: competitor.id,
             metricName,
-            value: sampleValue,
-            timePeriod: period,
-            sourceType: "Competitor"
+            value: sampleValue.toString(),
+            sourceType: "Competitor",
+            timePeriod: period
           });
         }
       }
