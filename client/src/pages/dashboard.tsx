@@ -234,7 +234,7 @@ export default function Dashboard() {
             />
             <div>
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-              <p className="text-sm font-medium text-slate-600 mt-0.5">{client?.name || "Client Name"}</p>
+              <p className="text-sm font-medium text-slate-600 mt-0.5">{client?.name}</p>
             </div>
           </div>
           <div className="flex items-center space-x-6">
