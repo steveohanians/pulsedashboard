@@ -30,13 +30,32 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    dates = ["Mar 25", "Apr 25", "May 25", "Jun 25"];
+    // Show June 2025 data points (ending in June) - daily intervals
+    const endDate = new Date(2025, 5, 30); // June 30, 2025 (month is 0-indexed)
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(endDate);
+      date.setDate(date.getDate() - (i * 5)); // Every 5 days
+      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
   } else if (timePeriod === "Last Quarter") {
+    // Show Q2 2025 (Apr, May, Jun) - ending in June 2025
     dates = ["Apr 25", "May 25", "Jun 25"];
   } else if (timePeriod === "Last Year") {
-    dates = ["Q2 24", "Q3 24", "Q4 24", "Q1 25"];
+    // Show 12 months ending June 2025 (July 2024 - June 2025)
+    const months = [
+      "Jul 24", "Aug 24", "Sep 24", "Oct 24", "Nov 24", "Dec 24",
+      "Jan 25", "Feb 25", "Mar 25", "Apr 25", "May 25", "Jun 25"
+    ];
+    // Take every other month for display clarity (6 points)
+    dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
   } else {
-    dates = ["Mar 25", "Apr 25", "May 25", "Jun 25"];
+    // Custom date range - show 6 points ending in June 2025
+    const endDate = new Date(2025, 5, 30); // June 30, 2025
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(endDate);
+      date.setDate(date.getDate() - (i * 7)); // Weekly
+      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
   }
 
   // Generate stable variance around the base values
@@ -84,7 +103,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   const colors: Record<string, string> = {
     [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
     'Industry Avg': '#9ca3af', // Light grey
-    'CD Client Avg': '#4b5563', // Dark grey
+    'CD Client Avg': '#9ca3af', // Light grey (changed from dark grey)
   };
 
   // Additional colors for competitors
@@ -128,7 +147,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
       <ResponsiveContainer width="100%" height="85%">
         <BarChart 
           data={data} 
-          margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
+          margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           barCategoryGap="20%"
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -174,9 +193,13 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                       />
                       <span style={{ 
                         fontWeight: entry.dataKey === clientKey ? 'bold' : 'normal',
-                        color: entry.dataKey === clientKey ? colors[clientKey] : '#374151'
+                        color: entry.dataKey === clientKey ? colors[clientKey] : '#9ca3af'
                       }}>
-                        {entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}
+                        {entry.dataKey === clientKey ? (
+                          <strong>{entry.dataKey}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}</strong>
+                        ) : (
+                          `${entry.dataKey}: ${Math.round(entry.value * 10) / 10}${metricName.includes('Rate') ? '%' : metricName.includes('Session Duration') ? 'min' : ''}`
+                        )}
                       </span>
                     </div>
                   ))}
@@ -199,11 +222,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             <Bar 
               dataKey="Industry Avg" 
               fill="none"
-              stroke={colors['Industry Avg']}
+              stroke="#9ca3af"
               strokeWidth={2}
               strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke={colors['Industry Avg']} strokeDasharray="5,5" />}
+              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="5,5" />}
             />
           )}
           
@@ -212,11 +235,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             <Bar 
               dataKey="CD Client Avg" 
               fill="none"
-              stroke={colors['CD Client Avg']}
+              stroke="#9ca3af"
               strokeWidth={2}
               strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke={colors['CD Client Avg']} strokeDasharray="8,4" />}
+              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="8,4" />}
             />
           )}
           
