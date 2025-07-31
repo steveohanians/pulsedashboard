@@ -117,13 +117,10 @@ export default function Dashboard() {
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = useCallback(() => {
     const trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-    console.log('Traffic metrics found:', trafficMetrics); // Debug log
-
     const result = [];
 
     // Client data
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    console.log('Client metrics:', clientMetrics); // Debug log
     if (clientMetrics.length > 0) {
       result.push({
         sourceType: 'Client',
