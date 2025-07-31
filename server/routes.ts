@@ -280,6 +280,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate bounce rate sample data
+  app.post("/api/generate-bounce-rate-data", requireAuth, async (req, res) => {
+    try {
+      const { generateBounceRateData } = await import("./bounceRateDataGenerator");
+      const result = await generateBounceRateData();
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating bounce rate data:", error);
+      res.status(500).json({ message: "Failed to generate bounce rate data" });
+    }
+  });
+
   // Generate comprehensive sample data
   app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
     try {
