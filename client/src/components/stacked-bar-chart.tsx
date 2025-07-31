@@ -53,7 +53,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   }}
                   title={`${channel.name}: ${channel.value}%`}
                 >
-                  {channel.percentage > 5 && `${channel.value}%`}
+                  {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                 </div>
               ))}
             </div>
