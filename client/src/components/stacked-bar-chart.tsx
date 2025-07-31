@@ -47,16 +47,22 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             </div>
             
             <div className="flex-1 h-7 flex rounded-md bg-gray-100 relative overflow-visible">
-              {item.channels.map((channel, channelIndex) => (
-                <div
-                  key={channelIndex}
-                  className="flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group overflow-visible"
-                  style={{
-                    width: `${channel.percentage}%`,
-                    backgroundColor: channel.color
-                  }}
-                  title={`${channel.name}: ${channel.value}%`}
-                >
+              {item.channels.map((channel, channelIndex) => {
+                const isFirst = channelIndex === 0;
+                const isLast = channelIndex === item.channels.length - 1;
+                
+                return (
+                  <div
+                    key={channelIndex}
+                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group overflow-visible ${
+                      isFirst ? 'rounded-l-md' : ''
+                    } ${isLast ? 'rounded-r-md' : ''}`}
+                    style={{
+                      width: `${channel.percentage}%`,
+                      backgroundColor: channel.color
+                    }}
+                    title={`${channel.name}: ${channel.value}%`}
+                  >
                   {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   
                   {/* Custom Tooltip - Always visible for small segments */}
@@ -71,8 +77,9 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     {/* Tooltip arrow */}
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-gray-900"></div>
                   </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
