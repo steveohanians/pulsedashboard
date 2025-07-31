@@ -652,7 +652,7 @@ export default function Dashboard() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight">{metricName}</CardTitle>
                     <div className="text-left sm:text-right">
-                      <span className="text-2xl lg:text-3xl font-extrabold text-primary block">
+                      <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
                         {metricData.Client ? Math.round(metricData.Client * 10) / 10 : "N/A"}
                         {metricName.includes("Rate") ? "%" : metricName.includes("Session Duration") ? " min" : metricName.includes("Pages per Session") ? " pages" : ""}
                       </span>
