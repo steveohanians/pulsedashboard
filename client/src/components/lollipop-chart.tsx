@@ -85,104 +85,97 @@ export default function LollipopChart({
       <div className="flex-1 px-2 py-2 flex">
         {/* Chart section */}
         <div className="flex-1 relative h-full mr-4">
-          {/* Y-axis labels */}
-          <div 
-            className="absolute left-0 top-2 flex flex-col"
-            style={{ width: `${labelWidth}px` }}
-          >
-            {chartEntities.map((entity, index) => (
-              <div 
-                key={index} 
-                className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end"
-                style={{ height: '48px' }}
-              >
-                <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
-                  {entity.label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Chart grid and lollipops */}
-          <div className="h-full relative" style={{ marginLeft: `${labelWidth}px` }}>
-            {/* Grid lines */}
-            <div className="absolute top-2 left-0 right-0 flex flex-col">
-              {chartEntities.map((_, index) => (
-                <div key={index} className="border-b border-gray-200 last:border-b-0" style={{ height: '48px' }} />
-              ))}
-            </div>
-
-            {/* Vertical grid lines */}
-            <div className="absolute inset-0">
-              {[0, 20, 40, 60, 80, 100].map(tick => (
-                <div
-                  key={tick}
-                  className="absolute top-0 bottom-0 border-l border-gray-200"
-                  style={{ left: `${tick}%` }}
-                />
-              ))}
-            </div>
-
-            {/* Lollipop chart */}
-            <div className="absolute top-2 left-0 right-0 flex flex-col">
-              {chartEntities.map((entity, entityIndex) => (
+          {/* Combined layout - labels and chart rows in sync */}
+          <div className="h-full flex">
+            {/* Y-axis labels column */}
+            <div className="flex flex-col justify-center" style={{ width: `${labelWidth}px` }}>
+              {chartEntities.map((entity, index) => (
                 <div 
-                  key={entityIndex} 
-                  className="relative flex items-center"
+                  key={index} 
+                  className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end border-b border-gray-200 last:border-b-0"
                   style={{ height: '48px' }}
                 >
-                  {devices.map((device, deviceIndex) => {
-                    const value = entity.data[device];
-                    const color = DEVICE_COLORS[device];
-                    const percentage = Math.round(value * 100);
-                    
-                    return (
-                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4}px` }}>
-                        {/* Lollipop stick */}
-                        <div
-                          className="h-0.5"
-                          style={{
-                            backgroundColor: color,
-                            width: `${percentage}%`,
-                            position: 'relative'
-                          }}
-                        />
-                        {/* Lollipop dot */}
-                        <div
-                          className="absolute w-2 h-2 rounded-full border border-white shadow-sm"
-                          style={{
-                            backgroundColor: color,
-                            left: `${percentage}%`,
-                            top: '-3px',
-                            transform: 'translateX(-50%)'
-                          }}
-                        />
-                        {/* Value label */}
-                        <div
-                          className="absolute text-xs font-medium text-gray-700"
-                          style={{
-                            left: `${percentage}%`,
-                            top: '-16px',
-                            transform: 'translateX(-50%)'
-                          }}
-                        >
-                          {percentage}%
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
+                    {entity.label}
+                  </span>
                 </div>
               ))}
             </div>
 
-            {/* X-axis labels */}
-            <div className="absolute -bottom-2 left-0 right-0 flex justify-between text-xs text-gray-500">
-              <span>0%</span>
-              <span>20%</span>
-              <span>40%</span>
-              <span>60%</span>
-              <span>80%</span>
-              <span>100%</span>
+            {/* Chart area */}
+            <div className="flex-1 relative">
+              {/* Vertical grid lines */}
+              <div className="absolute inset-0">
+                {[0, 20, 40, 60, 80, 100].map(tick => (
+                  <div
+                    key={tick}
+                    className="absolute top-0 bottom-0 border-l border-gray-200"
+                    style={{ left: `${tick}%` }}
+                  />
+                ))}
+              </div>
+
+              {/* Lollipop chart rows */}
+              <div className="h-full flex flex-col justify-center">
+                {chartEntities.map((entity, entityIndex) => (
+                  <div 
+                    key={entityIndex} 
+                    className="relative flex items-center border-b border-gray-200 last:border-b-0"
+                    style={{ height: '48px' }}
+                  >
+                    {devices.map((device, deviceIndex) => {
+                      const value = entity.data[device];
+                      const color = DEVICE_COLORS[device];
+                      const percentage = Math.round(value * 100);
+                      
+                      return (
+                        <div key={device} className="absolute w-full" style={{ top: `${24 + deviceIndex * 4 - 6}px` }}>
+                          {/* Lollipop stick */}
+                          <div
+                            className="h-0.5"
+                            style={{
+                              backgroundColor: color,
+                              width: `${percentage}%`,
+                              position: 'relative'
+                            }}
+                          />
+                          {/* Lollipop dot */}
+                          <div
+                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm"
+                            style={{
+                              backgroundColor: color,
+                              left: `${percentage}%`,
+                              top: '-3px',
+                              transform: 'translateX(-50%)'
+                            }}
+                          />
+                          {/* Value label */}
+                          <div
+                            className="absolute text-xs font-medium text-gray-700"
+                            style={{
+                              left: `${percentage}%`,
+                              top: '-16px',
+                              transform: 'translateX(-50%)'
+                            }}
+                          >
+                            {percentage}%
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              {/* X-axis labels */}
+              <div className="absolute -bottom-2 left-0 right-0 flex justify-between text-xs text-gray-500">
+                <span>0%</span>
+                <span>20%</span>
+                <span>40%</span>
+                <span>60%</span>
+                <span>80%</span>
+                <span>100%</span>
+              </div>
             </div>
           </div>
         </div>
