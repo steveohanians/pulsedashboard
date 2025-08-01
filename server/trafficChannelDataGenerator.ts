@@ -13,7 +13,30 @@ export async function generateTrafficChannelData(clientId: string) {
     'Email'
   ];
   
-  const timePeriods = ['2024-01', '2024-10', '2025-04', '2025-05', '2025-06'];
+  // Generate dynamic time periods
+  function generateTimePeriods(): string[] {
+    const now = new Date();
+    const periods: string[] = [];
+    
+    for (let i = 0; i < 3; i++) { // Last 3 months
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+    
+    // Add older periods for comparison
+    const prevYear = new Date(now);
+    prevYear.setFullYear(prevYear.getFullYear() - 1);
+    periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+    
+    const prevQuarter = new Date(now);
+    prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+    periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+    
+    return Array.from(new Set(periods));
+  }
+  
+  const timePeriods = generateTimePeriods();
   
   for (const period of timePeriods) {
     // Client data - realistic distribution with some variation per period
@@ -25,11 +48,12 @@ export async function generateTrafficChannelData(clientId: string) {
       'Email': 4
     };
     
-    // Add period-based variation
-    const periodVariance = period === '2025-06' ? 0 : 
-                          period === '2025-05' ? -2 : 
-                          period === '2025-04' ? 3 :
-                          period === '2024-10' ? -1 : 2;
+    // Add period-based variation (dynamic based on position in array)
+    const periodIndex = timePeriods.indexOf(period);
+    const periodVariance = periodIndex === 0 ? 0 : // Current period
+                          periodIndex === 1 ? -2 : // Last month
+                          periodIndex === 2 ? 3 :  // 2 months ago
+                          periodIndex === 3 ? -1 : 2; // Older periods
     
     let clientChannels = Object.entries(clientBaseDistribution).map(([channel, base]) => {
       let value = base;
@@ -129,7 +153,29 @@ export async function generateCompetitorTrafficChannelData(competitorId: string,
     'Email'
   ];
   
-  const timePeriods = ['2024-01', '2024-10', '2025-04', '2025-05', '2025-06'];
+  // Generate dynamic time periods for competitors
+  function generateTimePeriods(): string[] {
+    const now = new Date();
+    const periods: string[] = [];
+    
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+    
+    const prevYear = new Date(now);
+    prevYear.setFullYear(prevYear.getFullYear() - 1);
+    periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+    
+    const prevQuarter = new Date(now);
+    prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+    periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+    
+    return Array.from(new Set(periods));
+  }
+  
+  const timePeriods = generateTimePeriods();
   
   // Use competitor ID to create consistent but varied data
   const seed = competitorId.charCodeAt(0) + competitorId.length;

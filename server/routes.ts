@@ -245,7 +245,10 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      const { period = "2024-01" } = req.query;
+      // Generate default period dynamically
+      const now = new Date();
+      const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const { period = defaultPeriod } = req.query;
       
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
@@ -328,8 +331,29 @@ export function registerRoutes(app: Express): Server {
 
       const competitor = await storage.createCompetitor(validatedData);
       
-      // Generate sample data for the new competitor across all time periods
-      const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
+      // Generate sample data for the new competitor across all time periods (dynamic)
+      function generateCompetitorTimePeriods(): string[] {
+        const now = new Date();
+        const periods: string[] = [];
+        
+        for (let i = 0; i < 3; i++) {
+          const date = new Date(now);
+          date.setMonth(date.getMonth() - i);
+          periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+        }
+        
+        const prevYear = new Date(now);
+        prevYear.setFullYear(prevYear.getFullYear() - 1);
+        periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+        
+        const prevQuarter = new Date(now);
+        prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+        periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+        
+        return Array.from(new Set(periods));
+      }
+      
+      const timePeriods = generateCompetitorTimePeriods();
       const metricNames = [
         "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
         "Traffic Channels", "Device Distribution"
@@ -552,13 +576,37 @@ export function registerRoutes(app: Express): Server {
       let dataGenerated = 0;
       
       for (const competitor of competitors) {
-        const existingMetrics = await storage.getMetricsByCompetitors(clientId, "2025-06");
+        // Check with current period
+        const now = new Date();
+        const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const existingMetrics = await storage.getMetricsByCompetitors(clientId, currentPeriod);
         const competitorHasData = existingMetrics.some(m => m.competitorId === competitor.id);
         
         // Always regenerate data for competitors (remove the check)
         {
-          // Generate sample data for this competitor
-          const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
+          // Generate sample data for this competitor (dynamic periods)
+          function generateExistingCompetitorPeriods(): string[] {
+            const now = new Date();
+            const periods: string[] = [];
+            
+            for (let i = 0; i < 3; i++) {
+              const date = new Date(now);
+              date.setMonth(date.getMonth() - i);
+              periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+            }
+            
+            const prevYear = new Date(now);
+            prevYear.setFullYear(prevYear.getFullYear() - 1);
+            periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+            
+            const prevQuarter = new Date(now);
+            prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+            periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+            
+            return Array.from(new Set(periods));
+          }
+          
+          const timePeriods = generateExistingCompetitorPeriods();
           const metricNames = [
             "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
             "Traffic Channels", "Device Distribution"

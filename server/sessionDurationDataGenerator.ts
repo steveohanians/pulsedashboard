@@ -6,7 +6,29 @@ export async function generateSessionDurationData() {
   logger.info("Generating session duration sample data");
   
   const clientId = "demo-client-id";
-  const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
+  // Generate dynamic time periods
+  function generateTimePeriods(): string[] {
+    const now = new Date();
+    const periods: string[] = [];
+    
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+    
+    const prevYear = new Date(now);
+    prevYear.setFullYear(prevYear.getFullYear() - 1);
+    periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+    
+    const prevQuarter = new Date(now);
+    prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+    periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+    
+    return Array.from(new Set(periods));
+  }
+  
+  const timePeriods = generateTimePeriods();
   const sourceTypes = ["Client", "Industry_Avg", "CD_Avg"];
   
   // Base session duration ranges (in seconds) with enhanced variation
@@ -41,11 +63,12 @@ export async function generateSessionDurationData() {
         
         // Period-specific variations for clear differentiation
         let periodVariation = 0;
-        if (timePeriod === '2025-06') periodVariation = 20; // Best recent performance
-        if (timePeriod === '2025-05') periodVariation = 10;
-        if (timePeriod === '2025-04') periodVariation = 0;
-        if (timePeriod === '2024-10') periodVariation = -10;
-        if (timePeriod === '2024-01') periodVariation = -25; // Worst historical performance
+        const periodIndex = timePeriods.indexOf(timePeriod);
+        if (periodIndex === 0) periodVariation = 20; // Current period - Best recent performance
+        if (periodIndex === 1) periodVariation = 10; // Last month
+        if (periodIndex === 2) periodVariation = 0;  // 2 months ago
+        if (periodIndex === 3) periodVariation = -10; // Older period
+        if (periodIndex === 4) periodVariation = -25; // Oldest period - Worst historical performance
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));
         let finalValue = baseValue + seasonalFactor + yearTrend + monthTrend + periodVariation;

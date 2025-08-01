@@ -44,7 +44,31 @@ const METRIC_CONFIGS: MetricConfig[] = [
   }
 ];
 
-const TIME_PERIODS = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
+// Generate dynamic time periods based on current date
+function generateTimePeriods(): string[] {
+  const now = new Date();
+  const periods: string[] = [];
+  
+  // Current month and previous months for realistic data spread
+  for (let i = 0; i < 3; i++) { // Last 3 months including current
+    const date = new Date(now);
+    date.setMonth(date.getMonth() - i);
+    periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+  }
+  
+  // Add some older periods for year-over-year comparison
+  const prevYear = new Date(now);
+  prevYear.setFullYear(prevYear.getFullYear() - 1);
+  periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+  
+  const prevQuarter = new Date(now);
+  prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+  periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+  
+  return Array.from(new Set(periods)); // Remove duplicates
+}
+
+const TIME_PERIODS = generateTimePeriods();
 const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
 
 // Generate realistic variance around base value
@@ -402,7 +426,29 @@ export async function generateDataForNewBenchmarkCompany(companyId: string, clie
   
   try {
     // Generate sample metrics for the new benchmark company
-    const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
+    // Generate dynamic time periods for new company data
+    function generateNewCompanyTimePeriods(): string[] {
+      const now = new Date();
+      const periods: string[] = [];
+      
+      for (let i = 0; i < 3; i++) {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - i);
+        periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+      }
+      
+      const prevYear = new Date(now);
+      prevYear.setFullYear(prevYear.getFullYear() - 1);
+      periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
+      
+      const prevQuarter = new Date(now);
+      prevQuarter.setMonth(prevQuarter.getMonth() - 6);
+      periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
+      
+      return Array.from(new Set(periods));
+    }
+    
+    const timePeriods = generateNewCompanyTimePeriods();
     const metricNames = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
     
     for (const period of timePeriods) {
