@@ -69,8 +69,10 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Fix SelectValue padding consistency */
-  [data-radix-select-value] {
+  /* Fix SelectValue padding consistency - target the actual span element */
+  button[data-radix-select-trigger] span[data-radix-select-value] {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
     text-align: left !important;
   }
 }
