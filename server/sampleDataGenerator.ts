@@ -45,7 +45,7 @@ const METRIC_CONFIGS: MetricConfig[] = [
 ];
 
 // Generate dynamic time periods based on current date in Pacific Time
-function generateTimePeriods(): string[] {
+export function generateTimePeriods(): string[] {
   // Use Pacific Time properly with Intl API
   const now = new Date();
   const ptFormatter = new Intl.DateTimeFormat('en-US', {

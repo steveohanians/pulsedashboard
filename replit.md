@@ -107,3 +107,10 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Removed duplicate code references and cleaned up redundant implementations
   - Improved error handling with consistent logging patterns
   - Enhanced debugging information with comment-based debug messages in frontend
+- **Competitor UX & Data Fix (August 2025)**: Enhanced competitor management experience
+  - Added loading states for competitor deletion with smooth visual transitions
+  - Fixed competitor deletion flash by persisting loading state until data refresh completes
+  - **CRITICAL FIX**: Resolved sample data bug where new competitors only received sparse time periods
+  - New competitors now generate complete 15-month historical data using same logic as main sample data
+  - Ensured Pacific Time consistency across all time period calculations
+  - Added comprehensive error handling and logging for competitor metric creation

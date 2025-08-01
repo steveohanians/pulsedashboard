@@ -391,36 +391,19 @@ export function registerRoutes(app: Express): Server {
 
       const competitor = await storage.createCompetitor(validatedData);
       
-      // Generate comprehensive time periods matching the dashboard's expectations (15 months)
-      const generateCompetitorTimePeriods = (): string[] => {
-        // Use Pacific Time properly with Intl API (same as sampleDataGenerator)
-        const now = new Date();
-        const ptFormatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Los_Angeles',
-          year: 'numeric',
-          month: '2-digit'
-        });
-        
-        // Get current date in Pacific Time
-        const ptParts = ptFormatter.formatToParts(now);
-        const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-        const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-        
-        const periods: string[] = [];
-        
-        // Generate 15 months of historical data, starting from 1 month before current PT date
-        // This matches the dashboard's time series expectations
-        const latestDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current
-        for (let i = 0; i < 15; i++) {
-          const date = new Date(latestDate);
-          date.setMonth(latestDate.getMonth() - i);
-          periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-        }
-        
-        return Array.from(new Set(periods)); // Remove duplicates and return
-      };
+      // Use the same time period generation as the sample data generator to ensure consistency
+      const { generateTimePeriods } = await import("./sampleDataGenerator");
+      const generateCompetitorTimePeriods = generateTimePeriods;
       
       const timePeriods = generateCompetitorTimePeriods();
+      logger.info("Generated time periods for new competitor", { 
+        competitorId: competitor.id, 
+        timePeriods, 
+        periodCount: timePeriods.length 
+      });
+      
+
+      
       const metricNames = [
         "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
         "Traffic Channels", "Device Distribution"
@@ -483,14 +466,31 @@ export function registerRoutes(app: Express): Server {
             sampleValue = baseValues[metricName as keyof typeof baseValues];
           }
           
-          await storage.createMetric({
-            clientId: validatedData.clientId,
-            competitorId: competitor.id,
-            metricName,
-            value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
-            sourceType: "Competitor",
-            timePeriod: period
-          });
+          try {
+            await storage.createMetric({
+              clientId: validatedData.clientId,
+              competitorId: competitor.id,
+              metricName,
+              value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
+              sourceType: "Competitor",
+              timePeriod: period
+            });
+            
+            logger.info("Created metric for competitor", { 
+              competitorId: competitor.id, 
+              metricName, 
+              period, 
+              value: sampleValue 
+            });
+          } catch (metricError) {
+            logger.error("Failed to create metric for competitor", { 
+              competitorId: competitor.id, 
+              metricName, 
+              period, 
+              value: sampleValue,
+              error: (metricError as Error).message 
+            });
+          }
         }
       }
       
