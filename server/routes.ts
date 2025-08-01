@@ -718,14 +718,21 @@ export function registerRoutes(app: Express): Server {
         expiresAt,
       });
       
-      // In a real application, you would send an email here with the invitation link
-      const inviteLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}&new=true`;
-      
-      res.json({ 
-        message: "User invitation sent successfully",
-        user: { ...user, password: undefined }, // Don't return password
-        inviteLink // Remove this in production
-      });
+      // In production, send email with invitation link instead of returning it
+      if (process.env.NODE_ENV === 'development') {
+        const inviteLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}&new=true`;
+        res.json({ 
+          message: "User invitation sent successfully",
+          user: { ...user, password: undefined },
+          inviteLink // Development only
+        });
+      } else {
+        // TODO: Implement email sending service for production
+        res.json({ 
+          message: "User invitation sent successfully",
+          user: { ...user, password: undefined }
+        });
+      }
     } catch (error) {
       console.error("Error inviting user:", error);
       res.status(500).json({ message: "Failed to invite user" });
@@ -754,13 +761,19 @@ export function registerRoutes(app: Express): Server {
         expiresAt,
       });
 
-      // In a real application, you would send an email here
-      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
-      
-      res.json({ 
-        message: "If an account with that email exists, a reset link has been sent.",
-        resetLink // Remove this in production
-      });
+      // In production, send email with reset link instead of returning it
+      if (process.env.NODE_ENV === 'development') {
+        const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+        res.json({ 
+          message: "If an account with that email exists, a reset link has been sent.",
+          resetLink // Development only
+        });
+      } else {
+        // TODO: Implement email sending service for production
+        res.json({ 
+          message: "If an account with that email exists, a reset link has been sent."
+        });
+      }
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
