@@ -399,6 +399,14 @@ export function registerRoutes(app: Express): Server {
       // Generate metric-specific insights using OpenAI with enriched data
       const insights = await generateMetricSpecificInsights(metricName, enrichedData, clientId);
       
+      // Debug logging for status
+      logger.info('✅ OpenAI Response Status Debug', { 
+        metricName, 
+        hasStatus: !!insights.status, 
+        status: insights.status,
+        allFields: Object.keys(insights)
+      });
+      
       // Store insights in database
       const insertInsight = {
         clientId,
@@ -407,6 +415,7 @@ export function registerRoutes(app: Express): Server {
         contextText: insights.context,
         insightText: insights.insight || insights.insights,
         recommendationText: insights.recommendation || insights.recommendations,
+        status: insights.status, // Include the status field from OpenAI
         createdAt: new Date()
       };
 
@@ -415,7 +424,10 @@ export function registerRoutes(app: Express): Server {
 
       res.json({
         message: "Metric insights generated successfully",
-        insight: savedInsight
+        insight: {
+          ...savedInsight,
+          status: insights.status // Ensure status is included in response
+        }
       });
 
     } catch (error) {

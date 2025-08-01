@@ -105,6 +105,7 @@ export const aiInsights = pgTable("ai_insights", {
   contextText: text("context_text"),
   insightText: text("insight_text"),
   recommendationText: text("recommendation_text"),
+  status: text("status"), // success, needs_improvement, warning
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
