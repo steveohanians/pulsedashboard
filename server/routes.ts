@@ -328,11 +328,53 @@ export function registerRoutes(app: Express): Server {
 
       logger.info('Starting metric-specific insight generation', { clientId, metricName, timePeriod });
 
+      // Get enriched data for comprehensive analysis
+      const client = await storage.getClient(clientId);
+      const competitors = await storage.getCompetitorsByClient(clientId);
+      
+      // Get current period metrics for comparison  
+      const currentPeriod = generatePeriodMapping().currentPeriod;
+      const clientMetrics = await storage.getMetricsByClient(clientId, currentPeriod);
+      
+      // Build competitor data for this metric
+      const competitorData = competitors.map((comp: any) => {
+        const competitorMetric = clientMetrics.find((m: any) => 
+          m.competitorId === comp.id && 
+          m.metricName === metricName && 
+          m.timePeriod === currentPeriod
+        );
+        return {
+          name: comp.domain.replace('https://', '').replace('http://', ''),
+          value: competitorMetric ? parseFloat(competitorMetric.value as string) : null
+        };
+      }).filter((c: any) => c.value !== null);
+
+      // Build enriched context for OpenAI
+      const enrichedData = {
+        metric: {
+          name: metricName,
+          clientValue: metricData.Client || metricData,
+          timePeriod: timePeriod
+        },
+        client: {
+          name: client?.name,
+          industry: client?.industryVertical,
+          businessSize: client?.businessSize,
+          websiteUrl: client?.websiteUrl
+        },
+        benchmarks: {
+          industryAverage: metricData.Industry_Avg,
+          cdPortfolioAverage: metricData.CD_Avg,
+          competitors: competitorData
+        },
+        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ')}.`
+      };
+
       // Import OpenAI service dynamically
       const { generateMetricSpecificInsights } = await import('./services/openai.js');
       
-      // Generate metric-specific insights using OpenAI
-      const insights = await generateMetricSpecificInsights(metricName, metricData, clientId);
+      // Generate metric-specific insights using OpenAI with enriched data
+      const insights = await generateMetricSpecificInsights(metricName, enrichedData, clientId);
       
       // Store insights in database
       const insertInsight = {

@@ -299,20 +299,30 @@ Focus on practical business impact and competitive advantage.`;
 }
 
 // Generate insights for a specific metric
-export async function generateMetricSpecificInsights(metricName: string, metricData: any, clientId: string) {
+export async function generateMetricSpecificInsights(metricName: string, enrichedData: any, clientId: string) {
   const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
 
-METRIC: ${metricName}
-CLIENT DATA: ${JSON.stringify(metricData)}
+METRIC ANALYSIS REQUEST:
+- Metric: ${metricName}
+- Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
+- Current Value: ${enrichedData.metric?.clientValue}
+- Time Period: ${enrichedData.metric?.timePeriod}
+
+BENCHMARK COMPARISON:
+- Industry Average: ${enrichedData.benchmarks?.industryAverage}
+- CD Portfolio Average: ${enrichedData.benchmarks?.cdPortfolioAverage}
+- Competitors: ${enrichedData.benchmarks?.competitors?.map((c: any) => `${c.name} (${c.value})`).join(', ') || 'No competitor data available'}
+
+FULL CONTEXT: ${enrichedData.context}
 
 Provide a JSON response with exactly this structure:
 {
-  "context": "Brief explanation of what this metric measures and why it matters (2-3 sentences)",
-  "insights": "Analysis of the current performance, comparing to benchmarks when available (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations for improvement (2-3 sentences)"
+  "context": "Brief explanation of what this metric measures and why it matters for this business (2-3 sentences)",
+  "insights": "Detailed analysis comparing the client's performance to industry average, CD portfolio average, and competitors. Include specific numbers and performance gaps (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations for improvement based on the comparative analysis (2-3 sentences)"
 }
 
-Keep each section concise and professional. Focus on actionable insights that a business owner can understand and implement.`;
+Focus on the actual numbers provided and give specific comparative insights. Be precise about performance gaps and opportunities.`;
 
   try {
     const completion = await openai.chat.completions.create({
