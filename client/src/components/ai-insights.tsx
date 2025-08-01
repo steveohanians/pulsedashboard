@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Sparkles, TrendingUp } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
 import TypewriterText from "./typewriter-text";
 
 // Function to render text with bold formatting
@@ -87,7 +87,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
         {insight && (showInsight || !isTyping) && (
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
-              <Sparkles className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
+              <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
               Insight
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
