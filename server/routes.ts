@@ -297,8 +297,9 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      // Generate default period dynamically
+      // Generate default period dynamically (use last complete month)
       const now = new Date();
+      now.setMonth(now.getMonth() - 1); // Go back to last complete month
       const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const { period = defaultPeriod } = req.query;
       

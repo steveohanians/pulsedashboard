@@ -9,18 +9,22 @@ import logger from "./logger";
  */
 export function generateDynamicPeriodMapping(): Record<string, string[]> {
   const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed (0 = January, 11 = December)
+  // Use last complete month as the baseline (current month is incomplete)
+  const lastCompleteMonth = new Date(now);
+  lastCompleteMonth.setMonth(lastCompleteMonth.getMonth() - 1);
   
-  // Generate current month period (YYYY-MM format)
+  const currentYear = lastCompleteMonth.getFullYear();
+  const currentMonth = lastCompleteMonth.getMonth(); // 0-indexed, now points to last complete month
+  
+  // Generate current month period (YYYY-MM format) - this is now the last complete month
   const currentPeriod = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   
-  // Generate last month period
-  const lastMonth = new Date(now);
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
-  const lastMonthPeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  // Generate last month period (one month before the last complete month)
+  const previousMonth = new Date(lastCompleteMonth);
+  previousMonth.setMonth(previousMonth.getMonth() - 1);
+  const lastMonthPeriod = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}`;
   
-  // Generate current quarter periods
+  // Generate current quarter periods (ending with last complete month)
   const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
   const currentQuarterPeriods = [];
   for (let i = 0; i < 3; i++) {
@@ -35,17 +39,17 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   if (currentQuarterPeriods.length < 3) {
     const prevQuarterMonths = 3 - currentQuarterPeriods.length;
     for (let i = prevQuarterMonths; i > 0; i--) {
-      const prevMonth = new Date(now);
+      const prevMonth = new Date(lastCompleteMonth);
       prevMonth.setMonth(prevMonth.getMonth() - i);
       const prevPeriod = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
       currentQuarterPeriods.unshift(prevPeriod);
     }
   }
   
-  // Generate last 12 months for "Last Year"
+  // Generate last 12 months for "Last Year" (ending with last complete month)
   const yearPeriods = [];
   for (let i = 11; i >= 0; i--) {
-    const monthDate = new Date(now);
+    const monthDate = new Date(lastCompleteMonth);
     monthDate.setMonth(monthDate.getMonth() - i);
     const monthPeriod = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
     yearPeriods.push(monthPeriod);
@@ -59,10 +63,10 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   });
   
   return {
-    "Last Month": [lastMonthPeriod], // Previous month
-    "Last Quarter": currentQuarterPeriods, // Current quarter (up to 3 months)
-    "Last Year": yearPeriods, // Last 12 months
-    "Custom Date Range": [lastMonthPeriod] // Default to last month for custom ranges
+    "Last Month": [currentPeriod], // Last complete month
+    "Last Quarter": currentQuarterPeriods, // Current quarter (up to 3 months, ending with last complete month)
+    "Last Year": yearPeriods, // Last 12 months ending with last complete month
+    "Custom Date Range": [currentPeriod] // Default to last complete month for custom ranges
   };
 }
 
