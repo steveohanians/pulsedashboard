@@ -124,9 +124,22 @@ export default function Dashboard() {
       console.log("🧹 Successfully cleared AI insights:", data);
       // Reset all metric statuses to empty
       setMetricStatuses({});
-      // Invalidate and refetch dashboard data
+      // Clear localStorage insights to prevent loading from cache
+      try {
+        localStorage.removeItem('aiInsights');
+        console.log("🧹 Cleared localStorage insights cache");
+      } catch (error) {
+        console.warn("Failed to clear localStorage:", error);
+      }
+      // Invalidate and refetch all related queries
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      console.log("🧹 State reset and cache invalidated");
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      // Force refetch the dashboard data immediately
+      dashboardQuery.refetch();
+      console.log("🧹 State reset, cache invalidated, localStorage cleared, and dashboard refetched");
+      // Force page reload to ensure all components reset their state
+      window.location.reload();
     },
     onError: (error) => {
       console.error("❌ Failed to clear AI insights:", error);
