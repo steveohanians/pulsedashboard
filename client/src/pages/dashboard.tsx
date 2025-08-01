@@ -1206,29 +1206,7 @@ export default function Dashboard() {
 
         </div>
 
-        {/* AI Insights Generation */}
-        <div className="mb-12 pdf-hide">
-          <Button
-            onClick={async () => {
-              try {
-                const response = await fetch(`/api/generate-insights/${user?.clientId}?period=${timePeriod}`, {
-                  method: 'POST',
-                  credentials: 'include'
-                });
-                if (response.ok) {
-                  // Refresh dashboard data to show new insights
-                  dashboardQuery.refetch();
-                }
-              } catch (error) {
-                // Error generating insights: ${error}
-              }
-            }}
-            className="w-full h-14 text-base font-semibold hover:shadow-[0_0_20px_rgba(156,163,175,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"
-          >
-            <Sparkles className="h-5 w-5 mr-3" />
-            Generate AI Insights for All Metrics
-          </Button>
-        </div>
+
 
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
