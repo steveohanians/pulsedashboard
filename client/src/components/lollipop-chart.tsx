@@ -88,27 +88,27 @@ export default function LollipopChart({
 
 
 
-  // Calculate dynamic width based on longest entity name, tightened spacing
+  // Calculate dynamic width based on longest entity name with responsive sizing
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
-  const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 8)); // Tighter spacing
+  const labelWidth = Math.max(80, Math.min(160, maxLabelLength * 6)); // Responsive width
 
   return (
     <div className="w-full flex flex-col" style={{ height: `${chartEntities.length * 48 + 50}px` }}>
-      {/* Main chart area with legend on right */}
-      <div className="flex-1 px-2 py-1 flex">
+      {/* Main chart area with legend on right/bottom */}
+      <div className="flex-1 px-1 sm:px-2 py-1 flex flex-col lg:flex-row">
         {/* Chart section */}
-        <div className="flex-1 relative mr-4">
+        <div className="flex-1 relative lg:mr-4 mb-4 lg:mb-0">
           {/* Combined layout - labels and chart rows in sync */}
           <div className="flex" style={{ height: `${chartEntities.length * 48}px` }}>
-            {/* Y-axis labels column */}
+            {/* Y-axis labels column - responsive text size */}
             <div className="flex flex-col" style={{ width: `${labelWidth}px` }}>
               {chartEntities.map((entity, index) => (
                 <div 
                   key={index} 
-                  className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end border-b border-gray-200 last:border-b-0"
+                  className="text-xs sm:text-sm text-gray-600 text-right pr-2 sm:pr-4 flex items-center justify-end border-b border-gray-200 last:border-b-0"
                   style={{ height: '48px' }}
                 >
-                  <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
+                  <span className={`${entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'} truncate`}>
                     {entity.label}
                   </span>
                 </div>
@@ -210,15 +210,15 @@ export default function LollipopChart({
           </div>
         </div>
 
-        {/* Legend on the right - compact */}
-        <div className="flex flex-col justify-start space-y-2 ml-3 w-20 pt-4">
+        {/* Legend - responsive positioning */}
+        <div className="flex lg:flex-col justify-center lg:justify-start gap-4 lg:gap-2 lg:ml-3 lg:w-20 lg:pt-4">
           {devices.map((device) => (
             <div key={device} className="flex items-center space-x-1.5">
               <div 
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: DEVICE_COLORS[device] }}
               />
-              <span className="text-xs text-gray-600 truncate">{device}</span>
+              <span className="text-xs text-gray-600 whitespace-nowrap">{device}</span>
             </div>
           ))}
         </div>

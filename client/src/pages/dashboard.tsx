@@ -1284,7 +1284,7 @@ export default function Dashboard() {
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
                   <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6">
-                    <div className={`relative overflow-visible ${metricName === "Device Distribution" ? "h-64 sm:h-72" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}>
+                    <div className={`relative ${metricName === "Device Distribution" ? "h-72 sm:h-80 md:h-96 overflow-visible" : metricName === "Traffic Channels" ? "h-48 sm:h-56 md:h-64 lg:h-72 overflow-visible" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}>
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
