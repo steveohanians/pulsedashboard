@@ -321,7 +321,8 @@ function getMetricDisplayInfo(metricName: string, value: any): { unit: string; d
     'Click-Through Rate': { unit: '%', rawUnit: '%' },
     'Exit Rate': { unit: '%', rawUnit: '%' },
     'Load Time': { unit: 'seconds', rawUnit: 'seconds' },
-    'Revenue': { unit: '$', rawUnit: '$' }
+    'Revenue': { unit: '$', rawUnit: '$' },
+    'Traffic Channels': { unit: 'channels', rawUnit: 'channels' }
   };
 
   const config = metricConfig[metricName] || { unit: 'units', rawUnit: 'units' };
@@ -383,7 +384,7 @@ FULL CONTEXT: ${enrichedData.context}
 
 Provide a JSON response with exactly this structure. Use **bold formatting** strategically for emphasis:
 {
-  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
+  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : metricName === 'Traffic Channels' ? 'Explain that this counts distinct traffic sources like organic search, direct, social media, referrals, paid ads, etc.' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
   "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** to emphasize the key insight or competitive advantage (e.g., **significantly outperforming competitors** or **lagging behind industry standards**). Include specific numbers but bold the interpretation, not just the numbers. ${metricName === 'Session Duration' ? 'Use format like 5m 12s for time values and describe differences meaningfully' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
   "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
 }
