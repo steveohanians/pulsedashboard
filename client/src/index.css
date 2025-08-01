@@ -69,5 +69,10 @@
     font-family: 'Poppins', sans-serif;
   }
 
-
+  /* Ensure consistent arrow size for custom select triggers */
+  [data-radix-select-trigger] svg {
+    width: 16px !important;
+    height: 16px !important;
+    opacity: 0.7 !important;
+  }
 }
