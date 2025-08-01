@@ -28,9 +28,9 @@ interface LollipopChartProps {
 }
 
 const DEVICE_COLORS = {
-  Desktop: '#2563EB',   // Strong Blue
-  Mobile: '#059669',    // Emerald Green  
-  Tablet: '#7C3AED',    // Violet Purple
+  Desktop: '#3B82F6',   // Blue
+  Mobile: '#EF4444',    // Red  
+  Tablet: '#F59E0B',    // Amber
   Other: '#6B7280'      // Gray
 };
 
@@ -155,8 +155,8 @@ export default function LollipopChart({
                             style={{
                               left: `${percentage}%`,
                               top: '-8px',
-                              transform: 'translateX(-100%)',
-                              paddingRight: '6px'
+                              transform: 'translateX(0%)',
+                              paddingLeft: '8px'
                             }}
                           >
                             {percentage}%
