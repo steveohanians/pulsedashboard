@@ -69,9 +69,5 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Fix SelectValue text alignment inconsistency */
-  [data-radix-select-value] {
-    text-align: left !important;
-    justify-self: start !important;
-  }
+
 }
