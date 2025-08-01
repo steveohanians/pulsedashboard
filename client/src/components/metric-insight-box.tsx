@@ -137,7 +137,8 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onSuccess: (data) => {
       // Set insight with typing effect enabled
-      setInsight({ ...data.insight, isTyping: true });
+      console.debug('🎭 Setting new insight with typing=true');
+      setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       console.debug('✅ Status from API:', data.insight.status);
       onStatusChange?.(data.insight.status);
       // Invalidate insights cache

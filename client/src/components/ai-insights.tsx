@@ -91,16 +91,20 @@ export default function AIInsights({ context, insight, recommendation, status, i
   const [showRecommendation, setShowRecommendation] = useState(!isTyping);
   const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [contentKey, setContentKey] = useState(Date.now());
   const { toast } = useToast();
 
   // Reset typing states when content changes or isTyping changes
   useEffect(() => {
+    console.debug('🎭 AIInsights effect triggered - isTyping:', isTyping);
     setContextComplete(!isTyping);
     setInsightComplete(!isTyping);
     setShowInsight(!isTyping);
     setShowRecommendation(!isTyping);
     setRecommendationComplete(!isTyping);
     setCopiedText(null);
+    // Generate new key to force TypewriterText to remount
+    setContentKey(Date.now());
   }, [context, insight, recommendation, isTyping]);
   
   // Format timestamp
@@ -172,7 +176,7 @@ export default function AIInsights({ context, insight, recommendation, status, i
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && !contextComplete ? (
                 <TypewriterText 
-                  key={`context-${context?.slice(0, 20)}`}
+                  key={`context-${contentKey}`}
                   text={context} 
                   speed={10}
                   onComplete={() => {
@@ -197,7 +201,7 @@ export default function AIInsights({ context, insight, recommendation, status, i
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && showInsight && !insightComplete ? (
                 <TypewriterText 
-                  key={`insight-${insight?.slice(0, 20)}`}
+                  key={`insight-${contentKey}`}
                   text={insight} 
                   speed={10}
                   onComplete={() => {
@@ -222,7 +226,7 @@ export default function AIInsights({ context, insight, recommendation, status, i
             <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
               {isTyping && showRecommendation && !recommendationComplete ? (
                 <TypewriterText 
-                  key={`recommendation-${recommendation?.slice(0, 20)}`}
+                  key={`recommendation-${contentKey}`}
                   text={recommendation} 
                   speed={10}
                   onComplete={() => setRecommendationComplete(true)}
