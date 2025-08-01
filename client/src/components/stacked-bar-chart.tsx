@@ -80,6 +80,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     title={`${channel.name}: ${channel.value}%`}
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
+                    
+                    {/* Simple tooltip that's always positioned safely */}
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                      {channel.name}: {channel.value}%
+                    </div>
                   </div>
                 );
               })}
