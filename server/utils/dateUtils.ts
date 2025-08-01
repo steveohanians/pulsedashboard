@@ -8,10 +8,21 @@ import logger from "./logger";
  * This ensures the dashboard shows correct periods as time progresses
  */
 export function generateDynamicPeriodMapping(): Record<string, string[]> {
+  // Use Pacific Time properly with Intl API
   const now = new Date();
-  // Always use 1 month before current date (so August 1st shows June data)
-  const targetMonth = new Date(now);
-  targetMonth.setMonth(targetMonth.getMonth() - 2); // 2 months back from current
+  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit'
+  });
+  
+  // Get current date in Pacific Time
+  const ptParts = ptFormatter.formatToParts(now);
+  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+  
+  // Create PT date and go back 1 month for target period
+  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT date
   
   const currentYear = targetMonth.getFullYear();
   const currentMonth = targetMonth.getMonth(); // 0-indexed, now points to target month

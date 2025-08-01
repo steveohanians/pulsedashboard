@@ -44,16 +44,27 @@ const METRIC_CONFIGS: MetricConfig[] = [
   }
 ];
 
-// Generate dynamic time periods based on current date
+// Generate dynamic time periods based on current date in Pacific Time
 function generateTimePeriods(): string[] {
+  // Use Pacific Time properly with Intl API
   const now = new Date();
+  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit'
+  });
+  
+  // Get current date in Pacific Time
+  const ptParts = ptFormatter.formatToParts(now);
+  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+  
   const periods: string[] = [];
   
-  // Generate 15 months of historical data, starting from 1 month before current date
-  // Today is August 1st, so latest data should be June (2 months back)
-  for (let i = 2; i <= 16; i++) {
-    const date = new Date(now);
-    date.setMonth(date.getMonth() - i);
+  // Generate 15 months of historical data, starting from 1 month before current PT date
+  // July 31st PT should show May as latest (1 month before current)
+  for (let i = 1; i <= 15; i++) {
+    const date = new Date(ptYear, ptMonth - i, 1);
     periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
   }
   

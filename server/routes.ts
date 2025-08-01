@@ -296,10 +296,18 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      // Generate default period dynamically (use 1 month before current date)
+      // Generate default period dynamically (use 1 month before current date in PT)
       const now = new Date();
-      now.setMonth(now.getMonth() - 2); // Go back 2 months (1 month before current)
-      const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const ptFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit'
+      });
+      const ptParts = ptFormatter.formatToParts(now);
+      const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+      const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+      const targetDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+      const defaultPeriod = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
       const { period = defaultPeriod } = req.query;
       
       // Verify user has access to this client
