@@ -50,15 +50,27 @@ export function deduplicateByChannel<T extends { channel?: string }>(
 }
 
 /**
- * Format period display text for better UX
+ * Format period display text for better UX (dynamic based on current date)
  */
 export function formatPeriodDisplay(period: string): string {
-  const periodMap: Record<string, string> = {
-    "Last Month": "June 2025",
-    "Last Quarter": "Q2 2025",
-    "Last Year": "June 2024 - June 2025"
-  };
-  return periodMap[period] || period;
+  const now = new Date();
+  
+  if (period === "Last Month") {
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    return lastMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  } else if (period === "Last Quarter") {
+    const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+    return `Q${currentQuarter} ${now.getFullYear()}`;
+  } else if (period === "Last Year") {
+    const yearEnd = new Date(now);
+    yearEnd.setMonth(yearEnd.getMonth() - 1);
+    const yearStart = new Date(yearEnd);
+    yearStart.setFullYear(yearStart.getFullYear() - 1);
+    return `${yearStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${yearEnd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  }
+  
+  return period;
 }
 
 /**

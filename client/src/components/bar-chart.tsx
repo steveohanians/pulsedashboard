@@ -92,27 +92,52 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    // Show June 2025 data points (ending in June) - daily intervals
-    const endDate = new Date(2025, 5, 30); // June 30, 2025 (month is 0-indexed)
+    // Show last month data points (dynamic based on current date)
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0); // Last day of last month
+    
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
       date.setDate(date.getDate() - (i * 5)); // Every 5 days
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
   } else if (timePeriod === "Last Quarter") {
-    // Show Q2 2025 (Apr, May, Jun) - ending in June 2025
-    dates = ["Apr 25", "May 25", "Jun 25"];
+    // Show current quarter months (dynamic)
+    const now = new Date();
+    const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+    const quarterStartMonth = (currentQuarter - 1) * 3;
+    
+    for (let i = 0; i < 3; i++) {
+      const quarterMonth = quarterStartMonth + i;
+      if (quarterMonth < now.getMonth() + 1) {
+        const monthDate = new Date(now.getFullYear(), quarterMonth, 1);
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        dates.push(`${monthNames[quarterMonth]} ${String(now.getFullYear()).slice(-2)}`);
+      }
+    }
   } else if (timePeriod === "Last Year") {
-    // Show 12 months ending June 2025 (July 2024 - June 2025)
-    const months = [
-      "Jul 24", "Aug 24", "Sep 24", "Oct 24", "Nov 24", "Dec 24",
-      "Jan 25", "Feb 25", "Mar 25", "Apr 25", "May 25", "Jun 25"
-    ];
+    // Show 12 months ending last month (dynamic)
+    const now = new Date();
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(now);
+      monthDate.setMonth(monthDate.getMonth() - i - 1); // -1 for last month
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      months.push(`${monthNames[monthDate.getMonth()]} ${String(monthDate.getFullYear()).slice(-2)}`);
+    }
     // Take every other month for display clarity (6 points)
     dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
   } else {
-    // Custom date range - show 6 points ending in June 2025
-    const endDate = new Date(2025, 5, 30); // June 30, 2025
+    // Custom date range - show 6 points ending last month
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+    
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
       date.setDate(date.getDate() - (i * 7)); // Weekly
