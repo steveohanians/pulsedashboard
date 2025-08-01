@@ -1015,7 +1015,7 @@ export default function Dashboard() {
                   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
                   displayText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 } else if (timePeriod === "Last Quarter") {
-                  // Use Pacific Time calculation for consistent quarter display
+                  // Show the last 3 months ending with PT target month
                   const now = new Date();
                   const ptFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: 'America/Los_Angeles',
@@ -1026,11 +1026,26 @@ export default function Dashboard() {
                   const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
                   const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
                   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-                  const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
-                  displayText = `Q${currentQuarter} ${targetMonth.getFullYear()}`;
+                  
+                  // Calculate start month (2 months before target month)
+                  const startMonth = new Date(targetMonth);
+                  startMonth.setMonth(targetMonth.getMonth() - 2);
+                  
+                  const startText = startMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  const endText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  displayText = `${startText} - ${endText}`;
                 } else if (timePeriod === "Last Year") {
-                  const endDate = new Date();
-                  endDate.setMonth(endDate.getMonth() - 1); // Last month
+                  // Use Pacific Time for year calculation too
+                  const now = new Date();
+                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/Los_Angeles',
+                    year: 'numeric',
+                    month: '2-digit'
+                  });
+                  const ptParts = ptFormatter.formatToParts(now);
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const endDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
                   const startDate = new Date(endDate);
                   startDate.setFullYear(startDate.getFullYear() - 1); // 12 months ago
                   displayText = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
