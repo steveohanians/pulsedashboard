@@ -935,10 +935,8 @@ export default function Dashboard() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
-                  <SelectTrigger className="!pl-3 !pr-3 justify-between">
-                    <div className="text-left w-full truncate">
-                      {businessSize}
-                    </div>
+                  <SelectTrigger className="business-size-select">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {filtersData?.businessSizes?.map((size: string) => (
@@ -950,10 +948,8 @@ export default function Dashboard() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
                 <Select value={industryVertical} onValueChange={setIndustryVertical}>
-                  <SelectTrigger className="!pl-3 !pr-3 justify-between">
-                    <div className="text-left w-full truncate">
-                      {industryVertical}
-                    </div>
+                  <SelectTrigger>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {filtersData?.industryVerticals?.map((vertical: string) => (

@@ -69,13 +69,13 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Fix select dropdown padding inconsistency */
-  button[data-radix-select-trigger] {
+  /* Targeted fix for Business Size dropdown only */
+  .business-size-select button[data-radix-select-trigger] {
     padding-left: 12px !important;
     padding-right: 36px !important;
   }
   
-  button[data-radix-select-trigger] span[data-radix-select-value] {
+  .business-size-select button[data-radix-select-trigger] span[data-radix-select-value] {
     text-align: left !important;
     display: block !important;
     width: 100% !important;
