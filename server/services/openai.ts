@@ -47,6 +47,34 @@ async function generateInsightsWithCustomPrompt(
       formattedIndustryAverage = `${industryAverage} seconds (${industryMinutes}m ${industrySecondsRem}s)`;
     }
     
+    // Special handling for Traffic Channels - get actual channel distribution
+    if (metricName === 'Traffic Channels') {
+      try {
+        const { storage } = await import("../storage");
+        const getCurrentPeriod = () => {
+          const now = new Date();
+          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        };
+        const currentPeriod = getCurrentPeriod();
+        
+        // Get channel distribution data for client, industry, and CD averages
+        const clientChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'Client');
+        const industryChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'Industry_Avg');
+        const cdChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'CD_Avg');
+        
+        const formatChannelData = (channels: any[]) => {
+          if (!channels.length) return 'No data available';
+          return channels.map(c => `${c.channel}: ${c.value}%`).join(', ');
+        };
+        
+        formattedClientValue = formatChannelData(clientChannels);
+        formattedIndustryAverage = formatChannelData(industryChannels);
+        formattedCdAverage = formatChannelData(cdChannels);
+      } catch (error) {
+        logger.warn('Failed to get traffic channel distribution data', { error: (error as Error).message });
+      }
+    }
+    
     // Replace template variables in the custom prompt
     let processedPrompt = customPrompt.promptTemplate
       .replace(/\{\{clientName\}\}/g, 'Current Client')
