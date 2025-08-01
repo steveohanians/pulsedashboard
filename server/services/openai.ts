@@ -458,6 +458,35 @@ function getMetricDisplayInfo(metricName: string, value: any): { unit: string; d
 
 // Generate insights for a specific metric
 export async function generateMetricSpecificInsights(metricName: string, enrichedData: any, clientId: string) {
+  const { storage } = await import("../storage");
+  
+  // First try to use custom prompt templates from the admin panel
+  try {
+    const customPrompt = await storage.getMetricPrompt(metricName);
+    
+    if (customPrompt && customPrompt.isActive) {
+      // Use the existing custom prompt system with the enhanced data
+      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
+      
+      return await generateInsightsWithCustomPrompt(
+        customPrompt,
+        metricName,
+        enrichedData.metric?.clientValue || 0,
+        enrichedData.benchmarks?.cdPortfolioAverage || 0,
+        enrichedData.benchmarks?.industryAverage || 0,
+        competitorValues,
+        enrichedData.client?.industry || 'Technology',
+        enrichedData.client?.businessSize || 'Medium Business'
+      );
+    }
+  } catch (error) {
+    logger.warn("Failed to use custom prompt, falling back to hardcoded prompt", { 
+      metricName, 
+      error: (error as Error).message 
+    });
+  }
+  
+  // Fallback to hardcoded prompts (existing logic)
   const clientInfo = getMetricDisplayInfo(metricName, enrichedData.metric?.clientValue);
   const industryInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.industryAverage);
   const cdInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.cdPortfolioAverage);

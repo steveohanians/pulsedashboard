@@ -115,3 +115,9 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Ensured Pacific Time consistency across all time period calculations
   - Added comprehensive error handling and logging for competitor metric creation
   - **UX Enhancement**: Added loading spinner to "+ Add" button in competitor modal during data generation
+- **AI Prompt System Fix (August 2025)**: Critical prompt system consolidation completed
+  - Fixed inconsistent AI prompt usage where individual metric insights bypassed custom prompt templates
+  - Updated `generateMetricSpecificInsights` to prioritize admin panel custom prompts over hardcoded prompts
+  - Ensured all 6 active custom prompt templates (Bounce Rate, Traffic Channels, etc.) are used consistently
+  - Enhanced Traffic Channels analysis to use actual channel distribution data instead of simple counts
+  - Eliminated multiple competing system messages for unified AI personality and expertise
