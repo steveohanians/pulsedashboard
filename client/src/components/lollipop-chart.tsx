@@ -174,8 +174,8 @@ export default function LollipopChart({
                             style={{
                               backgroundColor: color,
                               left: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
-                              top: '-3px',
-                              transform: 'translateX(-50%)'
+                              top: '50%',
+                              transform: 'translate(-50%, -50%)'
                             }}
                           >
                             {/* Tooltip */}
