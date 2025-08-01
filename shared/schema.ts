@@ -63,6 +63,18 @@ export const benchmarkCompanies = pgTable("benchmark_companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// CD Portfolio companies for Clear Digital benchmarking (separate from clients)
+export const cdPortfolioCompanies = pgTable("cd_portfolio_companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  websiteUrl: text("website_url").notNull(),
+  industryVertical: text("industry_vertical").notNull(),
+  businessSize: text("business_size").notNull(),
+  description: text("description"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const metrics = pgTable("metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id),
@@ -168,6 +180,11 @@ export const insertBenchmarkCompanySchema = createInsertSchema(benchmarkCompanie
   createdAt: true,
 });
 
+export const insertCdPortfolioCompanySchema = createInsertSchema(cdPortfolioCompanies).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertMetricSchema = createInsertSchema(metrics).omit({
   id: true,
   createdAt: true,
@@ -197,6 +214,8 @@ export type Competitor = typeof competitors.$inferSelect;
 export type InsertCompetitor = z.infer<typeof insertCompetitorSchema>;
 export type BenchmarkCompany = typeof benchmarkCompanies.$inferSelect;
 export type InsertBenchmarkCompany = z.infer<typeof insertBenchmarkCompanySchema>;
+export type CdPortfolioCompany = typeof cdPortfolioCompanies.$inferSelect;
+export type InsertCdPortfolioCompany = z.infer<typeof insertCdPortfolioCompanySchema>;
 export type Metric = typeof metrics.$inferSelect;
 export type InsertMetric = z.infer<typeof insertMetricSchema>;
 export type Benchmark = typeof benchmarks.$inferSelect;

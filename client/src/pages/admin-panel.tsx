@@ -60,9 +60,9 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin",
   });
 
-  // Query for CD portfolio clients (clients with isPortfolioClient = true)
-  const { data: cdClients } = useQuery<any[]>({
-    queryKey: ["/api/admin/cd-clients"],
+  // Query for CD portfolio companies (independent from clients)
+  const { data: cdPortfolioCompanies } = useQuery<any[]>({
+    queryKey: ["/api/admin/cd-portfolio"],
     enabled: user?.role === "Admin",
   });
 
@@ -268,45 +268,67 @@ export default function AdminPanel() {
     },
   });
 
-  // CD Clients mutations
-  const togglePortfolioClientMutation = useMutation({
-    mutationFn: async ({ id, isPortfolioClient }: { id: string; isPortfolioClient: boolean }) => {
-      const res = await apiRequest("PATCH", `/api/admin/clients/${id}/portfolio`, { isPortfolioClient });
+  // CD Portfolio Company mutations
+  const createCdPortfolioCompanyMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/admin/cd-portfolio", data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
       toast({
-        title: "Portfolio status updated",
-        description: "Client portfolio status has been successfully updated.",
+        title: "Company added to portfolio",
+        description: "Company has been successfully added to Clear Digital portfolio.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to update portfolio status",
+        title: "Failed to add company",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const removeCDClientMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("PATCH", `/api/admin/clients/${id}/portfolio`, { isPortfolioClient: false });
+  const updateCdPortfolioCompanyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/cd-portfolio/${id}`, data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
       toast({
-        title: "Client removed from portfolio",
-        description: "Client has been removed from Clear Digital portfolio.",
+        title: "Portfolio company updated",
+        description: "Portfolio company information has been successfully updated.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to remove client",
+        title: "Failed to update company",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCdPortfolioCompanyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/cd-portfolio/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      toast({
+        title: "Company removed from portfolio",
+        description: "Company has been removed from Clear Digital portfolio.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to remove company",
         description: error.message,
         variant: "destructive",
       });
@@ -427,6 +449,52 @@ export default function AdminPanel() {
     }
     
     createBenchmarkCompanyMutation.mutate(data);
+  };
+
+  const handleCreateCdPortfolioCompany = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      websiteUrl: formData.get("websiteUrl") as string,
+      industryVertical: formData.get("industryVertical") as string,
+      businessSize: formData.get("businessSize") as string,
+      description: formData.get("description") as string || null,
+    };
+    
+    if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
+      toast({
+        title: "Validation error",
+        description: "Name, website URL, industry, and business size are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createCdPortfolioCompanyMutation.mutate(data);
+  };
+
+  const handleSaveCdPortfolioCompany = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      websiteUrl: formData.get("website") as string,
+      industryVertical: formData.get("industry") as string,
+      businessSize: formData.get("businessSize") as string,
+      description: formData.get("description") as string || null,
+    };
+    
+    if (!data.name || !data.websiteUrl) {
+      toast({
+        title: "Validation error",
+        description: "Name and website URL are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateCdPortfolioCompanyMutation.mutate({ id: editingItem.id, data });
   };
 
   const handleInviteUser = (event: React.FormEvent) => {
@@ -1422,66 +1490,95 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
 
-              {/* Clear Digital Portfolio Clients */}
+              {/* Clear Digital Portfolio Companies */}
               <TabsContent value="cd-clients">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <div>
                     <h2 className="text-base sm:text-lg font-semibold text-slate-900">Clear Digital Portfolio</h2>
-                    <p className="text-sm text-slate-600 mt-1">Manage clients included in CD benchmark calculations</p>
+                    <p className="text-sm text-slate-600 mt-1">Manage companies included in CD benchmark calculations</p>
                   </div>
                   <div className="flex gap-2">
-                    <Dialog open={isDialogOpen && editingItem?.type === 'add-cd-client'} onOpenChange={(open) => {
+                    <Dialog open={isDialogOpen && editingItem?.type === 'add-cd-company'} onOpenChange={(open) => {
                       setIsDialogOpen(open);
                       if (!open) setEditingItem(null);
                     }}>
                       <DialogTrigger asChild>
                         <Button onClick={() => {
-                          setEditingItem({ type: 'add-cd-client' });
+                          setEditingItem({ type: 'add-cd-company' });
                           setIsDialogOpen(true);
                         }}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Add to Portfolio
+                          Add Company
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Add Client to CD Portfolio</DialogTitle>
+                          <DialogTitle>Add Company to CD Portfolio</DialogTitle>
                           <DialogDescription>
-                            Select a client to include in Clear Digital portfolio benchmarks
+                            Add a new company to the Clear Digital portfolio for benchmark calculations
                           </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={(e) => {
-                          e.preventDefault();
-                          const formData = new FormData(e.currentTarget as HTMLFormElement);
-                          const clientId = formData.get("clientId") as string;
-                          
-                          if (!clientId || clientId === "none") {
-                            toast({
-                              title: "Validation error",
-                              description: "Please select a client to add to portfolio.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-                          
-                          togglePortfolioClientMutation.mutate({ id: clientId, isPortfolioClient: true });
-                          setIsDialogOpen(false);
-                          setEditingItem(null);
-                        }} className="space-y-4">
+                        <form onSubmit={handleCreateCdPortfolioCompany} className="space-y-4">
                           <div>
-                            <Label htmlFor="portfolio-clientId">Select Client *</Label>
-                            <Select name="clientId" required>
+                            <Label htmlFor="cd-company-name">Company Name *</Label>
+                            <Input 
+                              id="cd-company-name" 
+                              name="name"
+                              placeholder="Enter company name"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="cd-company-websiteUrl">Website URL *</Label>
+                            <Input 
+                              id="cd-company-websiteUrl"
+                              name="websiteUrl" 
+                              type="url"
+                              placeholder="https://example.com"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="cd-company-industryVertical">Industry Vertical *</Label>
+                            <Select name="industryVertical" required>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a client" />
+                                <SelectValue placeholder="Select industry" />
                               </SelectTrigger>
                               <SelectContent>
-                                {clients?.filter(client => !client.isPortfolioClient).map((client: any) => (
-                                  <SelectItem key={client.id} value={client.id}>
-                                    {client.name} - {client.industryVertical}
-                                  </SelectItem>
-                                ))}
+                                <SelectItem value="Technology">Technology</SelectItem>
+                                <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
+                                <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
+                                <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
+                                <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
+                                <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
+                                <SelectItem value="Healthcare">Healthcare</SelectItem>
+                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
                               </SelectContent>
                             </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="cd-company-businessSize">Business Size *</Label>
+                            <Select name="businessSize" required>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select business size" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
+                                <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
+                                <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
+                                <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="cd-company-description">Description</Label>
+                            <Textarea 
+                              id="cd-company-description"
+                              name="description" 
+                              placeholder="Optional description of the company"
+                              rows={3}
+                            />
                           </div>
                           <div className="flex justify-end space-x-2">
                             <Button 
@@ -1496,9 +1593,9 @@ export default function AdminPanel() {
                             </Button>
                             <Button 
                               type="submit"
-                              disabled={togglePortfolioClientMutation.isPending}
+                              disabled={createCdPortfolioCompanyMutation.isPending}
                             >
-                              {togglePortfolioClientMutation.isPending ? "Adding..." : "Add to Portfolio"}
+                              {createCdPortfolioCompanyMutation.isPending ? "Adding..." : "Add Company"}
                             </Button>
                           </div>
                         </form>
@@ -1511,26 +1608,26 @@ export default function AdminPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-slate-600">Total Portfolio Clients</CardTitle>
+                      <CardTitle className="text-sm font-medium text-slate-600">Total Portfolio Companies</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-primary">{cdClients?.length || 0}</div>
+                      <div className="text-2xl font-bold text-primary">{cdPortfolioCompanies?.length || 0}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-slate-600">Active Benchmarks</CardTitle>
+                      <CardTitle className="text-sm font-medium text-slate-600">Active Companies</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-emerald-600">{cdClients?.filter(c => c.active).length || 0}</div>
+                      <div className="text-2xl font-bold text-emerald-600">{cdPortfolioCompanies?.filter(c => c.active).length || 0}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-slate-600">Available to Add</CardTitle>
+                      <CardTitle className="text-sm font-medium text-slate-600">Benchmark Coverage</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-slate-500">{clients?.filter(c => !c.isPortfolioClient).length || 0}</div>
+                      <div className="text-2xl font-bold text-blue-600">100%</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -1540,41 +1637,143 @@ export default function AdminPanel() {
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead><SortableHeader label="Client Name" sortKey="name" /></TableHead>
+                          <TableHead><SortableHeader label="Company Name" sortKey="name" /></TableHead>
                           <TableHead className="hidden sm:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
                           <TableHead className="hidden md:table-cell"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="hidden lg:table-cell">GA4 Property</TableHead>
+                          <TableHead className="hidden lg:table-cell">Description</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(cdClients, 'cd-clients')?.map((client: any) => (
-                          <TableRow key={client.id}>
+                        {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
+                          <TableRow key={company.id}>
                             <TableCell className="font-medium min-w-40">
                               <div>
-                                <div className="font-medium">{client.name}</div>
-                                <div className="text-xs text-slate-500 sm:hidden">{client.websiteUrl}</div>
+                                <div className="font-medium">{company.name}</div>
+                                <div className="text-xs text-slate-500 sm:hidden">{company.websiteUrl}</div>
                               </div>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell min-w-48">
-                              <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                {client.websiteUrl}
+                              <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {company.websiteUrl}
                               </a>
                             </TableCell>
-                            <TableCell className="min-w-32">{client.industryVertical}</TableCell>
-                            <TableCell className="hidden md:table-cell min-w-36">{client.businessSize}</TableCell>
+                            <TableCell className="min-w-32">{company.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell min-w-36">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell min-w-32 text-xs">
-                              {client.ga4PropertyId || "Not configured"}
+                              {company.description || "No description"}
                             </TableCell>
                             <TableCell className="min-w-20">
-                              <Badge variant={client.active ? "secondary" : "outline"} className="text-xs">
-                                {client.active ? "Active" : "Inactive"}
+                              <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
+                                {company.active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
                             <TableCell className="min-w-24">
                               <div className="flex space-x-1 sm:space-x-2">
+                                <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
+                                  setIsDialogOpen(open);
+                                  if (!open) setEditingItem(null);
+                                }}>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
+                                      setIsDialogOpen(true);
+                                    }}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Edit Portfolio Company</DialogTitle>
+                                      <DialogDescription>
+                                        Update company information
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleSaveCdPortfolioCompany} className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="edit-cd-name">Company Name *</Label>
+                                        <Input 
+                                          id="edit-cd-name" 
+                                          name="name"
+                                          defaultValue={editingItem?.name}
+                                          required
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-cd-website">Website URL *</Label>
+                                        <Input 
+                                          id="edit-cd-website"
+                                          name="website" 
+                                          type="url"
+                                          defaultValue={editingItem?.websiteUrl}
+                                          required
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-cd-industry">Industry Vertical *</Label>
+                                        <Select name="industry" defaultValue={editingItem?.industryVertical}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Technology">Technology</SelectItem>
+                                            <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
+                                            <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
+                                            <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
+                                            <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
+                                            <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
+                                            <SelectItem value="Healthcare">Healthcare</SelectItem>
+                                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                            <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-cd-businessSize">Business Size *</Label>
+                                        <Select name="businessSize" defaultValue={editingItem?.businessSize}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
+                                            <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
+                                            <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
+                                            <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-cd-description">Description</Label>
+                                        <Textarea 
+                                          id="edit-cd-description"
+                                          name="description" 
+                                          defaultValue={editingItem?.description || ""}
+                                          rows={3}
+                                        />
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Button 
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setIsDialogOpen(false);
+                                            setEditingItem(null);
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button 
+                                          type="submit"
+                                          disabled={updateCdPortfolioCompanyMutation.isPending}
+                                        >
+                                          {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                        </Button>
+                                      </div>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
@@ -1585,17 +1784,17 @@ export default function AdminPanel() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Remove from Portfolio</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to remove "{client.name}" from the Clear Digital portfolio? This will exclude them from CD benchmark calculations.
+                                        Are you sure you want to remove "{company.name}" from the Clear Digital portfolio? This will exclude them from CD benchmark calculations.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction 
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        onClick={() => removeCDClientMutation.mutate(client.id)}
-                                        disabled={removeCDClientMutation.isPending}
+                                        onClick={() => deleteCdPortfolioCompanyMutation.mutate(company.id)}
+                                        disabled={deleteCdPortfolioCompanyMutation.isPending}
                                       >
-                                        {removeCDClientMutation.isPending ? "Removing..." : "Remove from Portfolio"}
+                                        {deleteCdPortfolioCompanyMutation.isPending ? "Removing..." : "Remove from Portfolio"}
                                       </AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
@@ -1607,17 +1806,17 @@ export default function AdminPanel() {
                       </TableBody>
                     </Table>
                   </div>
-                  {(!cdClients || cdClients.length === 0) && (
+                  {(!cdPortfolioCompanies || cdPortfolioCompanies.length === 0) && (
                     <div className="text-center py-8 text-slate-500">
                       <Building className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                      <h3 className="text-lg font-medium mb-2">No Portfolio Clients</h3>
-                      <p className="text-sm mb-4">Add clients to start building your portfolio benchmark.</p>
+                      <h3 className="text-lg font-medium mb-2">No Portfolio Companies</h3>
+                      <p className="text-sm mb-4">Add companies to start building your portfolio benchmark.</p>
                       <Button onClick={() => {
-                        setEditingItem({ type: 'add-cd-client' });
+                        setEditingItem({ type: 'add-cd-company' });
                         setIsDialogOpen(true);
                       }}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add First Client
+                        Add First Company
                       </Button>
                     </div>
                   )}

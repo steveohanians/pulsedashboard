@@ -1,9 +1,10 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, metrics, benchmarks, aiInsights, passwordResetTokens,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
   type BenchmarkCompany, type InsertBenchmarkCompany,
+  type CdPortfolioCompany, type InsertCdPortfolioCompany,
   type Metric, type InsertMetric,
   type Benchmark, type InsertBenchmark,
   type AIInsight, type InsertAIInsight,
@@ -31,10 +32,8 @@ export interface IStorage {
   // Clients
   getClient(id: string): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
-  getPortfolioClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
-  updateClientPortfolioStatus(id: string, isPortfolioClient: boolean): Promise<Client | undefined>;
   
   // Competitors
   getCompetitorsByClient(clientId: string): Promise<Competitor[]>;
@@ -46,6 +45,12 @@ export interface IStorage {
   createBenchmarkCompany(company: InsertBenchmarkCompany): Promise<BenchmarkCompany>;
   updateBenchmarkCompany(id: string, company: Partial<InsertBenchmarkCompany>): Promise<BenchmarkCompany | undefined>;
   deleteBenchmarkCompany(id: string): Promise<void>;
+  
+  // CD Portfolio Companies
+  getCdPortfolioCompanies(): Promise<CdPortfolioCompany[]>;
+  createCdPortfolioCompany(company: InsertCdPortfolioCompany): Promise<CdPortfolioCompany>;
+  updateCdPortfolioCompany(id: string, company: Partial<InsertCdPortfolioCompany>): Promise<CdPortfolioCompany | undefined>;
+  deleteCdPortfolioCompany(id: string): Promise<void>;
   
   // Metrics
   getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]>;
@@ -138,23 +143,7 @@ export class DatabaseStorage implements IStorage {
     return client || undefined;
   }
 
-  async getPortfolioClients(): Promise<Client[]> {
-    return await db.select().from(clients).where(
-      and(
-        eq(clients.active, true),
-        eq(clients.isPortfolioClient, true)
-      )
-    );
-  }
 
-  async updateClientPortfolioStatus(id: string, isPortfolioClient: boolean): Promise<Client | undefined> {
-    const [client] = await db
-      .update(clients)
-      .set({ isPortfolioClient })
-      .where(eq(clients.id, id))
-      .returning();
-    return client || undefined;
-  }
 
   // Competitors
   async getCompetitorsByClient(clientId: string): Promise<Competitor[]> {
@@ -203,6 +192,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBenchmarkCompany(id: string): Promise<void> {
     await db.delete(benchmarkCompanies).where(eq(benchmarkCompanies.id, id));
+  }
+
+  // CD Portfolio Companies
+  async getCdPortfolioCompanies(): Promise<CdPortfolioCompany[]> {
+    return await db.select().from(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.active, true));
+  }
+
+  async createCdPortfolioCompany(insertCompany: InsertCdPortfolioCompany): Promise<CdPortfolioCompany> {
+    const [company] = await db
+      .insert(cdPortfolioCompanies)
+      .values(insertCompany)
+      .returning();
+    return company;
+  }
+
+  async updateCdPortfolioCompany(id: string, updateCompany: Partial<InsertCdPortfolioCompany>): Promise<CdPortfolioCompany | undefined> {
+    const [company] = await db
+      .update(cdPortfolioCompanies)
+      .set(updateCompany)
+      .where(eq(cdPortfolioCompanies.id, id))
+      .returning();
+    return company || undefined;
+  }
+
+  async deleteCdPortfolioCompany(id: string): Promise<void> {
+    await db.delete(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.id, id));
   }
 
   // Metrics

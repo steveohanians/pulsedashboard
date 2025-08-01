@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
@@ -617,47 +617,107 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // CD Portfolio clients management
-  app.get("/api/admin/cd-clients", adminLimiter, requireAdmin, async (req, res) => {
+  // CD Portfolio Company Management (separate from clients)
+  app.get('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
-      const cdClients = await storage.getPortfolioClients();
-      logger.info("Retrieved CD portfolio clients", { count: cdClients.length, admin: req.user?.id });
-      res.json(cdClients);
+      const portfolioCompanies = await storage.getCdPortfolioCompanies();
+      logger.info("Retrieved CD portfolio companies", { 
+        count: portfolioCompanies.length, 
+        admin: req.user?.id 
+      });
+      res.json(portfolioCompanies);
     } catch (error) {
-      logger.error("Error retrieving CD portfolio clients", { error: (error as Error).message, admin: req.user?.id });
-      res.status(500).json({ message: "Internal server error" });
+      logger.error("Failed to retrieve CD portfolio companies", { 
+        error: (error as Error).message, 
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Failed to retrieve CD portfolio companies" });
     }
   });
 
-  app.patch("/api/admin/clients/:id/portfolio", adminLimiter, requireAdmin, async (req, res) => {
+  app.post('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
-      const { isPortfolioClient } = req.body;
+      const validatedData = insertCdPortfolioCompanySchema.parse(req.body);
+      const newCompany = await storage.createCdPortfolioCompany(validatedData);
       
-      if (typeof isPortfolioClient !== "boolean") {
-        return res.status(400).json({ message: "isPortfolioClient must be a boolean" });
-      }
-
-      const client = await storage.updateClientPortfolioStatus(id, isPortfolioClient);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
-
-      logger.info("Updated client portfolio status", { 
-        clientId: id, 
-        clientName: client.name,
-        isPortfolioClient, 
+      logger.info("Created CD portfolio company", { 
+        companyId: newCompany.id,
+        companyName: newCompany.name, 
         admin: req.user?.id 
       });
-
-      res.json(client);
+      res.status(201).json(newCompany);
     } catch (error) {
-      logger.error("Error updating client portfolio status", { 
+      if (error.name === 'ZodError') {
+        logger.warn("Invalid CD portfolio company data", { 
+          error: error.errors, 
+          admin: req.user?.id 
+        });
+        return res.status(400).json({ message: "Invalid company data", errors: error.errors });
+      }
+      
+      logger.error("Failed to create CD portfolio company", { 
         error: (error as Error).message, 
-        clientId: req.params.id,
         admin: req.user?.id 
       });
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Failed to create company" });
+    }
+  });
+
+  app.put('/api/admin/cd-portfolio/:companyId', adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const { companyId } = req.params;
+      const validatedData = insertCdPortfolioCompanySchema.partial().parse(req.body);
+      const updatedCompany = await storage.updateCdPortfolioCompany(companyId, validatedData);
+      
+      if (!updatedCompany) {
+        logger.warn("CD portfolio company not found for update", { 
+          companyId, 
+          admin: req.user?.id 
+        });
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      logger.info("Updated CD portfolio company", { 
+        companyId, 
+        companyName: updatedCompany.name, 
+        admin: req.user?.id 
+      });
+      res.json(updatedCompany);
+    } catch (error) {
+      if (error.name === 'ZodError') {
+        logger.warn("Invalid CD portfolio company update data", { 
+          error: error.errors, 
+          admin: req.user?.id 
+        });
+        return res.status(400).json({ message: "Invalid company data", errors: error.errors });
+      }
+      
+      logger.error("Failed to update CD portfolio company", { 
+        error: (error as Error).message, 
+        companyId: req.params.companyId, 
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Failed to update company" });
+    }
+  });
+
+  app.delete('/api/admin/cd-portfolio/:companyId', adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const { companyId } = req.params;
+      await storage.deleteCdPortfolioCompany(companyId);
+      
+      logger.info("Deleted CD portfolio company", { 
+        companyId, 
+        admin: req.user?.id 
+      });
+      res.json({ message: "Company deleted successfully" });
+    } catch (error) {
+      logger.error("Failed to delete CD portfolio company", { 
+        error: (error as Error).message, 
+        companyId: req.params.companyId, 
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Failed to delete company" });
     }
   });
 
