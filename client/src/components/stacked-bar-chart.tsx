@@ -55,8 +55,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4 relative">
-      <div className="space-y-2 sm:space-y-3">
+    <div className="w-full h-full space-y-2 relative">
+      <div className="space-y-1.5">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
@@ -65,7 +65,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
               </span>
             </div>
             
-            <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0">
+            <div className="flex-1 h-5 sm:h-6 flex rounded-md bg-gray-100 relative min-w-0">
               {/* Inline tooltip for this bar - positioned below to avoid clipping */}
               {hoveredSegment && hoveredSegment.barIndex === index && (
                 <div 
@@ -127,7 +127,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-2 border-t border-gray-200">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-2">
             <div 
