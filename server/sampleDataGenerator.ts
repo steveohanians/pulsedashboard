@@ -15,7 +15,7 @@ interface MetricConfig {
 const METRIC_CONFIGS: MetricConfig[] = [
   {
     name: "Bounce Rate",
-    clientRange: [35, 55],
+    clientRange: [35, 55], // Client performs well with low bounce rates
     industryRange: [45, 65],
     cdRange: [40, 60],
     unit: "%",
@@ -23,23 +23,23 @@ const METRIC_CONFIGS: MetricConfig[] = [
   },
   {
     name: "Session Duration",
-    clientRange: [180, 300], // 3-5 minutes in seconds
-    industryRange: [150, 270],
-    cdRange: [160, 280],
+    clientRange: [240, 360], // 4-6 minutes in seconds (client performs better)
+    industryRange: [180, 300], // 3-5 minutes
+    cdRange: [200, 320], // 3.3-5.3 minutes
     unit: "seconds"
   },
   {
     name: "Pages per Session",
-    clientRange: [2.1, 3.5],
-    industryRange: [1.8, 3.2],
-    cdRange: [1.9, 3.3],
+    clientRange: [2.8, 4.2], // Client has higher engagement
+    industryRange: [2.1, 3.5],
+    cdRange: [2.4, 3.8],
     unit: "pages"
   },
   {
     name: "Sessions per User",
-    clientRange: [1.3, 2.1],
-    industryRange: [1.1, 1.9],
-    cdRange: [1.2, 2.0],
+    clientRange: [1.6, 2.4], // Realistic range for returning visitors
+    industryRange: [1.2, 1.8],
+    cdRange: [1.4, 2.1],
     unit: "sessions"
   }
 ];
@@ -74,8 +74,10 @@ const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
 // Generate realistic variance around base value
 function generateValue(baseRange: [number, number], seed: number, timeVariance = 0.1): number {
   const [min, max] = baseRange;
-  const baseValue = min + (max - min) * (0.3 + seed * 0.4); // Use seed for consistency
-  const variance = (Math.sin(seed * 123.456) * timeVariance * baseValue);
+  // Use seed to generate consistent but bounded values (0.2 to 0.8 of range)
+  const normalizedSeed = (Math.abs(Math.sin(seed * 12.345)) * 0.6) + 0.2;
+  const baseValue = min + (max - min) * normalizedSeed;
+  const variance = (Math.sin(seed * 67.890) * timeVariance * (max - min));
   return Math.max(min, Math.min(max, baseValue + variance));
 }
 
