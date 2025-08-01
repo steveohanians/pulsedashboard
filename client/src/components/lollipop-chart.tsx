@@ -81,9 +81,10 @@ export default function LollipopChart({
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Chart area */}
-      <div className="flex-1 px-2 py-2">
-        <div className="relative h-full">
+      {/* Main chart area with legend on right */}
+      <div className="flex-1 px-2 py-2 flex">
+        {/* Chart section */}
+        <div className="flex-1 relative h-full mr-4">
           {/* Y-axis labels */}
           <div 
             className="absolute left-0 top-0 bottom-0 flex flex-col justify-start py-2"
@@ -188,19 +189,19 @@ export default function LollipopChart({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-4 pt-4 border-t border-gray-200">
-        {devices.map(device => (
-          <div key={device} className="flex items-center gap-1.5">
-            <div 
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: DEVICE_COLORS[device] }}
-            />
-            <span className="text-xs text-gray-600 font-medium">{device}</span>
-          </div>
-        ))}
+        {/* Legend on the right */}
+        <div className="flex flex-col justify-center gap-3 pl-4 border-l border-gray-200 min-w-20">
+          {devices.map(device => (
+            <div key={device} className="flex items-center gap-2">
+              <div 
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: DEVICE_COLORS[device] }}
+              />
+              <span className="text-xs text-gray-600 font-medium whitespace-nowrap">{device}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
