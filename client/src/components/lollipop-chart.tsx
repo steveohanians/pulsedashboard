@@ -164,30 +164,30 @@ export default function LollipopChart({
                           >
                             {/* Tooltip */}
                             <div 
-                              className="absolute invisible group-hover:visible z-10 -top-12 left-1/2 transform -translate-x-1/2 pointer-events-none"
+                              className="absolute invisible group-hover:visible z-10 -top-12 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap"
                               style={{
                                 backgroundColor: 'white',
                                 border: '1px solid #e2e8f0',
                                 borderRadius: '6px',
                                 boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                                 padding: '8px 12px',
-                                fontSize: '12px'
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center'
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <div 
-                                  style={{ 
-                                    width: '8px', 
-                                    height: '8px', 
-                                    backgroundColor: color, 
-                                    marginRight: '8px',
-                                    borderRadius: '50%'
-                                  }} 
-                                />
-                                <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
-                                  {device}: {percentage}%
-                                </span>
-                              </div>
+                              <div 
+                                style={{ 
+                                  width: '8px', 
+                                  height: '8px', 
+                                  backgroundColor: color, 
+                                  marginRight: '8px',
+                                  borderRadius: '50%'
+                                }} 
+                              />
+                              <span style={{ color: '#374151', fontWeight: 'normal' }}>
+                                {device}: {percentage}%
+                              </span>
                             </div>
                           </div>
                         </div>
