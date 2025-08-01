@@ -77,7 +77,7 @@ export default function LollipopChart({
 
   // Calculate dynamic width based on longest entity name
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
-  const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 7)); // Dynamic width with min/max bounds
+  const labelWidth = Math.max(140, Math.min(240, maxLabelLength * 8)); // Increased multiplier and min width
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -86,11 +86,18 @@ export default function LollipopChart({
         <div className="relative h-full">
           {/* Y-axis labels */}
           <div 
-            className="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-2"
+            className="absolute left-0 top-0 bottom-0 flex flex-col justify-start py-2"
             style={{ width: `${labelWidth}px` }}
           >
             {chartEntities.map((entity, index) => (
-              <div key={index} className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end h-12">
+              <div 
+                key={index} 
+                className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end"
+                style={{ 
+                  height: '48px',
+                  marginTop: index === 0 ? '0px' : '0px'
+                }}
+              >
                 <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
                   {entity.label}
                 </span>
@@ -101,9 +108,9 @@ export default function LollipopChart({
           {/* Chart grid and lollipops */}
           <div className="h-full relative" style={{ marginLeft: `${labelWidth}px` }}>
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between py-2">
+            <div className="absolute inset-0 flex flex-col justify-start py-2">
               {chartEntities.map((_, index) => (
-                <div key={index} className="h-12 border-b border-gray-200 last:border-b-0" />
+                <div key={index} className="border-b border-gray-200 last:border-b-0" style={{ height: '48px' }} />
               ))}
             </div>
 
@@ -121,14 +128,18 @@ export default function LollipopChart({
             {/* Lollipop chart */}
             <div className="absolute inset-0 py-2">
               {chartEntities.map((entity, entityIndex) => (
-                <div key={entityIndex} className="relative h-12 flex items-center">
+                <div 
+                  key={entityIndex} 
+                  className="relative flex items-center"
+                  style={{ height: '48px' }}
+                >
                   {devices.map((device, deviceIndex) => {
                     const value = entity.data[device];
                     const color = DEVICE_COLORS[device];
                     const percentage = Math.round(value * 100);
                     
                     return (
-                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4 - 6}px` }}>
+                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4}px` }}>
                         {/* Lollipop stick */}
                         <div
                           className="h-0.5"
