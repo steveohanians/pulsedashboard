@@ -123,3 +123,9 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Eliminated multiple competing system messages for unified AI personality and expertise
   - **Unified Expert Persona**: Added "sr. web analytics strategist and UX strategist" persona to all custom prompt templates for consistent AI expertise across all metric insights
   - **Enhanced Prompt Templates**: Added metric-specific nuances (time formats, percentages, counts), **bold formatting** for key insights, and numbered list format for exactly 3 recommendations per template
+- **Typewriter Effect & Debug System (August 2025)**: Resolved critical typewriter animation and debugging infrastructure
+  - **Typewriter Bug Fixed**: Resolved issue where typewriter effect wouldn't restart after regenerating insights - now works consistently for all new insight generations
+  - **Debug Infrastructure**: Added comprehensive debug system with red "Clear Insights" button in header to clear all AI insights from database and localStorage
+  - **localStorage Integration**: Fixed localStorage persistence issues by correctly clearing `pulse_dashboard_insights` key during debug operations
+  - **Enhanced Debugging**: Added detailed console logging throughout typewriter animation process with faster 5ms typing speed for better user experience
+  - **Component State Management**: Improved insight regeneration flow with proper state resets and cache invalidation for reliable typewriter effect restart
