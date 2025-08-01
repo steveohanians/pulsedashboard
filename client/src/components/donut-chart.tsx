@@ -84,9 +84,9 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const totalItems = data.length;
   
   return (
-    <div className="w-full h-full pb-4">
+    <div className="w-full h-full pb-2 sm:pb-4">
       {/* Grid layout with max 3 columns */}
-      <div className="grid grid-cols-3 gap-x-6 gap-y-4 place-items-center mb-4">
+      <div className="grid grid-cols-3 gap-x-4 gap-y-2 sm:gap-x-6 sm:gap-y-4 place-items-center mb-2 sm:mb-4">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
             <h4 className={`text-xs text-center leading-tight ${
@@ -97,15 +97,15 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
               {item.label}
             </h4>
             
-            <div className="w-24 h-24">
+            <div className="w-20 h-20 sm:w-24 sm:h-24">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
+                    innerRadius={20}
+                    outerRadius={35}
                     paddingAngle={1}
                     dataKey="value"
                   >
@@ -126,7 +126,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       </div>
       
       {/* Centered legend */}
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-4 border-t border-gray-200">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 sm:gap-x-6 pt-2 sm:pt-4 border-t border-gray-200">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
           <div key={device} className="flex items-center gap-1">
             <div 
