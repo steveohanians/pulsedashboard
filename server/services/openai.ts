@@ -96,9 +96,9 @@ IMPORTANT: Provide your response in JSON format with exactly these three fields:
 CRITICAL FORMATTING REQUIREMENTS:
 - Use ONLY the formatted time values provided above (e.g., "310 seconds (5m 10s)" not just "310 seconds")
 - Include **bold** formatting around key insights and strategic recommendations
-- For Session Duration improvements, use natural time increments (30-60 seconds, 1-2 minutes) rather than exact seconds
-- Focus on the strategic analysis rather than repeating basic time calculations
-- NEVER repeat the section names in your response (don't start with "Context:", "Insight:", or "Recommendation:")`;
+- Focus on strategic analysis rather than repeating basic calculations
+- NEVER repeat the section names in your response (don't start with "Context:", "Insight:", or "Recommendation:")
+- NEVER suggest specific percentage improvements or exact performance increases - use qualitative language like "meaningful improvement", "significant enhancement", or "substantial optimization"`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
