@@ -18,18 +18,23 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(`/api/generate-metric-insight/${clientId}`, {
+      const response = await fetch(`/api/generate-metric-insight/${clientId}`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           metricName,
           timePeriod,
           metricData
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        })
       });
-      return response;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       setInsight(data.insight);
