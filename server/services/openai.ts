@@ -126,7 +126,7 @@ CRITICAL FORMATTING REQUIREMENTS:
       metricName, 
       promptId: customPrompt.metricName 
     });
-    throw error; // Re-throw to fall back to default
+    throw error; // Throw error to be handled by caller - NO FALLBACKS
   }
 }
 
@@ -141,80 +141,38 @@ export async function generateMetricInsights(
 ): Promise<MetricAnalysis> {
   const { storage } = await import("../storage");
   
-  try {
-    // Try to get custom prompt for this metric
-    const customPrompt = await storage.getMetricPrompt(metricName);
-    
-    if (customPrompt && customPrompt.isActive) {
-      return await generateInsightsWithCustomPrompt(
-        customPrompt,
-        metricName,
-        clientValue,
-        cdAverage,
-        industryAverage,
-        competitorValues,
-        industryVertical,
-        businessSize
-      );
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch or use custom prompt, using default", { 
-      metricName, 
-      error: (error as Error).message 
-    });
+  // Get custom prompt for this metric - REQUIRED, no fallbacks
+  const customPrompt = await storage.getMetricPrompt(metricName);
+  
+  if (!customPrompt) {
+    const error = `No custom prompt template found for metric: ${metricName}`;
+    logger.error("Custom prompt template missing", { metricName });
+    throw new Error(error);
   }
   
-  // Fall back to default prompt logic
-  try {
-    const prompt = `STRATEGIC PERFORMANCE ANALYSIS for ${metricName}:
-
-COMPETITIVE BENCHMARKING:
-• Client Performance: ${clientValue}
-• Clear Digital Portfolio: ${cdAverage}
-• Industry Standard: ${industryAverage}
-• Direct Competitors: ${competitorValues.join(', ')}
-• Industry: ${industryVertical}
-• Business Size: ${businessSize}
-
-Provide strategic analysis in JSON format with exactly these three fields:
-1. "context" - Strategic positioning analysis with competitive landscape assessment (2-3 sentences)
-2. "insight" - Competitive intelligence insights explaining performance gaps and opportunities (2-3 sentences)
-3. "recommendation" - Specific action plan with projected ROI and timeline for ${businessSize} companies (2-3 sentences)
-
-Focus on competitive advantages, strategic opportunities, and measurable business impact.`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a senior digital strategy consultant with 15+ years experience in competitive intelligence and data-driven growth optimization. Your insights drive measurable business results. Always provide specific, actionable recommendations with projected performance improvements. Focus on competitive advantages and strategic opportunities."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 500
-    });
-
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-    
-    return {
-      context: result.context || "Unable to generate context analysis.",
-      insight: result.insight || "Unable to generate insights.",
-      recommendation: result.recommendation || "Unable to generate recommendations."
-    };
-  } catch (error) {
-    logger.error("Error generating AI insights", { error: (error as Error).message, metricName, clientValue });
-    return {
-      context: "Unable to generate AI analysis at this time.",
-      insight: "Please try again later or contact support.",
-      recommendation: "Continue monitoring this metric manually."
-    };
+  if (!customPrompt.isActive) {
+    const error = `Custom prompt template for ${metricName} is inactive`;
+    logger.error("Custom prompt template inactive", { metricName, promptId: customPrompt.id });
+    throw new Error(error);
   }
+  
+  logger.info('✅ USING CUSTOM PROMPT TEMPLATE (NO FALLBACKS)', { 
+    metricName, 
+    promptId: customPrompt.id,
+    isActive: customPrompt.isActive
+  });
+  
+  // Use custom prompt - this is the ONLY path
+  return await generateInsightsWithCustomPrompt(
+    customPrompt,
+    metricName,
+    clientValue,
+    cdAverage,
+    industryAverage,
+    competitorValues,
+    industryVertical,
+    businessSize
+  );
 }
 
 export async function generateBulkInsights(

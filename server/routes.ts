@@ -1579,26 +1579,38 @@ export function registerRoutes(app: Express): Server {
       const insights = [];
       for (const [metricName, data] of Object.entries(metricGroups)) {
         if (data.client !== null && data.cdAvg !== null && data.industry !== null) {
-          const analysis = await generateMetricInsights(
-            metricName,
-            data.client,
-            data.cdAvg,
-            data.industry,
-            data.competitors,
-            client.industryVertical,
-            client.businessSize
-          );
+          try {
+            const analysis = await generateMetricInsights(
+              metricName,
+              data.client,
+              data.cdAvg,
+              data.industry,
+              data.competitors,
+              client.industryVertical,
+              client.businessSize
+            );
 
-          const insight = await storage.createAIInsight({
-            clientId,
-            metricName,
-            timePeriod,
-            contextText: analysis.context,
-            insightText: analysis.insight,
-            recommendationText: analysis.recommendation
-          });
-          
-          insights.push(insight);
+            const insight = await storage.createAIInsight({
+              clientId,
+              metricName,
+              timePeriod,
+              contextText: analysis.context,
+              insightText: analysis.insight,
+              recommendationText: analysis.recommendation
+            });
+            
+            insights.push(insight);
+          } catch (error) {
+            logger.error("Failed to generate insight for metric", { 
+              metricName, 
+              error: (error as Error).message 
+            });
+            // Continue with other metrics instead of failing the entire request
+            insights.push({
+              metricName,
+              error: `Failed to generate insight: ${(error as Error).message}`
+            });
+          }
         }
       }
 
