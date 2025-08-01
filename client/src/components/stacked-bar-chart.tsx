@@ -48,8 +48,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4">
-      <div className="space-y-2 sm:space-y-3 relative">
+    <div className="w-full h-full space-y-3 sm:space-y-4" style={{ overflow: 'visible' }}>
+      <div className="space-y-2 sm:space-y-3 relative" style={{ overflow: 'visible' }}>
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
@@ -62,7 +62,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
               </span>
             </div>
             
-            <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative overflow-visible min-w-0">
+            <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0" style={{ overflow: 'visible' }}>
               {item.channels.map((channel, channelIndex) => {
                 const isFirst = channelIndex === 0;
                 const isLast = channelIndex === item.channels.length - 1;
@@ -70,36 +70,34 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                 return (
                   <div
                     key={channelIndex}
-                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group overflow-visible ${
+                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group ${
                       isFirst ? 'rounded-l-md' : ''
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
-                      backgroundColor: channel.color
+                      backgroundColor: channel.color,
+                      overflow: 'visible'
                     }}
                     title={`${channel.name}: ${channel.value}%`}
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                     
-                    {/* Tooltip matching app's design system */}
+                    {/* Simplified tooltip that always appears above */}
                     <div 
-                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
+                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap"
                       style={{
                         backgroundColor: 'white',
                         border: '1px solid #e2e8f0',
                         borderRadius: '6px',
-                        boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                         padding: '8px 12px',
                         fontSize: '12px',
-                        // Smart positioning: show above for top 2 rows, below for others
-                        bottom: index < 2 ? '100%' : 'auto',
-                        top: index >= 2 ? '100%' : 'auto',
-                        marginTop: index >= 2 ? '6px' : '0',
-                        marginBottom: index < 2 ? '6px' : '0',
-                        // Smart horizontal positioning based on segment position
-                        left: channelIndex <= 1 ? '0' : channelIndex >= item.channels.length - 2 ? 'auto' : '50%',
-                        right: channelIndex >= item.channels.length - 2 ? '0' : 'auto',
-                        transform: channelIndex > 1 && channelIndex < item.channels.length - 2 ? 'translateX(-50%)' : 'none'
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginBottom: '8px',
+                        zIndex: 1000,
+                        minWidth: 'max-content'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center' }}>
