@@ -178,8 +178,9 @@ export default function AIInsights({ context, insight, recommendation, status, i
                 <TypewriterText 
                   key={`context-${contentKey}`}
                   text={context} 
-                  speed={10}
+                  speed={5}
                   onComplete={() => {
+                    console.debug('🎭 Context typing complete');
                     setContextComplete(true);
                     setShowInsight(true);
                   }}
@@ -203,8 +204,9 @@ export default function AIInsights({ context, insight, recommendation, status, i
                 <TypewriterText 
                   key={`insight-${contentKey}`}
                   text={insight} 
-                  speed={10}
+                  speed={5}
                   onComplete={() => {
+                    console.debug('🎭 Insight typing complete');
                     setInsightComplete(true);
                     setShowRecommendation(true);
                   }}
@@ -228,8 +230,11 @@ export default function AIInsights({ context, insight, recommendation, status, i
                 <TypewriterText 
                   key={`recommendation-${contentKey}`}
                   text={recommendation} 
-                  speed={10}
-                  onComplete={() => setRecommendationComplete(true)}
+                  speed={5}
+                  onComplete={() => {
+                    console.debug('🎭 Recommendation typing complete');
+                    setRecommendationComplete(true);
+                  }}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (

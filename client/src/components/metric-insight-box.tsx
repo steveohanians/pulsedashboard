@@ -150,6 +150,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   });
 
   if (insight) {
+    console.debug('🎭 Rendering AIInsights with isTyping:', insight.isTyping);
     return (
       <AIInsights
         context={insight.contextText}
@@ -158,12 +159,14 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         status={insight.status}
         isTyping={insight.isTyping}
         onRegenerate={() => {
+          console.debug('🎭 Regenerate clicked - clearing insight');
           // Clear current insight and storage to force fresh generation with typewriter effect
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           // Small delay to ensure state is reset before generating new insight
           setTimeout(() => {
+            console.debug('🎭 Starting regeneration after delay');
             generateInsightMutation.mutate();
           }, 100);
         }}
