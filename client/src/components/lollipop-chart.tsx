@@ -163,10 +163,31 @@ export default function LollipopChart({
                             }}
                           >
                             {/* Tooltip */}
-                            <div className="absolute invisible group-hover:visible bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 -top-10 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                              {device}: {percentage}%
-                              {/* Tooltip arrow */}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-gray-900 border-l-transparent border-r-transparent"></div>
+                            <div 
+                              className="absolute invisible group-hover:visible z-10 -top-12 left-1/2 transform -translate-x-1/2 pointer-events-none"
+                              style={{
+                                backgroundColor: 'white',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                                padding: '8px 12px',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <div 
+                                  style={{ 
+                                    width: '8px', 
+                                    height: '8px', 
+                                    backgroundColor: color, 
+                                    marginRight: '8px',
+                                    borderRadius: '50%'
+                                  }} 
+                                />
+                                <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
+                                  {device}: {percentage}%
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
