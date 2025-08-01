@@ -87,7 +87,11 @@ export default function InsightGenerationButton({
           <span className="font-medium">AI-Powered Analysis</span>
         </div>
         <p className="leading-relaxed">
-          Analyzes {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} performance vs. competitors, industry benchmarks, and Clear Digital portfolio to generate strategic insights and recommendations.
+          Analyzes {(() => {
+            const now = new Date();
+            const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          })()} performance vs. competitors, industry benchmarks, and Clear Digital portfolio to generate strategic insights and recommendations.
         </p>
         {isGenerating && (
           <div className="mt-2 text-primary font-medium">

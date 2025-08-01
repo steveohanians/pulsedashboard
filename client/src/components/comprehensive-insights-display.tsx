@@ -69,7 +69,11 @@ export default function ComprehensiveInsightsDisplay({
             AI-Powered Insights
           </h2>
           <p className="text-sm text-slate-600">
-            Comprehensive analysis of your digital marketing performance with strategic recommendations for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            Comprehensive analysis of your digital marketing performance with strategic recommendations for {(() => {
+              const now = new Date();
+              const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            })()}
           </p>
         </div>
         

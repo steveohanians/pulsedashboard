@@ -45,6 +45,13 @@ export default function Dashboard() {
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
   const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
 
+  // Get the actual data period (one month before current) 
+  const getDataPeriodDisplay = () => {
+    const now = new Date();
+    const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1); // One month before current
+    return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
   interface DashboardData {
     client: {
       id: string;
@@ -1495,7 +1502,7 @@ export default function Dashboard() {
                       <div className="min-w-0 flex-1">
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">
-                          AI-powered analysis and recommendations for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          AI-powered analysis and recommendations for {getDataPeriodDisplay()}
                         </p>
                       </div>
                       {/* Enhanced Status Icon */}
