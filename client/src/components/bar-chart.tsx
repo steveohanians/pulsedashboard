@@ -94,11 +94,19 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    // Show last month data points (dynamic based on current date)
+    // Show last month data points (dynamic based on PT current date - 1 month)
     const now = new Date();
-    const lastMonth = new Date(now);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0); // Last day of last month
+    // Use Pacific Time calculation: current PT month - 1
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
@@ -106,27 +114,45 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
   } else if (timePeriod === "Last Quarter") {
-    // Show current quarter months (dynamic)
+    // Show current quarter months (dynamic PT)
     const now = new Date();
-    const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
     const quarterStartMonth = (currentQuarter - 1) * 3;
     
     for (let i = 0; i < 3; i++) {
       const quarterMonth = quarterStartMonth + i;
-      if (quarterMonth < now.getMonth() + 1) {
-        const monthDate = new Date(now.getFullYear(), quarterMonth, 1);
+      if (quarterMonth <= targetMonth.getMonth()) {
+        const monthDate = new Date(targetMonth.getFullYear(), quarterMonth, 1);
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        dates.push(`${monthNames[quarterMonth]} ${String(now.getFullYear()).slice(-2)}`);
+        dates.push(`${monthNames[quarterMonth]} ${String(targetMonth.getFullYear()).slice(-2)}`);
       }
     }
   } else if (timePeriod === "Last Year") {
-    // Show 12 months ending last month (dynamic)
+    // Show 12 months ending with PT target month (dynamic)
     const now = new Date();
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
     const months = [];
     for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(now);
-      monthDate.setMonth(monthDate.getMonth() - i - 1); // -1 for last month
+      const monthDate = new Date(targetMonth);
+      monthDate.setMonth(targetMonth.getMonth() - i);
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       months.push(`${monthNames[monthDate.getMonth()]} ${String(monthDate.getFullYear()).slice(-2)}`);
@@ -134,11 +160,18 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     // Take every other month for display clarity (6 points)
     dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
   } else {
-    // Custom date range - show 6 points ending last month
+    // Custom date range - show 6 points ending with PT target month
     const now = new Date();
-    const lastMonth = new Date(now);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
