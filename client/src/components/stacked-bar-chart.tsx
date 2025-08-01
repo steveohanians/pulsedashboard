@@ -68,19 +68,14 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0">
               {/* Inline tooltip for this bar - positioned below to avoid clipping */}
               {hoveredSegment && hoveredSegment.barIndex === index && (
-                <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap z-10">
-                  <div className="flex items-center gap-2">
+                <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md whitespace-nowrap">
+                  <div className="flex items-center gap-1.5">
                     <div 
-                      className="w-3 h-3 rounded-sm flex-shrink-0"
+                      className="w-2 h-2 rounded-sm flex-shrink-0"
                       style={{ backgroundColor: CHANNEL_COLORS[hoveredSegment.channelName as keyof typeof CHANNEL_COLORS] || '#6b7280' }}
                     />
-                    <span className="font-medium">{hoveredSegment.channelName}</span>
+                    <span>{hoveredSegment.channelName}: {Math.round(hoveredSegment.value)}%</span>
                   </div>
-                  <div className="text-gray-300 mt-1">
-                    {Math.round(hoveredSegment.value)}%
-                  </div>
-                  {/* Arrow pointing up */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900" />
                 </div>
               )}
               
