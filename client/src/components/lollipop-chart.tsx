@@ -28,9 +28,9 @@ interface LollipopChartProps {
 }
 
 const DEVICE_COLORS = {
-  Desktop: '#3B82F6',   // Blue
-  Mobile: '#10B981',    // Green
-  Tablet: '#8B5CF6',    // Purple
+  Desktop: '#2563EB',   // Strong Blue
+  Mobile: '#059669',    // Emerald Green  
+  Tablet: '#7C3AED',    // Violet Purple
   Other: '#6B7280'      // Gray
 };
 
@@ -151,11 +151,12 @@ export default function LollipopChart({
                           />
                           {/* Value label */}
                           <div
-                            className="absolute text-xs font-medium text-gray-700"
+                            className="absolute text-xs text-gray-500"
                             style={{
                               left: `${percentage}%`,
-                              top: '-16px',
-                              transform: 'translateX(-50%)'
+                              top: '-8px',
+                              transform: 'translateX(-100%)',
+                              paddingRight: '6px'
                             }}
                           >
                             {percentage}%
