@@ -11,7 +11,7 @@ import {
   type PasswordResetToken, type InsertPasswordResetToken
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, isNull, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -401,7 +401,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(aiInsights)
       .where(and(...conditions))
-      .orderBy(desc(aiInsights.createdAt));
+      .orderBy(sql`${aiInsights.createdAt} DESC`);
   }
 
   // Password Reset
