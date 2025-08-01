@@ -93,7 +93,7 @@ export default function LollipopChart({
   const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 8)); // Tighter spacing
 
   return (
-    <div className="w-full flex flex-col" style={{ height: `${chartEntities.length * 48 + 60}px` }}>
+    <div className="w-full flex flex-col" style={{ height: `${chartEntities.length * 48 + 50}px` }}>
       {/* Main chart area with legend on right */}
       <div className="flex-1 px-2 py-1 flex">
         {/* Chart section */}
@@ -182,7 +182,7 @@ export default function LollipopChart({
               </div>
 
               {/* X-axis labels */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 pt-2">
+              <div className="absolute left-0 right-0 flex justify-between text-xs text-gray-500" style={{ top: `${chartEntities.length * 48 + 8}px` }}>
                 <span>0%</span>
                 <span>20%</span>
                 <span>40%</span>
