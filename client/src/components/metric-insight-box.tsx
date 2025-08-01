@@ -26,14 +26,17 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   useEffect(() => {
     const storedInsight = globalInsightsStorage[insightKey];
     if (storedInsight) {
-      setInsight(storedInsight);
+      // Disable typing effect for stored insights to prevent restart
+      setInsight({ ...storedInsight, isTyping: false });
     }
   }, [insightKey]);
   
-  // Store insight in global storage when it changes
+  // Store insight in global storage when it changes (without typing state)
   useEffect(() => {
     if (insight) {
-      globalInsightsStorage[insightKey] = insight;
+      // Store without the typing state to avoid restart issues
+      const { isTyping, ...insightToStore } = insight;
+      globalInsightsStorage[insightKey] = insightToStore;
     }
   }, [insight, insightKey]);
 
