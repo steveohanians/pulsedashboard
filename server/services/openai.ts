@@ -11,6 +11,7 @@ interface MetricAnalysis {
   context: string;
   insight: string;
   recommendation: string;
+  status: 'success' | 'needs_improvement' | 'warning';
 }
 
 async function generateInsightsWithCustomPrompt(
@@ -103,10 +104,16 @@ async function generateInsightsWithCustomPrompt(
     // Add specific output format instruction for JSON compatibility
     processedPrompt += `
 
-IMPORTANT: Provide your response in JSON format with exactly these three fields:
+IMPORTANT: Provide your response in JSON format with exactly these four fields:
 - "context": Your Context analysis section (use **bold** formatting for key insights)
 - "insight": Your Competitive Intelligence section (use **bold** formatting for critical findings)
 - "recommendation": Your Action Plan section formatted as: "1. First recommendation\n2. Second recommendation\n3. Third recommendation"
+- "status": Overall assessment - choose exactly one of: "success", "needs_improvement", or "warning"
+
+STATUS ASSESSMENT GUIDELINES:
+- "success": Performance is strong/above average compared to industry and competitors (green indicator)
+- "needs_improvement": Performance is average or slightly below, with clear improvement opportunities (orange indicator)  
+- "warning": Performance is significantly below benchmarks, requiring urgent attention (red indicator)
 
 CRITICAL FORMATTING REQUIREMENTS:
 - Use ONLY the formatted time values provided above (e.g., "310 seconds (5m 10s)" not just "310 seconds")
@@ -133,7 +140,8 @@ CRITICAL FORMATTING REQUIREMENTS:
     return {
       context: result.context || "Unable to generate context analysis.",
       insight: result.insight || "Unable to generate insights.",
-      recommendation: result.recommendation || "Unable to generate recommendations."
+      recommendation: result.recommendation || "Unable to generate recommendations.",
+      status: result.status || "needs_improvement"
     };
   } catch (error) {
     logger.error("Error generating custom prompt insights", { 

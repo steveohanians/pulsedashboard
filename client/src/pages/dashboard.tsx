@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
+  const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
 
   interface DashboardData {
     client: {
@@ -1407,16 +1408,36 @@ export default function Dashboard() {
                       <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
                         <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">AI-powered analysis and recommendations</p>
                       </div>
+                      {/* Status Icon */}
+                      {metricStatuses[metricName] && (
+                        <div className="ml-3 flex-shrink-0">
+                          {metricStatuses[metricName] === 'success' && (
+                            <CheckCircle className="h-5 w-5 text-green-600" title="Good Performance" />
+                          )}
+                          {metricStatuses[metricName] === 'needs_improvement' && (
+                            <AlertTriangle className="h-5 w-5 text-orange-500" title="Needs Improvement" />
+                          )}
+                          {metricStatuses[metricName] === 'warning' && (
+                            <AlertCircle className="h-5 w-5 text-red-500" title="Requires Attention" />
+                          )}
+                        </div>
+                      )}
                     </div>
                     <MetricInsightBox 
                       metricName={metricName}
                       clientId={client.id}
                       timePeriod={timePeriod}
                       metricData={metricData}
+                      onStatusChange={(status) => {
+                        setMetricStatuses(prev => ({
+                          ...prev,
+                          [metricName]: status
+                        }));
+                      }}
                     />
                   </div>
                 </CardContent>

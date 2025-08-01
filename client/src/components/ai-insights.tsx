@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
@@ -62,12 +62,29 @@ interface AIInsightsProps {
   context?: string;
   insight?: string;
   recommendation?: string;
+  status?: 'success' | 'needs_improvement' | 'warning';
   isTyping?: boolean;
   onRegenerate?: () => void;
   onClear?: () => void;
 }
 
-export default function AIInsights({ context, insight, recommendation, isTyping = false, onRegenerate, onClear }: AIInsightsProps) {
+// Status icon component
+function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
+  if (!status) return null;
+  
+  switch (status) {
+    case 'success':
+      return <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />;
+    case 'needs_improvement':
+      return <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0" />;
+    case 'warning':
+      return <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />;
+    default:
+      return null;
+  }
+}
+
+export default function AIInsights({ context, insight, recommendation, status, isTyping = false, onRegenerate, onClear }: AIInsightsProps) {
   const [contextComplete, setContextComplete] = useState(!isTyping);
   const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);

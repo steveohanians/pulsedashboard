@@ -88,9 +88,10 @@ interface MetricInsightBoxProps {
   clientId: string;
   timePeriod: string;
   metricData: any;
+  onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
 }
 
-export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData }: MetricInsightBoxProps) {
+export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<any>(null);
   const queryClient = useQueryClient();
   
@@ -100,8 +101,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     if (storedInsight) {
       // Disable typing effect for stored insights to prevent restart
       setInsight({ ...storedInsight, isTyping: false });
+      onStatusChange?.(storedInsight.status);
     }
-  }, [clientId, metricName]);
+  }, [clientId, metricName, onStatusChange]);
   
   // Store insight in persistent storage when it changes (without typing state)
   useEffect(() => {
@@ -135,6 +137,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     onSuccess: (data) => {
       // Set insight with typing effect enabled
       setInsight({ ...data.insight, isTyping: true });
+      onStatusChange?.(data.insight.status);
       // Invalidate insights cache
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
@@ -149,15 +152,18 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         context={insight.contextText}
         insight={insight.insightText}
         recommendation={insight.recommendationText}
+        status={insight.status}
         isTyping={insight.isTyping}
         onRegenerate={() => {
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
+          onStatusChange?.(undefined);
           generateInsightMutation.mutate();
         }}
         onClear={() => {
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
+          onStatusChange?.(undefined);
         }}
       />
     );
