@@ -85,7 +85,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       setHoveredTooltip({
                         content: `${channel.name}: ${channel.value}%`,
                         x: rect.left + rect.width / 2,
-                        y: rect.top - 10
+                        y: rect.top - 45
                       });
                     }}
                     onMouseLeave={() => setHoveredTooltip(null)}
