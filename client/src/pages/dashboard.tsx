@@ -1395,6 +1395,7 @@ export default function Dashboard() {
                             };
                           })}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                          clientName={dashboardData?.client?.name}
                           industryAvg={(() => {
                             const deviceData = processDeviceDistributionData();
                             const industryData = deviceData.find(d => d.sourceType === 'Industry_Avg');

@@ -13,6 +13,7 @@ interface LollipopChartProps {
     value: any;
   }>;
   clientUrl?: string;
+  clientName?: string;
   industryAvg: {
     Desktop: number;
     Mobile: number;
@@ -38,14 +39,16 @@ export default function LollipopChart({
   data, 
   competitors, 
   clientUrl, 
+  clientName,
   industryAvg, 
   cdAvg 
 }: LollipopChartProps) {
-  // Extract client name from URL or use fallback
-  const getClientName = (url?: string) => {
-    if (!url) return 'Demo Company';
+  // Use provided client name or extract from URL as fallback
+  const getClientDisplayName = () => {
+    if (clientName) return clientName;
+    if (!clientUrl) return 'Demo Company';
     // Remove protocol and www, take first part before .com
-    const cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    const cleanUrl = clientUrl.replace(/^https?:\/\//, '').replace(/^www\./, '');
     const parts = cleanUrl.split('.');
     return parts[0] || 'Demo Company';
   };
@@ -60,7 +63,7 @@ export default function LollipopChart({
   // Prepare chart data
   const chartEntities = [
     {
-      label: getClientName(clientUrl),
+      label: getClientDisplayName(),
       data: normalizeData(data),
       type: 'client'
     },

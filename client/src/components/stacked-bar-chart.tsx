@@ -60,7 +60,9 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
-              <span className="text-sm font-medium text-gray-700 block truncate">
+              <span className={`text-sm block truncate ${
+                item.sourceType === 'Client' ? 'font-bold text-pink-600' : 'font-medium text-gray-700'
+              }`}>
                 {item.label}
               </span>
             </div>
