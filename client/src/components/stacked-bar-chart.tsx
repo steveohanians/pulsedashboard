@@ -82,10 +82,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     }}
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
+                      const scrollY = window.scrollY || window.pageYOffset;
                       setHoveredTooltip({
                         content: `${channel.name}: ${channel.value}%`,
                         x: rect.left + rect.width / 2,
-                        y: rect.top - 45
+                        y: rect.top + scrollY - 35
                       });
                     }}
                     onMouseLeave={() => setHoveredTooltip(null)}
