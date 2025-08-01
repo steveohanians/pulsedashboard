@@ -79,8 +79,11 @@ export default function Dashboard() {
     timePeriods: string[];
   }
 
+  // Use custom date range if selected, otherwise use timePeriod
+  const effectiveTimePeriod = timePeriod === "Custom Date Range" && customDateRange ? customDateRange : timePeriod;
+  
   const dashboardQuery = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(timePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`],
+    queryKey: [`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`],
     enabled: !!user?.clientId,
   });
   
