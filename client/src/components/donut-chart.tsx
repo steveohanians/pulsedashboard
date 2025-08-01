@@ -84,9 +84,9 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const totalItems = data.length;
   
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full pb-4">
       {/* Grid layout with max 3 columns */}
-      <div className="grid grid-cols-3 gap-x-8 gap-y-6 place-items-center mb-4">
+      <div className="grid grid-cols-3 gap-x-8 gap-y-6 place-items-center mb-8">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-2">
             <h4 className={`text-xs text-center leading-tight ${
@@ -126,7 +126,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       </div>
       
       {/* Centered legend */}
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-3 mt-3 border-t border-gray-200">
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 pt-8 border-t border-gray-200">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
           <div key={device} className="flex items-center gap-1">
             <div 
