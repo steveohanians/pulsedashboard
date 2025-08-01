@@ -324,6 +324,16 @@ Provide a JSON response with exactly this structure:
 
 Focus on the actual numbers provided and give specific comparative insights. Be precise about performance gaps and opportunities.`;
 
+  logger.info('OpenAI Prompt Details', { 
+    metricName,
+    clientName: enrichedData.client?.name,
+    clientValue: enrichedData.metric?.clientValue,
+    industryAvg: enrichedData.benchmarks?.industryAverage,
+    cdAvg: enrichedData.benchmarks?.cdPortfolioAverage,
+    competitorCount: enrichedData.benchmarks?.competitors?.length || 0,
+    fullPrompt: prompt.substring(0, 500)
+  });
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
