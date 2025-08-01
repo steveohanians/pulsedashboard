@@ -1416,18 +1416,18 @@ export default function Dashboard() {
                       {metricStatuses[metricName] && (
                         <div className="ml-4 flex-shrink-0">
                           {metricStatuses[metricName] === 'success' && (
-                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-green-200 hover:ring-green-300 transition-all duration-200" title="Performance is on target">
-                              <CheckCircle className="h-5 w-5 text-white" />
+                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance is on target">
+                              <CheckCircle className="h-6 w-6 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
-                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-orange-200 hover:ring-orange-300 transition-all duration-200" title="Performance needs improvement">
-                              <AlertTriangle className="h-5 w-5 text-white" />
+                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance needs improvement">
+                              <AlertTriangle className="h-6 w-6 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'warning' && (
-                            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-200 hover:ring-red-300 transition-all duration-200" title="Performance requires attention">
-                              <AlertCircle className="h-5 w-5 text-white" />
+                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance requires attention">
+                              <AlertCircle className="h-6 w-6 text-white" />
                             </div>
                           )}
                         </div>
