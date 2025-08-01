@@ -1494,7 +1494,9 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
-                        <p className="text-xs sm:text-sm text-slate-600">AI-powered analysis and recommendations</p>
+                        <p className="text-xs sm:text-sm text-slate-600">
+                          AI-powered analysis and recommendations for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </p>
                       </div>
                       {/* Enhanced Status Icon */}
                       {metricStatuses[metricName] && (

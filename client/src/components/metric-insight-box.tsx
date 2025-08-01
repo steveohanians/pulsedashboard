@@ -182,7 +182,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
       <div className="text-center">
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-          Get strategic competitive intelligence and actionable recommendations for <span className="font-medium text-primary">{metricName}</span>
+          Get strategic competitive intelligence and actionable recommendations for <span className="font-medium text-primary">{metricName}</span> for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </p>
         <Button 
           onClick={() => generateInsightMutation.mutate()}
