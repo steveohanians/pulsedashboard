@@ -1282,7 +1282,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
-                  <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6 mb-4 sm:mb-6 lg:mb-8">
+                  <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6">
                     <div className="h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 relative overflow-hidden">
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
