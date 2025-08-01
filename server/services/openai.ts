@@ -65,7 +65,11 @@ IMPORTANT: Provide your response in JSON format with exactly these three fields:
 - "insight": Your Competitive Intelligence section (use **bold** formatting for critical findings)
 - "recommendation": Your Action Plan section formatted as: "1. First recommendation\n2. Second recommendation\n3. Third recommendation"
 
-CRITICAL: Use the exact time formats provided in the data above (e.g., "310 seconds (5m 10s)") and include **bold** formatting around key insights and recommendations.`;
+CRITICAL FORMATTING REQUIREMENTS:
+- Use ONLY the formatted time values provided above (e.g., "310 seconds (5m 10s)" not just "310 seconds")
+- Include **bold** formatting around key insights and strategic recommendations
+- For Session Duration improvements, use natural time increments (30-60 seconds, 1-2 minutes) rather than exact seconds
+- Focus on the strategic analysis rather than repeating basic time calculations`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
