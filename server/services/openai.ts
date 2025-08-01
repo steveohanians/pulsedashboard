@@ -462,6 +462,35 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
   const industryInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.industryAverage);
   const cdInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.cdPortfolioAverage);
   
+  // Special handling for Traffic Channels - get actual channel distribution
+  let trafficChannelData = '';
+  if (metricName === 'Traffic Channels') {
+    try {
+      const { storage } = await import("../storage");
+      const currentPeriod = enrichedData.metric?.timePeriod || 'Last Month';
+      
+      // Get channel distribution data for client, industry, and CD averages
+      const clientChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'Client');
+      const industryChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'Industry_Avg');
+      const cdChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'CD_Avg');
+      
+      const formatChannelData = (channels: any[], label: string) => {
+        if (!channels.length) return `${label}: No data available`;
+        const channelList = channels.map(c => `${c.channel}: ${c.value}%`).join(', ');
+        return `${label}: ${channelList}`;
+      };
+      
+      trafficChannelData = `
+TRAFFIC CHANNEL DISTRIBUTION:
+- ${formatChannelData(clientChannels, 'Client')}
+- ${formatChannelData(industryChannels, 'Industry Average')}
+- ${formatChannelData(cdChannels, 'CD Portfolio Average')}`;
+    } catch (error) {
+      logger.warn('Failed to get traffic channel distribution data', { error: (error as Error).message });
+      trafficChannelData = 'Traffic channel distribution data temporarily unavailable.';
+    }
+  }
+  
   // Convert competitor values too
   const competitorText = enrichedData.benchmarks?.competitors?.map((c: any) => {
     const compInfo = getMetricDisplayInfo(metricName, c.value);
@@ -492,14 +521,15 @@ BENCHMARK COMPARISON:
     `${Math.floor(enrichedData.benchmarks?.cdPortfolioAverage / 60)}m ${enrichedData.benchmarks?.cdPortfolioAverage % 60}s` : 
     `${cdInfo.displayValue}${cdInfo.unit}`}
 - Competitors: ${competitorText}
+${metricName === 'Traffic Channels' ? trafficChannelData : ''}
 
 FULL CONTEXT: ${enrichedData.context}
 
 Provide a JSON response with exactly this structure. Use **bold formatting** strategically for emphasis:
 {
-  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : metricName === 'Traffic Channels' ? 'Explain that this counts distinct traffic sources like organic search, direct, social media, referrals, paid ads, etc.' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** to emphasize the key insight or competitive advantage (e.g., **significantly outperforming competitors** or **lagging behind industry standards**). Include specific numbers but bold the interpretation, not just the numbers. ${metricName === 'Session Duration' ? 'Use format like 5m 12s for time values and describe differences meaningfully' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
+  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : metricName === 'Traffic Channels' ? 'Explain that this measures traffic source diversification and the effectiveness of different acquisition channels, NOT just counting channels. Focus on channel utilization and distribution quality.' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
+  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** to emphasize the key insight or competitive advantage (e.g., **significantly outperforming competitors** or **lagging behind industry standards**). Include specific numbers but bold the interpretation, not just the numbers. ${metricName === 'Session Duration' ? 'Use format like 5m 12s for time values and describe differences meaningfully' : metricName === 'Traffic Channels' ? 'Focus on channel mix effectiveness, over-reliance on specific channels, or opportunities for diversification. Analyze the percentage distribution, not just the count.' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : metricName === 'Traffic Channels' ? 'Recommend specific channel optimization strategies, targeting underutilized channels like increasing organic search to X% or reducing over-dependence on direct traffic.' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
 }
 
 IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.`;

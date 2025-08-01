@@ -55,6 +55,7 @@ export interface IStorage {
   
   // Metrics
   getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]>;
+  getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]>;
   createMetric(metric: InsertMetric): Promise<Metric>;
   
   // Benchmarks
@@ -327,6 +328,17 @@ export class DatabaseStorage implements IStorage {
       and(
         or(eq(metrics.clientId, clientId), isNull(metrics.clientId)),
         eq(metrics.timePeriod, timePeriod)
+      )
+    );
+  }
+
+  async getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]> {
+    return await db.select().from(metrics).where(
+      and(
+        eq(metrics.clientId, clientId),
+        eq(metrics.metricName, metricName),
+        eq(metrics.timePeriod, timePeriod),
+        eq(metrics.sourceType, sourceType)
       )
     );
   }
