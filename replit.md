@@ -114,3 +114,4 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - New competitors now generate complete 15-month historical data using same logic as main sample data
   - Ensured Pacific Time consistency across all time period calculations
   - Added comprehensive error handling and logging for competitor metric creation
+  - **UX Enhancement**: Added loading spinner to "+ Add" button in competitor modal during data generation
