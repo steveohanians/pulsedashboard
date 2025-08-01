@@ -84,28 +84,28 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   const totalItems = data.length;
   
   return (
-    <div className="w-full h-full pb-2 sm:pb-4">
-      {/* Grid layout with max 3 columns */}
-      <div className="grid grid-cols-3 gap-x-4 gap-y-2 sm:gap-x-6 sm:gap-y-4 place-items-center mb-2 sm:mb-4">
+    <div className="w-full min-h-0 flex flex-col">
+      {/* Grid layout with responsive columns */}
+      <div className="grid grid-cols-3 gap-x-3 gap-y-3 sm:gap-x-4 sm:gap-y-4 md:gap-x-6 md:gap-y-4 place-items-center flex-shrink-0">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1">
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-1 sm:space-y-2">
             <h4 className={`text-xs text-center leading-tight ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
                 : 'font-medium text-gray-700'
-            } max-w-[100px]`}>
+            } max-w-[90px] sm:max-w-[100px]`}>
               {item.label}
             </h4>
             
-            <div className="w-20 h-20 sm:w-24 sm:h-24">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={20}
-                    outerRadius={35}
+                    innerRadius={12}
+                    outerRadius={28}
                     paddingAngle={1}
                     dataKey="value"
                   >
@@ -125,15 +125,15 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
         ))}
       </div>
       
-      {/* Centered legend */}
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 sm:gap-x-6 pt-2 sm:pt-4 border-t border-gray-200">
+      {/* Centered legend - always visible */}
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 sm:gap-x-4 md:gap-x-6 pt-3 sm:pt-4 mt-3 sm:mt-4 border-t border-gray-200 flex-shrink-0">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
-          <div key={device} className="flex items-center gap-1">
+          <div key={device} className="flex items-center gap-1 sm:gap-1.5">
             <div 
-              className="w-2 h-2 rounded-sm"
+              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm flex-shrink-0"
               style={{ backgroundColor: color }}
             />
-            <span className="text-xs text-gray-600">{device}</span>
+            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">{device}</span>
           </div>
         ))}
       </div>
