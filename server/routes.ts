@@ -246,8 +246,21 @@ export function registerRoutes(app: Express): Server {
       const uniqueBusinessSizes = [...new Set(allCompanies.map(c => c.businessSize).filter(Boolean))];
       const uniqueIndustryVerticals = [...new Set(allCompanies.map(c => c.industryVertical).filter(Boolean))];
       
-      // Sort alphabetically and add "All" option at the beginning
-      const businessSizes = ["All", ...uniqueBusinessSizes.sort()];
+      // Define business size order from small to large
+      const businessSizeOrder = [
+        "Small Business (1–100 employees)",
+        "Medium Business (100–500 employees)",
+        "Large Business (500–1,000 employees)",
+        "Enterprise (1,000–5,000 employees)",
+        "Large Enterprise (5,000+ employees)"
+      ];
+      
+      // Sort business sizes by defined order, then add any unknown sizes alphabetically
+      const sortedBusinessSizes = businessSizeOrder.filter(size => uniqueBusinessSizes.includes(size));
+      const unknownBusinessSizes = uniqueBusinessSizes.filter(size => !businessSizeOrder.includes(size)).sort();
+      const businessSizes = ["All", ...sortedBusinessSizes, ...unknownBusinessSizes];
+      
+      // Sort industry verticals alphabetically and add "All" option at the beginning
       const industryVerticals = ["All", ...uniqueIndustryVerticals.sort()];
       
       res.json({

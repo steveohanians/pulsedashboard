@@ -5,6 +5,7 @@ Pulse Dashboard™ is a full-stack analytics benchmarking dashboard for Clear Di
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Filter ordering: Business sizes ordered small to large, industry verticals alphabetical.
 
 ## System Architecture
 
