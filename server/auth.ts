@@ -30,12 +30,14 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'clearsight-secret-key',
+    secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
+      httpOnly: true, // Prevent XSS access to cookies
+      sameSite: 'strict', // CSRF protection
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   };
