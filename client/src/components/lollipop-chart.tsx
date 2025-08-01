@@ -78,12 +78,12 @@ export default function LollipopChart({
   return (
     <div className="w-full h-full flex flex-col">
       {/* Chart area */}
-      <div className="flex-1 px-2 py-4">
+      <div className="flex-1 px-2 py-6">
         <div className="relative h-full">
           {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 w-32 flex flex-col justify-between py-6">
+          <div className="absolute left-0 top-0 bottom-0 w-32 flex flex-col justify-between py-4">
             {chartEntities.map((entity, index) => (
-              <div key={index} className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end h-8">
+              <div key={index} className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end h-12">
                 <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
                   {entity.label}
                 </span>
@@ -94,39 +94,40 @@ export default function LollipopChart({
           {/* Chart grid and lollipops */}
           <div className="ml-32 h-full relative">
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between py-6">
+            <div className="absolute inset-0 flex flex-col justify-between py-4">
               {chartEntities.map((_, index) => (
-                <div key={index} className="h-8 border-b border-gray-200 last:border-b-0" />
+                <div key={index} className="h-12 border-b border-gray-200 last:border-b-0" />
               ))}
             </div>
 
             {/* Vertical grid lines */}
             <div className="absolute inset-0">
-              {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(tick => (
+              {[0, 20, 40, 60, 80, 100].map(tick => (
                 <div
                   key={tick}
                   className="absolute top-0 bottom-0 border-l border-gray-200"
-                  style={{ left: `${tick * 100}%` }}
+                  style={{ left: `${tick}%` }}
                 />
               ))}
             </div>
 
             {/* Lollipop chart */}
-            <div className="absolute inset-0 py-6">
+            <div className="absolute inset-0 py-4">
               {chartEntities.map((entity, entityIndex) => (
-                <div key={entityIndex} className="relative h-8 flex items-center">
+                <div key={entityIndex} className="relative h-12 flex items-center">
                   {devices.map((device, deviceIndex) => {
                     const value = entity.data[device];
                     const color = DEVICE_COLORS[device];
+                    const percentage = Math.round(value * 100);
                     
                     return (
-                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 2.5}px` }}>
+                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4}px` }}>
                         {/* Lollipop stick */}
                         <div
                           className="h-0.5"
                           style={{
                             backgroundColor: color,
-                            width: `${value * 100}%`,
+                            width: `${percentage}%`,
                             position: 'relative'
                           }}
                         />
@@ -135,11 +136,22 @@ export default function LollipopChart({
                           className="absolute w-2 h-2 rounded-full border border-white shadow-sm"
                           style={{
                             backgroundColor: color,
-                            left: `${value * 100}%`,
+                            left: `${percentage}%`,
                             top: '-3px',
                             transform: 'translateX(-50%)'
                           }}
                         />
+                        {/* Value label */}
+                        <div
+                          className="absolute text-xs font-medium text-gray-700"
+                          style={{
+                            left: `${percentage}%`,
+                            top: '-16px',
+                            transform: 'translateX(-50%)'
+                          }}
+                        >
+                          {percentage}%
+                        </div>
                       </div>
                     );
                   })}
@@ -149,20 +161,15 @@ export default function LollipopChart({
 
             {/* X-axis labels */}
             <div className="absolute -bottom-4 left-0 right-0 flex justify-between text-xs text-gray-500">
-              <span>0.0</span>
-              <span>0.2</span>
-              <span>0.4</span>
-              <span>0.6</span>
-              <span>0.8</span>
-              <span>1.0</span>
+              <span>0%</span>
+              <span>20%</span>
+              <span>40%</span>
+              <span>60%</span>
+              <span>80%</span>
+              <span>100%</span>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* X-axis title */}
-      <div className="text-center text-xs text-gray-500 pt-2 pb-1">
-        Proportion of Traffic
       </div>
 
       {/* Legend */}
