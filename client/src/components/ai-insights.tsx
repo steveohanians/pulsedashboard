@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
 
 // Function to render text with bold formatting and numbered lists
@@ -61,13 +63,44 @@ interface AIInsightsProps {
   insight?: string;
   recommendation?: string;
   isTyping?: boolean;
+  onRegenerate?: () => void;
 }
 
-export default function AIInsights({ context, insight, recommendation, isTyping = false }: AIInsightsProps) {
+export default function AIInsights({ context, insight, recommendation, isTyping = false, onRegenerate }: AIInsightsProps) {
   const [contextComplete, setContextComplete] = useState(!isTyping);
   const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);
   const [showRecommendation, setShowRecommendation] = useState(!isTyping);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  // Format timestamp
+  const timestamp = new Date().toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      toast({
+        title: "Copied to clipboard",
+        description: `${label} recommendation copied successfully`,
+      });
+      setTimeout(() => setCopiedText(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
   if (!context && !insight && !recommendation) {
     return (
       <div className="space-y-3 sm:space-y-4">
@@ -142,7 +175,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
               Recommendation
             </h4>
-            <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
               {isTyping && showRecommendation ? (
                 <TypewriterText 
                   key={`recommendation-${recommendation?.slice(0, 20)}`}
@@ -153,6 +186,37 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               ) : (
                 renderTextWithBold(recommendation, true)
               )}
+            </div>
+            
+            {/* Timestamp and Action Buttons */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <div className="text-xs text-slate-400">
+                Generated on {timestamp}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(recommendation, "Recommendation")}
+                  className="text-slate-500 hover:text-slate-700 h-7 px-2"
+                >
+                  {copiedText === recommendation ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+                {onRegenerate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onRegenerate}
+                    className="text-slate-500 hover:text-slate-700 h-7 px-2"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

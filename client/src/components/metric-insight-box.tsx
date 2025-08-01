@@ -54,6 +54,10 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         insight={insight.insightText}
         recommendation={insight.recommendationText}
         isTyping={insight.isTyping}
+        onRegenerate={() => {
+          setInsight(null);
+          generateInsightMutation.mutate();
+        }}
       />
     );
   }
