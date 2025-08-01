@@ -224,8 +224,10 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Use real time-series data if available, otherwise generate fallback data
   const data = useMemo(() => {
     if (timeSeriesData && periods && periods.length > 1) {
+      console.log('Using processTimeSeriesForBar with periods:', periods);
       return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
     }
+    console.log('Using generateBarData fallback with timePeriod:', timePeriod);
     return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 

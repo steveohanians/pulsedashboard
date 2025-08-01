@@ -34,12 +34,12 @@ export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,  // Save sessions to database  
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,  // Allow non-HTTPS for development
       httpOnly: true, // Prevent XSS access to cookies
-      sameSite: 'strict', // CSRF protection
+      sameSite: 'lax', // Allow cross-site requests for login
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   };
