@@ -336,7 +336,9 @@ Keep each section concise and professional. Focus on actionable insights that a 
       throw new Error('No response from OpenAI');
     }
 
-    const insights = JSON.parse(response);
+    // Clean the response - remove markdown code blocks if present
+    const cleanResponse = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const insights = JSON.parse(cleanResponse);
     
     return {
       context: insights.context,
