@@ -60,6 +60,29 @@ export function registerRoutes(app: Express): Server {
       let periodsToQuery: string[];
       if (typeof timePeriod === 'string' && periodMapping[timePeriod]) {
         periodsToQuery = periodMapping[timePeriod];
+      } else if (typeof timePeriod === 'string' && timePeriod.includes(' to ')) {
+        // Handle custom date range format: "4/30/2025 to 7/31/2025"
+        const [startDateStr, endDateStr] = timePeriod.split(' to ');
+        try {
+          const startDate = new Date(startDateStr);
+          const endDate = new Date(endDateStr);
+          
+          // Generate monthly periods between start and end dates
+          const periods: string[] = [];
+          const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+          const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+          
+          while (current <= end) {
+            const periodStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+            periods.push(periodStr);
+            current.setMonth(current.getMonth() + 1);
+          }
+          
+          periodsToQuery = periods;
+        } catch (error) {
+          console.error("Invalid custom date range format", { timePeriod, error: (error as Error).message });
+          periodsToQuery = periodMapping["Last Month"];
+        }
       } else {
         // Default fallback to Last Month if unknown period
         periodsToQuery = periodMapping["Last Month"];
