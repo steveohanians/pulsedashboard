@@ -38,7 +38,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tab = urlParams.get('tab');
-    if (tab && ['users', 'clients', 'benchmark', 'cd-clients', 'system'].includes(tab)) {
+    if (tab && ['users', 'clients', 'benchmark', 'cd-clients', 'system', 'prompts'].includes(tab)) {
       // Map 'system' to 'filters' for the internal tab state
       const mappedTab = tab === 'system' ? 'filters' : tab;
       setActiveTab(mappedTab);
@@ -63,6 +63,12 @@ export default function AdminPanel() {
   // Query for CD portfolio companies (independent from clients)
   const { data: cdPortfolioCompanies } = useQuery<any[]>({
     queryKey: ["/api/admin/cd-portfolio"],
+    enabled: user?.role === "Admin",
+  });
+
+  // Query for metric prompts
+  const { data: metricPrompts } = useQuery<any[]>({
+    queryKey: ["/api/admin/metric-prompts"],
     enabled: user?.role === "Admin",
   });
 
@@ -335,6 +341,73 @@ export default function AdminPanel() {
     },
   });
 
+  // Metric Prompts mutations
+  const createMetricPromptMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/admin/metric-prompts", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "Custom prompt created",
+        description: "Metric prompt has been successfully created.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create prompt",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMetricPromptMutation = useMutation({
+    mutationFn: async ({ metricName, data }: { metricName: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/metric-prompts/${metricName}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "Prompt updated",
+        description: "Metric prompt has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update prompt",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMetricPromptMutation = useMutation({
+    mutationFn: async (metricName: string) => {
+      await apiRequest("DELETE", `/api/admin/metric-prompts/${metricName}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
+      toast({
+        title: "Custom prompt deleted",
+        description: "Metric prompt has been removed. Default prompt will be used.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete prompt",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle save operations
   const handleSaveClient = (event: React.FormEvent) => {
     event.preventDefault();
@@ -427,7 +500,55 @@ export default function AdminPanel() {
     }
     
     createClientMutation.mutate(data);
+  }
+
+  // Metric prompts handlers
+  const handleCreateMetricPrompt = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const data = {
+      metricName: formData.get("metricName") as string,
+      description: formData.get("description") as string,
+      promptTemplate: formData.get("promptTemplate") as string,
+    };
+    
+    if (!data.metricName || !data.promptTemplate) {
+      toast({
+        title: "Validation error",
+        description: "Metric name and prompt template are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createMetricPromptMutation.mutate(data);
   };
+
+  const handleUpdateMetricPrompt = (event: React.FormEvent) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const metricName = formData.get("metricName") as string;
+    const data = {
+      description: formData.get("description") as string,
+      promptTemplate: formData.get("promptTemplate") as string,
+      isActive: formData.has("isActive"),
+    };
+    
+    if (!data.promptTemplate) {
+      toast({
+        title: "Validation error",
+        description: "Prompt template is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateMetricPromptMutation.mutate({ metricName, data });
+  };
+
+  const handleDeleteMetricPrompt = (metricName: string) => {
+    deleteMetricPromptMutation.mutate(metricName);
+  };;
 
   const handleCreateBenchmarkCompany = (event: React.FormEvent) => {
     event.preventDefault();
@@ -639,7 +760,7 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="w-full mb-4 sm:mb-6">
             <div className="flex overflow-x-auto pb-2 sm:pb-0">
-              <TabsList className="grid grid-cols-5 min-w-max w-full text-xs sm:text-sm">
+              <TabsList className="grid grid-cols-6 min-w-max w-full text-xs sm:text-sm">
                 <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">User Management</span>
                   <span className="sm:hidden">Users</span>
@@ -659,6 +780,10 @@ export default function AdminPanel() {
                 <TabsTrigger value="filters" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">Filter Management</span>
                   <span className="sm:hidden">Filters</span>
+                </TabsTrigger>
+                <TabsTrigger value="prompts" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">AI Prompts</span>
+                  <span className="sm:hidden">Prompts</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -2057,6 +2182,224 @@ export default function AdminPanel() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* Metric Prompts Management */}
+              <TabsContent value="prompts">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">AI Metric Prompts</h2>
+                  <Dialog open={isDialogOpen && editingItem?.type === 'add-prompt'} onOpenChange={(open) => {
+                    setIsDialogOpen(open);
+                    if (!open) setEditingItem(null);
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => {
+                        setEditingItem({ type: 'add-prompt' });
+                        setIsDialogOpen(true);
+                      }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Custom Prompt
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle>Add Custom Metric Prompt</DialogTitle>
+                        <DialogDescription>
+                          Create a custom AI prompt template for a specific metric analysis
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleCreateMetricPrompt} className="space-y-4">
+                        <div>
+                          <Label htmlFor="prompt-metric">Metric Name *</Label>
+                          <Input 
+                            id="prompt-metric"
+                            name="metricName" 
+                            placeholder="e.g., Bounce Rate, Session Duration, Traffic Channels"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="prompt-description">Description</Label>
+                          <Input 
+                            id="prompt-description"
+                            name="description" 
+                            placeholder="Brief description of this prompt's purpose"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="prompt-template">Prompt Template *</Label>
+                          <Textarea 
+                            id="prompt-template"
+                            name="promptTemplate" 
+                            placeholder="Use variables like {{clientName}}, {{industry}}, {{clientValue}}, {{industryAverage}}, {{cdPortfolioAverage}}, {{competitors}}"
+                            rows={12}
+                            className="font-mono text-sm"
+                            required
+                          />
+                          <p className="text-xs text-slate-500 mt-1">
+                            Available variables: clientName, industry, businessSize, clientValue, industryAverage, cdPortfolioAverage, competitors
+                          </p>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setIsDialogOpen(false);
+                              setEditingItem(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit">
+                            Create Prompt
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {metricPrompts && metricPrompts.length > 0 ? (
+                  <div className="bg-white rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Metric</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Last Updated</TableHead>
+                          <TableHead className="w-[100px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {metricPrompts.map((prompt: any) => (
+                          <TableRow key={prompt.metricName}>
+                            <TableCell className="font-medium">{prompt.metricName}</TableCell>
+                            <TableCell className="max-w-xs truncate">{prompt.description || 'No description'}</TableCell>
+                            <TableCell>
+                              <Badge variant={prompt.isActive ? "default" : "secondary"}>
+                                {prompt.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{new Date(prompt.updatedAt).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <div className="flex space-x-1">
+                                <Dialog open={isDialogOpen && editingItem?.type === 'edit-prompt' && editingItem?.metricName === prompt.metricName} onOpenChange={(open) => {
+                                  setIsDialogOpen(open);
+                                  if (!open) setEditingItem(null);
+                                }}>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingItem({ ...prompt, type: 'edit-prompt' });
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                      <DialogTitle>Edit Metric Prompt: {prompt.metricName}</DialogTitle>
+                                      <DialogDescription>
+                                        Modify the AI prompt template for {prompt.metricName} analysis
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleUpdateMetricPrompt} className="space-y-4">
+                                      <input type="hidden" name="metricName" value={prompt.metricName} />
+                                      <div>
+                                        <Label htmlFor="edit-prompt-description">Description</Label>
+                                        <Input 
+                                          id="edit-prompt-description"
+                                          name="description" 
+                                          defaultValue={prompt.description || ""}
+                                          placeholder="Brief description of this prompt's purpose"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-prompt-template">Prompt Template *</Label>
+                                        <Textarea 
+                                          id="edit-prompt-template"
+                                          name="promptTemplate" 
+                                          defaultValue={prompt.promptTemplate}
+                                          rows={12}
+                                          className="font-mono text-sm"
+                                          required
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">
+                                          Available variables: clientName, industry, businessSize, clientValue, industryAverage, cdPortfolioAverage, competitors
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <input type="checkbox" name="isActive" defaultChecked={prompt.isActive} />
+                                        <Label htmlFor="edit-prompt-active">Active</Label>
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Button 
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setIsDialogOpen(false);
+                                            setEditingItem(null);
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button type="submit">
+                                          Save Changes
+                                        </Button>
+                                      </div>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Custom Prompt</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete the custom prompt for "{prompt.metricName}"? The system will fall back to the default prompt.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={() => handleDeleteMetricPrompt(prompt.metricName)}
+                                      >
+                                        Delete Prompt
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-500">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                    <h3 className="text-lg font-medium mb-2">No Custom Prompts</h3>
+                    <p className="text-sm mb-4">Create custom AI prompts to tailor insights for specific metrics.</p>
+                    <Button onClick={() => {
+                      setEditingItem({ type: 'add-prompt' });
+                      setIsDialogOpen(true);
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Prompt
+                    </Button>
+                  </div>
+                )}
               </TabsContent>
         </Tabs>
 

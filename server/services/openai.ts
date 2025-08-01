@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import logger from "../utils/logger";
+import type { MetricPrompt } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -12,6 +13,92 @@ interface MetricAnalysis {
   recommendation: string;
 }
 
+async function generateInsightsWithCustomPrompt(
+  customPrompt: MetricPrompt,
+  metricName: string,
+  clientValue: number,
+  cdAverage: number,
+  industryAverage: number,
+  competitorValues: number[],
+  industryVertical: string,
+  businessSize: string
+): Promise<MetricAnalysis> {
+  try {
+    // Format competitors data properly
+    const competitorsText = competitorValues.length > 0 
+      ? competitorValues.map((val, idx) => `Competitor ${idx + 1}: ${val}`).join(', ')
+      : 'No competitor data available';
+
+    // Handle special formatting for Session Duration
+    let formattedClientValue = clientValue.toString();
+    let formattedCdAverage = cdAverage.toString();
+    let formattedIndustryAverage = industryAverage.toString();
+    
+    if (metricName === 'Session Duration') {
+      const clientMinutes = Math.floor(clientValue / 60);
+      const clientSeconds = Math.round(clientValue % 60);
+      const cdMinutes = Math.floor(cdAverage / 60);
+      const cdSecondsRem = Math.round(cdAverage % 60);
+      const industryMinutes = Math.floor(industryAverage / 60);
+      const industrySecondsRem = Math.round(industryAverage % 60);
+      
+      formattedClientValue = `${clientValue} seconds (${clientMinutes}m ${clientSeconds}s)`;
+      formattedCdAverage = `${cdAverage} seconds (${cdMinutes}m ${cdSecondsRem}s)`;
+      formattedIndustryAverage = `${industryAverage} seconds (${industryMinutes}m ${industrySecondsRem}s)`;
+    }
+    
+    // Replace template variables in the custom prompt
+    let processedPrompt = customPrompt.promptTemplate
+      .replace(/\{\{clientName\}\}/g, 'Current Client')
+      .replace(/\{\{industry\}\}/g, industryVertical)
+      .replace(/\{\{businessSize\}\}/g, businessSize)
+      .replace(/\{\{clientValue\}\}/g, formattedClientValue)
+      .replace(/\{\{industryAverage\}\}/g, formattedIndustryAverage)
+      .replace(/\{\{cdPortfolioAverage\}\}/g, formattedCdAverage)
+      .replace(/\{\{competitors\}\}/g, competitorsText);
+
+    // Add JSON format instruction
+    processedPrompt += `
+
+Provide your analysis in JSON format with exactly these three fields:
+1. "context" - Brief contextual analysis (2-3 sentences)
+2. "insight" - Key analytical insights (2-3 sentences) 
+3. "recommendation" - Specific actionable recommendations (2-3 sentences)`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a digital marketing analytics expert. Analyze metrics and provide actionable insights in JSON format."
+        },
+        {
+          role: "user",
+          content: processedPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 600
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      context: result.context || "Unable to generate context analysis.",
+      insight: result.insight || "Unable to generate insights.",
+      recommendation: result.recommendation || "Unable to generate recommendations."
+    };
+  } catch (error) {
+    logger.error("Error generating custom prompt insights", { 
+      error: (error as Error).message, 
+      metricName, 
+      promptId: customPrompt.metricName 
+    });
+    throw error; // Re-throw to fall back to default
+  }
+}
+
 export async function generateMetricInsights(
   metricName: string,
   clientValue: number,
@@ -21,6 +108,32 @@ export async function generateMetricInsights(
   industryVertical: string,
   businessSize: string
 ): Promise<MetricAnalysis> {
+  const { storage } = await import("../storage");
+  
+  try {
+    // Try to get custom prompt for this metric
+    const customPrompt = await storage.getMetricPrompt(metricName);
+    
+    if (customPrompt && customPrompt.isActive) {
+      return await generateInsightsWithCustomPrompt(
+        customPrompt,
+        metricName,
+        clientValue,
+        cdAverage,
+        industryAverage,
+        competitorValues,
+        industryVertical,
+        businessSize
+      );
+    }
+  } catch (error) {
+    logger.warn("Failed to fetch or use custom prompt, using default", { 
+      metricName, 
+      error: (error as Error).message 
+    });
+  }
+  
+  // Fall back to default prompt logic
   try {
     const prompt = `You are an expert digital marketing analyst. Analyze the following web analytics metric and provide insights:
 

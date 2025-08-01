@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertMetricPromptSchema, updateMetricPromptSchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
@@ -1089,6 +1089,56 @@ export function registerRoutes(app: Express): Server {
         admin: req.user?.id 
       });
       res.status(500).json({ message: "Failed to delete company" });
+    }
+  });
+
+  // Metric Prompts management (Admin only)
+  app.get("/api/admin/metric-prompts", requireAdmin, async (req, res) => {
+    try {
+      const prompts = await storage.getMetricPrompts();
+      res.json(prompts);
+    } catch (error) {
+      logger.error("Error fetching metric prompts", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch metric prompts" });
+    }
+  });
+
+  app.post("/api/admin/metric-prompts", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertMetricPromptSchema.parse(req.body);
+      const prompt = await storage.createMetricPrompt(validatedData);
+      res.status(201).json(prompt);
+    } catch (error) {
+      logger.error("Error creating metric prompt", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to create metric prompt" });
+    }
+  });
+
+  app.put("/api/admin/metric-prompts/:metricName", requireAdmin, async (req, res) => {
+    try {
+      const { metricName } = req.params;
+      const validatedData = updateMetricPromptSchema.parse(req.body);
+      const prompt = await storage.updateMetricPrompt(metricName, validatedData);
+      
+      if (!prompt) {
+        return res.status(404).json({ message: "Metric prompt not found" });
+      }
+      
+      res.json(prompt);
+    } catch (error) {
+      logger.error("Error updating metric prompt", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to update metric prompt" });
+    }
+  });
+
+  app.delete("/api/admin/metric-prompts/:metricName", requireAdmin, async (req, res) => {
+    try {
+      const { metricName } = req.params;
+      await storage.deleteMetricPrompt(metricName);
+      res.json({ message: "Metric prompt deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting metric prompt", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to delete metric prompt" });
     }
   });
 

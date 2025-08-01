@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, metricPrompts,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -8,7 +8,8 @@ import {
   type Metric, type InsertMetric,
   type Benchmark, type InsertBenchmark,
   type AIInsight, type InsertAIInsight,
-  type PasswordResetToken, type InsertPasswordResetToken
+  type PasswordResetToken, type InsertPasswordResetToken,
+  type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
@@ -69,6 +70,13 @@ export interface IStorage {
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   usePasswordResetToken(token: string): Promise<void>;
+  
+  // Metric Prompts
+  getMetricPrompts(): Promise<MetricPrompt[]>;
+  getMetricPrompt(metricName: string): Promise<MetricPrompt | undefined>;
+  createMetricPrompt(prompt: InsertMetricPrompt): Promise<MetricPrompt>;
+  updateMetricPrompt(metricName: string, prompt: UpdateMetricPrompt): Promise<MetricPrompt | undefined>;
+  deleteMetricPrompt(metricName: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -426,6 +434,46 @@ export class DatabaseStorage implements IStorage {
       .update(passwordResetTokens)
       .set({ used: true })
       .where(eq(passwordResetTokens.token, token));
+  }
+
+  // Metric Prompts
+  async getMetricPrompts(): Promise<MetricPrompt[]> {
+    return await db
+      .select()
+      .from(metricPrompts)
+      .where(eq(metricPrompts.isActive, true))
+      .orderBy(metricPrompts.metricName);
+  }
+
+  async getMetricPrompt(metricName: string): Promise<MetricPrompt | undefined> {
+    const [prompt] = await db
+      .select()
+      .from(metricPrompts)
+      .where(eq(metricPrompts.metricName, metricName));
+    return prompt || undefined;
+  }
+
+  async createMetricPrompt(prompt: InsertMetricPrompt): Promise<MetricPrompt> {
+    const [newPrompt] = await db
+      .insert(metricPrompts)
+      .values(prompt)
+      .returning();
+    return newPrompt;
+  }
+
+  async updateMetricPrompt(metricName: string, prompt: UpdateMetricPrompt): Promise<MetricPrompt | undefined> {
+    const [updatedPrompt] = await db
+      .update(metricPrompts)
+      .set({ ...prompt, updatedAt: new Date() })
+      .where(eq(metricPrompts.metricName, metricName))
+      .returning();
+    return updatedPrompt || undefined;
+  }
+
+  async deleteMetricPrompt(metricName: string): Promise<void> {
+    await db
+      .delete(metricPrompts)
+      .where(eq(metricPrompts.metricName, metricName));
   }
 }
 
