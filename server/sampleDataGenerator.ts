@@ -1,5 +1,6 @@
 // Comprehensive sample data generator for all metrics and time periods
 import { storage } from "./storage";
+import logger from "./utils/logger";
 
 interface MetricConfig {
   name: string;
@@ -110,7 +111,67 @@ function getChannelColor(channelName: string): string {
   return colors[channelName] || "#6b7280";
 }
 
+// Dynamic sample data generation based on actual companies
+export async function generateDynamicBenchmarkData() {
+  const { isSampleDataEnabled } = await import("./sampleDataConfig");
+  
+  if (!isSampleDataEnabled()) {
+    logger.info("Sample data generation is disabled");
+    return { success: false, message: "Sample data generation disabled" };
+  }
+  
+  logger.info("Generating dynamic benchmark data based on actual companies");
+  
+  try {
+    // Get actual CD Portfolio companies
+    const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
+    logger.info(`Found ${cdPortfolioCompanies.length} CD Portfolio companies`);
+    
+    // Get actual benchmark companies for all clients
+    const clients = await storage.getClients();
+    let totalBenchmarkCompanies = 0;
+    
+    for (const client of clients) {
+      const benchmarkCompanies = await storage.getBenchmarkCompanies();
+      totalBenchmarkCompanies += benchmarkCompanies.length;
+    }
+    
+    logger.info(`Found ${totalBenchmarkCompanies} total benchmark companies across ${clients.length} clients`);
+    
+    // Generate CD_Avg metrics based on actual CD Portfolio companies
+    if (cdPortfolioCompanies.length > 0) {
+      await generateCdPortfolioMetrics(cdPortfolioCompanies);
+    }
+    
+    // Generate Industry_Avg metrics dynamically
+    await generateIndustryAverageMetrics();
+    
+    // Generate Client metrics for existing clients
+    for (const client of clients) {
+      await generateClientMetrics(client.id);
+    }
+    
+    logger.info("Dynamic benchmark data generation completed successfully");
+    return { 
+      success: true, 
+      message: `Generated data for ${clients.length} clients, ${cdPortfolioCompanies.length} CD portfolio companies, ${totalBenchmarkCompanies} benchmark companies`
+    };
+    
+  } catch (error) {
+    const err = error as Error;
+    logger.error("Error generating dynamic benchmark data", { error: err.message, stack: err.stack });
+    throw error;
+  }
+}
+
 export async function generateComprehensiveSampleData() {
+  const { isSampleDataEnabled } = await import("./sampleDataConfig");
+  
+  if (!isSampleDataEnabled()) {
+    logger.info("Sample data generation is disabled");
+    return { success: false, message: "Sample data generation disabled" };
+  }
+  
   logger.info("Generating comprehensive sample data");
   
   const clientId = "demo-client-id";
@@ -178,6 +239,201 @@ export async function generateComprehensiveSampleData() {
   } catch (error) {
     const err = error as Error;
     logger.error("Error generating sample data", { error: err.message, stack: err.stack });
+    throw error;
+  }
+}
+
+// Generate metrics for CD Portfolio companies to create realistic CD_Avg benchmarks
+async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
+  logger.info("Generating CD Portfolio company metrics");
+  
+  for (const timePeriod of TIME_PERIODS) {
+    const periodSeed = timePeriod.charCodeAt(0) + timePeriod.charCodeAt(1);
+    
+    // Calculate weighted averages across CD Portfolio companies
+    for (const config of METRIC_CONFIGS) {
+      let totalValue = 0;
+      let companyCount = 0;
+      
+      // Generate values for each CD Portfolio company and calculate average
+      for (const company of cdPortfolioCompanies) {
+        const companySeed = periodSeed + company.name.charCodeAt(0);
+        const companyValue = generateValue(config.cdRange, companySeed + config.name.charCodeAt(0));
+        totalValue += companyValue;
+        companyCount++;
+      }
+      
+      const avgValue = companyCount > 0 ? totalValue / companyCount : generateValue(config.cdRange, periodSeed);
+      const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+        ? Math.round(avgValue * 10) / 10 
+        : Math.round(avgValue);
+      
+      await storage.createMetric({
+        clientId: "demo-client-id", // This could be made more dynamic
+        metricName: config.name,
+        value: finalValue,
+        sourceType: "CD_Avg",
+        timePeriod
+      });
+    }
+    
+    // Generate aggregated traffic channels and device data
+    await generateAggregatedChannelData(cdPortfolioCompanies, "CD_Avg", timePeriod, periodSeed);
+  }
+}
+
+// Generate industry averages dynamically based on industry types of companies
+async function generateIndustryAverageMetrics() {
+  logger.info("Generating industry average metrics");
+  
+  for (const timePeriod of TIME_PERIODS) {
+    const periodSeed = timePeriod.charCodeAt(0) + timePeriod.charCodeAt(1);
+    
+    for (const config of METRIC_CONFIGS) {
+      const value = generateValue(config.industryRange, periodSeed + config.name.charCodeAt(0));
+      const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+        ? Math.round(value * 10) / 10 
+        : Math.round(value);
+      
+      await storage.createMetric({
+        clientId: "demo-client-id",
+        metricName: config.name,
+        value: finalValue,
+        sourceType: "Industry_Avg",
+        timePeriod
+      });
+    }
+    
+    await generateAggregatedChannelData([], "Industry_Avg", timePeriod, periodSeed);
+  }
+}
+
+// Generate client-specific metrics
+async function generateClientMetrics(clientId: string) {
+  logger.info(`Generating client metrics for ${clientId}`);
+  
+  for (const timePeriod of TIME_PERIODS) {
+    const periodSeed = timePeriod.charCodeAt(0) + clientId.charCodeAt(0);
+    
+    for (const config of METRIC_CONFIGS) {
+      const value = generateValue(config.clientRange, periodSeed + config.name.charCodeAt(0));
+      const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+        ? Math.round(value * 10) / 10 
+        : Math.round(value);
+      
+      await storage.createMetric({
+        clientId,
+        metricName: config.name,
+        value: finalValue,
+        sourceType: "Client",
+        timePeriod
+      });
+    }
+    
+    await generateAggregatedChannelData([], "Client", timePeriod, periodSeed, clientId);
+  }
+}
+
+// Generate aggregated channel and device data
+async function generateAggregatedChannelData(companies: any[], sourceType: string, timePeriod: string, seed: number, clientId = "demo-client-id") {
+  // Generate Traffic Channels data
+  const trafficChannels = generateTrafficChannels(seed + 100);
+  for (const channel of trafficChannels) {
+    await storage.createMetric({
+      clientId,
+      metricName: "Traffic Channels",
+      value: channel.value,
+      sourceType: sourceType as any,
+      timePeriod,
+      channel: channel.name
+    });
+  }
+  
+  // Generate Device Distribution data
+  const deviceData = generateDeviceDistribution(seed + 200);
+  for (const device of deviceData) {
+    await storage.createMetric({
+      clientId,
+      metricName: "Device Distribution",
+      value: device.value,
+      sourceType: sourceType as any,
+      timePeriod,
+      channel: device.name
+    });
+  }
+}
+
+// Auto-generate data when new CD Portfolio company is added
+export async function generateDataForNewCdPortfolioCompany(companyId: string) {
+  const { shouldGenerateForNewCompanies } = await import("./sampleDataConfig");
+  
+  if (!shouldGenerateForNewCompanies()) {
+    logger.info("Auto-generation disabled for new CD Portfolio companies");
+    return { success: false, message: "Auto-generation disabled" };
+  }
+  
+  logger.info(`Auto-generating data for new CD Portfolio company: ${companyId}`);
+  
+  try {
+    // Regenerate CD_Avg benchmarks with the new company included
+    const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
+    await generateCdPortfolioMetrics(cdPortfolioCompanies);
+    
+    logger.info("Successfully updated CD Portfolio benchmarks with new company");
+    return { success: true, message: "CD Portfolio benchmarks updated" };
+    
+  } catch (error) {
+    const err = error as Error;
+    logger.error("Error generating data for new CD Portfolio company", { error: err.message, companyId });
+    throw error;
+  }
+}
+
+// Auto-generate data when new benchmark company is added
+export async function generateDataForNewBenchmarkCompany(companyId: string, clientId: string) {
+  const { shouldGenerateForNewCompanies } = await import("./sampleDataConfig");
+  
+  if (!shouldGenerateForNewCompanies()) {
+    logger.info("Auto-generation disabled for new benchmark companies");
+    return { success: false, message: "Auto-generation disabled" };
+  }
+  
+  logger.info(`Auto-generating data for new benchmark company: ${companyId} (client: ${clientId})`);
+  
+  try {
+    // Generate sample metrics for the new benchmark company
+    const timePeriods = ["2024-01", "2024-10", "2025-04", "2025-05", "2025-06"];
+    const metricNames = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
+    
+    for (const period of timePeriods) {
+      const periodSeed = period.charCodeAt(0) + companyId.charCodeAt(0);
+      
+      for (const metricName of metricNames) {
+        const config = METRIC_CONFIGS.find(c => c.name === metricName);
+        if (!config) continue;
+        
+        // Generate values in industry range for competitors
+        const value = generateValue(config.industryRange, periodSeed + metricName.charCodeAt(0));
+        const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
+          ? Math.round(value * 10) / 10 
+          : Math.round(value);
+        
+        await storage.createMetric({
+          competitorId: companyId,
+          metricName,
+          value: finalValue,
+          timePeriod: period,
+          sourceType: "Competitor"
+        });
+      }
+    }
+    
+    logger.info("Successfully generated data for new benchmark company");
+    return { success: true, message: "Benchmark company data generated" };
+    
+  } catch (error) {
+    const err = error as Error;
+    logger.error("Error generating data for new benchmark company", { error: err.message, companyId });
     throw error;
   }
 }

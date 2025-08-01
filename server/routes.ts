@@ -484,8 +484,33 @@ export function registerRoutes(app: Express): Server {
       const result = await generateComprehensiveSampleData();
       res.json(result);
     } catch (error) {
-      console.error("Error generating comprehensive data:", error);
+      logger.error("Error generating comprehensive data", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to generate sample data" });
+    }
+  });
+
+  // Generate dynamic benchmark data based on actual companies
+  app.post("/api/generate-dynamic-data", requireAuth, async (req, res) => {
+    try {
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
+      const result = await generateDynamicBenchmarkData();
+      res.json(result);
+    } catch (error) {
+      logger.error("Error generating dynamic data", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to generate dynamic data" });
+    }
+  });
+
+  // Get sample data configuration status
+  app.get("/api/admin/sample-data-config", requireAdmin, async (req, res) => {
+    try {
+      const { getSampleDataStatus, logSampleDataConfig } = await import("./sampleDataConfig");
+      logSampleDataConfig(); // Log current config for admin reference
+      const status = getSampleDataStatus();
+      res.json(status);
+    } catch (error) {
+      logger.error("Error getting sample data config", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to get sample data configuration" });
     }
   });
 
@@ -645,6 +670,20 @@ export function registerRoutes(app: Express): Server {
         companyName: newCompany.name, 
         admin: req.user?.id 
       });
+
+      // Auto-generate sample data for the new CD Portfolio company
+      try {
+        const { generateDataForNewCdPortfolioCompany } = await import("./sampleDataGenerator");
+        await generateDataForNewCdPortfolioCompany(newCompany.id);
+        logger.info("Auto-generated sample data for new CD portfolio company", { companyId: newCompany.id });
+      } catch (sampleError) {
+        logger.warn("Failed to auto-generate sample data for CD portfolio company", { 
+          companyId: newCompany.id, 
+          error: (sampleError as Error).message 
+        });
+        // Don't fail the main request if sample data generation fails
+      }
+      
       res.status(201).json(newCompany);
     } catch (error) {
       if ((error as any).name === 'ZodError') {

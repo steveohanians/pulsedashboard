@@ -86,3 +86,8 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
 - **Field Utilization**: Description field added to CD Portfolio forms (create and edit) with Textarea components
 - **Database Schema**: All tables properly utilized with clean separation of concerns
 - **Statistics Consistency**: Benchmark coverage correctly shows 0% when no companies exist
+- **Sample Data Management**: Complete configuration system for controlling sample data generation
+  - Environment-based controls (SAMPLE_DATA_ENABLED, AUTO_GENERATE_SAMPLE_DATA)
+  - Auto-generation when new CD Portfolio or benchmark companies are added
+  - Dynamic benchmark calculation based on actual company data
+  - Production safety controls to disable sample data by default
