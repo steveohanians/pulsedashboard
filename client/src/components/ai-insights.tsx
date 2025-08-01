@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +92,16 @@ export default function AIInsights({ context, insight, recommendation, status, i
   const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Reset typing states when content changes or isTyping changes
+  useEffect(() => {
+    setContextComplete(!isTyping);
+    setInsightComplete(!isTyping);
+    setShowInsight(!isTyping);
+    setShowRecommendation(!isTyping);
+    setRecommendationComplete(!isTyping);
+    setCopiedText(null);
+  }, [context, insight, recommendation, isTyping]);
   
   // Format timestamp
   const timestamp = new Date().toLocaleString('en-US', {

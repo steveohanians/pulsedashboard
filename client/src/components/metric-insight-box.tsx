@@ -100,7 +100,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     const storedInsight = insightsStorage.load(clientId, metricName);
     if (storedInsight) {
       // Disable typing effect for stored insights to prevent restart
-      setInsight({ ...storedInsight, isTyping: false });
+      setInsight({ ...storedInsight, isTyping: false, isFromStorage: true });
       console.debug('✅ Status from storage:', storedInsight.status);
       onStatusChange?.(storedInsight.status);
     }
@@ -108,9 +108,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   
   // Store insight in persistent storage when it changes (without typing state)
   useEffect(() => {
-    if (insight) {
-      // Store without the typing state to avoid restart issues
-      const { isTyping, ...insightToStore } = insight;
+    if (insight && !insight.isFromStorage) {
+      // Store without the typing state and storage flag to avoid restart issues
+      const { isTyping, isFromStorage, ...insightToStore } = insight;
       insightsStorage.save(clientId, metricName, insightToStore);
     }
   }, [insight, clientId, metricName]);
@@ -157,10 +157,14 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         status={insight.status}
         isTyping={insight.isTyping}
         onRegenerate={() => {
+          // Clear current insight and storage to force fresh generation with typewriter effect
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
-          generateInsightMutation.mutate();
+          // Small delay to ensure state is reset before generating new insight
+          setTimeout(() => {
+            generateInsightMutation.mutate();
+          }, 100);
         }}
         onClear={() => {
           setInsight(null);
