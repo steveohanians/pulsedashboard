@@ -298,53 +298,81 @@ Focus on practical business impact and competitive advantage.`;
   }
 }
 
-// Get metric unit/type for proper formatting
-function getMetricUnit(metricName: string): string {
-  const metricUnits: Record<string, string> = {
-    'Bounce Rate': '%',
-    'Session Duration': 'minutes',
-    'Pages per Session': 'pages',
-    'Sessions': 'sessions',
-    'Sessions per User': 'sessions',
-    'Page Views': 'views',
-    'Users': 'users',
-    'New Users': 'users',
-    'Conversion Rate': '%',
-    'Click-Through Rate': '%',
-    'Exit Rate': '%',
-    'Load Time': 'seconds',
-    'Revenue': '$'
+// Get metric unit/type and convert values for proper formatting
+function getMetricDisplayInfo(metricName: string, value: any): { unit: string; displayValue: string; rawUnit: string } {
+  const metricConfig: Record<string, { unit: string; rawUnit: string; converter?: (val: number) => number }> = {
+    'Bounce Rate': { unit: '%', rawUnit: '%' },
+    'Session Duration': { 
+      unit: 'minutes', 
+      rawUnit: 'seconds',
+      converter: (seconds: number) => Math.round((seconds / 60) * 10) / 10 // Convert seconds to minutes, 1 decimal
+    },
+    'Pages per Session': { unit: 'pages', rawUnit: 'pages' },
+    'Sessions': { unit: 'sessions', rawUnit: 'sessions' },
+    'Sessions per User': { unit: 'sessions', rawUnit: 'sessions' },
+    'Page Views': { unit: 'views', rawUnit: 'views' },
+    'Users': { unit: 'users', rawUnit: 'users' },
+    'New Users': { unit: 'users', rawUnit: 'users' },
+    'Conversion Rate': { unit: '%', rawUnit: '%' },
+    'Click-Through Rate': { unit: '%', rawUnit: '%' },
+    'Exit Rate': { unit: '%', rawUnit: '%' },
+    'Load Time': { unit: 'seconds', rawUnit: 'seconds' },
+    'Revenue': { unit: '$', rawUnit: '$' }
   };
-  return metricUnits[metricName] || 'units';
+
+  const config = metricConfig[metricName] || { unit: 'units', rawUnit: 'units' };
+  
+  if (config.converter && typeof value === 'number') {
+    const convertedValue = config.converter(value);
+    return {
+      unit: config.unit,
+      displayValue: convertedValue.toString(),
+      rawUnit: config.rawUnit
+    };
+  }
+  
+  return {
+    unit: config.unit,
+    displayValue: value?.toString() || '0',
+    rawUnit: config.rawUnit
+  };
 }
 
 // Generate insights for a specific metric
 export async function generateMetricSpecificInsights(metricName: string, enrichedData: any, clientId: string) {
-  const metricUnit = getMetricUnit(metricName);
+  const clientInfo = getMetricDisplayInfo(metricName, enrichedData.metric?.clientValue);
+  const industryInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.industryAverage);
+  const cdInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.cdPortfolioAverage);
+  
+  // Convert competitor values too
+  const competitorText = enrichedData.benchmarks?.competitors?.map((c: any) => {
+    const compInfo = getMetricDisplayInfo(metricName, c.value);
+    return `${c.name} (${compInfo.displayValue} ${compInfo.unit})`;
+  }).join(', ') || 'No competitor data available';
   
   const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
 
 METRIC ANALYSIS REQUEST:
-- Metric: ${metricName} (measured in ${metricUnit})
+- Metric: ${metricName} (stored as ${clientInfo.rawUnit}, displayed as ${clientInfo.unit})
 - Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
-- Current Value: ${enrichedData.metric?.clientValue}${metricUnit}
+- Current Value: ${clientInfo.displayValue} ${clientInfo.unit}
 - Time Period: ${enrichedData.metric?.timePeriod}
 
 BENCHMARK COMPARISON:
-- Industry Average: ${enrichedData.benchmarks?.industryAverage}${metricUnit}
-- CD Portfolio Average: ${enrichedData.benchmarks?.cdPortfolioAverage}${metricUnit}
-- Competitors: ${enrichedData.benchmarks?.competitors?.map((c: any) => `${c.name} (${c.value}${metricUnit})`).join(', ') || 'No competitor data available'}
+- Industry Average: ${industryInfo.displayValue} ${industryInfo.unit}
+- CD Portfolio Average: ${cdInfo.displayValue} ${cdInfo.unit}
+- Competitors: ${competitorText}
 
 FULL CONTEXT: ${enrichedData.context}
 
 Provide a JSON response with exactly this structure. Use **bold formatting** around key numbers, percentages, and important insights for emphasis:
 {
-  "context": "Brief explanation of what this metric measures and why it matters for this business. Include the metric unit (${metricUnit}) in your explanation (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. Example: 'Your **35%** bounce rate is **7% better** than the industry average of **42%**' (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. Include specific ${metricUnit} targets where relevant (2-3 sentences)"
+  "context": "Brief explanation of what this metric measures and why it matters for this business. Include the metric unit (${clientInfo.unit}) in your explanation (2-3 sentences)",
+  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. Always use ${clientInfo.unit} as the unit. Example: 'Your **${clientInfo.displayValue} ${clientInfo.unit}** performance is **X ${clientInfo.unit} better** than the industry average of **${industryInfo.displayValue} ${industryInfo.unit}**' (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. Include specific ${clientInfo.unit} targets where relevant (2-3 sentences)"
 }
 
-Focus on the actual numbers provided and give specific comparative insights. Be precise about performance gaps and opportunities. Always include the metric unit (${metricUnit}) when referencing values.`;
+IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.`;
 
   logger.info('OpenAI Prompt Details', { 
     metricName,
