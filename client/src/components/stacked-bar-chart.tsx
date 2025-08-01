@@ -50,17 +50,17 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     );
   }
 
-  // Calculate responsive label width
+  // Calculate the maximum label width needed for proper alignment
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
-  const labelWidth = Math.max(maxLabelLength * 6, 80); // Responsive width
+  const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
   return (
     <div className="w-full h-full space-y-2 relative pb-4">
       <div className="space-y-2 sm:space-y-1.5 mb-4">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-            <div className="flex-shrink-0 sm:w-auto" style={{ minWidth: `${Math.min(labelWidth, 120)}px` }}>
-              <span className={`text-xs sm:text-sm block truncate ${
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
+              <span className={`text-sm block truncate ${
                 item.sourceType === 'Client' ? 'font-bold text-primary' : 'font-medium text-gray-700'
               }`}>
                 {item.label}
@@ -129,7 +129,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center sm:justify-start gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 border-t border-gray-200 mt-4">
+      <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 border-t border-gray-200 mt-4">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-1.5 sm:gap-2">
             <div 
