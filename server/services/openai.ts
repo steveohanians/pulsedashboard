@@ -61,16 +61,16 @@ async function generateInsightsWithCustomPrompt(
     processedPrompt += `
 
 Provide your analysis in JSON format with exactly these three fields:
-1. "context" - Brief contextual analysis (2-3 sentences)
-2. "insight" - Key analytical insights (2-3 sentences) 
-3. "recommendation" - Specific actionable recommendations (2-3 sentences)`;
+1. "context" - Strategic contextual analysis with competitive positioning (2-3 sentences)
+2. "insight" - Key competitive intelligence insights with specific performance gaps (2-3 sentences) 
+3. "recommendation" - Concrete action plan with projected improvement percentages (2-3 sentences)`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are a digital marketing analytics expert. Analyze metrics and provide actionable insights in JSON format."
+          content: "You are a senior digital strategy consultant with 15+ years experience in competitive intelligence and data-driven growth optimization. Your insights drive measurable business results. Always provide specific, actionable recommendations with projected performance improvements. Focus on competitive advantages and strategic opportunities."
         },
         {
           role: "user",
@@ -135,29 +135,29 @@ export async function generateMetricInsights(
   
   // Fall back to default prompt logic
   try {
-    const prompt = `You are an expert digital marketing analyst. Analyze the following web analytics metric and provide insights:
+    const prompt = `STRATEGIC PERFORMANCE ANALYSIS for ${metricName}:
 
-Metric: ${metricName}
-Client Value: ${clientValue}
-Clear Digital Average: ${cdAverage}
-Industry Average: ${industryAverage}
-Competitor Values: ${competitorValues.join(', ')}
-Industry: ${industryVertical}
-Business Size: ${businessSize}
+COMPETITIVE BENCHMARKING:
+• Client Performance: ${clientValue}
+• Clear Digital Portfolio: ${cdAverage}
+• Industry Standard: ${industryAverage}
+• Direct Competitors: ${competitorValues.join(', ')}
+• Industry: ${industryVertical}
+• Business Size: ${businessSize}
 
-Provide a comprehensive analysis in JSON format with exactly these three fields:
-1. "context" - Explain what this metric performance means relative to benchmarks
-2. "insight" - Provide analytical interpretation of why this performance might be occurring
-3. "recommendation" - Give specific, actionable advice to improve or maintain this metric
+Provide strategic analysis in JSON format with exactly these three fields:
+1. "context" - Strategic positioning analysis with competitive landscape assessment (2-3 sentences)
+2. "insight" - Competitive intelligence insights explaining performance gaps and opportunities (2-3 sentences)
+3. "recommendation" - Specific action plan with projected ROI and timeline for ${businessSize} companies (2-3 sentences)
 
-Keep each section concise but informative (2-3 sentences each). Focus on practical business implications.`;
+Focus on competitive advantages, strategic opportunities, and measurable business impact.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are a digital marketing analytics expert. Analyze metrics and provide actionable insights in JSON format."
+          content: "You are a senior digital strategy consultant with 15+ years experience in competitive intelligence and data-driven growth optimization. Your insights drive measurable business results. Always provide specific, actionable recommendations with projected performance improvements. Focus on competitive advantages and strategic opportunities."
         },
         {
           role: "user",
