@@ -45,14 +45,14 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   
   // Calculate the maximum label width needed
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
-  const labelWidth = Math.min(Math.max(maxLabelLength * 8, 120), 200); // 8px per char, min 120px, max 200px
+  const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   return (
     <div className="w-full h-full space-y-3 sm:space-y-4">
       <div className="space-y-2 sm:space-y-3 relative">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
-            <div className="flex-shrink-0 sm:w-auto" style={{ minWidth: `${Math.min(labelWidth, 150)}px` }}>
+            <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
               <span className={`text-xs sm:text-sm block ${
                 item.sourceType === 'Client' 
                   ? 'font-bold text-primary' 
