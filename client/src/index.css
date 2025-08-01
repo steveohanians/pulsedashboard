@@ -69,16 +69,13 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Debug: Force all select triggers to have consistent styling */
-  button[data-radix-select-trigger] {
-    padding-left: 12px !important;
-    padding-right: 40px !important;
-    justify-content: flex-start !important;
-  }
-  
-  button[data-radix-select-trigger] * {
+  /* Fix Radix UI SelectValue text alignment for different content lengths */
+  [data-radix-select-value] {
+    display: block !important;
     text-align: left !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 }
