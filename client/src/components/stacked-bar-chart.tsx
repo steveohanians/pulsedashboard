@@ -54,8 +54,13 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
+  // Calculate dynamic height based on content
+  const barHeight = 32; // Height per bar including spacing
+  const legendHeight = 60; // Height for legend area
+  const containerHeight = data.length * barHeight + legendHeight;
+
   return (
-    <div className="w-full h-full space-y-2 relative pb-4">
+    <div className="w-full space-y-2 relative pb-4" style={{ height: `${containerHeight}px` }}>
       <div className="space-y-2 sm:space-y-1.5 mb-4">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
