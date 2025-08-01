@@ -1412,27 +1412,34 @@ export default function Dashboard() {
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">AI-powered analysis and recommendations</p>
                       </div>
-                      {/* Status Icon */}
+                      {/* Status Icon - Debug: status for {metricName} = {metricStatuses[metricName]} */}
                       {metricStatuses[metricName] && (
                         <div className="ml-3 flex-shrink-0">
                           {metricStatuses[metricName] === 'success' && (
-                            <CheckCircle className="h-5 w-5 text-green-600" title="Good Performance" />
+                            <div title="Good Performance">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
-                            <AlertTriangle className="h-5 w-5 text-orange-500" title="Needs Improvement" />
+                            <div title="Needs Improvement">
+                              <AlertTriangle className="h-5 w-5 text-orange-500" />
+                            </div>
                           )}
                           {metricStatuses[metricName] === 'warning' && (
-                            <AlertCircle className="h-5 w-5 text-red-500" title="Requires Attention" />
+                            <div title="Requires Attention">
+                              <AlertCircle className="h-5 w-5 text-red-500" />
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
                     <MetricInsightBox 
                       metricName={metricName}
-                      clientId={client.id}
+                      clientId={client?.id || ''}
                       timePeriod={timePeriod}
                       metricData={metricData}
                       onStatusChange={(status) => {
+                        console.debug(`✅ Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
                           ...prev,
                           [metricName]: status

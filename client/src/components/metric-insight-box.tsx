@@ -101,6 +101,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     if (storedInsight) {
       // Disable typing effect for stored insights to prevent restart
       setInsight({ ...storedInsight, isTyping: false });
+      console.debug('✅ Status from storage:', storedInsight.status);
       onStatusChange?.(storedInsight.status);
     }
   }, [clientId, metricName, onStatusChange]);
@@ -137,6 +138,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     onSuccess: (data) => {
       // Set insight with typing effect enabled
       setInsight({ ...data.insight, isTyping: true });
+      console.debug('✅ Status from API:', data.insight.status);
       onStatusChange?.(data.insight.status);
       // Invalidate insights cache
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
