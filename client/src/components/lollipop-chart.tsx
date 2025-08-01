@@ -66,7 +66,7 @@ export default function LollipopChart({
       data: normalizeData(industryAvg),
       type: 'industry'
     },
-    ...competitors.slice(0, 2).map(comp => ({
+    ...competitors.map(comp => ({
       label: comp.label,
       data: normalizeData(comp.value || { Desktop: 55, Mobile: 35, Tablet: 10 }),
       type: 'competitor'
