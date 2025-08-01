@@ -306,7 +306,7 @@ export function registerRoutes(app: Express): Server {
       const ptParts = ptFormatter.formatToParts(now);
       const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
       const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-      const targetDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+      const targetDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT (July→June)
       const defaultPeriod = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
       const { period = defaultPeriod } = req.query;
       

@@ -62,9 +62,11 @@ function generateTimePeriods(): string[] {
   const periods: string[] = [];
   
   // Generate 15 months of historical data, starting from 1 month before current PT date
-  // July 31st PT should show May as latest (1 month before current)
-  for (let i = 1; i <= 15; i++) {
-    const date = new Date(ptYear, ptMonth - i, 1);
+  // July 31st PT should show June as latest (1 month before current)
+  const latestDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(latestDate);
+    date.setMonth(latestDate.getMonth() - i);
     periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
   }
   
