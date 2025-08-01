@@ -357,7 +357,7 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
       const remainingSecs = seconds % 60;
       return `${c.name} (${minutes}m ${remainingSecs}s)`;
     }
-    return `${c.name} (${compInfo.displayValue} ${compInfo.unit})`;
+    return `${c.name} (${compInfo.displayValue}${compInfo.unit})`;
   }).join(', ') || 'No competitor data available';
   
   const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
@@ -367,16 +367,16 @@ METRIC ANALYSIS REQUEST:
 - Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
 - Current Value: ${metricName === 'Session Duration' ? 
     `${Math.floor(enrichedData.metric?.clientValue / 60)}m ${enrichedData.metric?.clientValue % 60}s` : 
-    `${clientInfo.displayValue} ${clientInfo.unit}`}
+    `${clientInfo.displayValue}${clientInfo.unit}`}
 - Time Period: ${enrichedData.metric?.timePeriod}
 
 BENCHMARK COMPARISON:
 - Industry Average: ${metricName === 'Session Duration' ? 
     `${Math.floor(enrichedData.benchmarks?.industryAverage / 60)}m ${enrichedData.benchmarks?.industryAverage % 60}s` : 
-    `${industryInfo.displayValue} ${industryInfo.unit}`}
+    `${industryInfo.displayValue}${industryInfo.unit}`}
 - CD Portfolio Average: ${metricName === 'Session Duration' ? 
     `${Math.floor(enrichedData.benchmarks?.cdPortfolioAverage / 60)}m ${enrichedData.benchmarks?.cdPortfolioAverage % 60}s` : 
-    `${cdInfo.displayValue} ${cdInfo.unit}`}
+    `${cdInfo.displayValue}${cdInfo.unit}`}
 - Competitors: ${competitorText}
 
 FULL CONTEXT: ${enrichedData.context}
