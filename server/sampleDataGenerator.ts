@@ -15,7 +15,7 @@ interface MetricConfig {
 const METRIC_CONFIGS: MetricConfig[] = [
   {
     name: "Bounce Rate",
-    clientRange: [35, 55], // Client performs well with low bounce rates
+    clientRange: [28, 35], // GOOD: Client performs excellently (lower is better)
     industryRange: [45, 65],
     cdRange: [40, 60],
     unit: "%",
@@ -23,21 +23,21 @@ const METRIC_CONFIGS: MetricConfig[] = [
   },
   {
     name: "Session Duration",
-    clientRange: [240, 360], // 4-6 minutes in seconds (client performs better)
-    industryRange: [180, 300], // 3-5 minutes
-    cdRange: [200, 320], // 3.3-5.3 minutes
+    clientRange: [150, 200], // BAD: Client performs poorly (lower than benchmarks)
+    industryRange: [240, 320], // Industry performs better
+    cdRange: [220, 300], // CD performs better
     unit: "seconds"
   },
   {
     name: "Pages per Session",
-    clientRange: [2.8, 4.2], // Client has higher engagement
-    industryRange: [2.1, 3.5],
-    cdRange: [2.4, 3.8],
+    clientRange: [2.2, 2.6], // NEEDS IMPROVEMENT: Client slightly below average
+    industryRange: [2.8, 3.4],
+    cdRange: [2.5, 3.1],
     unit: "pages"
   },
   {
     name: "Sessions per User",
-    clientRange: [1.6, 2.4], // Realistic range for returning visitors
+    clientRange: [2.0, 2.6], // GOOD: Client performs well
     industryRange: [1.2, 1.8],
     cdRange: [1.4, 2.1],
     unit: "sessions"
