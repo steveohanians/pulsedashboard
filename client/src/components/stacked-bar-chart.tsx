@@ -55,8 +55,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 6, 80); // Responsive width
 
   return (
-    <div className="w-full h-full space-y-2 relative">
-      <div className="space-y-2 sm:space-y-1.5">
+    <div className="w-full h-full space-y-2 relative pb-4">
+      <div className="space-y-2 sm:space-y-1.5 mb-4">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
             <div className="flex-shrink-0 sm:w-auto" style={{ minWidth: `${Math.min(labelWidth, 120)}px` }}>
@@ -129,7 +129,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center sm:justify-start gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 border-t border-gray-200">
+      <div className="flex flex-wrap justify-center sm:justify-start gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 border-t border-gray-200 mt-4">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-1.5 sm:gap-2">
             <div 

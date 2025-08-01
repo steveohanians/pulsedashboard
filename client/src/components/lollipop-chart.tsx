@@ -93,9 +93,9 @@ export default function LollipopChart({
   const labelWidth = Math.max(80, Math.min(160, maxLabelLength * 6)); // Responsive width
 
   return (
-    <div className="w-full flex flex-col" style={{ height: `${chartEntities.length * 48 + 50}px` }}>
+    <div className="w-full flex flex-col">
       {/* Main chart area with legend on right/bottom */}
-      <div className="flex-1 px-1 sm:px-2 py-1 flex flex-col lg:flex-row">
+      <div className="flex-1 px-1 sm:px-2 py-1 flex flex-col lg:flex-row" style={{ minHeight: `${chartEntities.length * 48 + 50}px` }}>
         {/* Chart section */}
         <div className="flex-1 relative lg:mr-4 mb-4 lg:mb-0">
           {/* Combined layout - labels and chart rows in sync */}
@@ -210,8 +210,8 @@ export default function LollipopChart({
           </div>
         </div>
 
-        {/* Legend - responsive positioning */}
-        <div className="flex lg:flex-col justify-center lg:justify-start gap-4 lg:gap-2 lg:ml-3 lg:w-20 lg:pt-4">
+        {/* Legend - responsive positioning with proper spacing */}
+        <div className="flex lg:flex-col justify-center lg:justify-start gap-4 lg:gap-2 lg:ml-3 lg:w-20 mt-4 lg:mt-0 lg:pt-4 pb-2">
           {devices.map((device) => (
             <div key={device} className="flex items-center space-x-1.5">
               <div 
