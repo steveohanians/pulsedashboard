@@ -37,7 +37,8 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       return await response.json();
     },
     onSuccess: (data) => {
-      setInsight(data.insight);
+      // Set insight with typing effect enabled
+      setInsight({ ...data.insight, isTyping: true });
       // Invalidate insights cache
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
@@ -52,6 +53,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         context={insight.contextText}
         insight={insight.insightText}
         recommendation={insight.recommendationText}
+        isTyping={insight.isTyping}
       />
     );
   }

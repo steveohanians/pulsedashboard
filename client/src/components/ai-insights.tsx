@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Info, Lightbulb, TrendingUp } from "lucide-react";
+import TypewriterText from "./typewriter-text";
 
 // Function to render text with bold formatting
 function renderTextWithBold(text: string) {
@@ -23,9 +25,12 @@ interface AIInsightsProps {
   context?: string;
   insight?: string;
   recommendation?: string;
+  isTyping?: boolean;
 }
 
-export default function AIInsights({ context, insight, recommendation }: AIInsightsProps) {
+export default function AIInsights({ context, insight, recommendation, isTyping = false }: AIInsightsProps) {
+  const [showInsight, setShowInsight] = useState(!isTyping);
+  const [showRecommendation, setShowRecommendation] = useState(!isTyping);
   if (!context && !insight && !recommendation) {
     return (
       <div className="space-y-3 sm:space-y-4 border-t border-slate-200 pt-3 sm:pt-4">
@@ -48,27 +53,59 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
               <Info className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
               Context
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(context)}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              {isTyping ? (
+                <TypewriterText 
+                  text={context} 
+                  speed={20}
+                  onComplete={() => setShowInsight(true)}
+                  className="text-xs sm:text-sm text-slate-600 leading-relaxed"
+                />
+              ) : (
+                renderTextWithBold(context)
+              )}
+            </p>
           </div>
         )}
         
-        {insight && (
+        {insight && (showInsight || !isTyping) && (
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
               Insight
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(insight)}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              {isTyping && showInsight ? (
+                <TypewriterText 
+                  text={insight} 
+                  speed={25}
+                  onComplete={() => setShowRecommendation(true)}
+                  className="text-xs sm:text-sm text-slate-600 leading-relaxed"
+                />
+              ) : (
+                renderTextWithBold(insight)
+              )}
+            </p>
           </div>
         )}
         
-        {recommendation && (
+        {recommendation && (showRecommendation || !isTyping) && (
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
               Recommendation
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(recommendation)}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              {isTyping && showRecommendation ? (
+                <TypewriterText 
+                  text={recommendation} 
+                  speed={25}
+                  className="text-xs sm:text-sm text-slate-600 leading-relaxed"
+                />
+              ) : (
+                renderTextWithBold(recommendation)
+              )}
+            </p>
           </div>
         )}
       </div>
