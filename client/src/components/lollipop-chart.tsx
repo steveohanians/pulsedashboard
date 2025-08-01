@@ -87,17 +87,14 @@ export default function LollipopChart({
         <div className="flex-1 relative h-full mr-4">
           {/* Y-axis labels */}
           <div 
-            className="absolute left-0 top-0 bottom-0 flex flex-col justify-start py-2"
+            className="absolute left-0 top-2 flex flex-col"
             style={{ width: `${labelWidth}px` }}
           >
             {chartEntities.map((entity, index) => (
               <div 
                 key={index} 
                 className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end"
-                style={{ 
-                  height: '48px',
-                  marginTop: index === 0 ? '0px' : '0px'
-                }}
+                style={{ height: '48px' }}
               >
                 <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
                   {entity.label}
@@ -109,7 +106,7 @@ export default function LollipopChart({
           {/* Chart grid and lollipops */}
           <div className="h-full relative" style={{ marginLeft: `${labelWidth}px` }}>
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-start py-2">
+            <div className="absolute top-2 left-0 right-0 flex flex-col">
               {chartEntities.map((_, index) => (
                 <div key={index} className="border-b border-gray-200 last:border-b-0" style={{ height: '48px' }} />
               ))}
@@ -127,7 +124,7 @@ export default function LollipopChart({
             </div>
 
             {/* Lollipop chart */}
-            <div className="absolute inset-0 py-2">
+            <div className="absolute top-2 left-0 right-0 flex flex-col">
               {chartEntities.map((entity, entityIndex) => (
                 <div 
                   key={entityIndex} 
