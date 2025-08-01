@@ -13,9 +13,10 @@ interface CompetitorModalProps {
   onClose: () => void;
   competitors: any[];
   clientId: string;
+  onAddingStatusChange?: (isAdding: boolean) => void;
 }
 
-export default function CompetitorModal({ isOpen, onClose, competitors, clientId }: CompetitorModalProps) {
+export default function CompetitorModal({ isOpen, onClose, competitors, clientId, onAddingStatusChange }: CompetitorModalProps) {
   const [domain, setDomain] = useState("");
   const [label, setLabel] = useState("");
   const { toast } = useToast();
@@ -23,6 +24,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
 
   const addCompetitorMutation = useMutation({
     mutationFn: async (data: { domain: string; label: string; clientId: string }) => {
+      onAddingStatusChange?.(true); // Start loading
       const res = await apiRequest("POST", "/api/competitors", data);
       return res.json();
     },
@@ -33,12 +35,14 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
       setDomain("");
       setLabel("");
+      onAddingStatusChange?.(false); // Stop loading
       toast({
         title: "Competitor added",
-        description: "The competitor has been successfully added.",
+        description: "The competitor has been successfully added with complete historical data.",
       });
     },
     onError: (error: Error) => {
+      onAddingStatusChange?.(false); // Stop loading on error
       toast({
         title: "Failed to add competitor",
         description: error.message,
