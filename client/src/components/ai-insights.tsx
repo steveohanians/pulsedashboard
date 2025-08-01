@@ -29,6 +29,8 @@ interface AIInsightsProps {
 }
 
 export default function AIInsights({ context, insight, recommendation, isTyping = false }: AIInsightsProps) {
+  const [contextComplete, setContextComplete] = useState(!isTyping);
+  const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);
   const [showRecommendation, setShowRecommendation] = useState(!isTyping);
   if (!context && !insight && !recommendation) {
@@ -54,11 +56,14 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               Context
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {isTyping ? (
+              {isTyping && !contextComplete ? (
                 <TypewriterText 
                   text={context} 
-                  speed={20}
-                  onComplete={() => setShowInsight(true)}
+                  speed={10}
+                  onComplete={() => {
+                    setContextComplete(true);
+                    setShowInsight(true);
+                  }}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (
@@ -75,11 +80,14 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               Insight
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {isTyping && showInsight ? (
+              {isTyping && showInsight && !insightComplete ? (
                 <TypewriterText 
                   text={insight} 
-                  speed={25}
-                  onComplete={() => setShowRecommendation(true)}
+                  speed={10}
+                  onComplete={() => {
+                    setInsightComplete(true);
+                    setShowRecommendation(true);
+                  }}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (
@@ -99,7 +107,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               {isTyping && showRecommendation ? (
                 <TypewriterText 
                   text={recommendation} 
-                  speed={25}
+                  speed={10}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (
