@@ -38,7 +38,6 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
-  const [isAddingCompetitor, setIsAddingCompetitor] = useState<boolean>(false);
 
   interface DashboardData {
     client: {
@@ -1183,20 +1182,11 @@ export default function Dashboard() {
               {competitors.length < 3 && (
                 <Button
                   onClick={() => setShowCompetitorModal(true)}
-                  disabled={isAddingCompetitor}
-                  className={`add-competitor-button pdf-hide w-full h-10 transition-all duration-200 ${
+                  className={`add-competitor-button pdf-hide w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
                     competitors.length > 0 ? 'mt-2' : 'mt-3'
-                  } ${
-                    isAddingCompetitor 
-                      ? 'cursor-not-allowed opacity-75' 
-                      : 'hover:shadow-[0_0_15px_rgba(156,163,175,0.25)]'
                   }`}
                 >
-                  {isAddingCompetitor ? (
-                    <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
+                  <Plus className="h-4 w-4 mr-2" />
                   Manage Competitors
                 </Button>
               )}
@@ -1480,7 +1470,6 @@ export default function Dashboard() {
           onClose={() => setShowCompetitorModal(false)}
           competitors={competitors}
           clientId={user?.clientId || ""}
-          onAddingStatusChange={setIsAddingCompetitor}
         />
       </div>
       

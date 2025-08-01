@@ -13,10 +13,9 @@ interface CompetitorModalProps {
   onClose: () => void;
   competitors: any[];
   clientId: string;
-  onAddingStatusChange?: (isAdding: boolean) => void;
 }
 
-export default function CompetitorModal({ isOpen, onClose, competitors, clientId, onAddingStatusChange }: CompetitorModalProps) {
+export default function CompetitorModal({ isOpen, onClose, competitors, clientId }: CompetitorModalProps) {
   const [domain, setDomain] = useState("");
   const [label, setLabel] = useState("");
   const { toast } = useToast();
@@ -24,7 +23,6 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
 
   const addCompetitorMutation = useMutation({
     mutationFn: async (data: { domain: string; label: string; clientId: string }) => {
-      onAddingStatusChange?.(true); // Start loading
       const res = await apiRequest("POST", "/api/competitors", data);
       return res.json();
     },
@@ -35,14 +33,12 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
       setDomain("");
       setLabel("");
-      onAddingStatusChange?.(false); // Stop loading
       toast({
         title: "Competitor added",
         description: "The competitor has been successfully added with complete historical data.",
       });
     },
     onError: (error: Error) => {
-      onAddingStatusChange?.(false); // Stop loading on error
       toast({
         title: "Failed to add competitor",
         description: error.message,
@@ -133,8 +129,13 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
                 <Button
                   onClick={handleAddCompetitor}
                   disabled={addCompetitorMutation.isPending}
+                  className={addCompetitorMutation.isPending ? 'cursor-not-allowed' : ''}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  {addCompetitorMutation.isPending ? (
+                    <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
                   Add
                 </Button>
               </div>
