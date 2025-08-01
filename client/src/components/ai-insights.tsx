@@ -85,13 +85,28 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
     hour12: true
   });
 
-  const handleCopy = async (text: string, label: string) => {
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedText(text);
+      // Combine all content into a single formatted string
+      let fullContent = '';
+      
+      if (context) {
+        fullContent += `CONTEXT:\n${context}\n\n`;
+      }
+      
+      if (insight) {
+        fullContent += `INSIGHT:\n${insight}\n\n`;
+      }
+      
+      if (recommendation) {
+        fullContent += `RECOMMENDATION:\n${recommendation}`;
+      }
+      
+      await navigator.clipboard.writeText(fullContent);
+      setCopiedText(fullContent);
       toast({
         title: "Copied to clipboard",
-        description: `${label} copied successfully`,
+        description: "AI analysis copied successfully",
       });
       setTimeout(() => setCopiedText(null), 2000);
     } catch (error) {
@@ -200,10 +215,10 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCopy(recommendation, "Recommendation")}
+                  onClick={handleCopy}
                   className="text-slate-500 hover:text-slate-700 h-7 px-2"
                 >
-                  {copiedText === recommendation ? (
+                  {copiedText ? (
                     <Check className="h-3 w-3" />
                   ) : (
                     <Copy className="h-3 w-3" />
