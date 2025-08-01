@@ -86,14 +86,18 @@ export default function LollipopChart({
 
   const devices = ['Desktop', 'Mobile', 'Tablet'] as const;
 
-  // Calculate dynamic width based on longest entity name, with more space
+  // Debug: Log competitor count
+  console.log('LollipopChart competitors:', competitors.length, competitors.map(c => c.label));
+  console.log('Chart entities count:', chartEntities.length, chartEntities.map(e => e.label));
+
+  // Calculate dynamic width based on longest entity name, tightened spacing
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
-  const labelWidth = Math.max(160, Math.min(280, maxLabelLength * 10)); // More generous spacing
+  const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 8)); // Tighter spacing
 
   return (
     <div className="w-full h-full flex flex-col">
       {/* Main chart area with legend on right */}
-      <div className="flex-1 px-2 py-2 flex">
+      <div className="flex-1 px-2 py-1 flex" style={{ minHeight: `${chartEntities.length * 48 + 60}px` }}>
         {/* Chart section */}
         <div className="flex-1 relative h-full mr-4">
           {/* Combined layout - labels and chart rows in sync */}
@@ -180,7 +184,7 @@ export default function LollipopChart({
               </div>
 
               {/* X-axis labels */}
-              <div className="absolute -bottom-2 left-0 right-0 flex justify-between text-xs text-gray-500">
+              <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 pt-2">
                 <span>0%</span>
                 <span>20%</span>
                 <span>40%</span>
@@ -192,15 +196,15 @@ export default function LollipopChart({
           </div>
         </div>
 
-        {/* Legend on the right */}
-        <div className="flex flex-col justify-center gap-3 pl-4 border-l border-gray-200 min-w-20">
-          {devices.map(device => (
-            <div key={device} className="flex items-center gap-2">
+        {/* Legend on the right - compact */}
+        <div className="flex flex-col justify-center space-y-1.5 ml-3 w-20">
+          {devices.map((device) => (
+            <div key={device} className="flex items-center space-x-1.5">
               <div 
-                className="w-2.5 h-2.5 rounded-full"
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: DEVICE_COLORS[device] }}
               />
-              <span className="text-xs text-gray-600 font-medium whitespace-nowrap">{device}</span>
+              <span className="text-xs text-gray-600 truncate">{device}</span>
             </div>
           ))}
         </div>
