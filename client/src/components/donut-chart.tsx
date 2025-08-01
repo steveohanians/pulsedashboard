@@ -126,7 +126,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       </div>
       
       {/* Centered legend - always visible */}
-      <div className="flex flex-wrap justify-center gap-x-1 gap-y-0 sm:gap-x-2 md:gap-x-3 border-t border-gray-200 flex-shrink-0">
+      <div className="flex flex-wrap justify-center gap-x-1 gap-y-0 sm:gap-x-2 md:gap-x-3 pt-2 border-t border-gray-200 flex-shrink-0">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
           <div key={device} className="flex items-center gap-0.5 sm:gap-1">
             <div 
