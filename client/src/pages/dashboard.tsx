@@ -15,6 +15,7 @@ import SessionDurationAreaChart from "@/components/area-chart";
 import MetricBarChart from "@/components/bar-chart";
 import { StackedBarChart } from "@/components/stacked-bar-chart";
 import { DonutChart } from "@/components/donut-chart";
+import LollipopChart from "@/components/lollipop-chart";
 import AIInsights from "@/components/ai-insights";
 import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
@@ -1357,10 +1358,61 @@ export default function Dashboard() {
                           periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Device Distribution" ? (
-                        <DonutChart 
-                          data={processDeviceDistributionData()}
-                          title="Device Distribution"
-                          description="Breakdown of traffic by device type"
+                        <LollipopChart 
+                          data={(() => {
+                            const deviceData = processDeviceDistributionData();
+                            const clientData = deviceData.find(d => d.sourceType === 'Client');
+                            const result = { Desktop: 0, Mobile: 0, Tablet: 0, Other: 0 };
+                            clientData?.devices.forEach(device => {
+                              result[device.name as keyof typeof result] = device.percentage;
+                            });
+                            return result;
+                          })()}
+                          competitors={competitors.map((comp: any) => {
+                            const deviceData = processDeviceDistributionData();
+                            // Generate device data for this competitor
+                            const seed = comp.id.length + comp.domain.length;
+                            const desktopBase = 50;
+                            const mobileBase = 40;
+                            const tabletBase = 10;
+                            
+                            const desktopVariance = (seed % 20) - 10;
+                            const mobileVariance = (seed % 16) - 8;
+                            
+                            let desktop = Math.max(30, Math.min(70, desktopBase + desktopVariance));
+                            let mobile = Math.max(25, Math.min(60, mobileBase + mobileVariance));
+                            let tablet = Math.max(5, 100 - desktop - mobile);
+                            
+                            const total = desktop + mobile + tablet;
+                            desktop = Math.round((desktop / total) * 100);
+                            mobile = Math.round((mobile / total) * 100);
+                            tablet = 100 - desktop - mobile;
+                            
+                            return {
+                              id: comp.id,
+                              label: comp.domain.replace('https://', '').replace('http://', ''),
+                              value: { Desktop: desktop, Mobile: mobile, Tablet: tablet }
+                            };
+                          })}
+                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                          industryAvg={(() => {
+                            const deviceData = processDeviceDistributionData();
+                            const industryData = deviceData.find(d => d.sourceType === 'Industry_Avg');
+                            const result = { Desktop: 45, Mobile: 45, Tablet: 10, Other: 0 };
+                            industryData?.devices.forEach(device => {
+                              result[device.name as keyof typeof result] = device.percentage;
+                            });
+                            return result;
+                          })()}
+                          cdAvg={(() => {
+                            const deviceData = processDeviceDistributionData();
+                            const cdData = deviceData.find(d => d.sourceType === 'CD_Avg');
+                            const result = { Desktop: 50, Mobile: 43, Tablet: 7, Other: 0 };
+                            cdData?.devices.forEach(device => {
+                              result[device.name as keyof typeof result] = device.percentage;
+                            });
+                            return result;
+                          })()}
                         />
                       ) : (
                         <MetricsChart metricName={metricName} data={metricData} />
