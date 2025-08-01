@@ -126,8 +126,19 @@ export default function Dashboard() {
       setMetricStatuses({});
       // Clear localStorage insights to prevent loading from cache
       try {
-        localStorage.removeItem('aiInsights');
-        console.log("🧹 Cleared localStorage insights cache");
+        localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
+        console.log("🧹 Cleared localStorage insights cache (pulse_dashboard_insights)");
+        
+        // Also clear any other potential insight-related keys
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('insight') || key.includes('ai'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log(`🧹 Cleared ${keysToRemove.length} additional insight-related keys`);
       } catch (error) {
         console.warn("Failed to clear localStorage:", error);
       }
