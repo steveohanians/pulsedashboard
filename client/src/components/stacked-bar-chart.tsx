@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface StackedBarData {
   sourceType: string;
@@ -44,94 +43,47 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     );
   }
 
-  // Transform data for Recharts horizontal stacked bars
-  const chartData = data.map(item => {
-    const rowData: any = { 
-      name: item.label,
-      // Add a total for reference
-      total: item.channels.reduce((sum, channel) => sum + channel.value, 0)
-    };
-    
-    // Add each channel as a property
-    item.channels.forEach(channel => {
-      rowData[channel.name] = channel.value;
-    });
-    
-    return rowData;
-  });
-
-  // Get all unique channel names in consistent order
-  const allChannels = Object.keys(CHANNEL_COLORS).filter(channel => 
-    data.some(item => item.channels.some(ch => ch.name === channel))
-  );
-
-
-
-  // Custom tooltip component
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length > 0) {
-      return (
-        <div className="bg-white border border-gray-200 rounded-md shadow-lg p-3 text-xs max-w-xs">
-          <p className="font-semibold mb-2 text-gray-800">{label}</p>
-          {payload
-            .filter((entry: any) => entry.value > 0)
-            .sort((a: any, b: any) => b.value - a.value)
-            .map((entry: any, index: number) => (
-              <div key={index} className="flex items-center justify-between gap-3 mb-1">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: entry.color }}
-                  />
-                  <span className="text-gray-700">{entry.dataKey}</span>
-                </div>
-                <span className="font-medium text-gray-800">{entry.value.toFixed(1)}%</span>
-              </div>
-            ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  // Calculate the maximum label width needed
+  const maxLabelLength = Math.max(...data.map(item => item.label.length));
+  const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
   return (
-    <div className="w-full h-full space-y-4">
-      {/* Recharts horizontal stacked bar chart */}
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            layout="horizontal" 
-            margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
-            barCategoryGap="20%"
-          >
-            <XAxis 
-              type="number" 
-              domain={[0, 100]} 
-              hide 
-            />
-            <YAxis 
-              dataKey="name" 
-              type="category" 
-              width={110}
-              tick={{ fontSize: 12, fill: '#374151' }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {allChannels.map(channelName => (
-              <Bar
-                key={channelName}
-                dataKey={channelName}
-                stackId="a"
-                fill={CHANNEL_COLORS[channelName as keyof typeof CHANNEL_COLORS] || '#6b7280'}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+    <div className="w-full h-full space-y-3 sm:space-y-4">
+      <div className="space-y-2 sm:space-y-3">
+        {data.map((item, index) => (
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
+              <span className="text-sm font-medium text-gray-700 block truncate">
+                {item.label}
+              </span>
+            </div>
+            
+            <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0">
+              {item.channels.map((channel, channelIndex) => {
+                const isFirst = channelIndex === 0;
+                const isLast = channelIndex === item.channels.length - 1;
+                
+                return (
+                  <div
+                    key={channelIndex}
+                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer ${
+                      isFirst ? 'rounded-l-md' : ''
+                    } ${isLast ? 'rounded-r-md' : ''}`}
+                    style={{
+                      width: `${channel.percentage}%`,
+                      backgroundColor: channel.color
+                    }}
+                    title={`${channel.name}: ${channel.value}%`}
+                  >
+                    {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Legend */}
       <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-2">
