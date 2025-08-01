@@ -49,23 +49,15 @@ function generateTimePeriods(): string[] {
   const now = new Date();
   const periods: string[] = [];
   
-  // Current month and previous months for realistic data spread
-  for (let i = 0; i < 3; i++) { // Last 3 months including current
+  // Generate 15 months of historical data (current month + 14 previous months)
+  // This ensures year-over-year comparisons always have data
+  for (let i = 0; i < 15; i++) {
     const date = new Date(now);
     date.setMonth(date.getMonth() - i);
     periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
   }
   
-  // Add some older periods for year-over-year comparison
-  const prevYear = new Date(now);
-  prevYear.setFullYear(prevYear.getFullYear() - 1);
-  periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
-  
-  const prevQuarter = new Date(now);
-  prevQuarter.setMonth(prevQuarter.getMonth() - 6);
-  periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
-  
-  return Array.from(new Set(periods)); // Remove duplicates
+  return Array.from(new Set(periods)); // Remove duplicates and return
 }
 
 const TIME_PERIODS = generateTimePeriods();
