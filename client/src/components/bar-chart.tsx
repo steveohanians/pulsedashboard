@@ -51,7 +51,7 @@ function processTimeSeriesForBar(
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const shortYear = year.slice(-2);
     const label = `${monthNames[parseInt(month) - 1]} ${shortYear}`;
-    console.log(`Converting period ${period} to label ${label}`);
+    // Debug: Converting period ${period} to label ${label}
     return label;
   };
   
@@ -68,12 +68,7 @@ function processTimeSeriesForBar(
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
     
-    console.log(`Period ${period}, Metric ${metricName}:`, {
-      clientValue: clientMetric?.value,
-      industryValue: industryMetric?.value,
-      cdValue: cdMetric?.value,
-      totalDataPoints: periodData.length
-    });
+    // Debug: Period ${period}, Metric ${metricName} - Client: ${clientMetric?.value}, Industry: ${industryMetric?.value}, CD: ${cdMetric?.value}
     
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
@@ -233,12 +228,12 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Use real time-series data if available, otherwise generate fallback data
   const data = useMemo(() => {
     if (timeSeriesData && periods && periods.length > 1) {
-      console.log('Using processTimeSeriesForBar with periods:', periods);
+      // Debug: Using processTimeSeriesForBar with periods: ${periods.join(', ')}
     const result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
-    console.log('processTimeSeriesForBar result:', result);
+    // Debug: processTimeSeriesForBar completed with ${result.length} data points
     return result;
     }
-    console.log('Using generateBarData fallback with timePeriod:', timePeriod);
+    // Debug: Using generateBarData fallback with timePeriod: ${timePeriod}
     return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 

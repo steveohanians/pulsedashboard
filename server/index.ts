@@ -79,7 +79,7 @@ app.use((req, res, next) => {
   // Validate configuration
   const configValidation = validateConfig();
   if (!configValidation.valid) {
-    console.error("Configuration errors:", configValidation.errors);
+    logger.error("Configuration validation failed", { errors: configValidation.errors });
     process.exit(1);
   }
   

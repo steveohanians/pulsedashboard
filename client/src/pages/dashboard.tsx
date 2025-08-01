@@ -179,7 +179,7 @@ export default function Dashboard() {
             }
           } catch (e) {
             // Fallback for invalid JSON
-            console.warn('Invalid traffic channel data:', metric.value);
+            // Warning: Invalid traffic channel data: ${metric.value}
           }
         }
       });
@@ -613,7 +613,7 @@ export default function Dashboard() {
       pdf.save(fileName);
       
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      // Error generating PDF: ${error}
       // Clean up in case of error
       const headerToRemove = document.getElementById('temp-pdf-header');
       if (headerToRemove) {
@@ -1139,7 +1139,7 @@ export default function Dashboard() {
                               dashboardQuery.refetch();
                             }
                           } catch (error) {
-                            console.error('Error deleting competitor:', error);
+                            // Error deleting competitor: ${error}
                           }
                         }}
                         className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
                   dashboardQuery.refetch();
                 }
               } catch (error) {
-                console.error('Error generating insights:', error);
+                // Error generating insights: ${error}
               }
             }}
             className="w-full h-14 text-base font-semibold hover:shadow-[0_0_20px_rgba(156,163,175,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"

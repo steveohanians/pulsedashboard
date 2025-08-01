@@ -374,7 +374,7 @@ export function registerRoutes(app: Express): Server {
         count: insights.length
       });
     } catch (error) {
-      console.error("Error generating AI insights:", error);
+      logger.error("Error generating AI insights", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate AI insights" });
     }
   });
@@ -392,7 +392,7 @@ export function registerRoutes(app: Express): Server {
       const competitor = await storage.createCompetitor(validatedData);
       
       // Generate sample data for the new competitor across all time periods (dynamic)
-      function generateCompetitorTimePeriods(): string[] {
+      const generateCompetitorTimePeriods = (): string[] => {
         const now = new Date();
         const periods: string[] = [];
         
@@ -411,7 +411,7 @@ export function registerRoutes(app: Express): Server {
         periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
         
         return Array.from(new Set(periods));
-      }
+      };
       
       const timePeriods = generateCompetitorTimePeriods();
       const metricNames = [
@@ -489,7 +489,7 @@ export function registerRoutes(app: Express): Server {
       
       res.status(201).json(competitor);
     } catch (error) {
-      console.error("Error creating competitor:", error);
+      logger.error("Error creating competitor", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Invalid data" });
     }
   });
@@ -497,14 +497,14 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      console.log('Attempting to delete competitor with ID:', id);
+      logger.info("Attempting to delete competitor", { competitorId: id });
       
       const deleted = await storage.deleteCompetitor(id);
-      console.log('Delete result:', deleted);
+      logger.info("Competitor deletion completed", { competitorId: id });
       
       res.sendStatus(204);
     } catch (error) {
-      console.error('Error deleting competitor:', error);
+      logger.error("Error deleting competitor", { error: (error as Error).message, stack: (error as Error).stack, competitorId: req.params.id });
       res.status(500).json({ message: "Internal server error", error: (error as Error).message });
     }
   });
@@ -516,7 +516,7 @@ export function registerRoutes(app: Express): Server {
       const result = await generateBounceRateData();
       res.json(result);
     } catch (error) {
-      console.error("Error generating bounce rate data:", error);
+      logger.error("Error generating bounce rate data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate bounce rate data" });
     }
   });
@@ -528,7 +528,7 @@ export function registerRoutes(app: Express): Server {
       const result = await generateSessionDurationData();
       res.json(result);
     } catch (error) {
-      console.error("Error generating session duration data:", error);
+      logger.error("Error generating session duration data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate session duration data" });
     }
   });
@@ -540,7 +540,7 @@ export function registerRoutes(app: Express): Server {
       const result = await generatePagesPerSessionData();
       res.json(result);
     } catch (error) {
-      console.error("Error generating pages per session data:", error);
+      logger.error("Error generating pages per session data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate pages per session data" });
     }
   });
@@ -552,7 +552,7 @@ export function registerRoutes(app: Express): Server {
       const result = await generateSessionsPerUserData();
       res.json(result);
     } catch (error) {
-      console.error("Error generating sessions per user data:", error);
+      logger.error("Error generating sessions per user data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate sessions per user data" });
     }
   });
@@ -645,7 +645,7 @@ export function registerRoutes(app: Express): Server {
         // Always regenerate data for competitors (remove the check)
         {
           // Generate sample data for this competitor (dynamic periods)
-          function generateExistingCompetitorPeriods(): string[] {
+          const generateExistingCompetitorPeriods = (): string[] => {
             const now = new Date();
             const periods: string[] = [];
             
@@ -664,7 +664,7 @@ export function registerRoutes(app: Express): Server {
             periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
             
             return Array.from(new Set(periods));
-          }
+          };
           
           const timePeriods = generateExistingCompetitorPeriods();
           const metricNames = [
@@ -734,7 +734,7 @@ export function registerRoutes(app: Express): Server {
       
       res.json({ message: `Generated sample data for ${dataGenerated} competitors` });
     } catch (error) {
-      console.error("Error generating competitor data:", error);
+      logger.error("Error generating competitor data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1100,7 +1100,7 @@ export function registerRoutes(app: Express): Server {
       const company = await storage.createBenchmarkCompany(validatedData);
       res.status(201).json(company);
     } catch (error) {
-      console.error("Error creating benchmark company:", error);
+      logger.error("Error creating benchmark company", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Invalid data" });
     }
   });
@@ -1352,7 +1352,7 @@ export function registerRoutes(app: Express): Server {
 
       res.json(insights);
     } catch (error) {
-      console.error("Error generating insights:", error);
+      logger.error("Error generating insights", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Internal server error" });
     }
   });
