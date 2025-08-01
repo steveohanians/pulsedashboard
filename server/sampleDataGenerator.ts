@@ -293,10 +293,11 @@ async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
         ? Math.round(avgValue * 10) / 10 
         : Math.round(avgValue);
       
+      const { getDefaultClientId } = await import('./config');
       await storage.createMetric({
         clientId: getDefaultClientId(), // Configurable demo client ID
         metricName: config.name,
-        value: finalValue,
+        value: typeof finalValue === 'string' ? finalValue : finalValue.toString(),
         sourceType: "CD_Avg",
         timePeriod
       });
@@ -320,10 +321,11 @@ async function generateIndustryAverageMetrics() {
         ? Math.round(value * 10) / 10 
         : Math.round(value);
       
+      const { getDefaultClientId } = await import('./config');
       await storage.createMetric({
         clientId: getDefaultClientId(),
         metricName: config.name,
-        value: finalValue,
+        value: typeof finalValue === 'string' ? finalValue : finalValue.toString(),
         sourceType: "Industry_Avg",
         timePeriod
       });
