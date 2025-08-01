@@ -92,10 +92,10 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                         padding: '8px 12px',
                         fontSize: '12px',
                         // Smart positioning: show above for top 2 rows, below for others
-                        bottom: index < 2 ? 'auto' : '100%',
-                        top: index < 2 ? '100%' : 'auto',
-                        marginTop: index < 2 ? '4px' : '0',
-                        marginBottom: index >= 2 ? '4px' : '0',
+                        bottom: index < 2 ? '100%' : 'auto',
+                        top: index >= 2 ? '100%' : 'auto',
+                        marginTop: index >= 2 ? '6px' : '0',
+                        marginBottom: index < 2 ? '6px' : '0',
                         // Smart horizontal positioning based on segment position
                         left: channelIndex <= 1 ? '0' : channelIndex >= item.channels.length - 2 ? 'auto' : '50%',
                         right: channelIndex >= item.channels.length - 2 ? '0' : 'auto',
