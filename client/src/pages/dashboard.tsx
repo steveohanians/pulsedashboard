@@ -1002,13 +1002,32 @@ export default function Dashboard() {
                 if (timePeriod === "Custom Date Range" && customDateRange) {
                   displayText = customDateRange;
                 } else if (timePeriod === "Last Month") {
-                  const lastMonth = new Date();
-                  lastMonth.setMonth(lastMonth.getMonth() - 1);
-                  displayText = lastMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                } else if (timePeriod === "Last Quarter") {
+                  // Use Pacific Time calculation: current PT month - 1
                   const now = new Date();
-                  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
-                  displayText = `Q${currentQuarter} ${now.getFullYear()}`;
+                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/Los_Angeles',
+                    year: 'numeric',
+                    month: '2-digit'
+                  });
+                  const ptParts = ptFormatter.formatToParts(now);
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+                  displayText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                } else if (timePeriod === "Last Quarter") {
+                  // Use Pacific Time calculation for consistent quarter display
+                  const now = new Date();
+                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/Los_Angeles',
+                    year: 'numeric',
+                    month: '2-digit'
+                  });
+                  const ptParts = ptFormatter.formatToParts(now);
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+                  const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
+                  displayText = `Q${currentQuarter} ${targetMonth.getFullYear()}`;
                 } else if (timePeriod === "Last Year") {
                   const endDate = new Date();
                   endDate.setMonth(endDate.getMonth() - 1); // Last month
