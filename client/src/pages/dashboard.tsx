@@ -86,8 +86,22 @@ export default function Dashboard() {
   const { data: dashboardData, isLoading } = dashboardQuery;
 
   const { data: filtersData } = useQuery<FiltersData>({
-    queryKey: ["/api/filters"],
+    queryKey: ["/api/filters", businessSize, industryVertical],
+    queryFn: () => fetch(`/api/filters?currentBusinessSize=${encodeURIComponent(businessSize)}&currentIndustryVertical=${encodeURIComponent(industryVertical)}`)
+      .then(res => res.json()),
   });
+
+  // Reset filters if current selection is no longer available
+  useEffect(() => {
+    if (filtersData) {
+      if (!filtersData.businessSizes.includes(businessSize)) {
+        setBusinessSize("All");
+      }
+      if (!filtersData.industryVerticals.includes(industryVertical)) {
+        setIndustryVertical("All");
+      }
+    }
+  }, [filtersData, businessSize, industryVertical]);
 
   const client = dashboardData?.client;
   const rawMetrics = dashboardData?.metrics || [];

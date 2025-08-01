@@ -232,19 +232,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Filters endpoint with dynamic options based on actual data
+  // Filters endpoint with dynamic interdependent options
   app.get("/api/filters", requireAuth, async (req, res) => {
     try {
-      // Get actual business sizes and industry verticals from benchmark companies
+      const { currentBusinessSize, currentIndustryVertical } = req.query;
+      
+      // Get actual companies data
       const benchmarkCompanies = await storage.getBenchmarkCompanies();
       const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
       
-      // Combine both data sources to get all available options
+      // Combine both data sources
       const allCompanies = [...benchmarkCompanies, ...cdPortfolioCompanies];
-      
-      // Extract unique business sizes and industry verticals
-      const uniqueBusinessSizes = [...new Set(allCompanies.map(c => c.businessSize).filter(Boolean))];
-      const uniqueIndustryVerticals = [...new Set(allCompanies.map(c => c.industryVertical).filter(Boolean))];
       
       // Define business size order from small to large
       const businessSizeOrder = [
@@ -255,13 +253,29 @@ export function registerRoutes(app: Express): Server {
         "Large Enterprise (5,000+ employees)"
       ];
       
-      // Sort business sizes by defined order, then add any unknown sizes alphabetically
-      const sortedBusinessSizes = businessSizeOrder.filter(size => uniqueBusinessSizes.includes(size));
-      const unknownBusinessSizes = uniqueBusinessSizes.filter(size => !businessSizeOrder.includes(size)).sort();
+      // Filter companies based on current selections
+      let filteredForVerticals = allCompanies;
+      let filteredForSizes = allCompanies;
+      
+      if (currentBusinessSize && currentBusinessSize !== "All") {
+        filteredForVerticals = allCompanies.filter(c => c.businessSize === currentBusinessSize);
+      }
+      
+      if (currentIndustryVertical && currentIndustryVertical !== "All") {
+        filteredForSizes = allCompanies.filter(c => c.industryVertical === currentIndustryVertical);
+      }
+      
+      // Extract available options based on current filters
+      const availableBusinessSizes = Array.from(new Set(filteredForSizes.map(c => c.businessSize).filter(Boolean)));
+      const availableIndustryVerticals = Array.from(new Set(filteredForVerticals.map(c => c.industryVertical).filter(Boolean)));
+      
+      // Sort business sizes by defined order
+      const sortedBusinessSizes = businessSizeOrder.filter(size => availableBusinessSizes.includes(size));
+      const unknownBusinessSizes = availableBusinessSizes.filter(size => !businessSizeOrder.includes(size)).sort();
       const businessSizes = ["All", ...sortedBusinessSizes, ...unknownBusinessSizes];
       
-      // Sort industry verticals alphabetically and add "All" option at the beginning
-      const industryVerticals = ["All", ...uniqueIndustryVerticals.sort()];
+      // Sort industry verticals alphabetically
+      const industryVerticals = ["All", ...availableIndustryVerticals.sort()];
       
       res.json({
         businessSizes,
