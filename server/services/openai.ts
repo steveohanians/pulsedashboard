@@ -465,6 +465,12 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
     const customPrompt = await storage.getMetricPrompt(metricName);
     
     if (customPrompt && customPrompt.isActive) {
+      logger.info('✅ USING CUSTOM PROMPT TEMPLATE', { 
+        metricName, 
+        promptId: customPrompt.id,
+        promptPreview: customPrompt.promptTemplate.substring(0, 150) + '...'
+      });
+      
       // Use the existing custom prompt system with the enhanced data
       const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
       
@@ -478,15 +484,22 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
         enrichedData.client?.industry || 'Technology',
         enrichedData.client?.businessSize || 'Medium Business'
       );
+    } else {
+      logger.warn('❌ NO ACTIVE CUSTOM PROMPT FOUND', { 
+        metricName, 
+        customPromptExists: !!customPrompt,
+        isActive: customPrompt?.isActive 
+      });
     }
   } catch (error) {
-    logger.warn("Failed to use custom prompt, falling back to hardcoded prompt", { 
+    logger.error("❌ FAILED TO USE CUSTOM PROMPT - FALLING BACK TO HARDCODED", { 
       metricName, 
       error: (error as Error).message 
     });
   }
   
-  // Fallback to hardcoded prompts (existing logic)
+  // ⚠️ FALLBACK: Using hardcoded prompts (should rarely execute)
+  logger.warn('⚠️ USING HARDCODED FALLBACK PROMPT', { metricName });
   const clientInfo = getMetricDisplayInfo(metricName, enrichedData.metric?.clientValue);
   const industryInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.industryAverage);
   const cdInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.cdPortfolioAverage);
