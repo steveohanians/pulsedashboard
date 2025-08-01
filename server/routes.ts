@@ -647,12 +647,12 @@ export function registerRoutes(app: Express): Server {
       });
       res.status(201).json(newCompany);
     } catch (error) {
-      if (error.name === 'ZodError') {
+      if ((error as any).name === 'ZodError') {
         logger.warn("Invalid CD portfolio company data", { 
-          error: error.errors, 
+          error: (error as any).errors, 
           admin: req.user?.id 
         });
-        return res.status(400).json({ message: "Invalid company data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid company data", errors: (error as any).errors });
       }
       
       logger.error("Failed to create CD portfolio company", { 
@@ -684,12 +684,12 @@ export function registerRoutes(app: Express): Server {
       });
       res.json(updatedCompany);
     } catch (error) {
-      if (error.name === 'ZodError') {
+      if ((error as any).name === 'ZodError') {
         logger.warn("Invalid CD portfolio company update data", { 
-          error: error.errors, 
+          error: (error as any).errors, 
           admin: req.user?.id 
         });
-        return res.status(400).json({ message: "Invalid company data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid company data", errors: (error as any).errors });
       }
       
       logger.error("Failed to update CD portfolio company", { 

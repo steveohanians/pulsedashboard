@@ -18,7 +18,6 @@ export const clients = pgTable("clients", {
   businessSize: text("business_size").notNull(),
   ga4PropertyId: text("ga4_property_id"),
   active: boolean("active").default(true).notNull(),
-  isPortfolioClient: boolean("is_portfolio_client").default(false).notNull(), // For CD benchmark calculations
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
