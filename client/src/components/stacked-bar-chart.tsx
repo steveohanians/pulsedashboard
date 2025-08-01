@@ -56,12 +56,28 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   const handleMouseEnter = (e: React.MouseEvent, channelName: string, value: number, color: string) => {
-    setTooltip({
-      visible: true,
-      content: `${channelName}: ${value}%`,
-      x: e.clientX,
-      y: e.clientY - 40
-    });
+    const updateTooltipPosition = (event: MouseEvent | React.MouseEvent) => {
+      setTooltip({
+        visible: true,
+        content: `${channelName}: ${value}%`,
+        x: event.clientX,
+        y: event.clientY - 45
+      });
+    };
+    
+    updateTooltipPosition(e);
+    
+    // Add mousemove listener to track cursor
+    const target = e.currentTarget;
+    const handleMouseMove = (event: MouseEvent) => {
+      updateTooltipPosition(event);
+    };
+    
+    target.addEventListener('mousemove', handleMouseMove);
+    target.addEventListener('mouseleave', () => {
+      target.removeEventListener('mousemove', handleMouseMove);
+      setTooltip({ visible: false, content: '', x: 0, y: 0 });
+    }, { once: true });
   };
 
   const handleMouseLeave = () => {
