@@ -232,33 +232,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Filters endpoint
+  // Filters endpoint with dynamic options based on actual data
   app.get("/api/filters", requireAuth, async (req, res) => {
     try {
-      // Return available filter options
+      // Get actual business sizes and industry verticals from benchmark companies
+      const benchmarkCompanies = await storage.getBenchmarkCompanies();
+      const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
+      
+      // Combine both data sources to get all available options
+      const allCompanies = [...benchmarkCompanies, ...cdPortfolioCompanies];
+      
+      // Extract unique business sizes and industry verticals
+      const uniqueBusinessSizes = [...new Set(allCompanies.map(c => c.businessSize).filter(Boolean))];
+      const uniqueIndustryVerticals = [...new Set(allCompanies.map(c => c.industryVertical).filter(Boolean))];
+      
+      // Sort alphabetically and add "All" option at the beginning
+      const businessSizes = ["All", ...uniqueBusinessSizes.sort()];
+      const industryVerticals = ["All", ...uniqueIndustryVerticals.sort()];
+      
       res.json({
-        businessSizes: [
-          "All",
-          "Medium Business (100–500 employees)",
-          "Large Business (500–1,000 employees)", 
-          "Enterprise (1,000–5,000 employees)",
-          "Large Enterprise (5,000+ employees)"
-        ],
-        industryVerticals: [
-          "All",
-          "Technology",
-          "Technology - Artificial Intelligence",
-          "Technology - Cloud", 
-          "Technology - Cybersecurity",
-          "Technology - SaaS",
-          "Technology - Services",
-          "Financial Services & Insurance",
-          "Healthcare",
-          "Manufacturing", 
-          "Semiconductor",
-          "Consumer Goods",
-          "Renewable Energy"
-        ],
+        businessSizes,
+        industryVerticals,
         timePeriods: [
           "Last Month",
           "Last Quarter", 
@@ -267,6 +261,7 @@ export function registerRoutes(app: Express): Server {
         ]
       });
     } catch (error) {
+      logger.error("Filters error", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Internal server error" });
     }
   });
