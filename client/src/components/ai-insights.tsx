@@ -95,6 +95,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && !contextComplete ? (
                 <TypewriterText 
+                  key={`context-${context?.slice(0, 20)}`}
                   text={context} 
                   speed={10}
                   onComplete={() => {
@@ -119,6 +120,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && showInsight && !insightComplete ? (
                 <TypewriterText 
+                  key={`insight-${insight?.slice(0, 20)}`}
                   text={insight} 
                   speed={10}
                   onComplete={() => {
@@ -143,6 +145,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
             <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && showRecommendation ? (
                 <TypewriterText 
+                  key={`recommendation-${recommendation?.slice(0, 20)}`}
                   text={recommendation} 
                   speed={10}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"

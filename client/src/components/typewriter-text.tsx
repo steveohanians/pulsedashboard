@@ -12,6 +12,10 @@ export default function TypewriterText({ text, speed = 15, onComplete, className
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
+    // Reset state when text changes
+    setDisplayedText('');
+    setIsComplete(false);
+    
     let currentIndex = 0;
     const interval = setInterval(() => {
       if (currentIndex < text.length) {
@@ -27,7 +31,7 @@ export default function TypewriterText({ text, speed = 15, onComplete, className
     }, speed);
 
     return () => clearInterval(interval);
-  }, [text, speed, onComplete]);
+  }, [text, speed]); // Removed onComplete from dependencies to prevent restart
 
   // Function to render text with bold formatting
   function renderTextWithBold(text: string) {
