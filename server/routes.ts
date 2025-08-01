@@ -594,29 +594,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Test benchmark data flow and chart compatibility
-  app.post("/api/admin/test-data-flow", requireAdmin, async (req, res) => {
+  // Test benchmark data generation for current period
+  app.post("/api/admin/generate-current-period-data", requireAdmin, async (req, res) => {
     try {
-      const { verifyBenchmarkDataFlow, testChartDataStructure } = await import("./testDataFlow");
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
       
-      // Verify benchmark data exists and is accessible
-      const dataFlowTest = await verifyBenchmarkDataFlow();
-      
-      // Test chart data structure compatibility
-      const chartTest = await testChartDataStructure();
+      // Generate benchmark data for current period to test filtering
+      const result = await generateDynamicBenchmarkData();
       
       res.json({
-        success: dataFlowTest.success && chartTest.success,
-        message: "Data flow and chart compatibility test completed",
-        dataFlow: dataFlowTest,
-        chartCompatibility: chartTest,
-        overallStatus: dataFlowTest.isReady && chartTest.success 
-          ? "All benchmark data is properly connected and chart-ready" 
-          : "Some issues found with data flow or chart compatibility"
+        success: true,
+        message: "Current period benchmark data generated successfully",
+        result
       });
     } catch (error) {
-      logger.error("Error testing data flow", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to test data flow" });
+      logger.error("Error generating current period data", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to generate current period data" });
     }
   });
 
