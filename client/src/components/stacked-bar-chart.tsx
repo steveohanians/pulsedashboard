@@ -48,7 +48,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4" style={{ overflow: 'visible', paddingTop: '60px', paddingRight: '20px', paddingLeft: '10px' }}>
+    <div className="w-full h-full space-y-3 sm:space-y-4" style={{ overflow: 'visible', paddingTop: '12px', paddingRight: '8px', paddingLeft: '4px' }}>
       <div className="space-y-2 sm:space-y-3 relative" style={{ overflow: 'visible' }}>
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
