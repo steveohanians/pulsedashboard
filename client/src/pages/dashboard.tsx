@@ -935,7 +935,7 @@ export default function Dashboard() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
-                  <SelectTrigger className="business-size-trigger">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

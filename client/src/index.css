@@ -69,15 +69,8 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Targeted fix for Business Size dropdown only */
-  .business-size-trigger {
-    padding-left: 12px !important;
-    padding-right: 36px !important;
-  }
-  
-  .business-size-trigger [data-radix-select-value] {
+  /* Fix SelectValue padding consistency */
+  [data-radix-select-value] {
     text-align: left !important;
-    padding-left: 0 !important;
-    margin-left: 0 !important;
   }
 }
