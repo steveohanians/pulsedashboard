@@ -69,13 +69,5 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Fix Radix UI SelectValue text alignment for different content lengths */
-  [data-radix-select-value] {
-    display: block !important;
-    text-align: left !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
+
 }

@@ -935,7 +935,7 @@ export default function Dashboard() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
                 <Select value={businessSize} onValueChange={setBusinessSize}>
-                  <SelectTrigger>
+                  <SelectTrigger style={{ paddingLeft: '12px', paddingRight: '40px' }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -948,7 +948,7 @@ export default function Dashboard() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
                 <Select value={industryVertical} onValueChange={setIndustryVertical}>
-                  <SelectTrigger>
+                  <SelectTrigger style={{ paddingLeft: '12px', paddingRight: '40px' }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
