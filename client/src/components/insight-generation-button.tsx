@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, Loader2, Sparkles, TrendingUp } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface InsightGenerationButtonProps {

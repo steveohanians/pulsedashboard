@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Zap } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -1225,7 +1225,7 @@ export default function Dashboard() {
             }}
             className="w-full h-14 text-base font-semibold hover:shadow-[0_0_20px_rgba(156,163,175,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90"
           >
-            <Zap className="h-5 w-5 mr-3" />
+            <Sparkles className="h-5 w-5 mr-3" />
             Generate AI Insights for All Metrics
           </Button>
         </div>
@@ -1427,7 +1427,7 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm mt-6 sm:mt-8 lg:mt-12">
                     <div className="flex items-center mb-4 sm:mb-6">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
-                        <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>

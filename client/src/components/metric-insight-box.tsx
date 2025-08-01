@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Zap, Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import AIInsights from "@/components/ai-insights";
 
@@ -84,7 +84,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
             </>
           ) : (
             <>
-              <Zap className="h-4 w-4 mr-2" />
+              <Sparkles className="h-4 w-4 mr-2" />
               Generate AI Insights
             </>
           )}

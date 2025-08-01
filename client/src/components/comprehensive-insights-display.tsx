@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Zap, TrendingUp, Target, AlertCircle, Sparkles } from 'lucide-react';
+import { Sparkles, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import InsightGenerationButton from './insight-generation-button';
 
 interface ComprehensiveInsightsDisplayProps {
@@ -83,7 +83,7 @@ export default function ComprehensiveInsightsDisplay({
       {!hasInsights ? (
         <Card className="border-dashed border-2 border-slate-300 bg-slate-50/50">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Zap className="h-12 w-12 text-slate-400 mb-4" />
+            <Sparkles className="h-12 w-12 text-slate-400 mb-4" />
             <h3 className="text-lg font-semibold text-slate-700 mb-2">
               No AI Insights Generated Yet
             </h3>
