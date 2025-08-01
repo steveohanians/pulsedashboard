@@ -472,7 +472,7 @@ export function registerRoutes(app: Express): Server {
             clientId: validatedData.clientId,
             competitorId: competitor.id,
             metricName,
-            value: sampleValue.toString(),
+            value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
             sourceType: "Competitor",
             timePeriod: period
           });
@@ -714,7 +714,7 @@ export function registerRoutes(app: Express): Server {
               await storage.createMetric({
                 competitorId: competitor.id,
                 metricName,
-                value: sampleValue,
+                value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
                 timePeriod: period,
                 sourceType: "Competitor"
               });
