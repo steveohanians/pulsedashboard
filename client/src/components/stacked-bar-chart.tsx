@@ -60,8 +60,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
       setTooltip({
         visible: true,
         content: `${channelName}: ${value}%`,
-        x: event.clientX,
-        y: event.clientY - 45
+        x: event.pageX,
+        y: event.pageY - 45
       });
     };
     
@@ -143,7 +143,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
       {/* Global tooltip positioned at document level */}
       {tooltip.visible && (
         <div
-          className="fixed z-[9999] pointer-events-none whitespace-nowrap px-3 py-2 bg-white border border-gray-200 rounded-md shadow-lg text-xs"
+          className="absolute z-[9999] pointer-events-none whitespace-nowrap px-3 py-2 bg-white border border-gray-200 rounded-md shadow-lg text-xs"
           style={{
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`,
