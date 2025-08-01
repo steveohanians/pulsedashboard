@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Loader2 } from "lucide-react";
+import { Zap, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import AIInsights from "@/components/ai-insights";
 
@@ -68,13 +68,6 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       </div>
       
       <div className="relative text-center">
-        <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/25">
-          <Lightbulb className="h-7 w-7 text-white" />
-        </div>
-        
-        <h3 className="text-base sm:text-lg font-semibold text-slate-800 mb-2">
-          Pulse™ AI Insight
-        </h3>
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
           Get strategic competitive intelligence and actionable recommendations for <span className="font-medium text-primary">{metricName}</span>
         </p>
@@ -91,7 +84,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
             </>
           ) : (
             <>
-              <Lightbulb className="h-4 w-4 mr-2" />
+              <Zap className="h-4 w-4 mr-2" />
               Generate AI Insights
             </>
           )}

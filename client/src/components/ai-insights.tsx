@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Lightbulb, TrendingUp } from "lucide-react";
+import { Info, Zap, TrendingUp } from "lucide-react";
 import TypewriterText from "./typewriter-text";
 
 // Function to render text with bold formatting
@@ -43,7 +43,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
           </div>
           <div className="relative text-center text-slate-500 py-4 sm:py-6">
             <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Lightbulb className="h-5 w-5 text-primary/70" />
+              <Zap className="h-5 w-5 text-primary/70" />
             </div>
             <p className="text-xs sm:text-sm text-slate-600">AI insights will appear here once generated</p>
           </div>
@@ -87,7 +87,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
         {insight && (showInsight || !isTyping) && (
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
-              <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
+              <Zap className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
               Insight
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
