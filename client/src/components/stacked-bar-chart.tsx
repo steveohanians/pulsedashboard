@@ -65,6 +65,10 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     data.some(item => item.channels.some(ch => ch.name === channel))
   );
 
+  // Debug: log the data to see what we're working with
+  console.log('Chart data:', chartData);
+  console.log('All channels:', allChannels);
+
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length > 0) {
@@ -102,7 +106,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             layout="horizontal"
             margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
           >
-            <XAxis type="number" domain={[0, 100]} hide />
+            <XAxis type="number" domain={[0, 'dataMax']} hide />
             <YAxis 
               dataKey="name" 
               type="category" 
@@ -117,7 +121,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                 key={channelName}
                 dataKey={channelName}
                 stackId="channels"
-                fill={CHANNEL_COLORS[channelName]}
+                fill={CHANNEL_COLORS[channelName as keyof typeof CHANNEL_COLORS] || '#6b7280'}
                 radius={channelName === allChannels[0] ? [4, 0, 0, 4] : 
                         channelName === allChannels[allChannels.length - 1] ? [0, 4, 4, 0] : 
                         [0, 0, 0, 0]}
