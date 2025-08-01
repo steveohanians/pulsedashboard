@@ -5,7 +5,8 @@ import logger from "./utils/logger";
 export async function generateSessionsPerUserData() {
   logger.info("Generating sessions per user sample data");
   
-  const clientId = "demo-client-id";
+  const { getDefaultClientId } = await import('./config');
+  const clientId = getDefaultClientId();
   // Generate dynamic time periods
   function generateTimePeriods(): string[] {
     const now = new Date();

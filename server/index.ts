@@ -74,7 +74,16 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const { APP_CONFIG, validateConfig } = await import('./config');
+  
+  // Validate configuration
+  const configValidation = validateConfig();
+  if (!configValidation.valid) {
+    console.error("Configuration errors:", configValidation.errors);
+    process.exit(1);
+  }
+  
+  const port = APP_CONFIG.DEFAULT_PORT;
   server.listen({
     port,
     host: "0.0.0.0",

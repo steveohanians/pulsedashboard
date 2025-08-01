@@ -40,7 +40,7 @@ export default function AuthPage() {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       password: formData.get("password") as string,
-      clientId: "demo-client-id", // This would be set during proper registration flow
+      clientId: import.meta.env.VITE_DEMO_CLIENT_ID || "demo-client-id", // Configurable demo client ID
       role: "User",
       status: "Active",
     });

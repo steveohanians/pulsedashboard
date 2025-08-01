@@ -978,7 +978,7 @@ export default function AdminPanel() {
                             id="client-websiteUrl"
                             name="websiteUrl" 
                             type="url"
-                            placeholder="https://example.com"
+                            placeholder="https://client-website.com"
                             required
                           />
                         </div>
@@ -1278,7 +1278,7 @@ export default function AdminPanel() {
                             id="company-websiteUrl"
                             name="websiteUrl" 
                             type="url"
-                            placeholder="https://example.com"
+                            placeholder="https://client-website.com"
                             required
                           />
                         </div>
@@ -1565,7 +1565,7 @@ export default function AdminPanel() {
                               id="cd-company-websiteUrl"
                               name="websiteUrl" 
                               type="url"
-                              placeholder="https://example.com"
+                              placeholder="https://client-website.com"
                               required
                             />
                           </div>

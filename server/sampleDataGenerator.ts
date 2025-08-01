@@ -198,7 +198,8 @@ export async function generateComprehensiveSampleData() {
   
   logger.info("Generating comprehensive sample data");
   
-  const clientId = "demo-client-id";
+  const { getDefaultClientId } = await import('./config');
+  const clientId = getDefaultClientId();
   
   try {
     // Generate standard metrics for all time periods and source types
@@ -293,7 +294,7 @@ async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
         : Math.round(avgValue);
       
       await storage.createMetric({
-        clientId: "demo-client-id", // This could be made more dynamic
+        clientId: getDefaultClientId(), // Configurable demo client ID
         metricName: config.name,
         value: finalValue,
         sourceType: "CD_Avg",
@@ -320,7 +321,7 @@ async function generateIndustryAverageMetrics() {
         : Math.round(value);
       
       await storage.createMetric({
-        clientId: "demo-client-id",
+        clientId: getDefaultClientId(),
         metricName: config.name,
         value: finalValue,
         sourceType: "Industry_Avg",
@@ -359,12 +360,14 @@ async function generateClientMetrics(clientId: string) {
 }
 
 // Generate aggregated channel and device data
-async function generateAggregatedChannelData(companies: any[], sourceType: string, timePeriod: string, seed: number, clientId = "demo-client-id") {
+async function generateAggregatedChannelData(companies: any[], sourceType: string, timePeriod: string, seed: number, clientId?: string) {
+  const { getDefaultClientId } = await import('./config');
+  const finalClientId = clientId || getDefaultClientId();
   // Generate Traffic Channels data
   const trafficChannels = generateTrafficChannels(seed + 100);
   for (const channel of trafficChannels) {
     await storage.createMetric({
-      clientId,
+      clientId: finalClientId,
       metricName: "Traffic Channels",
       value: channel.value,
       sourceType: sourceType as any,
@@ -377,7 +380,7 @@ async function generateAggregatedChannelData(companies: any[], sourceType: strin
   const deviceData = generateDeviceDistribution(seed + 200);
   for (const device of deviceData) {
     await storage.createMetric({
-      clientId,
+      clientId: finalClientId,
       metricName: "Device Distribution",
       value: device.value,
       sourceType: sourceType as any,

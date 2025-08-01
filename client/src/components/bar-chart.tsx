@@ -68,7 +68,8 @@ function processTimeSeriesForBar(
     
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
-    dataPoint['Clear Digital Clients Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
+    dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
     
     // Add competitor data
     competitors.forEach(competitor => {
@@ -86,6 +87,7 @@ function processTimeSeriesForBar(
 
 // Generate stable time series data for bar chart
 function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
+  const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const data: any[] = [];
   
   // Determine the date range based on time period
@@ -152,7 +154,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
       period,
       [clientKey]: Math.round(clientData * 10) / 10,
       'Industry Avg': Math.round(industryAvg * 10) / 10,
-      'Clear Digital Clients Avg': Math.round(cdAvg * 10) / 10,
+      [`${companyName} Clients Avg`]: Math.round(cdAvg * 10) / 10,
     };
 
     // Add competitor data with actual values
@@ -194,11 +196,12 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 
-  // Define colors for each bar series
+  // Define colors for each bar series (with dynamic company name)
+  const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const colors: Record<string, string> = {
     [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
     'Industry Avg': '#9ca3af', // Light grey
-    'Clear Digital Clients Avg': '#4b5563', // Dark grey (matching bounce rate chart)
+    [`${companyName} Clients Avg`]: '#4b5563', // Dark grey (matching bounce rate chart)
   };
 
   // Additional colors for competitors
@@ -212,7 +215,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Calculate fixed Y-axis domain based on all data (regardless of visibility)
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point[clientKey], point['Industry Avg'], point['Clear Digital Clients Avg']);
+    allValues.push(point[clientKey], point['Industry Avg'], point[`${companyName} Clients Avg`]);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
         allValues.push(point[comp.label]);
@@ -228,7 +231,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     const initial: Record<string, boolean> = {
       [clientKey]: true,
       'Industry Avg': true,
-      'Clear Digital Clients Avg': true,
+      [`${companyName} Clients Avg`]: true,
     };
     competitors.forEach(comp => {
       initial[comp.label] = true;
@@ -379,9 +382,9 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
           )}
           
           {/* Clear Digital Clients Average bars - dashed outline */}
-          {visibleBars['Clear Digital Clients Avg'] && (
+          {visibleBars[`${companyName} Clients Avg`] && (
             <Bar 
-              dataKey="Clear Digital Clients Avg" 
+              dataKey={`${companyName} Clients Avg`} 
               fill="none"
               stroke="#4b5563"
               strokeWidth={2}
@@ -461,22 +464,22 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
         <label className="flex items-center cursor-pointer text-xs">
           <input
             type="checkbox"
-            checked={visibleBars['Clear Digital Clients Avg']}
-            onChange={() => toggleBar('Clear Digital Clients Avg')}
+            checked={visibleBars[`${companyName} Clients Avg`]}
+            onChange={() => toggleBar(`${companyName} Clients Avg`)}
             className="sr-only"
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleBars['Clear Digital Clients Avg'] ? 'bg-gray-600 border-gray-600' : 'border-gray-300'
+              visibleBars[`${companyName} Clients Avg`] ? 'bg-gray-600 border-gray-600' : 'border-gray-300'
             }`}
           >
-            {visibleBars['Clear Digital Clients Avg'] && (
+            {visibleBars[`${companyName} Clients Avg`] && (
               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
           </div>
-          <span className="text-slate-700">Clear Digital Clients Avg</span>
+          <span className="text-slate-700">{companyName} Clients Avg</span>
         </label>
 
         {/* Competitor checkboxes */}

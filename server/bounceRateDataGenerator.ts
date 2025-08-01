@@ -5,7 +5,8 @@ import logger from "./utils/logger";
 export async function generateBounceRateData() {
   logger.info("Generating bounce rate sample data");
   
-  const clientId = "demo-client-id";
+  const { getDefaultClientId } = await import('./config');
+  const clientId = getDefaultClientId();
   // Generate dynamic time periods
   function generateTimePeriods(): string[] {
     const now = new Date();

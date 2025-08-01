@@ -7,7 +7,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center mb-4 sm:mb-6">
           <p className="text-xs sm:text-sm text-gray-600">
-            © {currentYear} Clear Digital, Inc. All rights reserved.
+            © {currentYear} {import.meta.env.VITE_COMPANY_LEGAL_NAME || "Clear Digital, Inc."}. All rights reserved.
           </p>
         </div>
 
@@ -17,7 +17,7 @@ export default function Footer() {
           <p className="text-xs text-gray-600 leading-relaxed">
             The metrics and rankings presented herein are compiled from multiple third-party sources. 
             These figures are provided "as-is" for general benchmarking purposes and are not guaranteed 
-            to be complete, reliable, or error‐free. Clear Digital and its data providers make no 
+            to be complete, reliable, or error‐free. {import.meta.env.VITE_COMPANY_NAME || "Clear Digital"} and its data providers make no 
             warranties—express or implied—regarding the accuracy, timeliness, or suitability of this 
             information. Users should verify critical insights against their own analytics before making decisions.
           </p>

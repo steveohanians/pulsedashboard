@@ -62,7 +62,7 @@ export const benchmarkCompanies = pgTable("benchmark_companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// CD Portfolio companies for Clear Digital benchmarking (separate from clients)
+// CD Portfolio companies for company benchmarking (separate from clients)
 export const cdPortfolioCompanies = pgTable("cd_portfolio_companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
