@@ -152,27 +152,22 @@ export default function LollipopChart({
                               position: 'relative'
                             }}
                           />
-                          {/* Lollipop dot */}
+                          {/* Lollipop dot with tooltip */}
                           <div
-                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm"
+                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm cursor-help group hover:scale-125 transition-transform duration-200"
                             style={{
                               backgroundColor: color,
                               left: `${percentage}%`,
                               top: '-3px',
                               transform: 'translateX(-50%)'
                             }}
-                          />
-                          {/* Value label */}
-                          <div
-                            className="absolute text-xs text-gray-500"
-                            style={{
-                              left: `${percentage}%`,
-                              top: '-8px',
-                              transform: 'translateX(0%)',
-                              paddingLeft: '8px'
-                            }}
                           >
-                            {percentage}%
+                            {/* Tooltip */}
+                            <div className="absolute invisible group-hover:visible bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 -top-10 left-1/2 transform -translate-x-1/2 pointer-events-none">
+                              {device}: {percentage}%
+                              {/* Tooltip arrow */}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-gray-900 border-l-transparent border-r-transparent"></div>
+                            </div>
                           </div>
                         </div>
                       );
