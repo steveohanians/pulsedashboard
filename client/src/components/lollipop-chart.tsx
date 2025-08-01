@@ -41,6 +41,14 @@ export default function LollipopChart({
   industryAvg, 
   cdAvg 
 }: LollipopChartProps) {
+  // Extract client name from URL or use fallback
+  const getClientName = (url?: string) => {
+    if (!url) return 'Demo Company';
+    // Remove protocol and www, take first part before .com
+    const cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    const parts = cleanUrl.split('.');
+    return parts[0] || 'Demo Company';
+  };
   // Convert percentages to proportions (0-1 scale)
   const normalizeData = (deviceData: any) => ({
     Desktop: (deviceData.Desktop || 0) / 100,
@@ -52,7 +60,7 @@ export default function LollipopChart({
   // Prepare chart data
   const chartEntities = [
     {
-      label: clientUrl || 'Demo Company',
+      label: getClientName(clientUrl),
       data: normalizeData(data),
       type: 'client'
     },
@@ -75,9 +83,9 @@ export default function LollipopChart({
 
   const devices = ['Desktop', 'Mobile', 'Tablet'] as const;
 
-  // Calculate dynamic width based on longest entity name
+  // Calculate dynamic width based on longest entity name, with more space
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
-  const labelWidth = Math.max(140, Math.min(240, maxLabelLength * 8)); // Increased multiplier and min width
+  const labelWidth = Math.max(160, Math.min(280, maxLabelLength * 10)); // More generous spacing
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -95,7 +103,7 @@ export default function LollipopChart({
                   className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end border-b border-gray-200 last:border-b-0"
                   style={{ height: '48px' }}
                 >
-                  <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
+                  <span className={entity.type === 'client' ? 'font-semibold text-pink-600' : 'font-medium'}>
                     {entity.label}
                   </span>
                 </div>
