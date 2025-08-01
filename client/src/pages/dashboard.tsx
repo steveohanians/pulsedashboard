@@ -103,9 +103,22 @@ export default function Dashboard() {
 
   // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       console.log("🧹 Starting to clear all AI insights...");
-      return apiRequest("/api/debug/clear-all-insights", { method: "DELETE" });
+      const response = await fetch("/api/debug/clear-all-insights", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Important: include session cookies for authentication
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       console.log("🧹 Successfully cleared AI insights:", data);
