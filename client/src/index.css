@@ -69,19 +69,9 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Ensure consistent arrow size for all select triggers */
-  [data-radix-select-trigger] svg,
-  [data-radix-select-trigger] [data-radix-select-icon],
-  button[data-radix-select-trigger] svg {
-    width: 16px !important;
-    height: 16px !important;
-    opacity: 0.7 !important;
-    flex-shrink: 0 !important;
-  }
-  
-  /* Force consistent chevron styling */
-  .lucide-chevron-down {
-    width: 16px !important;
-    height: 16px !important;
+  /* Fix SelectValue text alignment inconsistency */
+  [data-radix-select-value] {
+    text-align: left !important;
+    justify-self: start !important;
   }
 }
