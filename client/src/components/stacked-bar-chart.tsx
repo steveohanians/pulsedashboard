@@ -31,8 +31,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const [hoveredSegment, setHoveredSegment] = useState<{
     channelName: string;
     value: number;
-    color: string;
-    position: { x: number; y: number };
+    barIndex: number;
   } | null>(null);
 
   // Check if we have any valid data
@@ -67,6 +66,14 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             </div>
             
             <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0">
+              {/* Inline tooltip for this bar */}
+              {hoveredSegment && hoveredSegment.barIndex === index && (
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap z-10">
+                  {hoveredSegment.channelName}: {Math.round(hoveredSegment.value)}%
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900" />
+                </div>
+              )}
+              
               {item.channels.map((channel, channelIndex) => {
                 const isFirst = channelIndex === 0;
                 const isLast = channelIndex === item.channels.length - 1;
@@ -81,15 +88,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       width: `${channel.percentage}%`,
                       backgroundColor: channel.color
                     }}
-                    onMouseEnter={(e) => {
+                    onMouseEnter={() => {
                       setHoveredSegment({
                         channelName: channel.name,
                         value: channel.value,
-                        color: channel.color,
-                        position: {
-                          x: e.clientX,
-                          y: e.clientY - 60
-                        }
+                        barIndex: index
                       });
                     }}
                     onMouseLeave={() => setHoveredSegment(null)}
@@ -115,39 +118,6 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      {/* Tooltip Overlay Modal */}
-      {hoveredSegment && (
-        <div 
-          className="fixed z-50 pointer-events-none"
-          style={{
-            left: hoveredSegment.position.x,
-            top: hoveredSegment.position.y,
-            transform: 'translate(-50%, 0)'
-          }}
-        >
-          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: hoveredSegment.color }}
-              />
-              <span className="font-medium">{hoveredSegment.channelName}</span>
-            </div>
-            <div className="text-gray-300 mt-1">
-              {Math.round(hoveredSegment.value)}%
-            </div>
-            {/* Arrow pointing down */}
-            <div 
-              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0"
-              style={{
-                borderLeft: '4px solid transparent',
-                borderRight: '4px solid transparent',
-                borderTop: '4px solid #1f2937'
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
