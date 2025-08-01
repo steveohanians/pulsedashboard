@@ -98,13 +98,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   // Load insight from persistent storage on mount
   useEffect(() => {
     const storedInsight = insightsStorage.load(clientId, metricName);
-    if (storedInsight) {
+    if (storedInsight && !insight) { // Only load from storage if no current insight
       // Disable typing effect for stored insights to prevent restart
       setInsight({ ...storedInsight, isTyping: false, isFromStorage: true });
       console.debug('✅ Status from storage:', storedInsight.status);
       onStatusChange?.(storedInsight.status);
     }
-  }, [clientId, metricName, onStatusChange]);
+  }, [clientId, metricName, onStatusChange]); // Removed insight from deps to prevent interference
   
   // Store insight in persistent storage when it changes (without typing state)
   useEffect(() => {
@@ -164,11 +164,10 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
-          // Small delay to ensure state is reset before generating new insight
-          setTimeout(() => {
-            console.debug('🎭 Starting regeneration after delay');
-            generateInsightMutation.mutate();
-          }, 100);
+          
+          // Force component to reset completely before regenerating
+          console.debug('🎭 Starting regeneration after delay');
+          generateInsightMutation.mutate();
         }}
         onClear={() => {
           setInsight(null);

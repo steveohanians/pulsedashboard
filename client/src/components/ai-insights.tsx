@@ -97,11 +97,21 @@ export default function AIInsights({ context, insight, recommendation, status, i
   // Reset typing states when content changes or isTyping changes
   useEffect(() => {
     console.debug('🎭 AIInsights effect triggered - isTyping:', isTyping);
-    setContextComplete(!isTyping);
-    setInsightComplete(!isTyping);
-    setShowInsight(!isTyping);
-    setShowRecommendation(!isTyping);
-    setRecommendationComplete(!isTyping);
+    if (isTyping) {
+      // For typing mode, reset all states to start typing sequence
+      setContextComplete(false);
+      setInsightComplete(false);
+      setShowInsight(false);
+      setShowRecommendation(false);
+      setRecommendationComplete(false);
+    } else {
+      // For non-typing mode (stored insights), show everything immediately
+      setContextComplete(true);
+      setInsightComplete(true);
+      setShowInsight(true);
+      setShowRecommendation(true);
+      setRecommendationComplete(true);
+    }
     setCopiedText(null);
     // Generate new key to force TypewriterText to remount
     setContentKey(Date.now());
