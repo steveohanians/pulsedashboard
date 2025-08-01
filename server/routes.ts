@@ -391,26 +391,33 @@ export function registerRoutes(app: Express): Server {
 
       const competitor = await storage.createCompetitor(validatedData);
       
-      // Generate sample data for the new competitor across all time periods (dynamic)
+      // Generate comprehensive time periods matching the dashboard's expectations (15 months)
       const generateCompetitorTimePeriods = (): string[] => {
+        // Use Pacific Time properly with Intl API (same as sampleDataGenerator)
         const now = new Date();
+        const ptFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Los_Angeles',
+          year: 'numeric',
+          month: '2-digit'
+        });
+        
+        // Get current date in Pacific Time
+        const ptParts = ptFormatter.formatToParts(now);
+        const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+        const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+        
         const periods: string[] = [];
         
-        for (let i = 0; i < 3; i++) {
-          const date = new Date(now);
-          date.setMonth(date.getMonth() - i);
+        // Generate 15 months of historical data, starting from 1 month before current PT date
+        // This matches the dashboard's time series expectations
+        const latestDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current
+        for (let i = 0; i < 15; i++) {
+          const date = new Date(latestDate);
+          date.setMonth(latestDate.getMonth() - i);
           periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
         }
         
-        const prevYear = new Date(now);
-        prevYear.setFullYear(prevYear.getFullYear() - 1);
-        periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
-        
-        const prevQuarter = new Date(now);
-        prevQuarter.setMonth(prevQuarter.getMonth() - 6);
-        periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
-        
-        return Array.from(new Set(periods));
+        return Array.from(new Set(periods)); // Remove duplicates and return
       };
       
       const timePeriods = generateCompetitorTimePeriods();
