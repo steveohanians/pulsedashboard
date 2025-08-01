@@ -68,7 +68,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
             <div className="flex-1 h-6 sm:h-7 flex rounded-md bg-gray-100 relative min-w-0">
               {/* Inline tooltip for this bar - positioned below to avoid clipping */}
               {hoveredSegment && hoveredSegment.barIndex === index && (
-                <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md whitespace-nowrap">
+                <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md whitespace-nowrap font-medium">
                   <div className="flex items-center gap-1.5">
                     <div 
                       className="w-2 h-2 rounded-sm flex-shrink-0"
