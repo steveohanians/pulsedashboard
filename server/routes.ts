@@ -237,12 +237,11 @@ export function registerRoutes(app: Express): Server {
     try {
       const { currentBusinessSize, currentIndustryVertical } = req.query;
       
-      // Get actual companies data
+      // Get benchmark companies data ONLY (not CD Portfolio companies)
       const benchmarkCompanies = await storage.getBenchmarkCompanies();
-      const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
       
-      // Combine both data sources
-      const allCompanies = [...benchmarkCompanies, ...cdPortfolioCompanies];
+      // Use only benchmark companies for industry filters
+      const allCompanies = benchmarkCompanies;
       
       // Define business size order from small to large
       const businessSizeOrder = [
@@ -297,9 +296,9 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      // Generate default period dynamically (use last complete month)
+      // Generate default period dynamically (use 1 month before current date)
       const now = new Date();
-      now.setMonth(now.getMonth() - 1); // Go back to last complete month
+      now.setMonth(now.getMonth() - 2); // Go back 2 months (1 month before current)
       const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const { period = defaultPeriod } = req.query;
       

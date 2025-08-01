@@ -49,9 +49,9 @@ function generateTimePeriods(): string[] {
   const now = new Date();
   const periods: string[] = [];
   
-  // Generate 15 months of historical data, starting from LAST complete month
-  // Skip current month since it's incomplete (today is July 31st, so latest complete month is June)
-  for (let i = 1; i <= 15; i++) {
+  // Generate 15 months of historical data, starting from 1 month before current date
+  // Today is August 1st, so latest data should be June (2 months back)
+  for (let i = 2; i <= 16; i++) {
     const date = new Date(now);
     date.setMonth(date.getMonth() - i);
     periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
