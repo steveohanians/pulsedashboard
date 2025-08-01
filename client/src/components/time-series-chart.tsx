@@ -134,18 +134,27 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
   } else if (timePeriod === "Last Quarter") {
-    // Show current quarter months (dynamic)
+    // Show current quarter months (dynamic PT)
     const now = new Date();
-    const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
     const quarterStartMonth = (currentQuarter - 1) * 3;
     
     for (let i = 0; i < 3; i++) {
       const quarterMonth = quarterStartMonth + i;
-      if (quarterMonth < now.getMonth() + 1) {
-        const monthDate = new Date(now.getFullYear(), quarterMonth, 1);
+      if (quarterMonth <= targetMonth.getMonth()) {
+        const monthDate = new Date(targetMonth.getFullYear(), quarterMonth, 1);
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        dates.push(`${monthNames[quarterMonth]} ${String(now.getFullYear()).slice(-2)}`);
+        dates.push(`${monthNames[quarterMonth]} ${String(targetMonth.getFullYear()).slice(-2)}`);
       }
     }
   } else if (timePeriod === "Last Year") {

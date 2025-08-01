@@ -50,7 +50,9 @@ function processTimeSeriesForBar(
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const shortYear = year.slice(-2);
-    return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
+    const label = `${monthNames[parseInt(month) - 1]} ${shortYear}`;
+    console.log(`Converting period ${period} to label ${label}`);
+    return label;
   };
   
   const clientKey = clientUrl || 'Client';
@@ -65,6 +67,13 @@ function processTimeSeriesForBar(
     const clientMetric = periodData.find(m => m.sourceType === 'Client' && m.metricName === metricName);
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
+    
+    console.log(`Period ${period}, Metric ${metricName}:`, {
+      clientValue: clientMetric?.value,
+      industryValue: industryMetric?.value,
+      cdValue: cdMetric?.value,
+      totalDataPoints: periodData.length
+    });
     
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
@@ -225,7 +234,9 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   const data = useMemo(() => {
     if (timeSeriesData && periods && periods.length > 1) {
       console.log('Using processTimeSeriesForBar with periods:', periods);
-      return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+    const result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+    console.log('processTimeSeriesForBar result:', result);
+    return result;
     }
     console.log('Using generateBarData fallback with timePeriod:', timePeriod);
     return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);

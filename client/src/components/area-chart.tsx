@@ -44,11 +44,19 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
   let dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    // Show last month data points (dynamic based on current date)
+    // Show last month data points (dynamic based on PT current date - 1 month)
     const now = new Date();
-    const lastMonth = new Date(now);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0); // Last day of last month
+    // Use Pacific Time calculation: current PT month - 1
+    const ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit'
+    });
+    const ptParts = ptFormatter.formatToParts(now);
+    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
