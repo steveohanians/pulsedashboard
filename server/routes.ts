@@ -617,6 +617,50 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // CD Portfolio clients management
+  app.get("/api/admin/cd-clients", adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const cdClients = await storage.getPortfolioClients();
+      logger.info("Retrieved CD portfolio clients", { count: cdClients.length, admin: req.user?.id });
+      res.json(cdClients);
+    } catch (error) {
+      logger.error("Error retrieving CD portfolio clients", { error: (error as Error).message, admin: req.user?.id });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/clients/:id/portfolio", adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isPortfolioClient } = req.body;
+      
+      if (typeof isPortfolioClient !== "boolean") {
+        return res.status(400).json({ message: "isPortfolioClient must be a boolean" });
+      }
+
+      const client = await storage.updateClientPortfolioStatus(id, isPortfolioClient);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      logger.info("Updated client portfolio status", { 
+        clientId: id, 
+        clientName: client.name,
+        isPortfolioClient, 
+        admin: req.user?.id 
+      });
+
+      res.json(client);
+    } catch (error) {
+      logger.error("Error updating client portfolio status", { 
+        error: (error as Error).message, 
+        clientId: req.params.id,
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const users = await storage.getUsers();

@@ -31,8 +31,10 @@ export interface IStorage {
   // Clients
   getClient(id: string): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
+  getPortfolioClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
+  updateClientPortfolioStatus(id: string, isPortfolioClient: boolean): Promise<Client | undefined>;
   
   // Competitors
   getCompetitorsByClient(clientId: string): Promise<Competitor[]>;
@@ -131,6 +133,24 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db
       .update(clients)
       .set(updateClient)
+      .where(eq(clients.id, id))
+      .returning();
+    return client || undefined;
+  }
+
+  async getPortfolioClients(): Promise<Client[]> {
+    return await db.select().from(clients).where(
+      and(
+        eq(clients.active, true),
+        eq(clients.isPortfolioClient, true)
+      )
+    );
+  }
+
+  async updateClientPortfolioStatus(id: string, isPortfolioClient: boolean): Promise<Client | undefined> {
+    const [client] = await db
+      .update(clients)
+      .set({ isPortfolioClient })
       .where(eq(clients.id, id))
       .returning();
     return client || undefined;

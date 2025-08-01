@@ -38,7 +38,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tab = urlParams.get('tab');
-    if (tab && ['users', 'clients', 'benchmark', 'system'].includes(tab)) {
+    if (tab && ['users', 'clients', 'benchmark', 'cd-clients', 'system'].includes(tab)) {
       // Map 'system' to 'filters' for the internal tab state
       const mappedTab = tab === 'system' ? 'filters' : tab;
       setActiveTab(mappedTab);
@@ -57,6 +57,12 @@ export default function AdminPanel() {
 
   const { data: users } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
+    enabled: user?.role === "Admin",
+  });
+
+  // Query for CD portfolio clients (clients with isPortfolioClient = true)
+  const { data: cdClients } = useQuery<any[]>({
+    queryKey: ["/api/admin/cd-clients"],
     enabled: user?.role === "Admin",
   });
 
@@ -256,6 +262,51 @@ export default function AdminPanel() {
     onError: (error: Error) => {
       toast({
         title: "Failed to invite user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // CD Clients mutations
+  const togglePortfolioClientMutation = useMutation({
+    mutationFn: async ({ id, isPortfolioClient }: { id: string; isPortfolioClient: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/clients/${id}/portfolio`, { isPortfolioClient });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-clients"] });
+      toast({
+        title: "Portfolio status updated",
+        description: "Client portfolio status has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update portfolio status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeCDClientMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/admin/clients/${id}/portfolio`, { isPortfolioClient: false });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-clients"] });
+      toast({
+        title: "Client removed from portfolio",
+        description: "Client has been removed from Clear Digital portfolio.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to remove client",
         description: error.message,
         variant: "destructive",
       });
@@ -518,7 +569,7 @@ export default function AdminPanel() {
 
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 text-xs sm:text-sm">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 mb-4 sm:mb-6 text-xs sm:text-sm">
             <TabsTrigger value="users" className="px-2 sm:px-3">
               <span className="hidden sm:inline">Users Manager</span>
               <span className="sm:hidden">Users</span>
@@ -526,6 +577,10 @@ export default function AdminPanel() {
             <TabsTrigger value="clients" className="px-2 sm:px-3">
               <span className="hidden sm:inline">Clients Manager</span>
               <span className="sm:hidden">Clients</span>
+            </TabsTrigger>
+            <TabsTrigger value="cd-clients" className="px-2 sm:px-3">
+              <span className="hidden sm:inline">CD Portfolio</span>
+              <span className="sm:hidden">CD Clients</span>
             </TabsTrigger>
             <TabsTrigger value="benchmark" className="px-2 sm:px-3">
               <span className="hidden sm:inline">Benchmark Companies</span>
@@ -1345,6 +1400,208 @@ export default function AdminPanel() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              </TabsContent>
+
+              {/* Clear Digital Portfolio Clients */}
+              <TabsContent value="cd-clients">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">Clear Digital Portfolio</h2>
+                    <p className="text-sm text-slate-600 mt-1">Manage clients included in CD benchmark calculations</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Dialog open={isDialogOpen && editingItem?.type === 'add-cd-client'} onOpenChange={(open) => {
+                      setIsDialogOpen(open);
+                      if (!open) setEditingItem(null);
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button onClick={() => {
+                          setEditingItem({ type: 'add-cd-client' });
+                          setIsDialogOpen(true);
+                        }}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add to Portfolio
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Client to CD Portfolio</DialogTitle>
+                          <DialogDescription>
+                            Select a client to include in Clear Digital portfolio benchmarks
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget as HTMLFormElement);
+                          const clientId = formData.get("clientId") as string;
+                          
+                          if (!clientId || clientId === "none") {
+                            toast({
+                              title: "Validation error",
+                              description: "Please select a client to add to portfolio.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
+                          togglePortfolioClientMutation.mutate({ id: clientId, isPortfolioClient: true });
+                          setIsDialogOpen(false);
+                          setEditingItem(null);
+                        }} className="space-y-4">
+                          <div>
+                            <Label htmlFor="portfolio-clientId">Select Client *</Label>
+                            <Select name="clientId" required>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a client" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {clients?.filter(client => !client.isPortfolioClient).map((client: any) => (
+                                  <SelectItem key={client.id} value={client.id}>
+                                    {client.name} - {client.industryVertical}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button 
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setIsDialogOpen(false);
+                                setEditingItem(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              type="submit"
+                              disabled={togglePortfolioClientMutation.isPending}
+                            >
+                              {togglePortfolioClientMutation.isPending ? "Adding..." : "Add to Portfolio"}
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Total Portfolio Clients</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-primary">{cdClients?.length || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Active Benchmarks</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-emerald-600">{cdClients?.filter(c => c.active).length || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Available to Add</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-slate-500">{clients?.filter(c => !c.isPortfolioClient).length || 0}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="rounded-md border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead><SortableHeader label="Client Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden sm:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="hidden lg:table-cell">GA4 Property</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedData(cdClients, 'cd-clients')?.map((client: any) => (
+                          <TableRow key={client.id}>
+                            <TableCell className="font-medium min-w-40">
+                              <div>
+                                <div className="font-medium">{client.name}</div>
+                                <div className="text-xs text-slate-500 sm:hidden">{client.websiteUrl}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell min-w-48">
+                              <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {client.websiteUrl}
+                              </a>
+                            </TableCell>
+                            <TableCell className="min-w-32">{client.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell min-w-36">{client.businessSize}</TableCell>
+                            <TableCell className="hidden lg:table-cell min-w-32 text-xs">
+                              {client.ga4PropertyId || "Not configured"}
+                            </TableCell>
+                            <TableCell className="min-w-20">
+                              <Badge variant={client.active ? "secondary" : "outline"} className="text-xs">
+                                {client.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="min-w-24">
+                              <div className="flex space-x-1 sm:space-x-2">
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Remove from Portfolio</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to remove "{client.name}" from the Clear Digital portfolio? This will exclude them from CD benchmark calculations.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={() => removeCDClientMutation.mutate(client.id)}
+                                        disabled={removeCDClientMutation.isPending}
+                                      >
+                                        {removeCDClientMutation.isPending ? "Removing..." : "Remove from Portfolio"}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {(!cdClients || cdClients.length === 0) && (
+                    <div className="text-center py-8 text-slate-500">
+                      <Building className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                      <h3 className="text-lg font-medium mb-2">No Portfolio Clients</h3>
+                      <p className="text-sm mb-4">Add clients to start building your portfolio benchmark.</p>
+                      <Button onClick={() => {
+                        setEditingItem({ type: 'add-cd-client' });
+                        setIsDialogOpen(true);
+                      }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Client
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
