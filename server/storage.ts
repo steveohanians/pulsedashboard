@@ -256,59 +256,60 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    // Get filtered benchmark companies
-    const filteredCompanies = await this.getFilteredBenchmarkCompanies(filters);
+    // Query benchmarks table with filters
+    const conditions = [
+      eq(benchmarks.sourceType, 'Industry_Avg'),
+      eq(benchmarks.timePeriod, period)
+    ];
     
-    if (filteredCompanies.length === 0) {
-      // Return empty array if no companies match filters
+    if (filters?.businessSize && filters.businessSize !== "All") {
+      conditions.push(eq(benchmarks.businessSize, filters.businessSize));
+    }
+    
+    if (filters?.industryVertical && filters.industryVertical !== "All") {
+      conditions.push(eq(benchmarks.industryVertical, filters.industryVertical));
+    }
+    
+    const benchmarkData = await db
+      .select()
+      .from(benchmarks)
+      .where(and(...conditions));
+    
+    if (benchmarkData.length === 0) {
       return [];
     }
     
-    // Get metrics for these companies
-    const companyIds = filteredCompanies.map(c => c.id);
-    
-    // Query metrics for these specific companies in the given period
-    const companyMetrics = await db
-      .select()
-      .from(metrics)
-      .where(
-        and(
-          eq(metrics.timePeriod, period),
-          eq(metrics.sourceType, 'Competitor'),
-          inArray(metrics.competitorId!, companyIds)
-        )
-      );
-    
-    // Calculate industry averages from actual benchmark company data
+    // Group by metric and calculate averages
     const groupedMetrics: Record<string, number[]> = {};
     
-    companyMetrics.forEach(metric => {
-      if (!groupedMetrics[metric.metricName]) {
-        groupedMetrics[metric.metricName] = [];
+    benchmarkData.forEach(benchmark => {
+      if (!groupedMetrics[benchmark.metricName]) {
+        groupedMetrics[benchmark.metricName] = [];
       }
-      groupedMetrics[metric.metricName].push(parseFloat(metric.value as string));
+      groupedMetrics[benchmark.metricName].push(parseFloat(benchmark.value as string));
     });
     
-    // Create industry average metrics from actual data
-    const industryAverages: Metric[] = [];
-    Object.entries(groupedMetrics).forEach(([metricName, values]) => {
-      if (values.length > 0) {
-        const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-        industryAverages.push({
-          id: `industry-avg-${metricName}-${period}`,
-          clientId: null,
-          competitorId: null,
-          metricName,
-          value: average.toString(),
-          sourceType: 'Industry_Avg',
-          timePeriod: period,
-          channel: null,
-          createdAt: new Date()
-        });
-      }
+    // Calculate averages and return as Metric objects
+    const averagedMetrics: Metric[] = Object.entries(groupedMetrics).map(([metricName, values]) => {
+      const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+      const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
+        ? Math.round(avgValue * 10) / 10 
+        : Math.round(avgValue);
+      
+      return {
+        id: `industry-avg-${metricName}-${period}`,
+        clientId: "", // Not applicable for industry averages
+        metricName,
+        value: finalValue.toString(),
+        sourceType: 'Industry_Avg' as any,
+        timePeriod: period,
+        channel: null,
+        competitorId: null,
+        createdAt: new Date()
+      };
     });
     
-    return industryAverages;
+    return averagedMetrics;
   }
 
   // Metrics
