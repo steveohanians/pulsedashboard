@@ -103,16 +103,25 @@ export default function Dashboard() {
 
   // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
-    mutationFn: () => apiRequest("/api/debug/clear-all-insights", { method: "DELETE" }),
-    onSuccess: () => {
+    mutationFn: () => {
+      console.log("🧹 Starting to clear all AI insights...");
+      return apiRequest("/api/debug/clear-all-insights", { method: "DELETE" });
+    },
+    onSuccess: (data) => {
+      console.log("🧹 Successfully cleared AI insights:", data);
       // Reset all metric statuses to empty
       setMetricStatuses({});
       // Invalidate and refetch dashboard data
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      console.log("🧹 All AI insights cleared for debugging");
+      console.log("🧹 State reset and cache invalidated");
     },
     onError: (error) => {
       console.error("❌ Failed to clear AI insights:", error);
+      // Log more details about the error
+      if (error instanceof Error) {
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error stack:", error.stack);
+      }
     }
   });
 
