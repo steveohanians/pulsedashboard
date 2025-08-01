@@ -333,23 +333,44 @@ export function registerRoutes(app: Express): Server {
       const client = await storage.getClient(clientId);
       const competitors = await storage.getCompetitorsByClient(clientId);
       
-      // Get current period metrics for comparison  
+      // Get metrics for the requested time period (respect user's selection)
       const periodMapping = generateDynamicPeriodMapping();
-      const currentPeriod = periodMapping["Last Month"][0];
-      const clientMetrics = await storage.getMetricsByClient(clientId, currentPeriod);
+      let targetPeriod: string;
       
-      // Build competitor data for this metric
+      // Map the frontend timePeriod to actual period
+      if (timePeriod === "Last Month") {
+        targetPeriod = periodMapping["Last Month"][0];
+      } else if (timePeriod === "Last Quarter") {
+        targetPeriod = periodMapping["Last Quarter"][0]; // Use first month of quarter
+      } else if (timePeriod === "Last Year") {
+        targetPeriod = periodMapping["Last Year"][0]; // Use first month of year
+      } else {
+        // Default fallback to last month if unrecognized
+        targetPeriod = periodMapping["Last Month"][0];
+      }
+      
+      logger.info('Using period for insights', { timePeriod, targetPeriod, periodMapping });
+      const clientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
+      
+      // Build competitor data for this metric with actual names
       const competitorData = competitors.map((comp: any) => {
         const competitorMetric = clientMetrics.find((m: any) => 
           m.competitorId === comp.id && 
           m.metricName === metricName && 
-          m.timePeriod === currentPeriod
+          m.timePeriod === targetPeriod
         );
         return {
-          name: comp.domain.replace('https://', '').replace('http://', ''),
+          name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
           value: competitorMetric ? parseFloat(competitorMetric.value as string) : null
         };
       }).filter((c: any) => c.value !== null);
+      
+      logger.info('Built competitor data for insights', { 
+        metricName, 
+        targetPeriod,
+        competitorCount: competitorData.length,
+        competitors: competitorData.map(c => ({ name: c.name, value: c.value }))
+      });
 
       // Build enriched context for OpenAI
       const enrichedData = {
@@ -369,7 +390,7 @@ export function registerRoutes(app: Express): Server {
           cdPortfolioAverage: metricData.CD_Avg,
           competitors: competitorData
         },
-        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ')}.`
+        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
       };
 
       // Import OpenAI service dynamically
