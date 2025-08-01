@@ -527,6 +527,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Clear all AI insights (debug only)
+  app.delete("/api/debug/clear-all-insights", requireAuth, async (req, res) => {
+    try {
+      await storage.clearAllAIInsights();
+      logger.info("Cleared all AI insights for debugging", { userId: req.user?.id });
+      res.json({ message: "All AI insights cleared successfully" });
+    } catch (error) {
+      logger.error("Error clearing AI insights", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to clear AI insights" });
+    }
+  });
+
   // AI Insights generation endpoint
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {

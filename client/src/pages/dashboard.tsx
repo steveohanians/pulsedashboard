@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, AlertTriangle, AlertCircle, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -28,6 +29,7 @@ import { jsPDF } from 'jspdf';
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
@@ -97,6 +99,21 @@ export default function Dashboard() {
     queryKey: ["/api/filters", businessSize, industryVertical],
     queryFn: () => fetch(`/api/filters?currentBusinessSize=${encodeURIComponent(businessSize)}&currentIndustryVertical=${encodeURIComponent(industryVertical)}`)
       .then(res => res.json()),
+  });
+
+  // Clear all AI insights mutation (debug only)
+  const clearInsightsMutation = useMutation({
+    mutationFn: () => apiRequest("/api/debug/clear-all-insights", { method: "DELETE" }),
+    onSuccess: () => {
+      // Reset all metric statuses to empty
+      setMetricStatuses({});
+      // Invalidate and refetch dashboard data
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      console.log("🧹 All AI insights cleared for debugging");
+    },
+    onError: (error) => {
+      console.error("❌ Failed to clear AI insights:", error);
+    }
   });
 
   // Reset filters if current selection is no longer available
@@ -831,6 +848,27 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">Export PDF</span>
+                </div>
+              )}
+            </Button>
+
+            {/* Debug: Clear Insights Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => clearInsightsMutation.mutate()}
+              disabled={clearInsightsMutation.isPending}
+              className="pdf-hide hover:bg-red-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-red-200 text-red-600"
+            >
+              {clearInsightsMutation.isPending ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Clearing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Clear Insights</span>
                 </div>
               )}
             </Button>
