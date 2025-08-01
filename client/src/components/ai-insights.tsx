@@ -71,6 +71,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
   const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);
   const [showRecommendation, setShowRecommendation] = useState(!isTyping);
+  const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -90,7 +91,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
       setCopiedText(text);
       toast({
         title: "Copied to clipboard",
-        description: `${label} recommendation copied successfully`,
+        description: `${label} copied successfully`,
       });
       setTimeout(() => setCopiedText(null), 2000);
     } catch (error) {
@@ -176,11 +177,12 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               Recommendation
             </h4>
             <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
-              {isTyping && showRecommendation ? (
+              {isTyping && showRecommendation && !recommendationComplete ? (
                 <TypewriterText 
                   key={`recommendation-${recommendation?.slice(0, 20)}`}
                   text={recommendation} 
                   speed={10}
+                  onComplete={() => setRecommendationComplete(true)}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (
@@ -188,10 +190,11 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               )}
             </div>
             
-            {/* Timestamp and Action Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+            {/* Timestamp and Action Buttons - Only show after recommendation is complete */}
+            {(!isTyping || recommendationComplete) && (
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
               <div className="text-xs text-slate-400">
-                Generated on {timestamp}
+                {timestamp}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -217,7 +220,8 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
                   </Button>
                 )}
               </div>
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
