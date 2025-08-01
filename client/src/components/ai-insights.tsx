@@ -7,23 +7,15 @@ function renderTextWithBold(text: string, isRecommendation = false) {
   if (!text) return text;
   
   // Handle numbered list formatting for recommendations
-  if (isRecommendation && (text.includes('1.') || text.includes('2.') || text.includes('\n'))) {
-    // Clean up the text and split by line breaks or numbered items
+  if (isRecommendation && text.includes('1.')) {
+    // Clean up the text 
     let cleanText = text.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
     
-    // Split by line breaks first, then look for numbered items
-    const lines = cleanText.split('\n').filter(line => line.trim());
-    const numberedItems = [];
-    
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (/^\d+\./.test(trimmedLine)) {
-        numberedItems.push(trimmedLine);
-      }
-    }
+    // Split by numbered items using regex that looks for "number. " pattern
+    const numberedItems = cleanText.split(/(?=\d+\.\s)/).filter(item => item.trim() && /^\d+\./.test(item.trim()));
     
     // If we found numbered items, render as a list
-    if (numberedItems.length > 0) {
+    if (numberedItems.length >= 2) {
       return (
         <ol className="space-y-3 text-xs sm:text-sm list-none">
           {numberedItems.map((item, index) => {
