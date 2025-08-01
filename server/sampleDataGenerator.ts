@@ -224,7 +224,7 @@ export async function generateComprehensiveSampleData() {
           await storage.createMetric({
             clientId,
             metricName: config.name,
-            value: finalValue,
+            value: typeof finalValue === 'string' ? finalValue : finalValue.toString(),
             sourceType: sourceType as any,
             timePeriod
           });
@@ -236,7 +236,7 @@ export async function generateComprehensiveSampleData() {
           await storage.createMetric({
             clientId,
             metricName: "Traffic Channels",
-            value: channel.value,
+            value: channel.value.toString(),
             sourceType: sourceType as any,
             timePeriod,
             channel: channel.name
@@ -249,7 +249,7 @@ export async function generateComprehensiveSampleData() {
           await storage.createMetric({
             clientId,
             metricName: "Device Distribution",
-            value: device.value,
+            value: device.value.toString(),
             sourceType: sourceType as any,
             timePeriod,
             channel: device.name
