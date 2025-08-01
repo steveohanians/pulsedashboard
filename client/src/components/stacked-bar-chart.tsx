@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useRef, useEffect } from "react";
 
 interface StackedBarData {
   sourceType: string;
@@ -27,6 +28,8 @@ const CHANNEL_COLORS = {
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
+  const [hoveredTooltip, setHoveredTooltip] = useState<{ content: string; x: number; y: number } | null>(null);
+  
   // Check if we have any valid data
   const hasData = data && data.length > 0;
   
@@ -70,50 +73,24 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                 return (
                   <div
                     key={channelIndex}
-                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group ${
+                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative ${
                       isFirst ? 'rounded-l-md' : ''
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
-                      backgroundColor: channel.color,
-                      overflow: 'visible'
+                      backgroundColor: channel.color
                     }}
-                    title={`${channel.name}: ${channel.value}%`}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoveredTooltip({
+                        content: `${channel.name}: ${channel.value}%`,
+                        x: rect.left + rect.width / 2,
+                        y: rect.top - 10
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredTooltip(null)}
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
-                    
-                    {/* Simplified tooltip that always appears above */}
-                    <div 
-                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]"
-                      style={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        padding: '8px 12px',
-                        fontSize: '12px',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: '8px',
-                        minWidth: 'max-content'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div 
-                          style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            backgroundColor: channel.color, 
-                            marginRight: '6px',
-                            borderRadius: '50%'
-                          }} 
-                        />
-                        <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
-                          {channel.name}: {channel.value}%
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 );
               })}
@@ -121,6 +98,27 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
           </div>
         ))}
       </div>
+
+      {/* Global tooltip positioned absolutely relative to viewport */}
+      {hoveredTooltip && (
+        <div
+          className="fixed z-[9999] pointer-events-none whitespace-nowrap"
+          style={{
+            left: hoveredTooltip.x,
+            top: hoveredTooltip.y,
+            transform: 'translateX(-50%)',
+            backgroundColor: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            padding: '8px 12px',
+            fontSize: '11px',
+            color: '#374151'
+          }}
+        >
+          {hoveredTooltip.content}
+        </div>
+      )}
 
       <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
         {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
