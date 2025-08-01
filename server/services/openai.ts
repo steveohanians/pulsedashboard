@@ -381,11 +381,11 @@ BENCHMARK COMPARISON:
 
 FULL CONTEXT: ${enrichedData.context}
 
-Provide a JSON response with exactly this structure. Use **bold formatting** around key numbers, percentages, and important insights for emphasis:
+Provide a JSON response with exactly this structure. Use **bold formatting** strategically for emphasis:
 {
   "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. ${metricName === 'Session Duration' ? 'Use format like **5m 12s** for time values and describe differences in seconds when meaningful (e.g., 19 seconds longer)' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. ${metricName === 'Session Duration' ? 'Use practical time targets like **6m 0s** or improvements in seconds' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
+  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** to emphasize the key insight or competitive advantage (e.g., **significantly outperforming competitors** or **lagging behind industry standards**). Include specific numbers but bold the interpretation, not just the numbers. ${metricName === 'Session Duration' ? 'Use format like 5m 12s for time values and describe differences meaningfully' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
 }
 
 IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.`;
