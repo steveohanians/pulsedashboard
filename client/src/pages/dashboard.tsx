@@ -1421,12 +1421,12 @@ export default function Dashboard() {
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
-                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance needs improvement">
+                            <div className="w-12 h-12 bg-orange-500/70 rounded-full flex items-center justify-center" title="Performance needs improvement">
                               <AlertTriangle className="h-6 w-6 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'warning' && (
-                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance requires attention">
+                            <div className="w-12 h-12 bg-red-500/70 rounded-full flex items-center justify-center" title="Performance requires attention">
                               <AlertCircle className="h-6 w-6 text-white" />
                             </div>
                           )}
