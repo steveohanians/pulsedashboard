@@ -75,13 +75,20 @@ export default function LollipopChart({
 
   const devices = ['Desktop', 'Mobile', 'Tablet'] as const;
 
+  // Calculate dynamic width based on longest entity name
+  const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
+  const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 7)); // Dynamic width with min/max bounds
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Chart area */}
-      <div className="flex-1 px-2 py-6">
+      <div className="flex-1 px-2 py-2">
         <div className="relative h-full">
           {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 w-32 flex flex-col justify-between py-4">
+          <div 
+            className="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-2"
+            style={{ width: `${labelWidth}px` }}
+          >
             {chartEntities.map((entity, index) => (
               <div key={index} className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end h-12">
                 <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
@@ -92,9 +99,9 @@ export default function LollipopChart({
           </div>
 
           {/* Chart grid and lollipops */}
-          <div className="ml-32 h-full relative">
+          <div className="h-full relative" style={{ marginLeft: `${labelWidth}px` }}>
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between py-4">
+            <div className="absolute inset-0 flex flex-col justify-between py-2">
               {chartEntities.map((_, index) => (
                 <div key={index} className="h-12 border-b border-gray-200 last:border-b-0" />
               ))}
@@ -112,7 +119,7 @@ export default function LollipopChart({
             </div>
 
             {/* Lollipop chart */}
-            <div className="absolute inset-0 py-4">
+            <div className="absolute inset-0 py-2">
               {chartEntities.map((entity, entityIndex) => (
                 <div key={entityIndex} className="relative h-12 flex items-center">
                   {devices.map((device, deviceIndex) => {
@@ -121,7 +128,7 @@ export default function LollipopChart({
                     const percentage = Math.round(value * 100);
                     
                     return (
-                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4}px` }}>
+                      <div key={device} className="absolute w-full" style={{ top: `${deviceIndex * 4 - 6}px` }}>
                         {/* Lollipop stick */}
                         <div
                           className="h-0.5"
@@ -160,7 +167,7 @@ export default function LollipopChart({
             </div>
 
             {/* X-axis labels */}
-            <div className="absolute -bottom-4 left-0 right-0 flex justify-between text-xs text-gray-500">
+            <div className="absolute -bottom-2 left-0 right-0 flex justify-between text-xs text-gray-500">
               <span>0%</span>
               <span>20%</span>
               <span>40%</span>
@@ -173,7 +180,7 @@ export default function LollipopChart({
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-4 pt-6 border-t border-gray-200">
+      <div className="flex justify-center gap-4 pt-4 border-t border-gray-200">
         {devices.map(device => (
           <div key={device} className="flex items-center gap-1.5">
             <div 
