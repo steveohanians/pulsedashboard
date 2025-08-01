@@ -61,11 +61,11 @@ async function generateInsightsWithCustomPrompt(
     processedPrompt += `
 
 IMPORTANT: Provide your response in JSON format with exactly these three fields:
-- "context": Your Context analysis section
-- "insight": Your Competitive Intelligence section  
-- "recommendation": Your Action Plan section (maintain numbered list format within the JSON string)
+- "context": Your Context analysis section (use **bold** formatting for key insights)
+- "insight": Your Competitive Intelligence section (use **bold** formatting for critical findings)
+- "recommendation": Your Action Plan section formatted as: "1. First recommendation\n2. Second recommendation\n3. Third recommendation"
 
-Format recommendations as a single string with line breaks and numbers: "1. First recommendation\\n2. Second recommendation\\n3. Third recommendation"`;
+CRITICAL: Use the exact time formats provided in the data above (e.g., "310 seconds (5m 10s)") and include **bold** formatting around key insights and recommendations.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",

@@ -7,26 +7,35 @@ function renderTextWithBold(text: string, isRecommendation = false) {
   if (!text) return text;
   
   // Handle numbered list formatting for recommendations
-  if (isRecommendation && (text.includes('1.') || text.includes('\n'))) {
-    // Clean up malformed JSON strings
+  if (isRecommendation && (text.includes('1.') || text.includes('2.') || text.includes('\n'))) {
+    // Clean up the text and split by line breaks or numbered items
     let cleanText = text.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
     
-    // Split by numbered items and format as list
-    const listItems = cleanText.split(/(?=\d+\.\s)/).filter(item => item.trim());
+    // Split by line breaks first, then look for numbered items
+    const lines = cleanText.split('\n').filter(line => line.trim());
+    const numberedItems = [];
     
-    if (listItems.length > 1) {
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (/^\d+\./.test(trimmedLine)) {
+        numberedItems.push(trimmedLine);
+      }
+    }
+    
+    // If we found numbered items, render as a list
+    if (numberedItems.length > 0) {
       return (
-        <ol className="space-y-2 text-xs sm:text-sm">
-          {listItems.map((item, index) => {
+        <ol className="space-y-3 text-xs sm:text-sm list-none">
+          {numberedItems.map((item, index) => {
             const cleanItem = item.replace(/^\d+\.\s*/, '').trim();
             const parts = cleanItem.split(/(\*\*[^*]+\*\*)/g);
             return (
               <li key={index} className="flex items-start">
-                <span className="font-medium text-primary mr-2 flex-shrink-0">{index + 1}.</span>
-                <span className="leading-relaxed">
+                <span className="font-semibold text-primary mr-3 flex-shrink-0 text-sm">{index + 1}.</span>
+                <span className="leading-relaxed flex-1">
                   {parts.map((part, partIndex) => {
                     if (part.startsWith('**') && part.endsWith('**')) {
-                      return <strong key={partIndex} className="text-slate-700">{part.slice(2, -2)}</strong>;
+                      return <strong key={partIndex} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>;
                     }
                     return part;
                   })}
