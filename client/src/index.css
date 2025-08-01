@@ -70,16 +70,14 @@
   }
 
   /* Targeted fix for Business Size dropdown only */
-  .business-size-select button[data-radix-select-trigger] {
+  .business-size-trigger {
     padding-left: 12px !important;
     padding-right: 36px !important;
   }
   
-  .business-size-select button[data-radix-select-trigger] span[data-radix-select-value] {
+  .business-size-trigger [data-radix-select-value] {
     text-align: left !important;
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
   }
 }
