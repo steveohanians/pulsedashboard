@@ -1570,6 +1570,14 @@ export default function AdminPanel() {
                             />
                           </div>
                           <div>
+                            <Label htmlFor="cd-company-description">Description</Label>
+                            <Input 
+                              id="cd-company-description"
+                              name="description" 
+                              placeholder="Optional company description"
+                            />
+                          </div>
+                          <div>
                             <Label htmlFor="cd-company-industryVertical">Industry Vertical *</Label>
                             <Select name="industryVertical" required>
                               <SelectTrigger>

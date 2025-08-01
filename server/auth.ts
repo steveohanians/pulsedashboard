@@ -113,4 +113,70 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
+
+  // Password reset routes
+  app.post("/api/forgot-password", authLimiter, async (req, res) => {
+    try {
+      const { email } = req.body;
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Don't reveal if email exists for security
+        return res.json({ message: "If that email exists, a reset link has been sent." });
+      }
+
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt,
+        used: false
+      });
+
+      logger.info("Password reset token created", { userId: user.id, email });
+      
+      // TODO: Send email with reset link containing the token
+      // For now, we'll just log it for development
+      logger.info("Password reset token (dev mode)", { token, email });
+
+      res.json({ message: "If that email exists, a reset link has been sent." });
+    } catch (error) {
+      logger.error("Password reset request error", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/reset-password", authLimiter, async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update user password
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      
+      // Mark token as used
+      await storage.usePasswordResetToken(resetToken.token);
+
+      logger.info("Password reset completed", { userId: resetToken.userId });
+
+      res.json({ message: "Password has been reset successfully" });
+    } catch (error) {
+      logger.error("Password reset error", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }

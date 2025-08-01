@@ -74,3 +74,15 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
 - **Email Service**: Template ready for SendGrid/AWS SES integration
 - **Environment Configuration**: Production-ready .env template
 - **TypeScript Compliance**: All type errors resolved
+
+### Application Cleanup (August 2025)
+- **Password Reset Flow**: Complete implementation with secure token-based reset system
+  - Backend routes for `/api/forgot-password` and `/api/reset-password`
+  - Database table `password_reset_tokens` with expiration and usage tracking
+  - Frontend pages at `/forgot-password` and `/reset-password/:token`
+  - Integrated "Forgot Password" link in main auth page
+- **Last Login Tracking**: Authentication system now updates `lastLogin` timestamp on successful login
+- **AI Insights Integration**: OpenAI service connected to `aiInsights` table with endpoint `/api/generate-insights/:clientId`
+- **Field Utilization**: Description field added to CD Portfolio forms (create and edit) with Textarea components
+- **Database Schema**: All tables properly utilized with clean separation of concerns
+- **Statistics Consistency**: Benchmark coverage correctly shows 0% when no companies exist
