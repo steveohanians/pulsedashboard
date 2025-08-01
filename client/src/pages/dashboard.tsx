@@ -1146,12 +1146,14 @@ export default function Dashboard() {
                                 credentials: 'include'
                               });
                               if (response.ok) {
-                                // Use React Query to refetch data instead of page reload
-                                dashboardQuery.refetch();
+                                // Wait for refetch to complete before clearing loading state
+                                await dashboardQuery.refetch();
+                                setDeletingCompetitorId(null);
+                              } else {
+                                setDeletingCompetitorId(null);
                               }
                             } catch (error) {
                               // Error deleting competitor: ${error}
-                            } finally {
                               setDeletingCompetitorId(null);
                             }
                           }}
