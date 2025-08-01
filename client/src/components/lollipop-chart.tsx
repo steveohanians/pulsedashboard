@@ -93,11 +93,11 @@ export default function LollipopChart({
   const labelWidth = Math.max(120, Math.min(200, maxLabelLength * 8)); // Tighter spacing
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full flex flex-col" style={{ height: `${chartEntities.length * 48 + 60}px` }}>
       {/* Main chart area with legend on right */}
-      <div className="flex-1 px-2 py-1 flex" style={{ minHeight: `${chartEntities.length * 48 + 40}px`, height: 'auto' }}>
+      <div className="flex-1 px-2 py-1 flex">
         {/* Chart section */}
-        <div className="flex-1 relative h-full mr-4">
+        <div className="flex-1 relative mr-4">
           {/* Combined layout - labels and chart rows in sync */}
           <div className="flex" style={{ height: `${chartEntities.length * 48}px` }}>
             {/* Y-axis labels column */}
@@ -195,7 +195,7 @@ export default function LollipopChart({
         </div>
 
         {/* Legend on the right - compact */}
-        <div className="flex flex-col justify-center space-y-1.5 ml-3 w-20">
+        <div className="flex flex-col justify-start space-y-2 ml-3 w-20 pt-4">
           {devices.map((device) => (
             <div key={device} className="flex items-center space-x-1.5">
               <div 

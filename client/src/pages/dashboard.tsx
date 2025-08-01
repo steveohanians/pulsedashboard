@@ -1284,7 +1284,7 @@ export default function Dashboard() {
                 <CardContent className="space-y-6 lg:space-y-8">
                   {/* Enhanced Chart Container */}
                   <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6">
-                    <div className="h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 relative overflow-hidden">
+                    <div className={`relative overflow-visible ${metricName === "Device Distribution" ? "h-80 sm:h-96" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}>
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
