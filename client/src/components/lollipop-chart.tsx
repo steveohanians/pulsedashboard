@@ -86,9 +86,7 @@ export default function LollipopChart({
 
   const devices = ['Desktop', 'Mobile', 'Tablet'] as const;
 
-  // Debug: Log competitor count
-  console.log('LollipopChart competitors:', competitors.length, competitors.map(c => c.label));
-  console.log('Chart entities count:', chartEntities.length, chartEntities.map(e => e.label));
+
 
   // Calculate dynamic width based on longest entity name, tightened spacing
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
@@ -97,13 +95,13 @@ export default function LollipopChart({
   return (
     <div className="w-full h-full flex flex-col">
       {/* Main chart area with legend on right */}
-      <div className="flex-1 px-2 py-1 flex" style={{ minHeight: `${chartEntities.length * 48 + 60}px` }}>
+      <div className="flex-1 px-2 py-1 flex" style={{ minHeight: `${chartEntities.length * 48 + 40}px`, height: 'auto' }}>
         {/* Chart section */}
         <div className="flex-1 relative h-full mr-4">
           {/* Combined layout - labels and chart rows in sync */}
-          <div className="h-full flex">
+          <div className="flex" style={{ height: `${chartEntities.length * 48}px` }}>
             {/* Y-axis labels column */}
-            <div className="flex flex-col justify-center" style={{ width: `${labelWidth}px` }}>
+            <div className="flex flex-col" style={{ width: `${labelWidth}px` }}>
               {chartEntities.map((entity, index) => (
                 <div 
                   key={index} 
@@ -131,7 +129,7 @@ export default function LollipopChart({
               </div>
 
               {/* Lollipop chart rows */}
-              <div className="h-full flex flex-col justify-center">
+              <div className="flex flex-col" style={{ height: `${chartEntities.length * 48}px` }}>
                 {chartEntities.map((entity, entityIndex) => (
                   <div 
                     key={entityIndex} 
