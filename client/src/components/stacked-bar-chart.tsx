@@ -81,15 +81,18 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   >
                   {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   
-                  {/* Custom Tooltip matching bounce rate style */}
-                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
+                  {/* Custom Tooltip with smart positioning */}
+                  <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
                     style={{
                       backgroundColor: 'white',
                       border: '1px solid #e2e8f0',
                       borderRadius: '6px',
                       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                       padding: '8px 12px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      left: channelIndex === 0 ? '0' : channelIndex === item.channels.length - 1 ? 'auto' : '50%',
+                      right: channelIndex === item.channels.length - 1 ? '0' : 'auto',
+                      transform: channelIndex === 0 ? 'none' : channelIndex === item.channels.length - 1 ? 'none' : 'translateX(-50%)'
                     }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div 
