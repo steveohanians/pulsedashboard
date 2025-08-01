@@ -56,12 +56,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   const handleMouseEnter = (e: React.MouseEvent, channelName: string, value: number, color: string) => {
-    const rect = e.currentTarget.getBoundingClientRect();
     setTooltip({
       visible: true,
       content: `${channelName}: ${value}%`,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 35
+      x: e.clientX,
+      y: e.clientY - 40
     });
   };
 
@@ -130,8 +129,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         <div
           className="fixed z-[9999] pointer-events-none whitespace-nowrap px-3 py-2 bg-white border border-gray-200 rounded-md shadow-lg text-xs"
           style={{
-            left: tooltip.x,
-            top: tooltip.y,
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
             transform: 'translateX(-50%)',
             color: '#374151'
           }}
