@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
+  const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
 
   interface DashboardData {
     client: {
@@ -1117,37 +1118,58 @@ export default function Dashboard() {
             <CardContent>
               {competitors.length > 0 ? (
                 <div className="space-y-2">
-                  {competitors.map((competitor: any) => (
-                    <div
-                      key={competitor.id}
-                      className="flex items-center justify-between h-10 px-3 bg-slate-50 rounded-lg border border-slate-200"
-                    >
-                      <span className="text-sm text-slate-900 truncate flex-1 mr-2">
-                        {competitor.domain.replace('https://', '').replace('http://', '')}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const response = await fetch(`/api/competitors/${competitor.id}`, {
-                              method: 'DELETE',
-                              credentials: 'include'
-                            });
-                            if (response.ok) {
-                              // Use React Query to refetch data instead of page reload
-                              dashboardQuery.refetch();
-                            }
-                          } catch (error) {
-                            // Error deleting competitor: ${error}
-                          }
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                  {competitors.map((competitor: any) => {
+                    const isDeleting = deletingCompetitorId === competitor.id;
+                    return (
+                      <div
+                        key={competitor.id}
+                        className={`flex items-center justify-between h-10 px-3 rounded-lg border transition-all duration-200 ${
+                          isDeleting 
+                            ? 'bg-slate-100 border-slate-300 opacity-60' 
+                            : 'bg-slate-50 border-slate-200'
+                        }`}
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+                        <span className={`text-sm truncate flex-1 mr-2 transition-colors ${
+                          isDeleting ? 'text-slate-500' : 'text-slate-900'
+                        }`}>
+                          {competitor.domain.replace('https://', '').replace('http://', '')}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isDeleting}
+                          onClick={async () => {
+                            setDeletingCompetitorId(competitor.id);
+                            try {
+                              const response = await fetch(`/api/competitors/${competitor.id}`, {
+                                method: 'DELETE',
+                                credentials: 'include'
+                              });
+                              if (response.ok) {
+                                // Use React Query to refetch data instead of page reload
+                                dashboardQuery.refetch();
+                              }
+                            } catch (error) {
+                              // Error deleting competitor: ${error}
+                            } finally {
+                              setDeletingCompetitorId(null);
+                            }
+                          }}
+                          className={`h-6 w-6 p-0 transition-all duration-200 ${
+                            isDeleting 
+                              ? 'cursor-not-allowed' 
+                              : 'hover:bg-red-100 hover:text-red-600'
+                          }`}
+                        >
+                          {isDeleting ? (
+                            <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <X className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center text-slate-500 py-4">
