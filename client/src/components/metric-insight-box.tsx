@@ -59,15 +59,8 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   }
 
   return (
-    <div className="relative p-4 sm:p-6 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent rounded-lg border border-primary/20 min-h-[140px] sm:min-h-[160px] overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-primary/20"></div>
-        <div className="absolute bottom-6 left-6 w-12 h-12 rounded-full bg-primary/15"></div>
-        <div className="absolute top-1/2 right-1/3 w-6 h-6 rounded-full bg-primary/10"></div>
-      </div>
-      
-      <div className="relative text-center">
+    <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+      <div className="text-center">
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
           Get strategic competitive intelligence and actionable recommendations for <span className="font-medium text-primary">{metricName}</span>
         </p>
