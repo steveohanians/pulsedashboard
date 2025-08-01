@@ -82,7 +82,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   
                   {/* Custom Tooltip with smart positioning */}
-                  <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
+                  <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
                     style={{
                       backgroundColor: 'white',
                       border: '1px solid #e2e8f0',
@@ -90,6 +90,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                       padding: '8px 12px',
                       fontSize: '12px',
+                      // Smart positioning based on channel position
+                      top: index < 2 ? '100%' : 'auto', // Show below for top rows
+                      bottom: index >= 2 ? '100%' : 'auto', // Show above for bottom rows
+                      marginTop: index < 2 ? '4px' : '0',
+                      marginBottom: index >= 2 ? '4px' : '0',
                       left: channelIndex === 0 ? '0' : channelIndex === item.channels.length - 1 ? 'auto' : '50%',
                       right: channelIndex === item.channels.length - 1 ? '0' : 'auto',
                       transform: channelIndex === 0 ? 'none' : channelIndex === item.channels.length - 1 ? 'none' : 'translateX(-50%)'
