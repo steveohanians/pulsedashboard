@@ -68,4 +68,11 @@
     @apply antialiased bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
   }
+
+  /* Fix dropdown text alignment - force consistent left padding */
+  [data-radix-select-trigger] > span[data-radix-select-value] {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    text-align: left !important;
+  }
 }
