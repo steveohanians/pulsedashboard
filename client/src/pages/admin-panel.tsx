@@ -1338,6 +1338,37 @@ export default function AdminPanel() {
                   </Dialog>
                   </div>
                 </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Total Benchmark Companies</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-primary">{benchmarkCompanies?.length || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Active Companies</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-emerald-600">{benchmarkCompanies?.filter(c => c.active).length || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-slate-600">Data Coverage</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-2xl font-bold ${(benchmarkCompanies?.length || 0) > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
+                        {(benchmarkCompanies?.length || 0) > 0 ? '100%' : '0%'}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
