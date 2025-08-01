@@ -514,6 +514,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Fix missing sample data
+  app.post("/api/admin/fix-sample-data", requireAdmin, async (req, res) => {
+    try {
+      const { fixMissingDeviceData, validateAllMetricsExist } = await import("./fixSampleData");
+      
+      // Fix missing Device Distribution data
+      await fixMissingDeviceData();
+      
+      // Validate all metrics exist
+      const validation = await validateAllMetricsExist();
+      
+      res.json({
+        success: true,
+        message: "Sample data fix completed",
+        validation
+      });
+    } catch (error) {
+      logger.error("Error fixing sample data", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fix sample data" });
+    }
+  });
+
   // Generate sample data for existing competitors
   app.post("/api/generate-competitor-data/:clientId", requireAuth, async (req, res) => {
     try {
