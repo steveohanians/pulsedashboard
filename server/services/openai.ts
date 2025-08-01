@@ -336,8 +336,21 @@ Keep each section concise and professional. Focus on actionable insights that a 
       throw new Error('No response from OpenAI');
     }
 
+    logger.info('Raw OpenAI response', { response: response.substring(0, 200) });
+
     // Clean the response - remove markdown code blocks if present
-    const cleanResponse = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    let cleanResponse = response.trim();
+    
+    // Remove ```json at the start and ``` at the end
+    if (cleanResponse.startsWith('```json')) {
+      cleanResponse = cleanResponse.replace(/^```json\s*/, '');
+    }
+    if (cleanResponse.endsWith('```')) {
+      cleanResponse = cleanResponse.replace(/\s*```$/, '');
+    }
+    
+    logger.info('Cleaned response', { cleanResponse: cleanResponse.substring(0, 200) });
+    
     const insights = JSON.parse(cleanResponse);
     
     return {
