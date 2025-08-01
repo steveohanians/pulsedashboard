@@ -56,7 +56,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4">
+    <div className="w-full h-full space-y-3 sm:space-y-4 relative">
       <div className="space-y-2 sm:space-y-3">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -82,14 +82,13 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       backgroundColor: channel.color
                     }}
                     onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
                       setHoveredSegment({
                         channelName: channel.name,
                         value: channel.value,
                         color: channel.color,
                         position: {
-                          x: rect.left + rect.width / 2,
-                          y: rect.top - 10
+                          x: e.clientX,
+                          y: e.clientY - 60
                         }
                       });
                     }}
@@ -123,7 +122,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
           style={{
             left: hoveredSegment.position.x,
             top: hoveredSegment.position.y,
-            transform: 'translate(-50%, -100%)'
+            transform: 'translate(-50%, 0)'
           }}
         >
           <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap">
