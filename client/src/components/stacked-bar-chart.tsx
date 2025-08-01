@@ -61,7 +61,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
       visible: true,
       content: `${channelName}: ${value}%`,
       x: rect.left + rect.width / 2,
-      y: rect.top - 10
+      y: rect.top - 35
     });
   };
 
