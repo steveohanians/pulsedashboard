@@ -88,9 +88,16 @@ export default function LollipopChart({
 
 
 
-  // Calculate dynamic width based on longest entity name with responsive sizing
+  // Calculate dynamic width based on longest entity name
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
-  const labelWidth = Math.max(80, Math.min(160, maxLabelLength * 6)); // Responsive width
+  const labelWidth = Math.max(120, maxLabelLength * 8); // Dynamic width based on content
+  
+  // Calculate maximum value for dynamic scale
+  const maxValue = Math.max(...chartEntities.flatMap(entity => 
+    devices.map(device => entity.data[device])
+  ));
+  const scaleMax = Math.ceil(maxValue * 1.1 * 10) / 10; // Add 10% padding, round to nearest 0.1
+  const showFullScale = scaleMax >= 0.95; // Show 100% if data goes above 95%
 
   return (
     <div className="w-full flex flex-col">
@@ -117,15 +124,23 @@ export default function LollipopChart({
 
             {/* Chart area */}
             <div className="flex-1 relative">
-              {/* Vertical grid lines */}
+              {/* Vertical grid lines - dynamic based on scale */}
               <div className="absolute inset-0">
-                {[0, 20, 40, 60, 80, 100].map(tick => (
-                  <div
-                    key={tick}
-                    className="absolute top-0 bottom-0 border-l border-gray-200"
-                    style={{ left: `${tick}%` }}
-                  />
-                ))}
+                {(() => {
+                  const maxScale = showFullScale ? 1 : scaleMax;
+                  const step = maxScale <= 0.6 ? 0.1 : maxScale <= 0.8 ? 0.2 : 0.2;
+                  const ticks = [];
+                  for (let i = 0; i <= maxScale; i += step) {
+                    ticks.push(i);
+                  }
+                  return ticks.map(tick => (
+                    <div
+                      key={tick}
+                      className="absolute top-0 bottom-0 border-l border-gray-200"
+                      style={{ left: `${(tick / maxScale) * 100}%` }}
+                    />
+                  ));
+                })()}
               </div>
 
               {/* Lollipop chart rows */}
@@ -143,53 +158,28 @@ export default function LollipopChart({
                       
                       return (
                         <div key={device} className="absolute w-full" style={{ top: `${24 + deviceIndex * 4 - 6}px` }}>
-                          {/* Lollipop stick */}
-                          <div
-                            className="h-0.5"
-                            style={{
+                          {/* Line from start to dot */}
+                          <div 
+                            className="absolute h-0.5 top-1/2 transform -translate-y-1/2"
+                            style={{ 
+                              left: '0%',
+                              width: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
                               backgroundColor: color,
-                              width: `${percentage}%`,
-                              position: 'relative'
+                              opacity: 0.3
                             }}
                           />
-                          {/* Lollipop dot with tooltip */}
+                          {/* Dot at the end */}
                           <div
-                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm group hover:scale-125 transition-transform duration-200"
+                            className="absolute w-3 h-3 rounded-full transform -translate-y-1/2 hover:scale-125 transition-transform duration-200"
                             style={{
+                              left: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
+                              top: '50%',
                               backgroundColor: color,
-                              left: `${percentage}%`,
-                              top: '-3px',
-                              transform: 'translateX(-50%)'
+                              marginLeft: '-6px',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                             }}
-                          >
-                            {/* Tooltip */}
-                            <div 
-                              className="absolute invisible group-hover:visible z-10 -top-12 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap"
-                              style={{
-                                backgroundColor: 'white',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
-                                padding: '8px 12px',
-                                fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <div 
-                                style={{ 
-                                  width: '8px', 
-                                  height: '8px', 
-                                  backgroundColor: color, 
-                                  marginRight: '8px',
-                                  borderRadius: '50%'
-                                }} 
-                              />
-                              <span style={{ color: '#374151', fontWeight: 'normal' }}>
-                                {device}: {percentage}%
-                              </span>
-                            </div>
-                          </div>
+
+                          />
                         </div>
                       );
                     })}
@@ -197,14 +187,25 @@ export default function LollipopChart({
                 ))}
               </div>
 
-              {/* X-axis labels */}
+              {/* X-axis labels - dynamic based on scale */}
               <div className="absolute left-0 right-0 flex justify-between text-xs text-gray-500" style={{ top: `${chartEntities.length * 48 + 8}px` }}>
-                <span>0%</span>
-                <span>20%</span>
-                <span>40%</span>
-                <span>60%</span>
-                <span>80%</span>
-                <span>100%</span>
+                {(() => {
+                  const maxScale = showFullScale ? 1 : scaleMax;
+                  const step = maxScale <= 0.6 ? 0.1 : maxScale <= 0.8 ? 0.2 : 0.2;
+                  const ticks = [];
+                  for (let i = 0; i <= maxScale; i += step) {
+                    ticks.push(i);
+                  }
+                  return ticks.map((tick, index) => (
+                    <span key={tick} style={{ 
+                      position: 'absolute',
+                      left: `${(tick / maxScale) * 100}%`,
+                      transform: 'translateX(-50%)'
+                    }}>
+                      {Math.round(tick * 100)}%
+                    </span>
+                  ));
+                })()}
               </div>
             </div>
           </div>
