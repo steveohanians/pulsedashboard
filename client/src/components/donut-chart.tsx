@@ -86,7 +86,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   return (
     <div className="w-full min-h-0 flex flex-col">
       {/* Grid layout with responsive columns */}
-      <div className="grid grid-cols-3 gap-x-2 gap-y-2 sm:gap-x-3 sm:gap-y-3 md:gap-x-4 md:gap-y-3 place-items-center flex-shrink-0">
+      <div className="grid grid-cols-3 gap-x-1 gap-y-1 sm:gap-x-2 sm:gap-y-2 md:gap-x-3 md:gap-y-2 place-items-center flex-shrink-0">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-0.5 sm:space-y-1">
             <h4 className={`text-xs text-center leading-tight ${
@@ -97,15 +97,15 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
               {item.label}
             </h4>
             
-            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 flex-shrink-0">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={item.devices}
                     cx="50%"
                     cy="50%"
-                    innerRadius={10}
-                    outerRadius={24}
+                    innerRadius={15}
+                    outerRadius={32}
                     paddingAngle={1}
                     dataKey="value"
                   >
@@ -126,7 +126,7 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       </div>
       
       {/* Centered legend - always visible */}
-      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 sm:gap-x-4 md:gap-x-6 pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-gray-200 flex-shrink-0">
+      <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 sm:gap-x-3 md:gap-x-4 pt-1 sm:pt-2 mt-1 sm:mt-2 border-t border-gray-200 flex-shrink-0">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
           <div key={device} className="flex items-center gap-1 sm:gap-1.5">
             <div 
