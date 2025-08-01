@@ -641,11 +641,11 @@ export default function AdminPanel() {
             <div className="flex overflow-x-auto pb-2 sm:pb-0">
               <TabsList className="grid grid-cols-5 min-w-max w-full text-xs sm:text-sm">
                 <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Users Manager</span>
+                  <span className="hidden sm:inline">User Management</span>
                   <span className="sm:hidden">Users</span>
                 </TabsTrigger>
                 <TabsTrigger value="clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Clients Manager</span>
+                  <span className="hidden sm:inline">Client Management</span>
                   <span className="sm:hidden">Clients</span>
                 </TabsTrigger>
                 <TabsTrigger value="cd-clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
@@ -657,16 +657,16 @@ export default function AdminPanel() {
                   <span className="sm:hidden">Benchmark</span>
                 </TabsTrigger>
                 <TabsTrigger value="filters" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Filters Editor</span>
+                  <span className="hidden sm:inline">Filter Management</span>
                   <span className="sm:hidden">Filters</span>
                 </TabsTrigger>
               </TabsList>
             </div>
           </div>
-              {/* Users Manager */}
+              {/* User Management */}
               <TabsContent value="users">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Users Management</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">User Management</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'invite-user'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
@@ -938,10 +938,10 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
 
-              {/* Clients Manager */}
+              {/* Client Management */}
               <TabsContent value="clients">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Clients Management</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Client Management</h2>
                   <Dialog open={isDialogOpen && editingItem?.type === 'add-client'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
