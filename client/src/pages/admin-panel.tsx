@@ -569,28 +569,32 @@ export default function AdminPanel() {
 
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 mb-4 sm:mb-6 text-xs sm:text-sm">
-            <TabsTrigger value="users" className="px-2 sm:px-3">
-              <span className="hidden sm:inline">Users Manager</span>
-              <span className="sm:hidden">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="clients" className="px-2 sm:px-3">
-              <span className="hidden sm:inline">Clients Manager</span>
-              <span className="sm:hidden">Clients</span>
-            </TabsTrigger>
-            <TabsTrigger value="cd-clients" className="px-2 sm:px-3">
-              <span className="hidden sm:inline">CD Portfolio</span>
-              <span className="sm:hidden">CD Clients</span>
-            </TabsTrigger>
-            <TabsTrigger value="benchmark" className="px-2 sm:px-3">
-              <span className="hidden sm:inline">Benchmark Companies</span>
-              <span className="sm:hidden">Benchmark</span>
-            </TabsTrigger>
-            <TabsTrigger value="filters" className="px-2 sm:px-3">
-              <span className="hidden sm:inline">Filters Editor</span>
-              <span className="sm:hidden">Filters</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full mb-4 sm:mb-6">
+            <div className="flex overflow-x-auto pb-2 sm:pb-0">
+              <TabsList className="grid grid-cols-5 min-w-max w-full text-xs sm:text-sm">
+                <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">Users Manager</span>
+                  <span className="sm:hidden">Users</span>
+                </TabsTrigger>
+                <TabsTrigger value="clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">Clients Manager</span>
+                  <span className="sm:hidden">Clients</span>
+                </TabsTrigger>
+                <TabsTrigger value="cd-clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">CD Portfolio</span>
+                  <span className="sm:hidden">Portfolio</span>
+                </TabsTrigger>
+                <TabsTrigger value="benchmark" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">Benchmark Companies</span>
+                  <span className="sm:hidden">Benchmark</span>
+                </TabsTrigger>
+                <TabsTrigger value="filters" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">Filters Editor</span>
+                  <span className="sm:hidden">Filters</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
               {/* Users Manager */}
               <TabsContent value="users">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
@@ -690,26 +694,29 @@ export default function AdminPanel() {
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead><SortableHeader label="Email" sortKey="email" /></TableHead>
-                          <TableHead className="hidden sm:table-cell">
+                          <TableHead className="min-w-40"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden sm:table-cell min-w-48"><SortableHeader label="Email" sortKey="email" /></TableHead>
+                          <TableHead className="hidden sm:table-cell min-w-32">
                             <SortableHeader label="Client" sortKey="clientId" />
                           </TableHead>
-                          <TableHead><SortableHeader label="Role" sortKey="role" /></TableHead>
-                          <TableHead className="hidden md:table-cell">Status</TableHead>
-                          <TableHead className="hidden lg:table-cell">
+                          <TableHead className="min-w-20"><SortableHeader label="Role" sortKey="role" /></TableHead>
+                          <TableHead className="hidden md:table-cell min-w-20">Status</TableHead>
+                          <TableHead className="hidden lg:table-cell min-w-36">
                             <SortableHeader label="Last Login" sortKey="lastLogin" />
                           </TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead className="min-w-24">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                       {sortedData(users, 'users')?.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium min-w-32">
+                          <TableCell className="font-medium min-w-40">
                             <div>
                               <div className="font-medium">{user.name}</div>
                               <div className="text-xs text-gray-500 sm:hidden">{user.email}</div>
+                              <div className="text-xs text-gray-500 sm:hidden">
+                                {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell min-w-48">{user.email}</TableCell>
@@ -986,34 +993,45 @@ export default function AdminPanel() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <SortableHeader label="Name" sortKey="name" />
-                        <SortableHeader label="Website" sortKey="websiteUrl" />
-                        <SortableHeader label="GA4 Property" sortKey="gaPropertyId" />
-                        <SortableHeader label="Industry" sortKey="industryVertical" />
-                        <SortableHeader label="Business Size" sortKey="businessSize" />
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                <div className="rounded-md border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-40"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden sm:table-cell min-w-48"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="hidden lg:table-cell min-w-32"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
+                          <TableHead className="min-w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell min-w-36"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="min-w-20">Status</TableHead>
+                          <TableHead className="min-w-24">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {sortedData(clients, 'clients')?.map((client: any) => (
                         <TableRow key={client.id}>
-                          <TableCell className="font-medium">{client.name}</TableCell>
-                          <TableCell>{client.websiteUrl}</TableCell>
-                          <TableCell className="font-mono text-sm">{client.gaPropertyId || "Not set"}</TableCell>
-                          <TableCell>{client.industryVertical}</TableCell>
-                          <TableCell>{client.businessSize}</TableCell>
-                          <TableCell>
-                            <Badge variant={client.active ? "secondary" : "destructive"}>
+                          <TableCell className="font-medium min-w-40">
+                            <div>
+                              <div className="font-medium">{client.name}</div>
+                              <div className="text-xs text-slate-500 sm:hidden">{client.websiteUrl}</div>
+                              <div className="text-xs text-slate-500 md:hidden">{client.businessSize}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell min-w-48">
+                            <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {client.websiteUrl}
+                            </a>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell min-w-32 font-mono text-sm">{client.ga4PropertyId || "Not set"}</TableCell>
+                          <TableCell className="min-w-32">{client.industryVertical}</TableCell>
+                          <TableCell className="hidden md:table-cell min-w-36">{client.businessSize}</TableCell>
+                          <TableCell className="min-w-20">
+                            <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
                               {client.active ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
+                          <TableCell className="min-w-24">
+                            <div className="flex space-x-1 sm:space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) setEditingItem(null);
@@ -1140,6 +1158,7 @@ export default function AdminPanel() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </div>
               </TabsContent>
 
