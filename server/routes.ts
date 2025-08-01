@@ -8,6 +8,7 @@ import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
+import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -333,7 +334,8 @@ export function registerRoutes(app: Express): Server {
       const competitors = await storage.getCompetitorsByClient(clientId);
       
       // Get current period metrics for comparison  
-      const currentPeriod = generatePeriodMapping().currentPeriod;
+      const periodMapping = generateDynamicPeriodMapping();
+      const currentPeriod = periodMapping["Last Month"][0];
       const clientMetrics = await storage.getMetricsByClient(clientId, currentPeriod);
       
       // Build competitor data for this metric
