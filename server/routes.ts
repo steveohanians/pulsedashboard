@@ -47,7 +47,11 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      let { timePeriod = "Last Month" } = req.query;
+      let { 
+        timePeriod = "Last Month", 
+        businessSize = "All", 
+        industryVertical = "All" 
+      } = req.query;
       
       // Generate dynamic period mapping based on current date
       const { generateDynamicPeriodMapping } = await import("./utils/dateUtils");
@@ -71,19 +75,28 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Client not found" });
       }
 
+      // Prepare filters for industry data
+      const filters = {
+        businessSize: businessSize as string,
+        industryVertical: industryVertical as string
+      };
+
       // Fetch data for all relevant periods
       const allMetricsPromises = periodsToQuery.map(p => storage.getMetricsByClient(clientId, p));
       const allCompetitorMetricsPromises = periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p));
+      const allFilteredIndustryMetricsPromises = periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters));
       
       const [
         allMetricsArrays,
         competitors,
         allCompetitorMetricsArrays,
+        allFilteredIndustryMetricsArrays,
         insights
       ] = await Promise.all([
         Promise.all(allMetricsPromises),
         storage.getCompetitorsByClient(clientId),
         Promise.all(allCompetitorMetricsPromises),
+        Promise.all(allFilteredIndustryMetricsPromises),
         storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
       ]);
 
@@ -91,6 +104,7 @@ export function registerRoutes(app: Express): Server {
       if (periodsToQuery.length === 1) {
         const allMetrics = allMetricsArrays.flat();
         const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
+        const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
         
         const processedMetrics = [
           ...allMetrics.map(m => ({
@@ -107,6 +121,13 @@ export function registerRoutes(app: Express): Server {
             competitorId: m.competitorId,
             timePeriod: m.timePeriod,
             channel: m.channel // Preserve channel information for Traffic Channels
+          })),
+          ...allFilteredIndustryMetrics.map(m => ({
+            metricName: m.metricName,
+            value: m.value,
+            sourceType: 'Industry_Avg',
+            timePeriod: m.timePeriod,
+            channel: m.channel // Preserve channel information for Traffic Channels
           }))
         ];
         
@@ -119,6 +140,8 @@ export function registerRoutes(app: Express): Server {
         });
       } else {
         // For multi-period queries, return time-series data
+        const allFilteredIndustryMetricsFlat = allFilteredIndustryMetricsArrays.flat();
+        
         const timeSeriesData: Record<string, Array<{
           metricName: string;
           value: string;
@@ -131,7 +154,7 @@ export function registerRoutes(app: Express): Server {
         periodsToQuery.forEach((timePeriod, index) => {
           const periodMetrics = allMetricsArrays[index] || [];
           const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
-          
+          const periodFilteredIndustryMetrics = allFilteredIndustryMetricsArrays[index] || [];
 
           
           const metrics = [
@@ -147,6 +170,13 @@ export function registerRoutes(app: Express): Server {
               value: m.value,
               sourceType: 'Competitor',
               competitorId: m.competitorId,
+              channel: m.channel, // Preserve channel information
+              timePeriod
+            })),
+            ...periodFilteredIndustryMetrics.map(m => ({
+              metricName: m.metricName,
+              value: m.value,
+              sourceType: 'Industry_Avg',
               channel: m.channel, // Preserve channel information
               timePeriod
             }))

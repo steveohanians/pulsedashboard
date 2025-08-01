@@ -220,6 +220,96 @@ export class DatabaseStorage implements IStorage {
     await db.delete(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.id, id));
   }
 
+  // Get filtered CD Portfolio companies
+  async getFilteredCdPortfolioCompanies(filters?: { businessSize?: string; industryVertical?: string }): Promise<CdPortfolioCompany[]> {
+    const conditions = [eq(cdPortfolioCompanies.active, true)];
+    
+    if (filters?.businessSize && filters.businessSize !== "All") {
+      conditions.push(eq(cdPortfolioCompanies.businessSize, filters.businessSize));
+    }
+    
+    if (filters?.industryVertical && filters.industryVertical !== "All") {
+      conditions.push(eq(cdPortfolioCompanies.industryVertical, filters.industryVertical));
+    }
+    
+    return await db.select().from(cdPortfolioCompanies).where(and(...conditions));
+  }
+
+  // Get filtered benchmark companies
+  async getFilteredBenchmarkCompanies(filters?: { businessSize?: string; industryVertical?: string }): Promise<BenchmarkCompany[]> {
+    const conditions = [eq(benchmarkCompanies.active, true)];
+    
+    if (filters?.businessSize && filters.businessSize !== "All") {
+      conditions.push(eq(benchmarkCompanies.businessSize, filters.businessSize));
+    }
+    
+    if (filters?.industryVertical && filters.industryVertical !== "All") {
+      conditions.push(eq(benchmarkCompanies.industryVertical, filters.industryVertical));
+    }
+    
+    return await db.select().from(benchmarkCompanies).where(and(...conditions));
+  }
+
+  // Get filtered industry average metrics based on actual benchmark data
+  async getFilteredIndustryMetrics(
+    period: string, 
+    filters?: { businessSize?: string; industryVertical?: string }
+  ): Promise<Metric[]> {
+    // Get filtered benchmark companies
+    const filteredCompanies = await this.getFilteredBenchmarkCompanies(filters);
+    
+    if (filteredCompanies.length === 0) {
+      // Return empty array if no companies match filters
+      return [];
+    }
+    
+    // Get metrics for these companies
+    const companyIds = filteredCompanies.map(c => c.id);
+    
+    // Query metrics for these specific companies in the given period
+    const companyMetrics = await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.timePeriod, period),
+          eq(metrics.sourceType, 'Competitor'),
+          inArray(metrics.competitorId!, companyIds)
+        )
+      );
+    
+    // Calculate industry averages from actual benchmark company data
+    const groupedMetrics: Record<string, number[]> = {};
+    
+    companyMetrics.forEach(metric => {
+      if (!groupedMetrics[metric.metricName]) {
+        groupedMetrics[metric.metricName] = [];
+      }
+      groupedMetrics[metric.metricName].push(parseFloat(metric.value as string));
+    });
+    
+    // Create industry average metrics from actual data
+    const industryAverages: Metric[] = [];
+    Object.entries(groupedMetrics).forEach(([metricName, values]) => {
+      if (values.length > 0) {
+        const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+        industryAverages.push({
+          id: `industry-avg-${metricName}-${period}`,
+          clientId: null,
+          competitorId: null,
+          metricName,
+          value: average.toString(),
+          sourceType: 'Industry_Avg',
+          timePeriod: period,
+          channel: null,
+          createdAt: new Date()
+        });
+      }
+    });
+    
+    return industryAverages;
+  }
+
   // Metrics
   async getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]> {
     return await db.select().from(metrics).where(
