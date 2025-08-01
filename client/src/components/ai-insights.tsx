@@ -2,10 +2,44 @@ import { useState } from "react";
 import { Info, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
 import TypewriterText from "./typewriter-text";
 
-// Function to render text with bold formatting
-function renderTextWithBold(text: string) {
+// Function to render text with bold formatting and numbered lists
+function renderTextWithBold(text: string, isRecommendation = false) {
   if (!text) return text;
   
+  // Handle numbered list formatting for recommendations
+  if (isRecommendation && (text.includes('1.') || text.includes('\n'))) {
+    // Clean up malformed JSON strings
+    let cleanText = text.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+    
+    // Split by numbered items and format as list
+    const listItems = cleanText.split(/(?=\d+\.\s)/).filter(item => item.trim());
+    
+    if (listItems.length > 1) {
+      return (
+        <ol className="space-y-2 text-xs sm:text-sm">
+          {listItems.map((item, index) => {
+            const cleanItem = item.replace(/^\d+\.\s*/, '').trim();
+            const parts = cleanItem.split(/(\*\*[^*]+\*\*)/g);
+            return (
+              <li key={index} className="flex items-start">
+                <span className="font-medium text-primary mr-2 flex-shrink-0">{index + 1}.</span>
+                <span className="leading-relaxed">
+                  {parts.map((part, partIndex) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                      return <strong key={partIndex} className="text-slate-700">{part.slice(2, -2)}</strong>;
+                    }
+                    return part;
+                  })}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      );
+    }
+  }
+  
+  // Default bold text rendering
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   
   return parts.map((part, index) => {
@@ -105,7 +139,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
               Recommendation
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && showRecommendation ? (
                 <TypewriterText 
                   text={recommendation} 
@@ -113,9 +147,9 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
                 />
               ) : (
-                renderTextWithBold(recommendation)
+                renderTextWithBold(recommendation, true)
               )}
-            </p>
+            </div>
           </div>
         )}
       </div>

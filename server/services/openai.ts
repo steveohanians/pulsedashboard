@@ -57,21 +57,19 @@ async function generateInsightsWithCustomPrompt(
       .replace(/\{\{cdPortfolioAverage\}\}/g, formattedCdAverage)
       .replace(/\{\{competitors\}\}/g, competitorsText);
 
-    // Add JSON format instruction
+    // Add specific output format instruction for JSON compatibility
     processedPrompt += `
 
-Provide your analysis in JSON format with exactly these three fields:
-1. "context" - Strategic contextual analysis with competitive positioning (2-3 sentences)
-2. "insight" - Key competitive intelligence insights with specific performance gaps (2-3 sentences) 
-3. "recommendation" - Concrete action plan with projected improvement percentages (2-3 sentences)`;
+IMPORTANT: Provide your response in JSON format with exactly these three fields:
+- "context": Your Context analysis section
+- "insight": Your Competitive Intelligence section  
+- "recommendation": Your Action Plan section (maintain numbered list format within the JSON string)
+
+Format recommendations as a single string with line breaks and numbers: "1. First recommendation\\n2. Second recommendation\\n3. Third recommendation"`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content: "You are a senior digital strategy consultant with 15+ years experience in competitive intelligence and data-driven growth optimization. Your insights drive measurable business results. Always provide specific, actionable recommendations with projected performance improvements. Focus on competitive advantages and strategic opportunities."
-        },
         {
           role: "user",
           content: processedPrompt
