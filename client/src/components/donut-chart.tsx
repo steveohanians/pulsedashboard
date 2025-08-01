@@ -86,9 +86,9 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
   return (
     <div className="w-full min-h-0 flex flex-col">
       {/* Grid layout with responsive columns */}
-      <div className="grid grid-cols-3 gap-x-1 gap-y-1 sm:gap-x-2 sm:gap-y-2 md:gap-x-3 md:gap-y-2 place-items-center flex-shrink-0">
+      <div className="grid grid-cols-3 gap-x-0.5 gap-y-0.5 sm:gap-x-1 sm:gap-y-1 md:gap-x-2 md:gap-y-1 place-items-center flex-shrink-0">
         {data.map((item, index) => (
-          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-0.5 sm:space-y-1">
+          <div key={`${item.sourceType}-${index}`} className="flex flex-col items-center space-y-0">
             <h4 className={`text-xs text-center leading-tight ${
               item.sourceType === 'Client' 
                 ? 'font-bold text-primary' 
@@ -126,14 +126,14 @@ export function DonutChart({ data, title, description }: DonutChartProps) {
       </div>
       
       {/* Centered legend - always visible */}
-      <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 sm:gap-x-3 md:gap-x-4 pt-1 sm:pt-2 mt-1 sm:mt-2 border-t border-gray-200 flex-shrink-0">
+      <div className="flex flex-wrap justify-center gap-x-1 gap-y-0 sm:gap-x-2 md:gap-x-3 border-t border-gray-200 flex-shrink-0">
         {Object.entries(DEVICE_COLORS).map(([device, color]) => (
-          <div key={device} className="flex items-center gap-1 sm:gap-1.5">
+          <div key={device} className="flex items-center gap-0.5 sm:gap-1">
             <div 
-              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm flex-shrink-0"
+              className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm flex-shrink-0"
               style={{ backgroundColor: color }}
             />
-            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">{device}</span>
+            <span className="text-xs text-gray-600 whitespace-nowrap">{device}</span>
           </div>
         ))}
       </div>
