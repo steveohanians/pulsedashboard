@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
@@ -64,9 +64,10 @@ interface AIInsightsProps {
   recommendation?: string;
   isTyping?: boolean;
   onRegenerate?: () => void;
+  onClear?: () => void;
 }
 
-export default function AIInsights({ context, insight, recommendation, isTyping = false, onRegenerate }: AIInsightsProps) {
+export default function AIInsights({ context, insight, recommendation, isTyping = false, onRegenerate, onClear }: AIInsightsProps) {
   const [contextComplete, setContextComplete] = useState(!isTyping);
   const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);
@@ -232,6 +233,17 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
                     className="text-slate-500 hover:text-slate-700 h-7 px-2"
                   >
                     <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
+                {onClear && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClear}
+                    className="text-slate-500 hover:text-red-600 h-7 px-2"
+                    title="Clear insights"
+                  >
+                    <X className="h-3 w-3" />
                   </Button>
                 )}
               </div>

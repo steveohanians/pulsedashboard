@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import AIInsights from "@/components/ai-insights";
+
+// Global insights storage to persist across filter changes
+const globalInsightsStorage: Record<string, any> = {};
 
 interface MetricInsightBoxProps {
   metricName: string;
@@ -15,6 +18,24 @@ interface MetricInsightBoxProps {
 export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<any>(null);
   const queryClient = useQueryClient();
+  
+  // Generate unique key for this metric-client combination
+  const insightKey = `${clientId}-${metricName}`;
+  
+  // Load insight from global storage on mount
+  useEffect(() => {
+    const storedInsight = globalInsightsStorage[insightKey];
+    if (storedInsight) {
+      setInsight(storedInsight);
+    }
+  }, [insightKey]);
+  
+  // Store insight in global storage when it changes
+  useEffect(() => {
+    if (insight) {
+      globalInsightsStorage[insightKey] = insight;
+    }
+  }, [insight, insightKey]);
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
@@ -56,7 +77,12 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         isTyping={insight.isTyping}
         onRegenerate={() => {
           setInsight(null);
+          delete globalInsightsStorage[insightKey];
           generateInsightMutation.mutate();
+        }}
+        onClear={() => {
+          setInsight(null);
+          delete globalInsightsStorage[insightKey];
         }}
       />
     );
