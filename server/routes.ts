@@ -315,6 +315,97 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Enhanced AI Insights generation endpoint
+  app.post("/api/generate-comprehensive-insights/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { period } = req.query;
+      
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Import services dynamically to avoid circular dependencies
+      const { InsightDataAggregator } = await import('./services/insightDataAggregator.js');
+      const { generateComprehensiveInsights } = await import('./services/openai.js');
+      
+      // Aggregate data for comprehensive analysis
+      const aggregator = new InsightDataAggregator(storage);
+      const context = await aggregator.aggregateDataForInsights(clientId, period as string);
+      
+      // Generate comprehensive insights
+      const { dashboardSummary, metricInsights } = await generateComprehensiveInsights(context);
+      
+      // Store insights in database
+      const storedInsights = [];
+      
+      // Store dashboard summary
+      const summaryInsight = await storage.createAIInsight({
+        clientId,
+        metricName: "Dashboard Overview",
+        timePeriod: context.period,
+        contextText: dashboardSummary.context,
+        insightText: dashboardSummary.insight,
+        recommendationText: dashboardSummary.recommendation
+      });
+      storedInsights.push(summaryInsight);
+      
+      // Store individual metric insights
+      for (const insight of metricInsights) {
+        const storedInsight = await storage.createAIInsight({
+          clientId,
+          metricName: insight.metricName,
+          timePeriod: context.period,
+          contextText: insight.context,
+          insightText: insight.insight,
+          recommendationText: insight.recommendation
+        });
+        storedInsights.push(storedInsight);
+      }
+
+      res.json({
+        message: "Comprehensive AI insights generated successfully",
+        summary: dashboardSummary,
+        insights: storedInsights,
+        context: {
+          period: context.period,
+          previousPeriod: context.previousPeriod,
+          metricsAnalyzed: context.metrics.length,
+          competitorsTracked: context.totalCompetitors
+        }
+      });
+    } catch (error) {
+      logger.error("Error generating comprehensive insights", {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        clientId: req.params.clientId
+      });
+      res.status(500).json({ message: "Failed to generate comprehensive insights" });
+    }
+  });
+
+  // Fetch AI insights for a client
+  app.get("/api/insights", requireAuth, async (req, res) => {
+    try {
+      const { period } = req.query;
+      const clientId = req.user?.clientId;
+      
+      if (!clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const insights = await storage.getAIInsightsByClient(clientId, period as string);
+      res.json(insights);
+    } catch (error) {
+      logger.error("Error fetching AI insights", {
+        error: (error as Error).message,
+        clientId: req.user?.clientId
+      });
+      res.status(500).json({ message: "Failed to fetch insights" });
+    }
+  });
+
   // AI Insights generation endpoint
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {

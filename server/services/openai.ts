@@ -64,7 +64,7 @@ Keep each section concise but informative (2-3 sentences each). Focus on practic
       recommendation: result.recommendation || "Unable to generate recommendations."
     };
   } catch (error) {
-    logger.error("Error generating AI insights", { error: (error as Error).message, metricName, currentValue, timeframe });
+    logger.error("Error generating AI insights", { error: (error as Error).message, metricName, clientValue });
     return {
       context: "Unable to generate AI analysis at this time.",
       insight: "Please try again later or contact support.",
@@ -113,4 +113,187 @@ export async function generateBulkInsights(
   }
   
   return insights;
+}
+
+/**
+ * Generate comprehensive dashboard insights from aggregated context
+ */
+export async function generateComprehensiveInsights(
+  context: any // InsightGenerationContext
+): Promise<{
+  dashboardSummary: {
+    context: string;
+    insight: string;
+    recommendation: string;
+  };
+  metricInsights: Array<{
+    metricName: string;
+    context: string;
+    insight: string;
+    recommendation: string;
+  }>;
+}> {
+  try {
+    // Generate overall dashboard summary
+    const summaryPrompt = `You are a senior digital marketing consultant analyzing a comprehensive dashboard for ${context.client.name}, a ${context.client.businessSize} company in the ${context.client.industryVertical} industry.
+
+DASHBOARD OVERVIEW:
+- Analysis Period: ${context.period} (vs. previous period ${context.previousPeriod})
+- Total Competitors Tracked: ${context.totalCompetitors}
+- Industry Benchmarks Available: ${context.hasIndustryData ? 'Yes' : 'No'}
+- Clear Digital Portfolio Data: ${context.hasCdPortfolioData ? 'Yes' : 'No'}
+
+KEY METRICS SUMMARY:
+${context.metrics.map((m: any) => `
+- ${m.metricName}: ${m.clientValue || 'N/A'} (${m.trendDirection} ${m.percentageChange ? Math.abs(m.percentageChange).toFixed(1) + '%' : ''} vs. last period)
+  vs. CD Avg: ${m.cdAverage || 'N/A'} | Industry: ${m.industryAverage || 'N/A'}
+  Competitors: ${m.competitorValues.length > 0 ? m.competitorValues.join(', ') : 'None'}
+`).join('')}
+
+Provide a strategic overview in JSON format with:
+1. "context" - High-level performance summary across all metrics (2-3 sentences)
+2. "insight" - Strategic analysis of overall digital marketing effectiveness (2-3 sentences)  
+3. "recommendation" - Top 2-3 strategic priorities for the next period (2-3 sentences)
+
+Focus on business impact and strategic direction rather than individual metric details.`;
+
+    const summaryResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a senior digital marketing consultant providing strategic dashboard analysis in JSON format."
+        },
+        {
+          role: "user",
+          content: summaryPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 600
+    });
+
+    const summaryResult = JSON.parse(summaryResponse.choices[0].message.content || '{}');
+
+    // Generate individual metric insights with enhanced context
+    const metricInsights = [];
+    for (const metric of context.metrics) {
+      if (metric.clientValue !== null) {
+        const analysis = await generateEnhancedMetricInsights(metric, context);
+        metricInsights.push({
+          metricName: metric.metricName,
+          ...analysis
+        });
+      }
+    }
+
+    return {
+      dashboardSummary: {
+        context: summaryResult.context || "Dashboard analysis in progress.",
+        insight: summaryResult.insight || "Strategic insights being generated.",
+        recommendation: summaryResult.recommendation || "Recommendations will be available shortly."
+      },
+      metricInsights
+    };
+
+  } catch (error) {
+    logger.error("Error generating comprehensive insights", { 
+      error: (error as Error).message,
+      clientId: context.client.id,
+      period: context.period 
+    });
+    
+    return {
+      dashboardSummary: {
+        context: "Unable to generate comprehensive analysis at this time.",
+        insight: "Please try again or contact support for assistance.",
+        recommendation: "Continue monitoring metrics manually in the meantime."
+      },
+      metricInsights: []
+    };
+  }
+}
+
+/**
+ * Generate enhanced metric insights with trend and competitive context
+ */
+async function generateEnhancedMetricInsights(
+  metric: any, // AggregatedMetricData
+  context: any // InsightGenerationContext
+): Promise<{
+  context: string;
+  insight: string;
+  recommendation: string;
+}> {
+  try {
+    const trendText = metric.percentageChange 
+      ? `${metric.trendDirection} ${Math.abs(metric.percentageChange).toFixed(1)}% from last period`
+      : `${metric.trendDirection} trend`;
+
+    const competitiveContext = metric.competitorValues.length > 0
+      ? `Competitors average: ${(metric.competitorValues.reduce((a: number, b: number) => a + b, 0) / metric.competitorValues.length).toFixed(1)}`
+      : 'No competitor data available';
+
+    const prompt = `Analyze this web analytics metric for ${context.client.name} (${context.client.businessSize}, ${context.client.industryVertical}):
+
+METRIC PERFORMANCE:
+- ${metric.metricName}: ${metric.clientValue} (${trendText})
+- Previous Period: ${metric.previousPeriodValue || 'N/A'}
+- Clear Digital Average: ${metric.cdAverage || 'N/A'}
+- Industry Average: ${metric.industryAverage || 'N/A'}
+- ${competitiveContext}
+
+COMPETITIVE LANDSCAPE:
+${metric.competitorNames.length > 0 ? 
+  metric.competitorNames.map((name: string, i: number) => 
+    `- ${name}: ${metric.competitorValues[i]}`
+  ).join('\n') : 
+  'No competitor data available'
+}
+
+Provide analysis in JSON format:
+1. "context" - Performance interpretation with trend and competitive positioning (2 sentences)
+2. "insight" - Why this performance is occurring and business implications (2 sentences)
+3. "recommendation" - Specific, actionable next steps for this metric (2 sentences)
+
+Focus on practical business impact and competitive advantage.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a digital marketing analytics expert providing metric-specific insights in JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 400
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      context: result.context || "Metric analysis in progress.",
+      insight: result.insight || "Insights being generated.",
+      recommendation: result.recommendation || "Recommendations will be available shortly."
+    };
+
+  } catch (error) {
+    logger.error("Error generating enhanced metric insights", { 
+      error: (error as Error).message,
+      metricName: metric.metricName 
+    });
+    
+    return {
+      context: "Unable to analyze this metric at the moment.",
+      insight: "Analysis temporarily unavailable.",
+      recommendation: "Monitor this metric manually and try again later."
+    };
+  }
 }
