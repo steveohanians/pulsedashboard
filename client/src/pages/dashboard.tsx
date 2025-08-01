@@ -984,9 +984,7 @@ export default function Dashboard() {
                 } else if (timePeriod === "Last Quarter") {
                   const now = new Date();
                   const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
-                  const lastQuarter = currentQuarter === 1 ? 4 : currentQuarter - 1;
-                  const lastQuarterYear = currentQuarter === 1 ? now.getFullYear() - 1 : now.getFullYear();
-                  displayText = `Q${lastQuarter} ${lastQuarterYear}`;
+                  displayText = `Q${currentQuarter} ${now.getFullYear()}`;
                 } else if (timePeriod === "Last Year") {
                   const endDate = new Date();
                   endDate.setMonth(endDate.getMonth() - 1); // Last month

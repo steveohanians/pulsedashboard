@@ -44,13 +44,13 @@ function processTimeSeriesForBar(
 ): any[] {
   const data: any[] = [];
   
-  // Map period codes to display labels
-  const periodLabels: Record<string, string> = {
-    "2024-01": "Jan 24",
-    "2024-10": "Oct 24",
-    "2025-04": "Apr 25",
-    "2025-05": "May 25",
-    "2025-06": "Jun 25"
+  // Generate dynamic period labels based on actual periods
+  const generatePeriodLabel = (period: string): string => {
+    const [year, month] = period.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const shortYear = year.slice(-2);
+    return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
   };
   
   const clientKey = clientUrl || 'Client';
@@ -58,7 +58,7 @@ function processTimeSeriesForBar(
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
     const dataPoint: any = {
-      period: periodLabels[period] || period
+      period: generatePeriodLabel(period)
     };
     
     // Find data for each source type - filter by metric name too
