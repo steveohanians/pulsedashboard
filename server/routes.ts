@@ -399,11 +399,19 @@ export function registerRoutes(app: Express): Server {
       // Generate metric-specific insights using OpenAI with enriched data
       const insights = await generateMetricSpecificInsights(metricName, enrichedData, clientId);
       
+      // Normalize the insights object to handle both MetricAnalysis and fallback formats
+      const normalizedInsights = {
+        context: (insights as any).context,
+        insight: (insights as any).insight || (insights as any).insights,
+        recommendation: (insights as any).recommendation || (insights as any).recommendations,
+        status: (insights as any).status || 'needs_improvement' // Default status if not provided
+      };
+
       // Debug logging for status
       logger.info('✅ OpenAI Response Status Debug', { 
         metricName, 
-        hasStatus: !!insights.status, 
-        status: insights.status,
+        hasStatus: !!normalizedInsights.status, 
+        status: normalizedInsights.status,
         allFields: Object.keys(insights)
       });
       
@@ -412,10 +420,10 @@ export function registerRoutes(app: Express): Server {
         clientId,
         timePeriod: timePeriod,
         metricName: metricName,
-        contextText: insights.context,
-        insightText: insights.insight || insights.insights,
-        recommendationText: insights.recommendation || insights.recommendations,
-        status: insights.status, // Include the status field from OpenAI
+        contextText: normalizedInsights.context,
+        insightText: normalizedInsights.insight,
+        recommendationText: normalizedInsights.recommendation,
+        status: normalizedInsights.status, // Include the status field from OpenAI
         createdAt: new Date()
       };
 
@@ -426,7 +434,7 @@ export function registerRoutes(app: Express): Server {
         message: "Metric insights generated successfully",
         insight: {
           ...savedInsight,
-          status: insights.status // Ensure status is included in response
+          status: normalizedInsights.status // Ensure status is included in response
         }
       });
 
