@@ -106,7 +106,7 @@ export default function LollipopChart({
                   className="text-xs text-gray-600 text-right pr-4 flex items-center justify-end border-b border-gray-200 last:border-b-0"
                   style={{ height: '48px' }}
                 >
-                  <span className={entity.type === 'client' ? 'font-semibold text-pink-600' : 'font-medium'}>
+                  <span className={entity.type === 'client' ? 'font-semibold text-primary' : 'font-medium'}>
                     {entity.label}
                   </span>
                 </div>
