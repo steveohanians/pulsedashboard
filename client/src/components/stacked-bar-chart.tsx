@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 
 interface StackedBarData {
   sourceType: string;
@@ -27,6 +28,13 @@ const CHANNEL_COLORS = {
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
+  const [hoveredSegment, setHoveredSegment] = useState<{
+    channelName: string;
+    value: number;
+    color: string;
+    position: { x: number; y: number };
+  } | null>(null);
+
   // Check if we have any valid data
   const hasData = data && data.length > 0;
   
@@ -73,7 +81,19 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       width: `${channel.percentage}%`,
                       backgroundColor: channel.color
                     }}
-                    title={`${channel.name}: ${channel.value}%`}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoveredSegment({
+                        channelName: channel.name,
+                        value: channel.value,
+                        color: channel.color,
+                        position: {
+                          x: rect.left + rect.width / 2,
+                          y: rect.top - 10
+                        }
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredSegment(null)}
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   </div>
@@ -95,6 +115,40 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
           </div>
         ))}
       </div>
+
+      {/* Tooltip Overlay Modal */}
+      {hoveredSegment && (
+        <div 
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: hoveredSegment.position.x,
+            top: hoveredSegment.position.y,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: hoveredSegment.color }}
+              />
+              <span className="font-medium">{hoveredSegment.channelName}</span>
+            </div>
+            <div className="text-gray-300 mt-1">
+              {Math.round(hoveredSegment.value)}%
+            </div>
+            {/* Arrow pointing down */}
+            <div 
+              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0"
+              style={{
+                borderLeft: '4px solid transparent',
+                borderRight: '4px solid transparent',
+                borderTop: '4px solid #1f2937'
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
