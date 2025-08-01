@@ -48,8 +48,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4" style={{ overflow: 'visible', paddingTop: '12px', paddingRight: '8px', paddingLeft: '4px' }}>
-      <div className="space-y-2 sm:space-y-3 relative" style={{ overflow: 'visible' }}>
+    <div className="w-full h-full space-y-3 sm:space-y-4 relative" style={{ overflow: 'visible', paddingTop: '12px', paddingRight: '8px', paddingLeft: '4px', zIndex: 1 }}>
+      <div className="space-y-2 sm:space-y-3 relative" style={{ overflow: 'visible', zIndex: 1 }}>
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
@@ -84,7 +84,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     
                     {/* Simplified tooltip that always appears above */}
                     <div 
-                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap"
+                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]"
                       style={{
                         backgroundColor: 'white',
                         border: '1px solid #e2e8f0',
@@ -96,7 +96,6 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                         left: '50%',
                         transform: 'translateX(-50%)',
                         marginBottom: '8px',
-                        zIndex: 1000,
                         minWidth: 'max-content'
                       }}
                     >
