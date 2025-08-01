@@ -78,7 +78,7 @@ function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'wa
     case 'needs_improvement':
       return <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0" />;
     case 'warning':
-      return <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />;
+      return <AlertCircle className="h-5 w-5 text-red-500 opacity-20 flex-shrink-0" />;
     default:
       return null;
   }
