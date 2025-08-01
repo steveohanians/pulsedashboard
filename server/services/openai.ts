@@ -21,18 +21,23 @@ async function generateInsightsWithCustomPrompt(
   industryAverage: number,
   competitorValues: number[],
   industryVertical: string,
-  businessSize: string
+  businessSize: string,
+  competitorNames?: string[]
 ): Promise<MetricAnalysis> {
   try {
-    // Format competitors data properly
+    // Format competitors data properly with actual names
     const competitorsText = competitorValues.length > 0 
-      ? competitorValues.map((val, idx) => `Competitor ${idx + 1}: ${val}`).join(', ')
+      ? competitorValues.map((val, idx) => {
+          const name = competitorNames?.[idx] || `Competitor ${idx + 1}`;
+          return `${name}: ${val}`;
+        }).join(', ')
       : 'No competitor data available';
 
     // Handle special formatting for Session Duration
     let formattedClientValue = clientValue.toString();
     let formattedCdAverage = cdAverage.toString();
     let formattedIndustryAverage = industryAverage.toString();
+    let formattedCompetitorsText = competitorsText;
     
     if (metricName === 'Session Duration') {
       const clientMinutes = Math.floor(clientValue / 60);
@@ -45,6 +50,16 @@ async function generateInsightsWithCustomPrompt(
       formattedClientValue = `${clientValue} seconds (${clientMinutes}m ${clientSeconds}s)`;
       formattedCdAverage = `${cdAverage} seconds (${cdMinutes}m ${cdSecondsRem}s)`;
       formattedIndustryAverage = `${industryAverage} seconds (${industryMinutes}m ${industrySecondsRem}s)`;
+      
+      // Format competitor values with time display
+      if (competitorValues.length > 0) {
+        formattedCompetitorsText = competitorValues.map((val, idx) => {
+          const name = competitorNames?.[idx] || `Competitor ${idx + 1}`;
+          const minutes = Math.floor(val / 60);
+          const seconds = Math.round(val % 60);
+          return `${name}: ${val} seconds (${minutes}m ${seconds}s)`;
+        }).join(', ');
+      }
     }
     
     // Special handling for Traffic Channels - get actual channel distribution
@@ -83,7 +98,7 @@ async function generateInsightsWithCustomPrompt(
       .replace(/\{\{clientValue\}\}/g, formattedClientValue)
       .replace(/\{\{industryAverage\}\}/g, formattedIndustryAverage)
       .replace(/\{\{cdPortfolioAverage\}\}/g, formattedCdAverage)
-      .replace(/\{\{competitors\}\}/g, competitorsText);
+      .replace(/\{\{competitors\}\}/g, formattedCompetitorsText);
 
     // Add specific output format instruction for JSON compatibility
     processedPrompt += `
@@ -462,6 +477,7 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
       
       // Use the existing custom prompt system with the enhanced data
       const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
+      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: any) => c.name) || [];
       
       return await generateInsightsWithCustomPrompt(
         customPrompt,
@@ -471,7 +487,8 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
         enrichedData.benchmarks?.industryAverage || 0,
         competitorValues,
         enrichedData.client?.industry || 'Technology',
-        enrichedData.client?.businessSize || 'Medium Business'
+        enrichedData.client?.businessSize || 'Medium Business',
+        competitorNames
       );
     } else {
       logger.warn('❌ NO ACTIVE CUSTOM PROMPT FOUND', { 
