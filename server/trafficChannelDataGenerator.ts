@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import logger from "./utils/logger";
 
 // Generate realistic traffic channel data for client, industry averages, and CD averages
 export async function generateTrafficChannelData(clientId: string) {
@@ -115,7 +116,7 @@ export async function generateTrafficChannelData(clientId: string) {
     }
   }
   
-  console.log('Traffic channel data generated successfully');
+  logger.info('Traffic channel data generated successfully');
 }
 
 // Generate competitor traffic channel data

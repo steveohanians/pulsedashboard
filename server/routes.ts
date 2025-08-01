@@ -6,6 +6,8 @@ import { generateMetricInsights, generateBulkInsights } from "./services/openai"
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
+import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
+import logger from "./utils/logger";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -199,7 +201,7 @@ export function registerRoutes(app: Express): Server {
 
 
     } catch (error) {
-      console.error("Dashboard error:", error);
+      logger.error("Dashboard error", { error: (error as Error).message, stack: (error as Error).stack, clientId: req.params.clientId });
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -303,7 +305,7 @@ export function registerRoutes(app: Express): Server {
 
           insights.push(insight);
         } catch (error) {
-          console.error(`Error generating insights for ${metricName}:`, error);
+          logger.error(`Error generating insights for ${metricName}`, { error: (error as Error).message, metricName, clientId });
         }
       }
 
@@ -734,7 +736,7 @@ export function registerRoutes(app: Express): Server {
         });
       }
     } catch (error) {
-      console.error("Error inviting user:", error);
+      logger.error("Error inviting user", { error: (error as Error).message, email: req.body.email });
       res.status(500).json({ message: "Failed to invite user" });
     }
   });
@@ -810,7 +812,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
+  app.get("/api/admin/benchmark-companies", requireAdmin, adminLimiter, async (req, res) => {
     try {
       const companies = await storage.getBenchmarkCompanies();
       res.json(companies);
@@ -864,7 +866,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // CSV Upload endpoint - parse CSV and return column headers for mapping
-  app.post("/api/admin/benchmark-companies/csv-preview", requireAdmin, upload.single('csvFile'), async (req, res) => {
+  app.post("/api/admin/benchmark-companies/csv-preview", requireAdmin, uploadLimiter, upload.single('csvFile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No CSV file uploaded" });
@@ -901,13 +903,13 @@ export function registerRoutes(app: Express): Server {
         ]
       });
     } catch (error) {
-      console.error("Error previewing CSV:", error);
+      logger.error("Error previewing CSV", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Failed to parse CSV file" });
     }
   });
 
   // CSV Import endpoint - import data with column mapping
-  app.post("/api/admin/benchmark-companies/csv-import", requireAdmin, upload.single('csvFile'), async (req, res) => {
+  app.post("/api/admin/benchmark-companies/csv-import", requireAdmin, uploadLimiter, upload.single('csvFile'), async (req, res) => {
     try {
       if (!req.file || !req.body.columnMapping) {
         return res.status(400).json({ message: "CSV file and column mapping required" });
@@ -976,7 +978,7 @@ export function registerRoutes(app: Express): Server {
       });
       
     } catch (error) {
-      console.error("Error importing CSV:", error);
+      logger.error("Error importing CSV", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to import CSV data" });
     }
   });

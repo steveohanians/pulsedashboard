@@ -1,8 +1,22 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupSecurityHeaders } from "./middleware/security";
+import { setupHealthCheck } from "./middleware/healthCheck";
+import { generalLimiter } from "./middleware/rateLimiter";
+import logger from "./utils/logger";
 
 const app = express();
+
+// Security headers (must be early in middleware stack)
+setupSecurityHeaders(app);
+
+// Health checks (before rate limiting)
+setupHealthCheck(app);
+
+// Rate limiting (after health checks)
+app.use('/api', generalLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

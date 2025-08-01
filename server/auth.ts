@@ -6,6 +6,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { authLimiter } from "./middleware/rateLimiter";
+import logger from "./utils/logger";
 
 declare global {
   namespace Express {
@@ -54,10 +56,12 @@ export function setupAuth(app: Express) {
     }, async (email, password, done) => {
       const user = await storage.getUserByEmail(email);
       if (!user || !(await comparePasswords(password, user.password))) {
+        logger.security("Failed login attempt", { email, ip: "unknown" });
         return done(null, false);
       } else {
         // Update last login timestamp
         await storage.updateUser(user.id, { lastLogin: new Date() });
+        logger.info("Successful login", { userId: user.id, email: user.email });
         return done(null, user);
       }
     }),
@@ -69,10 +73,11 @@ export function setupAuth(app: Express) {
     done(null, user);
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", authLimiter, async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
+        logger.security("Registration attempt with existing email", { email: req.body.email });
         return res.status(400).json({ message: "Email already exists" });
       }
 
@@ -81,16 +86,19 @@ export function setupAuth(app: Express) {
         password: await hashPassword(req.body.password),
       });
 
+      logger.info("New user registered", { userId: user.id, email: user.email });
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json(user);
       });
     } catch (error) {
+      logger.error("Registration error", { error: (error as Error).message, email: req.body.email });
       next(error);
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+  app.post("/api/login", authLimiter, passport.authenticate("local"), (req, res) => {
     res.status(200).json(req.user);
   });
 

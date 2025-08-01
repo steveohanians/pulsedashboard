@@ -111,7 +111,7 @@ function getChannelColor(channelName: string): string {
 }
 
 export async function generateComprehensiveSampleData() {
-  console.log("Generating comprehensive sample data...");
+  logger.info("Generating comprehensive sample data");
   
   const clientId = "demo-client-id";
   
@@ -172,11 +172,12 @@ export async function generateComprehensiveSampleData() {
       }
     }
     
-    console.log("Sample data generation completed successfully");
+    logger.info("Sample data generation completed successfully");
     return { success: true, message: "Comprehensive sample data generated" };
     
   } catch (error) {
-    console.error("Error generating sample data:", error);
+    const err = error as Error;
+    logger.error("Error generating sample data", { error: err.message, stack: err.stack });
     throw error;
   }
 }

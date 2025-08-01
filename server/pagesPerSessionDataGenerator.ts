@@ -1,8 +1,9 @@
 import { storage } from "./storage";
+import logger from "./utils/logger";
 
 // Generate realistic pages per session data for all time periods and source types
 export async function generatePagesPerSessionData() {
-  console.log("Generating pages per session sample data...");
+  logger.info("Generating pages per session sample data");
   
   const clientId = "demo-client-id";
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
@@ -64,15 +65,16 @@ export async function generatePagesPerSessionData() {
           timePeriod
         });
         
-        console.log(`Generated Pages per Session: ${sourceType} ${timePeriod} = ${finalValue}`);
+        logger.debug(`Generated Pages per Session: ${sourceType} ${timePeriod} = ${finalValue}`);
       }
     }
     
-    console.log("Pages per session data generation completed successfully");
+    logger.info("Pages per session data generation completed successfully");
     return { success: true, message: "Pages per session sample data generated" };
     
   } catch (error) {
-    console.error("Error generating pages per session data:", error);
+    const err = error as Error;
+    logger.error("Error generating pages per session data", { error: err.message, stack: err.stack });
     throw error;
   }
 }

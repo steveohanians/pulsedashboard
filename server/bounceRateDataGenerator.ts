@@ -1,8 +1,9 @@
 import { storage } from "./storage";
+import logger from "./utils/logger";
 
 // Generate realistic bounce rate data for all time periods and source types
 export async function generateBounceRateData() {
-  console.log("Generating bounce rate sample data...");
+  logger.info("Generating bounce rate sample data");
   
   const clientId = "demo-client-id";
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
@@ -63,15 +64,16 @@ export async function generateBounceRateData() {
           timePeriod
         });
         
-        console.log(`Generated Bounce Rate: ${sourceType} ${timePeriod} = ${finalValue}%`);
+        logger.debug(`Generated Bounce Rate: ${sourceType} ${timePeriod} = ${finalValue}%`);
       }
     }
     
-    console.log("Bounce rate data generation completed");
+    logger.info("Bounce rate data generation completed");
     return { success: true, message: "Bounce rate sample data generated successfully" };
     
   } catch (error) {
-    console.error("Error generating bounce rate data:", error);
+    const err = error as Error;
+    logger.error("Error generating bounce rate data", { error: err.message, stack: err.stack });
     throw error;
   }
 }

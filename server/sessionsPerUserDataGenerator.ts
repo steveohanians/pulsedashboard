@@ -1,8 +1,9 @@
 import { storage } from "./storage";
+import logger from "./utils/logger";
 
 // Generate realistic sessions per user data for all time periods and source types
 export async function generateSessionsPerUserData() {
-  console.log("Generating sessions per user sample data...");
+  logger.info("Generating sessions per user sample data");
   
   const clientId = "demo-client-id";
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
@@ -64,15 +65,16 @@ export async function generateSessionsPerUserData() {
           timePeriod
         });
         
-        console.log(`Generated Sessions per User: ${sourceType} ${timePeriod} = ${finalValue}`);
+        logger.debug(`Generated Sessions per User: ${sourceType} ${timePeriod} = ${finalValue}`);
       }
     }
     
-    console.log("Sessions per user data generation completed successfully");
+    logger.info("Sessions per user data generation completed successfully");
     return { success: true, message: "Sessions per user sample data generated" };
     
   } catch (error) {
-    console.error("Error generating sessions per user data:", error);
+    const err = error as Error;
+    logger.error("Error generating sessions per user data", { error: err.message, stack: err.stack });
     throw error;
   }
 }

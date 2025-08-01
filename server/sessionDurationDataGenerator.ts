@@ -1,8 +1,9 @@
 import { storage } from "./storage";
+import logger from "./utils/logger";
 
 // Generate realistic session duration data for all time periods and source types
 export async function generateSessionDurationData() {
-  console.log("Generating session duration sample data...");
+  logger.info("Generating session duration sample data");
   
   const clientId = "demo-client-id";
   const timePeriods = ["2025-06", "2025-05", "2025-04", "2024-10", "2024-01"];
@@ -64,15 +65,16 @@ export async function generateSessionDurationData() {
         });
         
         const minutes = Math.round((finalValue / 60) * 10) / 10;
-        console.log(`Generated Session Duration: ${sourceType} ${timePeriod} = ${finalValue}s (${minutes} min)`);
+        logger.debug(`Generated Session Duration: ${sourceType} ${timePeriod} = ${finalValue}s (${minutes} min)`);
       }
     }
     
-    console.log("Session duration data generation completed");
+    logger.info("Session duration data generation completed");
     return { success: true, message: "Session duration sample data generated successfully" };
     
   } catch (error) {
-    console.error("Error generating session duration data:", error);
+    const err = error as Error;
+    logger.error("Error generating session duration data", { error: err.message, stack: err.stack });
     throw error;
   }
 }
