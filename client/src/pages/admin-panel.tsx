@@ -1627,7 +1627,9 @@ export default function AdminPanel() {
                       <CardTitle className="text-sm font-medium text-slate-600">Benchmark Coverage</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-blue-600">100%</div>
+                      <div className={`text-2xl font-bold ${(cdPortfolioCompanies?.length || 0) > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
+                        {(cdPortfolioCompanies?.length || 0) > 0 ? '100%' : '0%'}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
