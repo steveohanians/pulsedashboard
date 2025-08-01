@@ -35,7 +35,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
   const [showRecommendation, setShowRecommendation] = useState(!isTyping);
   if (!context && !insight && !recommendation) {
     return (
-      <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px] sm:min-h-[120px]">
           <div className="text-center text-slate-500">
             <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -49,7 +49,7 @@ export default function AIInsights({ context, insight, recommendation, isTyping 
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px] sm:min-h-[120px]">
         {context && (
           <div className="mb-3 sm:mb-4">
