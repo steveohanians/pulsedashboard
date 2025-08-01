@@ -1412,22 +1412,22 @@ export default function Dashboard() {
                         <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">AI-powered analysis and recommendations</p>
                       </div>
-                      {/* Status Icon - Debug: status for {metricName} = {metricStatuses[metricName]} */}
+                      {/* Enhanced Status Icon */}
                       {metricStatuses[metricName] && (
-                        <div className="ml-3 flex-shrink-0">
+                        <div className="ml-4 flex-shrink-0">
                           {metricStatuses[metricName] === 'success' && (
-                            <div title="Good Performance">
-                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-green-200 hover:ring-green-300 transition-all duration-200" title="Performance is on target">
+                              <CheckCircle className="h-5 w-5 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
-                            <div title="Needs Improvement">
-                              <AlertTriangle className="h-5 w-5 text-orange-500" />
+                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-orange-200 hover:ring-orange-300 transition-all duration-200" title="Performance needs improvement">
+                              <AlertTriangle className="h-5 w-5 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'warning' && (
-                            <div title="Requires Attention">
-                              <AlertCircle className="h-5 w-5 text-red-500" />
+                            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-200 hover:ring-red-300 transition-all duration-200" title="Performance requires attention">
+                              <AlertCircle className="h-5 w-5 text-white" />
                             </div>
                           )}
                         </div>
