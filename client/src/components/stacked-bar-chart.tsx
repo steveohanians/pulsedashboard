@@ -81,9 +81,41 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                     
-                    {/* Simple tooltip that's always positioned safely */}
-                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
-                      {channel.name}: {channel.value}%
+                    {/* Tooltip matching app's design system */}
+                    <div 
+                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[100]"
+                      style={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        // Smart positioning: show above for top 2 rows, below for others
+                        bottom: index < 2 ? 'auto' : '100%',
+                        top: index < 2 ? '100%' : 'auto',
+                        marginTop: index < 2 ? '4px' : '0',
+                        marginBottom: index >= 2 ? '4px' : '0',
+                        // Smart horizontal positioning based on segment position
+                        left: channelIndex <= 1 ? '0' : channelIndex >= item.channels.length - 2 ? 'auto' : '50%',
+                        right: channelIndex >= item.channels.length - 2 ? '0' : 'auto',
+                        transform: channelIndex > 1 && channelIndex < item.channels.length - 2 ? 'translateX(-50%)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            backgroundColor: channel.color, 
+                            marginRight: '6px',
+                            borderRadius: '50%'
+                          }} 
+                        />
+                        <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
+                          {channel.name}: {channel.value}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
