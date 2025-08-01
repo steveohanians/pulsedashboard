@@ -102,7 +102,7 @@ export default function LollipopChart({
   return (
     <div className="w-full flex flex-col">
       {/* Main chart area with legend on right/bottom */}
-      <div className="flex-1 px-1 sm:px-2 py-1 flex flex-col lg:flex-row" style={{ minHeight: `${chartEntities.length * 48 + 50}px` }}>
+      <div className="flex-1 px-1 sm:px-2 py-1 flex flex-col lg:flex-row" style={{ height: `${chartEntities.length * 48 + 80}px` }}>
         {/* Chart section */}
         <div className="flex-1 relative lg:mr-4 mb-4 lg:mb-0">
           {/* Combined layout - labels and chart rows in sync */}
@@ -170,16 +170,42 @@ export default function LollipopChart({
                           />
                           {/* Dot at the end */}
                           <div
-                            className="absolute w-3 h-3 rounded-full transform -translate-y-1/2 hover:scale-125 transition-transform duration-200"
+                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm group hover:scale-125 transition-transform duration-200"
                             style={{
-                              left: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
-                              top: '50%',
                               backgroundColor: color,
-                              marginLeft: '-6px',
-                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                              left: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
+                              top: '-3px',
+                              transform: 'translateX(-50%)'
                             }}
-
-                          />
+                          >
+                            {/* Tooltip */}
+                            <div 
+                              className="absolute invisible group-hover:visible z-10 -top-12 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap"
+                              style={{
+                                backgroundColor: 'white',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                                padding: '8px 12px',
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <div 
+                                style={{ 
+                                  width: '8px', 
+                                  height: '8px', 
+                                  backgroundColor: color, 
+                                  marginRight: '8px',
+                                  borderRadius: '50%'
+                                }} 
+                              />
+                              <span style={{ color: '#374151', fontWeight: 'normal' }}>
+                                {device}: {percentage}%
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
