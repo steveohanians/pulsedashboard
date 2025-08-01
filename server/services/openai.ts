@@ -297,3 +297,65 @@ Focus on practical business impact and competitive advantage.`;
     };
   }
 }
+
+// Generate insights for a specific metric
+export async function generateMetricSpecificInsights(metricName: string, metricData: any, clientId: string) {
+  const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
+
+METRIC: ${metricName}
+CLIENT DATA: ${JSON.stringify(metricData)}
+
+Provide a JSON response with exactly this structure:
+{
+  "context": "Brief explanation of what this metric measures and why it matters (2-3 sentences)",
+  "insights": "Analysis of the current performance, comparing to benchmarks when available (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations for improvement (2-3 sentences)"
+}
+
+Keep each section concise and professional. Focus on actionable insights that a business owner can understand and implement.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert web analytics consultant. Provide clear, actionable insights in the exact JSON format requested."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const insights = JSON.parse(response);
+    
+    return {
+      context: insights.context,
+      insights: insights.insights,
+      recommendations: insights.recommendations
+    };
+
+  } catch (error) {
+    logger.error('Error generating metric-specific insights with OpenAI', { 
+      error: (error as Error).message,
+      metricName,
+      clientId
+    });
+    
+    // Fallback insights
+    return {
+      context: `${metricName} is a key performance indicator that helps measure website effectiveness and user engagement.`,
+      insights: `Your current ${metricName} performance shows opportunities for optimization based on industry standards.`,
+      recommendations: `Focus on improving ${metricName} through targeted optimization strategies and regular monitoring.`
+    };
+  }
+}

@@ -315,6 +315,50 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate metric-specific insights
+  app.post("/api/generate-metric-insight/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { metricName, timePeriod, metricData } = req.body;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      logger.info('Starting metric-specific insight generation', { clientId, metricName, timePeriod });
+
+      // Import OpenAI service dynamically
+      const { generateMetricSpecificInsights } = await import('./services/openai.js');
+      
+      // Generate metric-specific insights using OpenAI
+      const insights = await generateMetricSpecificInsights(metricName, metricData, clientId);
+      
+      // Store insights in database
+      const insertInsight = {
+        clientId,
+        timePeriod: timePeriod,
+        metricName: metricName,
+        contextText: insights.context,
+        insightText: insights.insights,
+        recommendationText: insights.recommendations,
+        createdAt: new Date()
+      };
+
+      const savedInsight = await storage.createAIInsight(insertInsight);
+      logger.info('Successfully saved metric-specific insights', { clientId, metricName, insightId: savedInsight.id });
+
+      res.json({
+        message: "Metric insights generated successfully",
+        insight: savedInsight
+      });
+
+    } catch (error) {
+      logger.error('Error generating metric insights', { error: (error as Error).message, clientId: req.params.clientId, metricName: req.body.metricName });
+      res.status(500).json({ message: "Failed to generate metric insights" });
+    }
+  });
+
   // Enhanced AI Insights generation endpoint
   app.post("/api/generate-comprehensive-insights/:clientId", requireAuth, async (req, res) => {
     try {
