@@ -79,60 +79,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     }}
                     title={`${channel.name}: ${channel.value}%`}
                   >
-                  {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
-                  
-                  {/* Custom Tooltip with viewport-aware positioning */}
-                  <div className="fixed opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-[9999]"
-                    style={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
-                      padding: '8px 12px',
-                      fontSize: '12px'
-                    }}
-                    onMouseEnter={(e) => {
-                      const tooltip = e.currentTarget;
-                      const rect = tooltip.parentElement?.getBoundingClientRect();
-                      if (rect) {
-                        const tooltipRect = tooltip.getBoundingClientRect();
-                        const viewportHeight = window.innerHeight;
-                        const viewportWidth = window.innerWidth;
-                        
-                        // Position horizontally
-                        if (channelIndex === 0) {
-                          tooltip.style.left = `${rect.left}px`;
-                        } else if (channelIndex === item.channels.length - 1) {
-                          tooltip.style.left = `${rect.right - tooltipRect.width}px`;
-                        } else {
-                          tooltip.style.left = `${rect.left + rect.width / 2 - tooltipRect.width / 2}px`;
-                        }
-                        
-                        // Position vertically with viewport bounds checking
-                        if (rect.top > 60) {
-                          // Show above if there's space
-                          tooltip.style.top = `${rect.top - tooltipRect.height - 8}px`;
-                        } else {
-                          // Show below if no space above
-                          tooltip.style.top = `${rect.bottom + 8}px`;
-                        }
-                      }
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div 
-                        style={{ 
-                          width: '8px', 
-                          height: '8px', 
-                          backgroundColor: channel.color, 
-                          marginRight: '6px',
-                          borderRadius: '50%'
-                        }} 
-                      />
-                      <span style={{ color: '#374151', fontWeight: 'normal', fontSize: '11px' }}>
-                        {channel.name}: {channel.value}%
-                      </span>
-                    </div>
-                  </div>
+                    {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
                   </div>
                 );
               })}
