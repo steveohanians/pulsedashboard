@@ -303,9 +303,13 @@ function getMetricDisplayInfo(metricName: string, value: any): { unit: string; d
   const metricConfig: Record<string, { unit: string; rawUnit: string; converter?: (val: number) => number }> = {
     'Bounce Rate': { unit: '%', rawUnit: '%' },
     'Session Duration': { 
-      unit: 'minutes', 
+      unit: 'minutes and seconds', 
       rawUnit: 'seconds',
-      converter: (seconds: number) => Math.round((seconds / 60) * 10) / 10 // Convert seconds to minutes, 1 decimal
+      converter: (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return parseFloat(`${minutes}.${remainingSeconds.toString().padStart(2, '0')}`);
+      }
     },
     'Pages per Session': { unit: 'pages', rawUnit: 'pages' },
     'Sessions': { unit: 'sessions', rawUnit: 'sessions' },
@@ -347,6 +351,12 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
   // Convert competitor values too
   const competitorText = enrichedData.benchmarks?.competitors?.map((c: any) => {
     const compInfo = getMetricDisplayInfo(metricName, c.value);
+    if (metricName === 'Session Duration') {
+      const seconds = c.value;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSecs = seconds % 60;
+      return `${c.name} (${minutes}m ${remainingSecs}s)`;
+    }
     return `${c.name} (${compInfo.displayValue} ${compInfo.unit})`;
   }).join(', ') || 'No competitor data available';
   
@@ -355,21 +365,27 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
 METRIC ANALYSIS REQUEST:
 - Metric: ${metricName} (stored as ${clientInfo.rawUnit}, displayed as ${clientInfo.unit})
 - Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
-- Current Value: ${clientInfo.displayValue} ${clientInfo.unit}
+- Current Value: ${metricName === 'Session Duration' ? 
+    `${Math.floor(enrichedData.metric?.clientValue / 60)}m ${enrichedData.metric?.clientValue % 60}s` : 
+    `${clientInfo.displayValue} ${clientInfo.unit}`}
 - Time Period: ${enrichedData.metric?.timePeriod}
 
 BENCHMARK COMPARISON:
-- Industry Average: ${industryInfo.displayValue} ${industryInfo.unit}
-- CD Portfolio Average: ${cdInfo.displayValue} ${cdInfo.unit}
+- Industry Average: ${metricName === 'Session Duration' ? 
+    `${Math.floor(enrichedData.benchmarks?.industryAverage / 60)}m ${enrichedData.benchmarks?.industryAverage % 60}s` : 
+    `${industryInfo.displayValue} ${industryInfo.unit}`}
+- CD Portfolio Average: ${metricName === 'Session Duration' ? 
+    `${Math.floor(enrichedData.benchmarks?.cdPortfolioAverage / 60)}m ${enrichedData.benchmarks?.cdPortfolioAverage % 60}s` : 
+    `${cdInfo.displayValue} ${cdInfo.unit}`}
 - Competitors: ${competitorText}
 
 FULL CONTEXT: ${enrichedData.context}
 
 Provide a JSON response with exactly this structure. Use **bold formatting** around key numbers, percentages, and important insights for emphasis:
 {
-  "context": "Brief explanation of what this metric measures and why it matters for this business. Include the metric unit (${clientInfo.unit}) in your explanation (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. Always use ${clientInfo.unit} as the unit. Example: 'Your **${clientInfo.displayValue} ${clientInfo.unit}** performance is **X ${clientInfo.unit} better** than the industry average of **${industryInfo.displayValue} ${industryInfo.unit}**' (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. Include specific ${clientInfo.unit} targets where relevant (2-3 sentences)"
+  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
+  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. ${metricName === 'Session Duration' ? 'Use format like **5m 12s** for time values and describe differences in seconds when meaningful (e.g., 19 seconds longer)' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. ${metricName === 'Session Duration' ? 'Use practical time targets like **6m 0s** or improvements in seconds' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
 }
 
 IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.`;
