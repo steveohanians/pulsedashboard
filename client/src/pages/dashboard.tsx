@@ -602,8 +602,8 @@ export default function Dashboard() {
       console.error('Error generating PDF:', error);
       // Clean up in case of error
       const headerToRemove = document.getElementById('temp-pdf-header');
-      if (headerToRemove && originalElement?.contains(headerToRemove)) {
-        originalElement.removeChild(headerToRemove);
+      if (headerToRemove) {
+        headerToRemove.remove();
       }
       
       // Restore visibility of any hidden elements

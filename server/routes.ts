@@ -158,7 +158,7 @@ export function registerRoutes(app: Express): Server {
             timeSeriesData[timePeriod] = [];
           }
           
-          timeSeriesData[timePeriod] = metrics;
+          timeSeriesData[timePeriod] = metrics as any;
         });
         
         // Calculate averaged performance values for "Your Performance" display
@@ -869,7 +869,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Extract headers from the first record
-      const headers = Object.keys(records[0]);
+      const headers = Object.keys(records[0] as Record<string, any>);
       
       // Return preview data (first 5 rows) and available headers
       const preview = records.slice(0, 5);
@@ -923,8 +923,8 @@ export function registerRoutes(app: Express): Server {
           const mappedData: any = {};
           
           Object.entries(columnMapping).forEach(([dbField, csvColumn]) => {
-            if (csvColumn && record[csvColumn as string] !== undefined) {
-              let value = record[csvColumn as string];
+            if (csvColumn && (record as any)[csvColumn as string] !== undefined) {
+              let value = (record as any)[csvColumn as string];
               
               // Handle boolean fields
               if (dbField === 'sourceVerified' || dbField === 'active') {

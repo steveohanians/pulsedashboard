@@ -139,7 +139,7 @@ export async function generateComprehensiveSampleData() {
             clientId,
             metricName: config.name,
             value: finalValue,
-            sourceType,
+            sourceType: sourceType as any,
             timePeriod
           });
         }
@@ -151,7 +151,7 @@ export async function generateComprehensiveSampleData() {
             clientId,
             metricName: "Traffic Channels",
             value: channel.value,
-            sourceType,
+            sourceType: sourceType as any,
             timePeriod,
             channel: channel.name
           });
@@ -164,7 +164,7 @@ export async function generateComprehensiveSampleData() {
             clientId,
             metricName: "Device Distribution",
             value: device.value,
-            sourceType,
+            sourceType: sourceType as any,
             timePeriod,
             channel: device.name
           });
