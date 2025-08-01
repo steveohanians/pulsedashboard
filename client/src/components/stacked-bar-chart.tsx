@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 
 interface StackedBarData {
   sourceType: string;
@@ -27,6 +28,13 @@ const CHANNEL_COLORS = {
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    content: string;
+    x: number;
+    y: number;
+  }>({ visible: false, content: '', x: 0, y: 0 });
+
   // Check if we have any valid data
   const hasData = data && data.length > 0;
   
@@ -47,9 +55,24 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px, no max limit
 
+  const handleMouseEnter = (e: React.MouseEvent, channelName: string, value: number, color: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      visible: true,
+      content: `${channelName}: ${value}%`,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip({ visible: false, content: '', x: 0, y: 0 });
+  };
+
   return (
-    <div className="w-full h-full space-y-3 sm:space-y-4 relative" style={{ overflow: 'visible', paddingTop: '50px', paddingRight: '8px', paddingLeft: '4px', zIndex: 1 }}>
-      <div className="space-y-2 sm:space-y-3 relative" style={{ overflow: 'visible', zIndex: 1 }}>
+    <>
+      <div className="w-full h-full space-y-3 sm:space-y-4">
+        <div className="space-y-2 sm:space-y-3">
         {data.map((item, index) => (
           <div key={`${item.sourceType}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 relative">
             <div className="flex-shrink-0" style={{ width: `${labelWidth}px` }}>
@@ -70,52 +93,52 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                 return (
                   <div
                     key={channelIndex}
-                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer relative group ${
+                    className={`flex items-center justify-center text-xs font-medium text-white hover:brightness-110 transition-all cursor-pointer ${
                       isFirst ? 'rounded-l-md' : ''
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
                       backgroundColor: channel.color
                     }}
-                    title={`${channel.name}: ${channel.value}%`}
+                    onMouseEnter={(e) => handleMouseEnter(e, channel.name, channel.value, channel.color)}
+                    onMouseLeave={handleMouseLeave}
                   >
                     {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
-                    
-                    {/* Simple tooltip that appears directly above */}
-                    <div 
-                      className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50"
-                      style={{
-                        fontSize: '11px',
-                        color: '#374151'
-                      }}
-                    >
-                      <div className="flex items-center">
-                        <div 
-                          className="w-2 h-2 rounded-full mr-2"
-                          style={{ backgroundColor: channel.color }}
-                        />
-                        {channel.name}: {channel.value}%
-                      </div>
-                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
         ))}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
+          {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
+            <div key={channel} className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-xs text-gray-600">{channel}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 border-t border-gray-200">
-        {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
-          <div key={channel} className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-sm"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-xs text-gray-600">{channel}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+      {/* Global tooltip positioned at document level */}
+      {tooltip.visible && (
+        <div
+          className="fixed z-[9999] pointer-events-none whitespace-nowrap px-3 py-2 bg-white border border-gray-200 rounded-md shadow-lg text-xs"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translateX(-50%)',
+            color: '#374151'
+          }}
+        >
+          {tooltip.content}
+        </div>
+      )}
+    </>
   );
 }
