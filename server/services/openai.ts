@@ -298,31 +298,53 @@ Focus on practical business impact and competitive advantage.`;
   }
 }
 
+// Get metric unit/type for proper formatting
+function getMetricUnit(metricName: string): string {
+  const metricUnits: Record<string, string> = {
+    'Bounce Rate': '%',
+    'Session Duration': 'minutes',
+    'Pages per Session': 'pages',
+    'Sessions': 'sessions',
+    'Sessions per User': 'sessions',
+    'Page Views': 'views',
+    'Users': 'users',
+    'New Users': 'users',
+    'Conversion Rate': '%',
+    'Click-Through Rate': '%',
+    'Exit Rate': '%',
+    'Load Time': 'seconds',
+    'Revenue': '$'
+  };
+  return metricUnits[metricName] || 'units';
+}
+
 // Generate insights for a specific metric
 export async function generateMetricSpecificInsights(metricName: string, enrichedData: any, clientId: string) {
+  const metricUnit = getMetricUnit(metricName);
+  
   const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
 
 METRIC ANALYSIS REQUEST:
-- Metric: ${metricName}
+- Metric: ${metricName} (measured in ${metricUnit})
 - Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
-- Current Value: ${enrichedData.metric?.clientValue}
+- Current Value: ${enrichedData.metric?.clientValue}${metricUnit}
 - Time Period: ${enrichedData.metric?.timePeriod}
 
 BENCHMARK COMPARISON:
-- Industry Average: ${enrichedData.benchmarks?.industryAverage}
-- CD Portfolio Average: ${enrichedData.benchmarks?.cdPortfolioAverage}
-- Competitors: ${enrichedData.benchmarks?.competitors?.map((c: any) => `${c.name} (${c.value})`).join(', ') || 'No competitor data available'}
+- Industry Average: ${enrichedData.benchmarks?.industryAverage}${metricUnit}
+- CD Portfolio Average: ${enrichedData.benchmarks?.cdPortfolioAverage}${metricUnit}
+- Competitors: ${enrichedData.benchmarks?.competitors?.map((c: any) => `${c.name} (${c.value}${metricUnit})`).join(', ') || 'No competitor data available'}
 
 FULL CONTEXT: ${enrichedData.context}
 
-Provide a JSON response with exactly this structure:
+Provide a JSON response with exactly this structure. Use **bold formatting** around key numbers, percentages, and important insights for emphasis:
 {
-  "context": "Brief explanation of what this metric measures and why it matters for this business (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to industry average, CD portfolio average, and competitors. Include specific numbers and performance gaps (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations for improvement based on the comparative analysis (2-3 sentences)"
+  "context": "Brief explanation of what this metric measures and why it matters for this business. Include the metric unit (${metricUnit}) in your explanation (2-3 sentences)",
+  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** around specific numbers and performance gaps. Example: 'Your **35%** bounce rate is **7% better** than the industry average of **42%**' (2-3 sentences)", 
+  "recommendations": "Specific, actionable recommendations with **bold** emphasis on key targets and metrics. Include specific ${metricUnit} targets where relevant (2-3 sentences)"
 }
 
-Focus on the actual numbers provided and give specific comparative insights. Be precise about performance gaps and opportunities.`;
+Focus on the actual numbers provided and give specific comparative insights. Be precise about performance gaps and opportunities. Always include the metric unit (${metricUnit}) when referencing values.`;
 
   logger.info('OpenAI Prompt Details', { 
     metricName,

@@ -1,5 +1,24 @@
 import { Info, Lightbulb, TrendingUp } from "lucide-react";
 
+// Function to render text with bold formatting
+function renderTextWithBold(text: string) {
+  if (!text) return text;
+  
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const boldText = part.slice(2, -2);
+      return (
+        <strong key={index} className="font-semibold text-slate-800">
+          {boldText}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
 interface AIInsightsProps {
   context?: string;
   insight?: string;
@@ -29,7 +48,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
               <Info className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
               Context
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{context}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(context)}</p>
           </div>
         )}
         
@@ -39,7 +58,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
               <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
               Insight
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{insight}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(insight)}</p>
           </div>
         )}
         
@@ -49,7 +68,7 @@ export default function AIInsights({ context, insight, recommendation }: AIInsig
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
               Recommendation
             </h4>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{recommendation}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{renderTextWithBold(recommendation)}</p>
           </div>
         )}
       </div>
