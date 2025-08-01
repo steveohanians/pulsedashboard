@@ -957,15 +957,7 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
                 
-                {/* Show filter info when specific filters are applied */}
-                {(businessSize !== "All" || industryVertical !== "All") && (
-                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                    <p className="text-xs text-blue-700">
-                      <Info className="h-3 w-3 inline mr-1" />
-                      Industry averages filtered by: {businessSize !== "All" && businessSize}{businessSize !== "All" && industryVertical !== "All" && ", "}{industryVertical !== "All" && industryVertical}
-                    </p>
-                  </div>
-                )}
+
               </div>
             </CardContent>
           </Card>

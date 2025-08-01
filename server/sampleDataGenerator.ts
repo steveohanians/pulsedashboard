@@ -439,7 +439,7 @@ export async function generateDataForNewBenchmarkCompany(companyId: string, clie
   try {
     // Generate sample metrics for the new benchmark company
     // Generate dynamic time periods for new company data
-    function generateNewCompanyTimePeriods(): string[] {
+    const generateNewCompanyTimePeriods = (): string[] => {
       const now = new Date();
       const periods: string[] = [];
       
