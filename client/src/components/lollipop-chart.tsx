@@ -154,7 +154,7 @@ export default function LollipopChart({
                           />
                           {/* Lollipop dot with tooltip */}
                           <div
-                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm cursor-help group hover:scale-125 transition-transform duration-200"
+                            className="absolute w-2 h-2 rounded-full border border-white shadow-sm group hover:scale-125 transition-transform duration-200"
                             style={{
                               backgroundColor: color,
                               left: `${percentage}%`,
