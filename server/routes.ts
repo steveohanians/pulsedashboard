@@ -514,25 +514,29 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Fix missing sample data
-  app.post("/api/admin/fix-sample-data", requireAdmin, async (req, res) => {
+  // Test benchmark data flow and chart compatibility
+  app.post("/api/admin/test-data-flow", requireAdmin, async (req, res) => {
     try {
-      const { fixMissingDeviceData, validateAllMetricsExist } = await import("./fixSampleData");
+      const { verifyBenchmarkDataFlow, testChartDataStructure } = await import("./testDataFlow");
       
-      // Fix missing Device Distribution data
-      await fixMissingDeviceData();
+      // Verify benchmark data exists and is accessible
+      const dataFlowTest = await verifyBenchmarkDataFlow();
       
-      // Validate all metrics exist
-      const validation = await validateAllMetricsExist();
+      // Test chart data structure compatibility
+      const chartTest = await testChartDataStructure();
       
       res.json({
-        success: true,
-        message: "Sample data fix completed",
-        validation
+        success: dataFlowTest.success && chartTest.success,
+        message: "Data flow and chart compatibility test completed",
+        dataFlow: dataFlowTest,
+        chartCompatibility: chartTest,
+        overallStatus: dataFlowTest.isReady && chartTest.success 
+          ? "All benchmark data is properly connected and chart-ready" 
+          : "Some issues found with data flow or chart compatibility"
       });
     } catch (error) {
-      logger.error("Error fixing sample data", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to fix sample data" });
+      logger.error("Error testing data flow", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to test data flow" });
     }
   });
 
