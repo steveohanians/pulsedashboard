@@ -122,3 +122,4 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Enhanced Traffic Channels analysis to use actual channel distribution data instead of simple counts
   - Eliminated multiple competing system messages for unified AI personality and expertise
   - **Unified Expert Persona**: Added "sr. web analytics strategist and UX strategist" persona to all custom prompt templates for consistent AI expertise across all metric insights
+  - **Enhanced Prompt Templates**: Added metric-specific nuances (time formats, percentages, counts), **bold formatting** for key insights, and numbered list format for exactly 3 recommendations per template
