@@ -384,8 +384,8 @@ export function registerRoutes(app: Express): Server {
         timePeriod: timePeriod,
         metricName: metricName,
         contextText: insights.context,
-        insightText: insights.insights,
-        recommendationText: insights.recommendations,
+        insightText: insights.insight || insights.insights,
+        recommendationText: insights.recommendation || insights.recommendations,
         createdAt: new Date()
       };
 

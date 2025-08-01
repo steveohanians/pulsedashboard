@@ -338,7 +338,7 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.clientId, clientId),
         eq(metrics.metricName, metricName),
         eq(metrics.timePeriod, timePeriod),
-        eq(metrics.sourceType, sourceType)
+        eq(metrics.sourceType, sourceType as any)
       )
     );
   }
