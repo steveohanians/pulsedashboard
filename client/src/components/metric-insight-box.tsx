@@ -258,15 +258,16 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
-          console.debug('🎭 Regenerate with context clicked - clearing insight');
-          // Clear current insight and storage to force fresh generation with typewriter effect
+          console.debug('🎭 Regenerate with context clicked - starting mutation immediately');
+          // Start the mutation first to trigger loading state
+          generateInsightWithContextMutation.mutate(userContext);
+          
+          // Then clear current insight and storage
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           
-          // Generate with context (mutation pending state will show loading)
-          console.debug('🎭 Starting context-based regeneration');
-          generateInsightWithContextMutation.mutate(userContext);
+          console.debug('🎭 Context-based regeneration mutation started');
         }}
         onClear={() => {
           setInsight(null);
