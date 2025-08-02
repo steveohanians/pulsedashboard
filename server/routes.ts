@@ -422,7 +422,7 @@ export function registerRoutes(app: Express): Server {
       const clientMetricForPeriod = clientMetrics.find((m: any) => 
         m.metricName === metricName && 
         m.timePeriod === targetPeriod &&
-        m.sourceType === 'Competitor' // Client data is stored as Competitor sourceType
+        m.sourceType === 'Client' // Client data is stored with sourceType 'Client'
       );
       
       let clientValue = clientMetricForPeriod ? parseFloat(clientMetricForPeriod.value as string) : (metricData.Client || metricData);
