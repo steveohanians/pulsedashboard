@@ -376,7 +376,15 @@ export default function AIInsights({
                 {timestamp}
               </div>
               <div className="flex items-center space-x-2">
-                {/* Add Context Button - First (leftmost) position - Only show if we have necessary data */}
+                {/* Context Badge - Show first if this insight was generated with custom context */}
+                {hasCustomContext && (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
+                    <MessageCircle className="h-3 w-3" />
+                    <span>Enhanced</span>
+                  </div>
+                )}
+                
+                {/* Add Context Button - Only show if we have necessary data */}
                 {clientId && metricName && timePeriod && metricData && onRegenerateWithContext && (
                   <Dialog open={isContextModalOpen} onOpenChange={setIsContextModalOpen}>
                     <DialogTrigger asChild>
@@ -462,14 +470,6 @@ export default function AIInsights({
                   >
                     <X className="h-3 w-3" />
                   </Button>
-                )}
-                
-                {/* Context Badge - Show if this insight was generated with custom context */}
-                {hasCustomContext && (
-                  <div className="flex items-center space-x-1 px-2 py-1 bg-pink-100 text-pink-700 rounded-md text-xs">
-                    <Tag className="h-3 w-3" />
-                    <span>Enhanced</span>
-                  </div>
                 )}
               </div>
               </div>
