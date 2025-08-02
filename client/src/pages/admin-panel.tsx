@@ -41,7 +41,11 @@ function BusinessSizeEditDialog({ option }: { option: any }) {
         title: "Business size updated",
         description: `Updated to "${value}".`,
       });
+      // Invalidate all related queries since cascading update affects multiple data sources
       queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -107,7 +111,11 @@ function IndustryVerticalEditDialog({ option }: { option: any }) {
         title: "Industry vertical updated",
         description: `Updated to "${value}".`,
       });
+      // Invalidate all related queries since cascading update affects multiple data sources
       queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
       setIsOpen(false);
     } catch (error) {
       toast({
