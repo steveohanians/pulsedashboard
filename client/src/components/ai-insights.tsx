@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle, MessageCircle, Plus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
 
@@ -66,6 +68,13 @@ interface AIInsightsProps {
   isTyping?: boolean;
   onRegenerate?: () => void;
   onClear?: () => void;
+  // New context functionality props
+  clientId?: string;
+  metricName?: string;
+  timePeriod?: string;
+  metricData?: any;
+  hasCustomContext?: boolean;
+  onRegenerateWithContext?: (context: string) => void;
 }
 
 // Status icon component
@@ -84,7 +93,21 @@ function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'wa
   }
 }
 
-export default function AIInsights({ context, insight, recommendation, status, isTyping = false, onRegenerate, onClear }: AIInsightsProps) {
+export default function AIInsights({ 
+  context, 
+  insight, 
+  recommendation, 
+  status, 
+  isTyping = false, 
+  onRegenerate, 
+  onClear,
+  clientId,
+  metricName,
+  timePeriod,
+  metricData,
+  hasCustomContext = false,
+  onRegenerateWithContext
+}: AIInsightsProps) {
   const [contextComplete, setContextComplete] = useState(!isTyping);
   const [insightComplete, setInsightComplete] = useState(!isTyping);
   const [showInsight, setShowInsight] = useState(!isTyping);
@@ -92,6 +115,13 @@ export default function AIInsights({ context, insight, recommendation, status, i
   const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [contentKey, setContentKey] = useState(Date.now());
+  
+  // Context modal state
+  const [isContextModalOpen, setIsContextModalOpen] = useState(false);
+  const [userContext, setUserContext] = useState("");
+  const [isLoadingContext, setIsLoadingContext] = useState(false);
+  const [isSavingContext, setIsSavingContext] = useState(false);
+  
   const { toast } = useToast();
 
   // Reset typing states when content changes or isTyping changes
@@ -159,6 +189,93 @@ export default function AIInsights({ context, insight, recommendation, status, i
       });
     }
   };
+
+  // Load existing context when modal opens
+  const handleOpenContextModal = async () => {
+    if (!clientId || !metricName) {
+      toast({
+        title: "Error",
+        description: "Unable to load context data",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsContextModalOpen(true);
+    setIsLoadingContext(true);
+    
+    try {
+      const response = await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserContext(data.userContext || "");
+      }
+    } catch (error) {
+      console.error("Error loading context:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load existing context",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingContext(false);
+    }
+  }
+
+  // Save context and regenerate insights
+  const handleRegenerateWithContext = async () => {
+    if (!clientId || !metricName || !timePeriod || !metricData) {
+      toast({
+        title: "Error",
+        description: "Missing required data for regeneration",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingContext(true);
+    
+    try {
+      // Save the context first
+      if (userContext.trim()) {
+        await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userContext: userContext.trim() })
+        });
+      }
+
+      // Close modal and trigger regeneration with context
+      setIsContextModalOpen(false);
+      
+      if (onRegenerateWithContext) {
+        onRegenerateWithContext(userContext.trim());
+      }
+      
+      toast({
+        title: "Success",
+        description: "Context saved and insights regenerating...",
+      });
+    } catch (error) {
+      console.error("Error saving context:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save context",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingContext(false);
+    }
+  }
+
+  // Cancel context modal
+  const handleCancelContext = () => {
+    setIsContextModalOpen(false);
+    setUserContext("");
+  }
+
   if (!context && !insight && !recommendation) {
     return (
       <div className="space-y-3 sm:space-y-4">
@@ -259,6 +376,14 @@ export default function AIInsights({ context, insight, recommendation, status, i
                 {timestamp}
               </div>
               <div className="flex items-center space-x-2">
+                {/* Context Badge - Show if this insight was generated with custom context */}
+                {hasCustomContext && (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs">
+                    <Tag className="h-3 w-3" />
+                    <span>Enhanced</span>
+                  </div>
+                )}
+                
                 <Button
                   variant="ghost"
                   size="sm"
@@ -271,6 +396,60 @@ export default function AIInsights({ context, insight, recommendation, status, i
                     <Copy className="h-3 w-3" />
                   )}
                 </Button>
+                
+                {/* Add Context Button - Only show if we have necessary data */}
+                {clientId && metricName && timePeriod && metricData && onRegenerateWithContext && (
+                  <Dialog open={isContextModalOpen} onOpenChange={setIsContextModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleOpenContextModal}
+                        className="text-slate-500 hover:text-slate-700 h-7 px-2"
+                        title="Add context for better insights"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center">
+                          <MessageCircle className="h-4 w-4 mr-2 text-primary" />
+                          Add Context for {metricName}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-sm text-slate-600">
+                          Provide additional context to help our AI generate more relevant insights for your {metricName} metric.
+                        </p>
+                        <Textarea
+                          placeholder="e.g., We recently launched a new marketing campaign targeting mobile users, or our website had technical issues last week..."
+                          value={userContext}
+                          onChange={(e) => setUserContext(e.target.value)}
+                          rows={4}
+                          disabled={isLoadingContext || isSavingContext}
+                          className="resize-none"
+                        />
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={handleCancelContext}
+                            disabled={isSavingContext}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleRegenerateWithContext}
+                            disabled={isSavingContext || !userContext.trim()}
+                          >
+                            {isSavingContext ? "Regenerating..." : "Regenerate"}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                
                 {onRegenerate && (
                   <Button
                     variant="ghost"

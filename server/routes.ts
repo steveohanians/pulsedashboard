@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertMetricPromptSchema, updateMetricPromptSchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
@@ -441,6 +441,182 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       logger.error('Error generating metric insights', { error: (error as Error).message, clientId: req.params.clientId, metricName: req.body.metricName });
       res.status(500).json({ message: "Failed to generate metric insights" });
+    }
+  });
+
+  // Get insight context for a specific metric
+  app.get("/api/insight-context/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const context = await storage.getInsightContext(clientId, metricName);
+      res.json(context || { userContext: "" });
+    } catch (error) {
+      logger.error("Error fetching insight context", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
+      res.status(500).json({ message: "Failed to fetch insight context" });
+    }
+  });
+
+  // Save or update insight context
+  app.post("/api/insight-context/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+      const { userContext } = req.body;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Validate the user context
+      if (!userContext || typeof userContext !== 'string') {
+        return res.status(400).json({ message: "User context is required and must be a string" });
+      }
+
+      // Check if context already exists
+      const existingContext = await storage.getInsightContext(clientId, metricName);
+      
+      let savedContext;
+      if (existingContext) {
+        // Update existing context
+        savedContext = await storage.updateInsightContext(existingContext.id, { userContext });
+      } else {
+        // Create new context
+        const insertContext = insertInsightContextSchema.parse({
+          clientId,
+          metricName,
+          userContext
+        });
+        savedContext = await storage.createInsightContext(insertContext);
+      }
+
+      res.json({
+        message: "Context saved successfully",
+        context: savedContext
+      });
+    } catch (error) {
+      logger.error("Error saving insight context", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
+      res.status(500).json({ message: "Failed to save insight context" });
+    }
+  });
+
+  // Generate metric insights with user context
+  app.post("/api/generate-metric-insight-with-context/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { metricName, timePeriod, metricData, userContext } = req.body;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      logger.info('Starting metric-specific insight generation with context', { clientId, metricName, timePeriod, hasContext: !!userContext });
+
+      // Get enriched data for comprehensive analysis (same as regular generation)
+      const client = await storage.getClient(clientId);
+      const competitors = await storage.getCompetitorsByClient(clientId);
+      
+      const periodMapping = generateDynamicPeriodMapping();
+      let targetPeriod: string;
+      
+      if (timePeriod === "Last Month") {
+        targetPeriod = periodMapping["Last Month"][0];
+      } else if (timePeriod === "Last Quarter") {
+        targetPeriod = periodMapping["Last Quarter"][0];
+      } else if (timePeriod === "Last Year") {
+        targetPeriod = periodMapping["Last Year"][0];
+      } else {
+        targetPeriod = periodMapping["Last Month"][0];
+      }
+      
+      const clientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
+      
+      const competitorData = competitors.map((comp: any) => {
+        const competitorMetric = clientMetrics.find((m: any) => 
+          m.competitorId === comp.id && 
+          m.metricName === metricName && 
+          m.timePeriod === targetPeriod
+        );
+        return {
+          name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
+          value: competitorMetric ? parseFloat(competitorMetric.value as string) : null
+        };
+      }).filter((c: any) => c.value !== null);
+
+      // Build enriched context with user-provided context
+      const enrichedData = {
+        metric: {
+          name: metricName,
+          clientValue: metricData.Client || metricData,
+          timePeriod: timePeriod
+        },
+        client: {
+          name: client?.name,
+          industry: client?.industryVertical,
+          businessSize: client?.businessSize,
+          websiteUrl: client?.websiteUrl
+        },
+        benchmarks: {
+          industryAverage: metricData.Industry_Avg,
+          cdPortfolioAverage: metricData.CD_Avg,
+          competitors: competitorData
+        },
+        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
+        userContext: userContext // Add user context to the enriched data
+      };
+
+      // Import OpenAI service and generate insights with context
+      const { generateMetricSpecificInsightsWithContext } = await import('./services/openai.js');
+      
+      const insights = await generateMetricSpecificInsightsWithContext(metricName, enrichedData, clientId, userContext);
+      
+      const normalizedInsights = {
+        context: (insights as any).context,
+        insight: (insights as any).insight || (insights as any).insights,
+        recommendation: (insights as any).recommendation || (insights as any).recommendations,
+        status: (insights as any).status || 'needs_improvement'
+      };
+
+      logger.info('✅ OpenAI Response with Context Status Debug', { 
+        metricName, 
+        hasStatus: !!normalizedInsights.status, 
+        status: normalizedInsights.status,
+        hasUserContext: !!userContext
+      });
+      
+      // Store insights in database
+      const insertInsight = {
+        clientId,
+        timePeriod: timePeriod,
+        metricName: metricName,
+        contextText: normalizedInsights.context,
+        insightText: normalizedInsights.insight,
+        recommendationText: normalizedInsights.recommendation,
+        status: normalizedInsights.status,
+        createdAt: new Date()
+      };
+
+      const savedInsight = await storage.createAIInsight(insertInsight);
+      logger.info('Successfully saved metric-specific insights with context', { clientId, metricName, insightId: savedInsight.id });
+
+      res.json({
+        message: "Metric insights with context generated successfully",
+        insight: {
+          ...savedInsight,
+          status: normalizedInsights.status,
+          hasCustomContext: true
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error generating metric insights with context', { error: (error as Error).message, clientId: req.params.clientId, metricName: req.body.metricName });
+      res.status(500).json({ message: "Failed to generate metric insights with context" });
     }
   });
 

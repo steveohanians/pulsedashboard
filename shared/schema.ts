@@ -120,12 +120,22 @@ export const metricPrompts = pgTable("metric_prompts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const insightContexts = pgTable("insight_contexts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  metricName: text("metric_name").notNull(),
+  userContext: text("user_context").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const clientsRelations = relations(clients, ({ many }) => ({
   users: many(users),
   competitors: many(competitors),
   metrics: many(metrics),
   aiInsights: many(aiInsights),
+  insightContexts: many(insightContexts),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -165,6 +175,13 @@ export const metricsRelations = relations(metrics, ({ one }) => ({
 export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
   client: one(clients, {
     fields: [aiInsights.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export const insightContextsRelations = relations(insightContexts, ({ one }) => ({
+  client: one(clients, {
+    fields: [insightContexts.clientId],
     references: [clients.id],
   }),
 }));
@@ -228,6 +245,18 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
   createdAt: true,
 });
 
+export const insertInsightContextSchema = createInsertSchema(insightContexts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateInsightContextSchema = createInsertSchema(insightContexts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 // Types
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -251,3 +280,6 @@ export type InsertMetricPrompt = z.infer<typeof insertMetricPromptSchema>;
 export type UpdateMetricPrompt = z.infer<typeof updateMetricPromptSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type InsightContext = typeof insightContexts.$inferSelect;
+export type InsertInsightContext = z.infer<typeof insertInsightContextSchema>;
+export type UpdateInsightContext = z.infer<typeof updateInsightContextSchema>;

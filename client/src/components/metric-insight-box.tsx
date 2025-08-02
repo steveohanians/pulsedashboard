@@ -149,6 +149,41 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     }
   });
 
+  const generateInsightWithContextMutation = useMutation({
+    mutationFn: async (userContext: string) => {
+      const response = await fetch(`/api/generate-metric-insight-with-context/${clientId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          metricName,
+          timePeriod,
+          metricData,
+          userContext
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Set insight with typing effect enabled and mark as having custom context
+      console.debug('🎭 Setting new insight with context and typing=true');
+      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
+      console.debug('✅ Status from API with context:', data.insight.status);
+      onStatusChange?.(data.insight.status);
+      // Invalidate insights cache
+      queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
+    },
+    onError: (error) => {
+      console.error('Failed to generate insight with context:', error);
+    }
+  });
+
   if (insight) {
     console.debug('🎭 Rendering AIInsights with isTyping:', insight.isTyping);
     return (
@@ -158,6 +193,11 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         recommendation={insight.recommendationText}
         status={insight.status}
         isTyping={insight.isTyping}
+        hasCustomContext={insight.hasCustomContext}
+        clientId={clientId}
+        metricName={metricName}
+        timePeriod={timePeriod}
+        metricData={metricData}
         onRegenerate={() => {
           console.debug('🎭 Regenerate clicked - clearing insight');
           // Clear current insight and storage to force fresh generation with typewriter effect
@@ -168,6 +208,17 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           // Force component to reset completely before regenerating
           console.debug('🎭 Starting regeneration after delay');
           generateInsightMutation.mutate();
+        }}
+        onRegenerateWithContext={(userContext: string) => {
+          console.debug('🎭 Regenerate with context clicked - clearing insight');
+          // Clear current insight and storage to force fresh generation with typewriter effect
+          setInsight(null);
+          insightsStorage.remove(clientId, metricName);
+          onStatusChange?.(undefined);
+          
+          // Generate with context
+          console.debug('🎭 Starting context-based regeneration');
+          generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={() => {
           setInsight(null);

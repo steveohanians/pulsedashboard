@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, metricPrompts,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, metricPrompts, insightContexts,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -9,7 +9,8 @@ import {
   type Benchmark, type InsertBenchmark,
   type AIInsight, type InsertAIInsight,
   type PasswordResetToken, type InsertPasswordResetToken,
-  type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt
+  type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
+  type InsightContext, type InsertInsightContext, type UpdateInsightContext
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
@@ -72,6 +73,11 @@ export interface IStorage {
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   usePasswordResetToken(token: string): Promise<void>;
+  
+  // Insight Contexts
+  getInsightContext(clientId: string, metricName: string): Promise<InsightContext | undefined>;
+  createInsightContext(context: InsertInsightContext): Promise<InsightContext>;
+  updateInsightContext(id: string, context: UpdateInsightContext): Promise<InsightContext | undefined>;
   
   // Metric Prompts
   getMetricPrompts(): Promise<MetricPrompt[]>;
@@ -491,6 +497,39 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(metricPrompts)
       .where(eq(metricPrompts.metricName, metricName));
+  }
+
+  // Insight Contexts
+  async getInsightContext(clientId: string, metricName: string): Promise<InsightContext | undefined> {
+    const [context] = await db
+      .select()
+      .from(insightContexts)
+      .where(
+        and(
+          eq(insightContexts.clientId, clientId),
+          eq(insightContexts.metricName, metricName)
+        )
+      )
+      .orderBy(sql`${insightContexts.updatedAt} DESC`)
+      .limit(1);
+    return context || undefined;
+  }
+
+  async createInsightContext(insertContext: InsertInsightContext): Promise<InsightContext> {
+    const [context] = await db
+      .insert(insightContexts)
+      .values(insertContext)
+      .returning();
+    return context;
+  }
+
+  async updateInsightContext(id: string, updateContext: UpdateInsightContext): Promise<InsightContext | undefined> {
+    const [context] = await db
+      .update(insightContexts)
+      .set({ ...updateContext, updatedAt: new Date() })
+      .where(eq(insightContexts.id, id))
+      .returning();
+    return context || undefined;
   }
 }
 

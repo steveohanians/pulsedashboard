@@ -341,6 +341,203 @@ Focus on business impact and strategic direction rather than individual metric d
 }
 
 /**
+ * Generate metric-specific insights with user-provided context
+ */
+export async function generateMetricSpecificInsightsWithContext(
+  metricName: string,
+  enrichedData: any,
+  clientId: string,
+  userContext: string
+): Promise<any> {
+  try {
+    // First try to use custom prompt templates from the admin panel
+    const customPrompt = await storage.getMetricPrompt(metricName);
+    
+    if (customPrompt && customPrompt.isActive) {
+      logger.info('✅ USING CUSTOM PROMPT TEMPLATE WITH USER CONTEXT', { 
+        metricName, 
+        promptId: customPrompt.id,
+        hasUserContext: !!userContext
+      });
+      
+      // Use the existing custom prompt system with user context appended
+      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
+      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: any) => c.name) || [];
+      
+      return await generateInsightsWithCustomPromptAndContext(
+        customPrompt,
+        metricName,
+        enrichedData.metric.clientValue,
+        competitorValues,
+        competitorNames,
+        enrichedData.benchmarks?.industryAverage,
+        enrichedData.benchmarks?.cdPortfolioAverage,
+        enrichedData.client?.name,
+        enrichedData.client?.industry,
+        enrichedData.client?.businessSize,
+        userContext
+      );
+    }
+    
+    // Fallback to default generation with context if no custom prompt
+    return await generateDefaultInsightsWithContext(metricName, enrichedData, userContext);
+    
+  } catch (error) {
+    logger.error("Error in generateMetricSpecificInsightsWithContext", { 
+      error: (error as Error).message,
+      metricName,
+      clientId
+    });
+    throw error;
+  }
+}
+
+/**
+ * Generate insights using custom prompt template with user context
+ */
+async function generateInsightsWithCustomPromptAndContext(
+  customPrompt: any,
+  metricName: string,
+  clientValue: any,
+  competitorValues: number[],
+  competitorNames: string[],
+  industryAverage: any,
+  cdPortfolioAverage: any,
+  clientName: string,
+  industry: string,
+  businessSize: string,
+  userContext: string
+): Promise<any> {
+  try {
+    // Build competitor string for prompt
+    const competitorString = competitorNames.length > 0 
+      ? competitorNames.map((name, i) => `${name}: ${competitorValues[i]}`).join(', ')
+      : 'No competitor data available';
+
+    // Fill in the custom prompt template with actual data
+    let filledPrompt = customPrompt.promptTemplate
+      .replace(/{{clientName}}/g, clientName || 'Client')
+      .replace(/{{industry}}/g, industry || 'Unknown')
+      .replace(/{{businessSize}}/g, businessSize || 'Unknown')
+      .replace(/{{clientValue}}/g, String(clientValue))
+      .replace(/{{industryAverage}}/g, String(industryAverage || 'N/A'))
+      .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
+      .replace(/{{competitors}}/g, competitorString);
+
+    // Append user context to the prompt
+    if (userContext && userContext.trim()) {
+      filledPrompt += `\n\nUser-provided context:\n${userContext.trim()}`;
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: filledPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 800
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    logger.info('✅ Generated insights with custom prompt and user context', { 
+      metricName,
+      promptId: customPrompt.id,
+      hasUserContext: !!userContext,
+      responseFields: Object.keys(result)
+    });
+
+    return {
+      context: result.context || "Analysis in progress.",
+      insight: result.insight || "Insights being generated.",
+      recommendation: result.recommendation || "Recommendations will be available shortly.",
+      status: result.status || 'needs_improvement'
+    };
+
+  } catch (error) {
+    logger.error("Error generating insights with custom prompt and context", { 
+      error: (error as Error).message,
+      metricName,
+      promptId: customPrompt.id
+    });
+    throw error;
+  }
+}
+
+/**
+ * Generate default insights with user context (fallback)
+ */
+async function generateDefaultInsightsWithContext(
+  metricName: string,
+  enrichedData: any,
+  userContext: string
+): Promise<any> {
+  try {
+    const competitiveContext = enrichedData.benchmarks?.competitors?.length > 0
+      ? `Competitors: ${enrichedData.benchmarks.competitors.map((c: any) => `${c.name}: ${c.value}`).join(', ')}`
+      : 'No competitor data available';
+
+    let prompt = `Analyze this web analytics metric for ${enrichedData.client?.name} (${enrichedData.client?.businessSize}, ${enrichedData.client?.industry}):
+
+METRIC PERFORMANCE:
+- ${metricName}: ${enrichedData.metric.clientValue}
+- Industry Average: ${enrichedData.benchmarks?.industryAverage || 'N/A'}
+- Clear Digital Average: ${enrichedData.benchmarks?.cdPortfolioAverage || 'N/A'}
+- ${competitiveContext}
+
+Provide analysis in JSON format:
+1. "context" - Performance interpretation with competitive positioning
+2. "insight" - Why this performance is occurring and business implications
+3. "recommendation" - Specific, actionable next steps for this metric
+4. "status" - Overall assessment: "success", "needs_improvement", or "warning"
+
+Focus on practical business impact and competitive advantage.`;
+
+    // Append user context if provided
+    if (userContext && userContext.trim()) {
+      prompt += `\n\nUser-provided context:\n${userContext.trim()}`;
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a digital marketing analytics expert providing metric-specific insights in JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 600
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      context: result.context || "Metric analysis in progress.",
+      insight: result.insight || "Insights being generated.",
+      recommendation: result.recommendation || "Recommendations will be available shortly.",
+      status: result.status || 'needs_improvement'
+    };
+
+  } catch (error) {
+    logger.error("Error generating default insights with context", { 
+      error: (error as Error).message,
+      metricName
+    });
+    throw error;
+  }
+}
+
+/**
  * Generate enhanced metric insights with trend and competitive context
  */
 async function generateEnhancedMetricInsights(
