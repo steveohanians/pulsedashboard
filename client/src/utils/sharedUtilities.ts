@@ -3,33 +3,8 @@
 
 /**
  * Text formatting utilities
- * Consolidates text processing patterns found across components
  */
 export const textUtils = {
-  /**
-   * Render text with bold formatting (JSX safe)
-   * Consolidates bold text rendering patterns from multiple components
-   */
-  renderTextWithBold: (text: string, isRecommendation = false) => {
-    if (!text) return null;
-    
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        const boldText = part.slice(2, -2);
-        return (
-          <strong 
-            key={index} 
-            className={isRecommendation ? "text-blue-600 font-semibold" : "font-semibold"}
-          >
-            {boldText}
-          </strong>
-        );
-      }
-      return part;
-    });
-  },
-
   /**
    * Truncate text with ellipsis
    */
@@ -50,13 +25,12 @@ export const textUtils = {
    * Convert snake_case to Title Case
    */
   snakeToTitle: (text: string): string => {
-    return text.split('_').map(word => textUtils.capitalize(word)).join(' ');
+    return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   },
 };
 
 /**
  * Local storage utilities
- * Consolidates localStorage interaction patterns
  */
 export const storageUtils = {
   /**
@@ -93,26 +67,10 @@ export const storageUtils = {
       // Silently fail
     }
   },
-
-  /**
-   * Clear all localStorage items for the app
-   */
-  clearAppData: (prefix: string = 'pulse-dashboard-'): void => {
-    try {
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith(prefix)) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch {
-      // Silently fail
-    }
-  },
 };
 
 /**
  * Number formatting utilities
- * Consolidates number formatting patterns from chart components
  */
 export const numberUtils = {
   /**
@@ -126,7 +84,7 @@ export const numberUtils = {
    * Format percentage values
    */
   formatPercentage: (value: number, decimals: number = 1): string => {
-    return `${numberUtils.formatNumber(value, decimals)}%`;
+    return `${Number(value.toFixed(decimals)).toString()}%`;
   },
 
   /**
@@ -154,14 +112,13 @@ export const numberUtils = {
 
 /**
  * Array utilities
- * Common array manipulation patterns
  */
 export const arrayUtils = {
   /**
    * Remove duplicates from array
    */
   unique: <T>(array: T[]): T[] => {
-    return [...new Set(array)];
+    return Array.from(new Set(array));
   },
 
   /**
@@ -188,26 +145,10 @@ export const arrayUtils = {
     }
     return chunks;
   },
-
-  /**
-   * Sort array by multiple criteria
-   */
-  sortBy: <T>(array: T[], ...sortFns: ((item: T) => any)[]): T[] => {
-    return [...array].sort((a, b) => {
-      for (const sortFn of sortFns) {
-        const aVal = sortFn(a);
-        const bVal = sortFn(b);
-        if (aVal < bVal) return -1;
-        if (aVal > bVal) return 1;
-      }
-      return 0;
-    });
-  },
 };
 
 /**
  * Date utilities
- * Common date formatting and manipulation
  */
 export const dateUtils = {
   /**
@@ -238,18 +179,10 @@ export const dateUtils = {
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
     return `${Math.floor(diffDays / 365)} years ago`;
   },
-
-  /**
-   * Check if date is within range
-   */
-  isWithinRange: (date: Date, startDate: Date, endDate: Date): boolean => {
-    return date >= startDate && date <= endDate;
-  },
 };
 
 /**
  * URL utilities
- * Common URL handling patterns
  */
 export const urlUtils = {
   /**
@@ -298,7 +231,6 @@ export const urlUtils = {
 
 /**
  * Debounce utility
- * Consolidates debouncing patterns from search components
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -311,41 +243,3 @@ export function debounce<T extends (...args: any[]) => any>(
     timeoutId = setTimeout(() => func(...args), delay);
   };
 }
-
-/**
- * Color utilities
- * Common color manipulation patterns
- */
-export const colorUtils = {
-  /**
-   * Convert HSL to hex
-   */
-  hslToHex: (h: number, s: number, l: number): string => {
-    l /= 100;
-    const a = s * Math.min(l, 1 - l) / 100;
-    const f = (n: number) => {
-      const k = (n + h / 30) % 12;
-      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-    return `#${f(0)}${f(8)}${f(4)}`;
-  },
-
-  /**
-   * Generate random color
-   */
-  randomColor: (): string => {
-    return `#${Math.floor(Math.random()*16777215).toString(16)}`;
-  },
-
-  /**
-   * Check if color is light or dark
-   */
-  isLight: (hex: string): boolean => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128;
-  },
-};
