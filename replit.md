@@ -8,6 +8,13 @@ Preferred communication style: Simple, everyday language.
 Filter ordering: Business sizes ordered small to large, industry verticals alphabetical.
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 
+## Recent Changes
+**August 2, 2025**: Completed comprehensive data generation consolidation
+- Fixed dual generation systems: All data generation now uses centralized 15-month system
+- Removed legacy individual generators (bounceRate, sessionDuration, etc.) that only generated 5 months
+- All new company functions now generate consistent 15-month datasets
+- Eliminated function naming inconsistencies and clarified architecture documentation
+
 ## System Architecture
 
 Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear separation between frontend, backend, and data layers.

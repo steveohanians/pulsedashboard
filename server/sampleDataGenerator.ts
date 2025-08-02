@@ -406,6 +406,31 @@ async function generateAggregatedChannelData(companies: any[], sourceType: strin
   }
 }
 
+// Auto-generate data when new benchmark company is added
+export async function generateDataForNewBenchmarkCompany(companyId: string) {
+  const { shouldGenerateForNewCompanies } = await import("./sampleDataConfig");
+  
+  if (!shouldGenerateForNewCompanies()) {
+    logger.info("Auto-generation disabled for new benchmark companies");
+    return { success: false, message: "Auto-generation disabled" };
+  }
+  
+  logger.info(`Auto-generating data for new benchmark company: ${companyId}`);
+  
+  try {
+    // Regenerate Industry_Avg benchmarks with the new company included
+    await generateIndustryAverageMetrics();
+    
+    logger.info("Successfully updated Industry_Avg benchmarks with new company");
+    return { success: true, message: "Industry_Avg benchmarks updated with 15 months of data" };
+    
+  } catch (error) {
+    const err = error as Error;
+    logger.error("Error generating data for new benchmark company", { error: err.message, companyId });
+    throw error;
+  }
+}
+
 // Auto-generate data when new CD Portfolio company is added
 export async function generateDataForNewCdPortfolioCompany(companyId: string) {
   const { shouldGenerateForNewCompanies } = await import("./sampleDataConfig");

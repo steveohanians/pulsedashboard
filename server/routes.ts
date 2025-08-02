@@ -955,11 +955,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Generate bounce rate sample data
+  // Generate bounce rate sample data - Redirected to centralized system
   app.post("/api/generate-bounce-rate-data", requireAuth, async (req, res) => {
     try {
-      const { generateBounceRateData } = await import("./bounceRateDataGenerator");
-      const result = await generateBounceRateData();
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
+      const result = await generateDynamicBenchmarkData();
       res.json(result);
     } catch (error) {
       logger.error("Error generating bounce rate data", { error: (error as Error).message, stack: (error as Error).stack });
@@ -967,11 +967,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Generate session duration sample data
+  // Generate session duration sample data - Redirected to centralized system
   app.post("/api/generate-session-duration-data", requireAuth, async (req, res) => {
     try {
-      const { generateSessionDurationData } = await import("./sessionDurationDataGenerator");
-      const result = await generateSessionDurationData();
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
+      const result = await generateDynamicBenchmarkData();
       res.json(result);
     } catch (error) {
       logger.error("Error generating session duration data", { error: (error as Error).message, stack: (error as Error).stack });
@@ -979,11 +979,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Generate pages per session sample data
+  // Generate pages per session sample data - Redirected to centralized system
   app.post("/api/generate-pages-per-session-data", requireAuth, async (req, res) => {
     try {
-      const { generatePagesPerSessionData } = await import("./pagesPerSessionDataGenerator");
-      const result = await generatePagesPerSessionData();
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
+      const result = await generateDynamicBenchmarkData();
       res.json(result);
     } catch (error) {
       logger.error("Error generating pages per session data", { error: (error as Error).message, stack: (error as Error).stack });
@@ -991,11 +991,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Generate sessions per user sample data
+  // Generate sessions per user sample data - Redirected to centralized system
   app.post("/api/generate-sessions-per-user-data", requireAuth, async (req, res) => {
     try {
-      const { generateSessionsPerUserData } = await import("./sessionsPerUserDataGenerator");
-      const result = await generateSessionsPerUserData();
+      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
+      const result = await generateDynamicBenchmarkData();
       res.json(result);
     } catch (error) {
       logger.error("Error generating sessions per user data", { error: (error as Error).message, stack: (error as Error).stack });
@@ -1547,19 +1547,23 @@ export function registerRoutes(app: Express): Server {
     try {
       const validatedData = insertBenchmarkCompanySchema.parse(req.body);
       const company = await storage.createBenchmarkCompany(validatedData);
+      
+      // Auto-generate 15 months of sample data for the new benchmark company
+      try {
+        const { generateDataForNewBenchmarkCompany } = await import("./sampleDataGenerator");
+        await generateDataForNewBenchmarkCompany(company.id);
+        logger.info("Auto-generated 15 months of sample data for new benchmark company", { companyId: company.id });
+      } catch (sampleError) {
+        logger.warn("Failed to auto-generate sample data for benchmark company", { 
+          companyId: company.id, 
+          error: (sampleError as Error).message 
+        });
+        // Don't fail the main request if sample data generation fails
+      }
+      
       res.status(201).json(company);
     } catch (error) {
       logger.error("Error creating benchmark company", { error: (error as Error).message, stack: (error as Error).stack });
-      res.status(400).json({ message: "Invalid data" });
-    }
-  });
-
-  app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
-    try {
-      const validatedData = insertBenchmarkCompanySchema.parse(req.body);
-      const company = await storage.createBenchmarkCompany(validatedData);
-      res.status(201).json(company);
-    } catch (error) {
       res.status(400).json({ message: "Invalid data" });
     }
   });
