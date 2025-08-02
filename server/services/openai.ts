@@ -458,9 +458,9 @@ async function generateInsightsWithCustomPromptAndContext(
     });
 
     return {
-      context: result.context || "Analysis in progress.",
-      insight: result.insight || "Insights being generated.",
-      recommendation: result.recommendation || "Recommendations will be available shortly.",
+      context: result.context || result.context_analysis || "Analysis in progress.",
+      insight: result.insight || result.competitive_intelligence || "Insights being generated.",
+      recommendation: result.recommendation || result.action_plan || "Recommendations will be available shortly.",
       status: result.status || 'needs_improvement'
     };
 
