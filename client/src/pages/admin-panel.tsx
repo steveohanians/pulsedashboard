@@ -534,10 +534,13 @@ export default function AdminPanel() {
       isActive: formData.has("isActive"),
     };
     
-    if (!data.promptTemplate) {
+    // Debug logging
+    console.debug("Form data:", { metricName, data });
+    
+    if (!data.promptTemplate || !metricName) {
       toast({
         title: "Validation error",
-        description: "Prompt template is required.",
+        description: "Metric name and prompt template are required.",
         variant: "destructive",
       });
       return;
@@ -2334,7 +2337,7 @@ export default function AdminPanel() {
                                         </p>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <input type="checkbox" name="isActive" defaultChecked={prompt.isActive} />
+                                        <input type="checkbox" id="edit-prompt-active" name="isActive" defaultChecked={prompt.isActive} />
                                         <Label htmlFor="edit-prompt-active">Active</Label>
                                       </div>
                                       <div className="flex justify-end space-x-2">
