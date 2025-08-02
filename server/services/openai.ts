@@ -40,6 +40,7 @@ async function generateInsightsWithCustomPrompt(
   competitorValues: number[],
   industryVertical: string,
   businessSize: string,
+  clientName: string,
   competitorNames?: string[]
 ): Promise<MetricAnalysis> {
   try {
@@ -126,7 +127,7 @@ async function generateInsightsWithCustomPrompt(
       .replace(/\{\{COMPETITIVE_INSTRUCTIONS\}\}/g, customPrompt.promptTemplate.includes('COMPETITIVE INTELLIGENCE:') 
         ? customPrompt.promptTemplate.split('COMPETITIVE INTELLIGENCE:')[1]?.split('\n')[0]?.trim() || 'Compare performance against industry and competitors.'
         : 'Compare performance against industry and competitors.')
-      .replace(/\{\{clientName\}\}/g, 'Current Client')
+      .replace(/\{\{clientName\}\}/g, clientName || 'Current Client')
       .replace(/\{\{industry\}\}/g, industryVertical)
       .replace(/\{\{businessSize\}\}/g, businessSize)
       .replace(/\{\{clientValue\}\}/g, formattedClientValue)
@@ -219,7 +220,8 @@ export async function generateMetricInsights(
   industryAverage: number,
   competitorValues: number[],
   industryVertical: string,
-  businessSize: string
+  businessSize: string,
+  clientName?: string
 ): Promise<MetricAnalysis> {
   const { storage } = await import("../storage");
   
@@ -253,7 +255,8 @@ export async function generateMetricInsights(
     industryAverage,
     competitorValues,
     industryVertical,
-    businessSize
+    businessSize,
+    clientName || 'Current Client'
   );
 }
 
@@ -287,7 +290,8 @@ export async function generateBulkInsights(
       metric.industryAverage,
       metric.competitorValues,
       clientInfo.industryVertical,
-      clientInfo.businessSize
+      clientInfo.businessSize,
+      'Current Client' // TODO: Pass actual client name when available
     );
     
     insights.push({
@@ -971,6 +975,7 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
         competitorValues,
         enrichedData.client?.industry || 'Technology',
         enrichedData.client?.businessSize || 'Medium Business',
+        enrichedData.client?.name || 'Current Client',
         competitorNames
       );
     } else {
