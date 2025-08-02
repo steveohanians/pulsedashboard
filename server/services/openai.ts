@@ -441,14 +441,14 @@ async function generateInsightsWithCustomPromptAndContext(
       .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
       .replace(/{{competitors}}/g, competitorString);
 
-    // Append user context to the prompt with clear instructions
-    if (userContext && userContext.trim()) {
-      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.`;
-    }
-
-    // Add centralized formatting instructions
+    // Add centralized formatting instructions BEFORE user context
     if (!filledPrompt.toLowerCase().includes('json')) {
       filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
+    }
+
+    // Append user context to the prompt with clear instructions INCLUDING formatting reminder
+    if (userContext && userContext.trim()) {
+      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nREMINDER: Format all recommendations as numbered lists (1. 2. 3.) - do NOT use paragraph format.`;
     }
 
     const response = await openai.chat.completions.create({
@@ -584,11 +584,11 @@ Provide analysis in JSON format:
 3. "recommendation" - Specific, actionable next steps for this metric
 4. "status" - Overall assessment: "success", "needs_improvement", or "warning"
 
-Focus on practical business impact and competitive advantage.`;
+Focus on practical business impact and competitive advantage.${FORMATTING_INSTRUCTIONS}`;
 
-    // Append user context if provided
+    // Append user context if provided with formatting reminder
     if (userContext && userContext.trim()) {
-      prompt += `\n\nUser-provided context:\n${userContext.trim()}`;
+      prompt += `\n\nUser-provided context:\n${userContext.trim()}\n\nREMINDER: Format all recommendations as numbered lists (1. 2. 3.) - do NOT use paragraph format.`;
     }
 
     const response = await openai.chat.completions.create({
