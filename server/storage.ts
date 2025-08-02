@@ -303,18 +303,24 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    // If no filters applied, return all Industry_Avg metrics for the period
+    console.log(`🔍 getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
+    
+    // Get all Industry_Avg metrics for this period
+    const allIndustryMetrics = await db.select().from(metrics).where(
+      and(
+        eq(metrics.sourceType, 'Industry_Avg'),
+        eq(metrics.timePeriod, period)
+      )
+    );
+    
+    // If no filters applied, return all metrics
     if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
                     (!filters.industryVertical || filters.industryVertical === "All"))) {
-      return await db.select().from(metrics).where(
-        and(
-          eq(metrics.sourceType, 'Industry_Avg'),
-          eq(metrics.timePeriod, period)
-        )
-      );
+      console.log(`📝 No filters applied, returning ${allIndustryMetrics.length} metrics`);
+      return allIndustryMetrics;
     }
     
-    // Get benchmark companies that match the filters
+    // Get benchmark companies that match the filters to determine which variations to use
     const companyConditions = [];
     if (filters.businessSize && filters.businessSize !== "All") {
       companyConditions.push(eq(benchmarkCompanies.businessSize, filters.businessSize));
@@ -330,33 +336,25 @@ export class DatabaseStorage implements IStorage {
       .where(and(...companyConditions));
     
     if (matchingCompanies.length === 0) {
+      console.log(`❌ No matching companies found for filters`);
       return [];
     }
     
-    // Get Industry_Avg metrics for this period, filtered by business size and industry
-    // Since we generated Industry_Avg metrics with variations based on benchmark companies,
-    // we need to filter them to match the selected business size and industry vertical
-    const allIndustryMetrics = await db.select().from(metrics).where(
-      and(
-        eq(metrics.sourceType, 'Industry_Avg'),
-        eq(metrics.timePeriod, period)
-      )
-    );
+    console.log(`✅ Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
-    // Apply business size and industry vertical variations to Industry_Avg data
-    // by filtering and averaging based on matching benchmark companies
+    // Use the data generation logic to create filtered metrics that match the selected filters
     const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
     const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
     const timePeriods = generateTimePeriods();
     
     const filteredMetrics: Metric[] = [];
     
-    // Generate new filtered metrics that represent the average for the selected filters
+    // Generate filtered metrics by averaging values for matching companies
     for (const config of METRIC_CONFIGS) {
       let totalValue = 0;
       let companyCount = 0;
       
-      // Calculate average for matching companies
+      // Calculate average for matching companies using the same logic as data generation
       for (const company of matchingCompanies) {
         const value = generateMetricValue(
           config, 
@@ -387,6 +385,10 @@ export class DatabaseStorage implements IStorage {
           competitorId: null,
           createdAt: new Date()
         });
+        
+        if (config.name === "Session Duration") {
+          console.log(`📊 Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
+        }
       }
     }
     
