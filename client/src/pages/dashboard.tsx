@@ -256,7 +256,7 @@ export default function Dashboard() {
     
     // Helper function to aggregate channel data across multiple periods
     const aggregateChannelData = (sourceMetrics: any[]) => {
-      console.log(`🎯 aggregateChannelData called with ${sourceMetrics.length} metrics for sourceType:`, sourceMetrics[0]?.sourceType);
+
       const channelMap = new Map();
       
       sourceMetrics.forEach(metric => {
@@ -266,7 +266,7 @@ export default function Dashboard() {
           const channelName = metric.channel;
           const value = parseFloat(metric.value);
           
-          console.log(`🎯 Processing channel: ${channelName} = ${value} (sourceType: ${metric.sourceType})`);
+
           
           if (channelMap.has(channelName)) {
             channelMap.set(channelName, channelMap.get(channelName) + value);
@@ -296,22 +296,36 @@ export default function Dashboard() {
         }
       });
       
-      // Convert to array and calculate averages
-      const channels = Array.from(channelMap.entries()).map(([name, totalValue]) => {
-        const averageValue = totalValue / (periods?.length || 1);
-        return {
-          name,
-          value: Math.round(averageValue),
-          percentage: Math.round(averageValue),
-          color: CHART_COLORS.TRAFFIC_CHANNELS[name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-        };
-      });
+      // Define consistent channel order
+      const channelOrder = ['Organic Search', 'Direct', 'Social Media', 'Paid Search', 'Email', 'Other'];
       
-      console.log(`🎯 Aggregated channels for sourceType ${sourceMetrics[0]?.sourceType}:`, channels);
+      // Convert to array with consistent ordering
+      const channels = channelOrder
+        .map(channelName => {
+          if (channelMap.has(channelName)) {
+            const totalValue = channelMap.get(channelName);
+            const averageValue = totalValue / (periods?.length || 1);
+            return {
+              name: channelName,
+              value: Math.round(averageValue),
+              percentage: Math.round(averageValue),
+              color: CHART_COLORS.TRAFFIC_CHANNELS[channelName as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+            };
+          }
+          return null;
+        })
+        .filter(channel => channel !== null) as Array<{
+          name: string;
+          value: number;
+          percentage: number;
+          color: string;
+        }>;
+      
+
       
       // Ensure percentages add up to 100%
       const total = channels.reduce((sum, channel) => sum + channel.value, 0);
-      console.log(`🎯 Pre-normalization total for ${sourceMetrics[0]?.sourceType}: ${total}`);
+
       if (total > 0) {
         let runningTotal = 0;
         channels.forEach((channel, index) => {
@@ -328,7 +342,7 @@ export default function Dashboard() {
         });
       }
       
-      console.log(`🎯 Post-normalization channels for ${sourceMetrics[0]?.sourceType}:`, channels);
+
       
       return channels;
     };
@@ -1474,7 +1488,7 @@ export default function Dashboard() {
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
                           const trafficData = processTrafficChannelData();
-                          console.log(`🎯 Final traffic data being passed to StackedBarChart:`, trafficData);
+
                           return (
                             <StackedBarChart 
                               data={trafficData}

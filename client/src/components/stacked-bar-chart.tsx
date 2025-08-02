@@ -34,7 +34,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     barIndex: number;
   } | null>(null);
 
-  console.log(`🎯 StackedBarChart received data:`, data);
+
 
   // Check if we have any valid data
   const hasData = data && data.length > 0;
