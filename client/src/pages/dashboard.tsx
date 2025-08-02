@@ -933,11 +933,7 @@ export default function Dashboard() {
             <div className="min-w-0">
               <div className="flex items-center gap-4">
                 <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-                {/* CodePen spinning mask test - Enhanced */}
-                <div className="w-16 h-16 bg-green-600/70 rounded-full flex items-center justify-center status-icon-success relative">
-                  <CheckCircle className="h-8 w-8 text-white relative z-20" />
-                  <div className="absolute inset-0 rounded-full border-2 border-white/30 z-10"></div>
-                </div>
+
               </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
