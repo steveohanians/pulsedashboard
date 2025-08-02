@@ -228,10 +228,17 @@ export default function Dashboard() {
     console.log(`🔍 Traffic Channel Debug:`, {
       isTimeSeries,
       timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
+      dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
+      trafficChannelMetricsExists: !!dashboardData?.trafficChannelMetrics,
+      trafficChannelMetricsCount: dashboardData?.trafficChannelMetrics?.length || 0,
       trafficMetricsCount: trafficMetrics.length,
       trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
       sampleTrafficChannelData: trafficMetrics.filter((m: any) => m.channel).slice(0, 3) // Only channel data
     });
+    
+    if (dashboardData?.trafficChannelMetrics) {
+      console.log(`🎯 TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
+    }
     
     if (trafficMetrics.length === 0) {
       console.warn(`⚠️ No traffic metrics found! Debug:`, {

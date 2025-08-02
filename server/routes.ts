@@ -272,6 +272,7 @@ export function registerRoutes(app: Express): Server {
         });
         
         console.log(`🔍 Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
+        console.log(`🔍 Sample preserved traffic channels:`, trafficChannelMetrics.slice(0, 3).map(t => ({ channel: t.channel, value: t.value, sourceType: t.sourceType })));
         
         res.json({
           client,
