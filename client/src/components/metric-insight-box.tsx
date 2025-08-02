@@ -36,7 +36,7 @@ const insightsStorage = {
       
       localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify(allInsights));
     } catch (error) {
-      console.warn('Failed to save insight to localStorage:', error);
+      // Failed to save insight to localStorage - handled silently
     }
   },
   
@@ -62,7 +62,7 @@ const insightsStorage = {
       
       return insight.data;
     } catch (error) {
-      console.warn('Failed to load insight from localStorage:', error);
+      // Failed to load insight from localStorage - handled silently
       return null;
     }
   },
@@ -78,7 +78,7 @@ const insightsStorage = {
       
       localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify(allInsights));
     } catch (error) {
-      console.warn('Failed to remove insight from localStorage:', error);
+      // Failed to remove insight from localStorage - handled silently
     }
   }
 };
@@ -101,7 +101,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     if (storedInsight && !insight) { // Only load from storage if no current insight
       // Disable typing effect for stored insights to prevent restart
       setInsight({ ...storedInsight, isTyping: false, isFromStorage: true });
-      console.debug('✅ Status from storage:', storedInsight.status);
+      // Status loaded from storage
       onStatusChange?.(storedInsight.status);
     }
   }, [clientId, metricName, onStatusChange]); // Removed insight from deps to prevent interference
@@ -137,15 +137,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onSuccess: (data) => {
       // Set insight with typing effect enabled
-      console.debug('🎭 Setting new insight with typing=true');
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
-      console.debug('✅ Status from API:', data.insight.status);
       onStatusChange?.(data.insight.status);
       // Invalidate insights cache
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      console.error('Failed to generate insight:', error);
+      // Failed to generate insight - error handled by UI
     }
   });
 
@@ -172,17 +170,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onSuccess: (data) => {
       // Set insight with typing effect enabled and mark as having custom context
-      console.debug('🎭 Setting new insight with context and typing=true');
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
-      console.debug('✅ Status from API with context:', data.insight.status);
       onStatusChange?.(data.insight.status);
       // Invalidate insights cache
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      console.error('Failed to generate insight with context:', error);
       // Fallback to regular regeneration if context generation fails
-      console.debug('🎭 Context generation failed, falling back to regular regeneration');
       generateInsightMutation.mutate();
     }
   });
@@ -216,7 +210,6 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   }
 
   if (insight) {
-    console.debug('🎭 Rendering AIInsights with isTyping:', insight.isTyping);
     return (
       <AIInsights
         context={insight.contextText}
@@ -250,15 +243,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
               }
             }
           } catch (error) {
-            console.debug('🎭 No existing context found, proceeding with regular regeneration');
+            // No existing context found, proceeding with regular regeneration
           }
           
           // No context found, proceed with regular regeneration
-          console.debug('🎭 Starting regular regeneration');
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
-          console.debug('🎭 Regenerate with context clicked - starting mutation immediately');
           // Start the mutation first to trigger loading state
           generateInsightWithContextMutation.mutate(userContext);
           
@@ -266,8 +257,6 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
-          
-          console.debug('🎭 Context-based regeneration mutation started');
         }}
         onClear={async () => {
           // Clear insight and storage
@@ -280,9 +269,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
             await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
               method: 'DELETE'
             });
-            console.debug('🎭 Cleared insights and deleted saved context');
+            // Successfully cleared insights and deleted saved context
           } catch (error) {
-            console.error('Failed to delete context:', error);
+            // Failed to delete context - handled silently
           }
         }}
       />

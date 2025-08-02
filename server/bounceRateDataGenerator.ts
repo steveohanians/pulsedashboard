@@ -59,17 +59,17 @@ export async function generateBounceRateData() {
         const range = bounceRateRanges[sourceType as keyof typeof bounceRateRanges];
         
         // Enhanced variation with period-specific seeds
-        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + periodIndex * 100;
+        const currentPeriodIndex = timePeriods.indexOf(timePeriod);
+        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + currentPeriodIndex * 100;
         const randomFactor = (Math.sin(sourceSeed * 2.789) + 1) / 2; // 0-1 range
         
         // Period-specific variations for clear differentiation
         let periodVariation = 0;
-        const periodIndex = timePeriods.indexOf(timePeriod);
-        if (periodIndex === 0) periodVariation = -3; // Current period - Best recent performance
-        if (periodIndex === 1) periodVariation = -1; // Last month
-        if (periodIndex === 2) periodVariation = 1;  // 2 months ago
-        if (periodIndex === 3) periodVariation = 3;  // Older period
-        if (periodIndex === 4) periodVariation = 5;  // Oldest period - Worst historical performance
+        if (currentPeriodIndex === 0) periodVariation = -3; // Current period - Best recent performance
+        if (currentPeriodIndex === 1) periodVariation = -1; // Last month
+        if (currentPeriodIndex === 2) periodVariation = 1;  // 2 months ago
+        if (currentPeriodIndex === 3) periodVariation = 3;  // Older period
+        if (currentPeriodIndex === 4) periodVariation = 5;  // Oldest period - Worst historical performance
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));
         let finalValue = baseValue + seasonalFactor + yearTrend + monthTrend + periodVariation;

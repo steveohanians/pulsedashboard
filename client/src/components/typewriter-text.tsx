@@ -12,25 +12,21 @@ export default function TypewriterText({ text, speed = 15, onComplete, className
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    console.debug('🎭 TypewriterText useEffect triggered for text:', text.slice(0, 30) + '...');
     // Reset state when text changes
     setDisplayedText('');
     setIsComplete(false);
     
     if (!text || text.length === 0) {
-      console.debug('🎭 TypewriterText: Empty text, skipping animation');
       return;
     }
     
     let currentIndex = 0;
-    console.debug('🎭 TypewriterText: Starting animation with speed:', speed);
     
     const interval = setInterval(() => {
       if (currentIndex < text.length) {
         setDisplayedText(text.slice(0, currentIndex + 1));
         currentIndex++;
       } else {
-        console.debug('🎭 TypewriterText: Animation complete');
         setIsComplete(true);
         clearInterval(interval);
         if (onComplete) {
@@ -40,10 +36,9 @@ export default function TypewriterText({ text, speed = 15, onComplete, className
     }, speed);
 
     return () => {
-      console.debug('🎭 TypewriterText: Cleaning up interval');
       clearInterval(interval);
     };
-  }, [text, speed]); // Removed onComplete from dependencies to prevent restart
+  }, [text, speed, onComplete]);
 
   // Function to render text with bold formatting
   function renderTextWithBold(text: string) {

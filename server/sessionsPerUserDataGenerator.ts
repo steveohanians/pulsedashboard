@@ -59,17 +59,17 @@ export async function generateSessionsPerUserData() {
         const range = sessionsPerUserRanges[sourceType as keyof typeof sessionsPerUserRanges];
         
         // Enhanced variation with period-specific seeds
-        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 9 + periodIndex * 75;
+        const currentPeriodIndex = timePeriods.indexOf(timePeriod);
+        const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 9 + currentPeriodIndex * 75;
         const randomFactor = (Math.sin(sourceSeed * 3.456) + 1) / 2; // 0-1 range
         
         // Period-specific variations for clear differentiation
         let periodVariation = 0;
-        const periodIndex = timePeriods.indexOf(timePeriod);
-        if (periodIndex === 0) periodVariation = 0.5; // Current period
-        if (periodIndex === 1) periodVariation = 0.2; // Last month
-        if (periodIndex === 2) periodVariation = -0.2; // 2 months ago
-        if (periodIndex === 3) periodVariation = 0.4;  // Older period
-        if (periodIndex === 4) periodVariation = -0.8; // Oldest period
+        if (currentPeriodIndex === 0) periodVariation = 0.5; // Current period
+        if (currentPeriodIndex === 1) periodVariation = 0.2; // Last month
+        if (currentPeriodIndex === 2) periodVariation = -0.2; // 2 months ago
+        if (currentPeriodIndex === 3) periodVariation = 0.4;  // Older period
+        if (currentPeriodIndex === 4) periodVariation = -0.8; // Oldest period
         
         const baseValue = range.min + (randomFactor * (range.max - range.min));
         let finalValue = baseValue + seasonalFactor + yearTrend + monthTrend + periodVariation;
