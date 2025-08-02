@@ -37,7 +37,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
       
       return await query;
     } catch (error) {
-      logger.error(`Failed to find all ${this.entityName}`, { filters, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to find all ${this.entityName}`, { filters, error: errorMessage });
       throw error;
     }
   }
@@ -51,7 +52,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
       logger.info(`Created ${this.entityName}`, { id: entity.id });
       return entity;
     } catch (error) {
-      logger.error(`Failed to create ${this.entityName}`, { data, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to create ${this.entityName}`, { data, error: errorMessage });
       throw error;
     }
   }
@@ -72,7 +74,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
       
       return entity || undefined;
     } catch (error) {
-      logger.error(`Failed to update ${this.entityName}`, { id, data, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to update ${this.entityName}`, { id, data, error: errorMessage });
       throw error;
     }
   }
@@ -93,7 +96,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
       
       return deleted;
     } catch (error) {
-      logger.error(`Failed to delete ${this.entityName}`, { id, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to delete ${this.entityName}`, { id, error: errorMessage });
       throw error;
     }
   }
@@ -107,7 +111,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
         .limit(1);
       return !!entity;
     } catch (error) {
-      logger.error(`Failed to check ${this.entityName} existence`, { id, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to check ${this.entityName} existence`, { id, error: errorMessage });
       throw error;
     }
   }
@@ -128,7 +133,8 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
       const [result] = await query;
       return Number(result.count);
     } catch (error) {
-      logger.error(`Failed to count ${this.entityName}`, { filters, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to count ${this.entityName}`, { filters, error: errorMessage });
       throw error;
     }
   }

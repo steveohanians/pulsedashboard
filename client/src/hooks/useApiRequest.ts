@@ -38,7 +38,7 @@ export function useApiRequest<TData = any, TVariables = any>(
   const queryClient = useQueryClient();
 
   return useMutation<TData, Error, TVariables>({
-    mutationFn: async (variables: TVariables) => {
+    mutationFn: async (variables: TVariables): Promise<TData> => {
       const requestOptions: any = { method };
       
       if (method !== 'GET' && variables) {
@@ -48,7 +48,7 @@ export function useApiRequest<TData = any, TVariables = any>(
         };
       }
 
-      return apiRequest(endpoint, requestOptions);
+      return await apiRequest(endpoint, requestOptions);
     },
     onSuccess: (data, variables) => {
       // Invalidate specified queries
@@ -105,7 +105,9 @@ export function useApiQuery<TData = any>(
 
   return useQuery<TData>({
     queryKey: keyArray,
-    queryFn: () => apiRequest(actualEndpoint),
+    queryFn: async (): Promise<TData> => {
+      return await apiRequest(actualEndpoint);
+    },
     ...options,
     onError: (error: any) => {
       if (showErrorToast) {
@@ -135,12 +137,13 @@ export function useOptimisticUpdate<TData, TVariables>(
   const queryClient = useQueryClient();
 
   return useMutation<TData, Error, TVariables>({
-    mutationFn: (variables: TVariables) => 
-      apiRequest(endpoint, {
+    mutationFn: async (variables: TVariables): Promise<TData> => {
+      return await apiRequest(endpoint, {
         method: 'POST',
         body: JSON.stringify(variables),
         headers: { 'Content-Type': 'application/json' }
-      }),
+      });
+    },
     onMutate: async (variables) => {
       if (!optimisticUpdate) return;
 
