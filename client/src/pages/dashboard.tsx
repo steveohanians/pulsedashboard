@@ -1156,7 +1156,7 @@ export default function Dashboard() {
                   const endText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                   displayText = `${startText} - ${endText}`;
                 } else if (timePeriod === "Last Year") {
-                  // Use Pacific Time for year calculation - Last Year should end in previous month (rolling 12 months)
+                  // Use Pacific Time for year calculation - Last Year should be rolling 12 months ending in previous month
                   const now = new Date();
                   const ptFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: 'America/Los_Angeles',
@@ -1166,9 +1166,14 @@ export default function Dashboard() {
                   const ptParts = ptFormatter.formatToParts(now);
                   const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
                   const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-                  const endDate = new Date(ptYear, ptMonth - 1, 1); // Previous month in PT
+                  
+                  // End date is previous month (July 2025)
+                  const endDate = new Date(ptYear, ptMonth - 1, 1);
+                  
+                  // Start date is 12 months before end date (August 2024)
                   const startDate = new Date(endDate);
-                  startDate.setFullYear(startDate.getFullYear() - 1); // 12 months ago
+                  startDate.setMonth(startDate.getMonth() - 11); // 11 months back from end month = 12 months total
+                  
                   displayText = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
                 }
                 
