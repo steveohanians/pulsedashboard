@@ -379,7 +379,7 @@ export default function AIInsights({
                 {/* Context Badge - Show first if this insight was generated with custom context */}
                 {hasCustomContext && (
                   <div className="flex items-center space-x-1 px-2 py-1 bg-pink-50 text-primary rounded-md text-xs border border-primary/20">
-                    <MessageCircle className="h-3 w-3" />
+                    <Sparkles className="h-3 w-3" />
                     <span>Enhanced</span>
                   </div>
                 )}
@@ -415,7 +415,10 @@ export default function AIInsights({
                           onChange={(e) => setUserContext(e.target.value)}
                           rows={4}
                           disabled={isLoadingContext || isSavingContext}
-                          className="resize-none [&::placeholder]:!text-slate-400 [&::placeholder]:!opacity-100"
+                          className="resize-none"
+                          style={{
+                            '--tw-placeholder-opacity': '1',
+                          } as React.CSSProperties}
                         />
                         <div className="flex justify-end space-x-2">
                           <Button

@@ -70,8 +70,21 @@
   }
 
   /* Force consistent placeholder color to prevent flashing */
-  textarea::placeholder {
+  textarea::placeholder,
+  textarea::-webkit-input-placeholder,
+  textarea::-moz-placeholder,
+  textarea:-ms-input-placeholder {
     color: #9ca3af !important;
     opacity: 1 !important;
+    transition: none !important;
+  }
+  
+  textarea:focus::placeholder,
+  textarea:focus::-webkit-input-placeholder,
+  textarea:focus::-moz-placeholder,
+  textarea:focus:-ms-input-placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+    transition: none !important;
   }
 }
