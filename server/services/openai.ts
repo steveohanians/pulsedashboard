@@ -459,6 +459,8 @@ async function generateInsightsWithCustomPromptAndContext(
 
     // Helper function to parse nested JSON strings and extract readable text
     const parseNestedJson = (value: any): string => {
+      if (!value) return '';
+      
       if (typeof value === 'string') {
         try {
           const parsed = JSON.parse(value);
@@ -476,20 +478,55 @@ async function generateInsightsWithCustomPromptAndContext(
               return texts;
             };
             const extractedTexts = extractText(parsed);
-            return extractedTexts.join(' ');
+            const result = extractedTexts.join(' ');
+            logger.info('✅ Parsed JSON content', { originalLength: value.length, parsedLength: result.length });
+            return result;
           }
           return String(parsed);
         } catch {
+          // If it's not JSON, return as-is
           return value;
         }
       }
-      return value || '';
+      
+      if (typeof value === 'object' && value !== null) {
+        // Handle direct objects (not stringified JSON)
+        const extractText = (obj: any): string[] => {
+          const texts: string[] = [];
+          for (const val of Object.values(obj)) {
+            if (typeof val === 'string') {
+              texts.push(val);
+            } else if (typeof val === 'object' && val !== null) {
+              texts.push(...extractText(val));
+            }
+          }
+          return texts;
+        };
+        const extractedTexts = extractText(value);
+        return extractedTexts.join(' ');
+      }
+      
+      return String(value);
     };
 
+    const parsedContext = parseNestedJson(result.context || result.context_analysis || result.contextAnalysis);
+    const parsedInsight = parseNestedJson(result.insight || result.competitive_intelligence || result.competitiveIntelligence);
+    const parsedRecommendation = parseNestedJson(result.recommendation || result.action_plan || result.actionPlan);
+
+    logger.info('✅ Content parsing results', {
+      metricName,
+      hasContext: !!parsedContext,
+      hasInsight: !!parsedInsight,
+      hasRecommendation: !!parsedRecommendation,
+      contextLength: parsedContext?.length || 0,
+      insightLength: parsedInsight?.length || 0,
+      recommendationLength: parsedRecommendation?.length || 0
+    });
+
     return {
-      context: parseNestedJson(result.context || result.context_analysis) || "Analysis in progress.",
-      insight: parseNestedJson(result.insight || result.competitive_intelligence) || "Insights being generated.",
-      recommendation: parseNestedJson(result.recommendation || result.action_plan) || "Recommendations will be available shortly.",
+      context: parsedContext || "Analysis in progress.",
+      insight: parsedInsight || "Insights being generated.",
+      recommendation: parsedRecommendation || "Recommendations will be available shortly.",
       status: result.status || 'needs_improvement'
     };
 
