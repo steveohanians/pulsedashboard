@@ -78,46 +78,29 @@ interface AIInsightsProps {
   onRegenerateWithContext?: (context: string) => void;
 }
 
-// Status icon component - Testing basic CSS animations
+// Status icon component with spinning glow effect
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
   if (!status) return null;
   
-  const getColors = () => {
+  const getIconClasses = () => {
     switch (status) {
       case 'success':
-        return { color: '#10b981', bg: '#10b98120' };
+        return 'status-icon-success';
       case 'needs_improvement':
-        return { color: '#f59e0b', bg: '#f59e0b20' };
       case 'warning':
-        return { color: '#ef4444', bg: '#ef444420' };
+        return 'status-icon-warning';
       default:
-        return { color: '#6b7280', bg: '#6b728020' };
+        return '';
     }
   };
   
-  const colors = getColors();
+  const iconClasses = getIconClasses();
   
   return (
-    <div className="flex items-center gap-2">
-      {/* Test 1: Basic Tailwind animate-spin */}
-      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      
-      {/* Test 2: Tailwind spin with custom timing */}
-      <div 
-        className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full"
-        style={{ animation: 'spin 1s linear infinite' }}
-      ></div>
-      
-      {/* Test 3: Custom keyframe */}
-      <div 
-        className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"
-        style={{ animation: 'ai-icon-spin 1s linear infinite' }}
-      ></div>
-      
-      {/* Original icon */}
-      {status === 'success' && <CheckCircle className="h-6 w-6" style={{ color: colors.color }} />}
-      {status === 'needs_improvement' && <AlertTriangle className="h-6 w-6" style={{ color: colors.color }} />}
-      {status === 'warning' && <AlertCircle className="h-6 w-6" style={{ color: colors.color }} />}
+    <div className="flex items-center">
+      {status === 'success' && <CheckCircle className={`h-6 w-6 ${iconClasses}`} />}
+      {status === 'needs_improvement' && <AlertTriangle className={`h-6 w-6 ${iconClasses}`} />}
+      {status === 'warning' && <AlertCircle className={`h-6 w-6 ${iconClasses}`} />}
     </div>
   );
 }

@@ -68,6 +68,44 @@
   --sidebar-ring: var(--ring);
 }
 
+/* CodePen-inspired spinning glow animations */
+@keyframes spinning {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glowing {
+  0% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+  100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+}
+
+/* Status icon animations */
+.status-icon-success {
+  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  color: #10b981; /* green-500 */
+}
+
+.status-icon-warning {
+  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  color: #f59e0b; /* amber-500 */
+}
+
+.status-icon-error {
+  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  color: #ef4444; /* red-500 */
+}
+
 /* Test CSS animations - Multiple approaches */
 @keyframes ai-icon-spin {
   0% { 
