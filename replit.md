@@ -9,7 +9,7 @@ Filter ordering: Business sizes ordered small to large, industry verticals alpha
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 
 ## Recent Changes
-**August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes, MAJOR TRAFFIC CHANNELS FIX, AI INSIGHTS CRITICAL FIX
+**August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes, MAJOR TRAFFIC CHANNELS FIX, AI INSIGHTS CRITICAL FIX, CLIENT NAME SUBSTITUTION FIX
 - **CRITICAL FILTERING FIX**: Resolved multi-period filtering issue where Quarter/Year views didn't show filter changes
   - Root cause: Chart component used `.find()` for first match instead of averaging multiple filtered metrics per period
   - Fixed chart data processing to properly average Industry_Avg values across multiple records per time period
@@ -48,6 +48,12 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
   - Fixed to fetch actual client, industry, CD, and competitor values from July 2025 database records instead of frontend averaged data
   - Added comprehensive logging to track AI analysis periods vs user dashboard selections and DB values vs frontend values
   - Ensures consistent AI insights based solely on July 2025 data as required, regardless of Quarter/Year dashboard selections
+- **CLIENT NAME SUBSTITUTION FIX**: Resolved critical bug where {{clientName}} variable was hardcoded as "Current Client" instead of using actual client names
+  - Root cause: generateInsightsWithCustomPrompt function had hardcoded string replacement instead of dynamic client name parameter
+  - Updated all AI insight generation functions to properly pass and substitute actual client names from database
+  - Enhanced global prompt template to include {{clientName}} placeholder in multiple strategic locations
+  - AI insights now correctly reference "Demo Company" instead of generic "Current Client" text
+  - Verified fix working through database testing - insights now show proper client name personalization
 
 
 ## System Architecture
