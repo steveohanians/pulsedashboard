@@ -134,6 +134,9 @@ export function registerRoutes(app: Express): Server {
         const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
         const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
         
+        console.log(`🔍 Single-period traffic channel debug: Client=${allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, Industry=${allFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, CD=${allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}`);
+        console.log(`🔍 Sample single-period traffic channels:`, allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+        
         const processedMetrics = [
           ...allMetrics.map(m => ({
             metricName: m.metricName,

@@ -350,7 +350,13 @@ export class DatabaseStorage implements IStorage {
     const filteredMetrics: Metric[] = [];
     
     // Generate filtered metrics by averaging values for matching companies
+    // IMPORTANT: Skip Traffic Channels - they need actual database records to preserve channel information
     for (const config of METRIC_CONFIGS) {
+      if (config.name === 'Traffic Channels') {
+        console.log(`🔍 Skipping Traffic Channels generation - will use actual database records`);
+        continue; // Skip traffic channels - use actual database records instead
+      }
+      
       let totalValue = 0;
       let companyCount = 0;
       
@@ -392,6 +398,11 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    // Add actual Traffic Channels data from database to preserve channel information
+    const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
+    console.log(`🔍 Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
+    filteredMetrics.push(...trafficChannelsFromDB);
+    
     return filteredMetrics;
   }
 
@@ -410,6 +421,12 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.sourceType, 'CD_Avg'),
         eq(metrics.timePeriod, period)
       ));
+    
+    // Debug traffic channel data specifically for CD_Avg
+    const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
+    const channelsWithNames = trafficChannels.filter(r => r.channel);
+    console.log(`🔍 CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+    
     console.log(`📝 Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
     return allMetrics;
   }
@@ -423,6 +440,12 @@ export class DatabaseStorage implements IStorage {
       )
     );
     console.log(`🔍 getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
+    
+    // Debug traffic channel data specifically
+    const trafficChannels = results.filter(r => r.metricName === 'Traffic Channels');
+    const channelsWithNames = trafficChannels.filter(r => r.channel);
+    console.log(`🔍 Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
+    
     return results;
   }
 
