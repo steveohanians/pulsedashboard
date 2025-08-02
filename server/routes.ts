@@ -410,11 +410,12 @@ export function registerRoutes(app: Express): Server {
         };
       }).filter((c: any) => c.value !== null);
       
-      logger.info('Built competitor data for insights', { 
+      logger.info('🎯 AI COMPETITOR VALUES DEBUG', { 
         metricName, 
         targetPeriod,
         competitorCount: competitorData.length,
-        competitors: competitorData.map(c => ({ name: c.name, value: c.value }))
+        competitors: competitorData.map(c => ({ name: c.name, value: c.value })),
+        note: 'Competitors already use DB values for targetPeriod, not frontend averaged data'
       });
 
       // CRITICAL: Get actual client value for targetPeriod (July 2025) from database, not from frontend averaged data

@@ -43,9 +43,10 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
   - Enhanced data processing with consistent channel ordering: Organic Search → Direct → Social Media → Paid Search → Email → Other
   - All traffic channel charts now display proper colored bars with correct percentages and consistent visual hierarchy
 - **CRITICAL AI INSIGHTS FIX**: Resolved major issue where OpenAI insights were based on user-selected time periods instead of last month data only
-  - Root cause: Both insight generation routes (`/api/generate-metric-insight/` and `/api/generate-insights/`) used user's selected time period for AI analysis
+  - Root cause: Both insight generation routes (`/api/generate-metric-insight/` and `/api/generate-insights/`) used user's selected time period for AI analysis, and client/benchmark values used frontend averaged data instead of July 2025 specific values
   - Fixed to force dashboard's "Last Month" period (July 2025) for all AI insights regardless of user's time period selections
-  - Added comprehensive logging to track AI analysis periods vs user dashboard selections
+  - Fixed to fetch actual client, industry, CD, and competitor values from July 2025 database records instead of frontend averaged data
+  - Added comprehensive logging to track AI analysis periods vs user dashboard selections and DB values vs frontend values
   - Ensures consistent AI insights based solely on July 2025 data as required, regardless of Quarter/Year dashboard selections
 
 
