@@ -229,15 +229,32 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         metricName={metricName}
         timePeriod={timePeriod}
         metricData={metricData}
-        onRegenerate={() => {
-          console.debug('🎭 Regenerate clicked - clearing insight');
+        onRegenerate={async () => {
+          console.debug('🎭 Regenerate clicked - checking for existing context');
           // Clear current insight and storage to force fresh generation with typewriter effect
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           
-          // Force component to reset completely before regenerating
-          console.debug('🎭 Starting regeneration after delay');
+          // Check if there's existing context and use it for regeneration
+          try {
+            const contextResponse = await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`);
+            if (contextResponse.ok) {
+              const contextData = await contextResponse.json();
+              const existingContext = contextData.userContext?.trim();
+              
+              if (existingContext) {
+                console.debug('🎭 Found existing context, regenerating with context');
+                generateInsightWithContextMutation.mutate(existingContext);
+                return;
+              }
+            }
+          } catch (error) {
+            console.debug('🎭 No existing context found, proceeding with regular regeneration');
+          }
+          
+          // No context found, proceed with regular regeneration
+          console.debug('🎭 Starting regular regeneration');
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
