@@ -269,10 +269,21 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           
           console.debug('🎭 Context-based regeneration mutation started');
         }}
-        onClear={() => {
+        onClear={async () => {
+          // Clear insight and storage
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
+          
+          // Also delete the saved context
+          try {
+            await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
+              method: 'DELETE'
+            });
+            console.debug('🎭 Cleared insights and deleted saved context');
+          } catch (error) {
+            console.error('Failed to delete context:', error);
+          }
         }}
       />
     );

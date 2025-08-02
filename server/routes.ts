@@ -505,6 +505,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete insight context for a specific metric
+  app.delete("/api/insight-context/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const existingContext = await storage.getInsightContext(clientId, metricName);
+      if (existingContext) {
+        await storage.deleteInsightContext(existingContext.id);
+        logger.info("Insight context deleted successfully", { clientId, metricName });
+        res.json({ message: "Context deleted successfully" });
+      } else {
+        res.json({ message: "No context found to delete" });
+      }
+    } catch (error) {
+      logger.error("Error deleting insight context", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
+      res.status(500).json({ message: "Failed to delete insight context" });
+    }
+  });
+
   // Generate metric insights with user context
   app.post("/api/generate-metric-insight-with-context/:clientId", requireAuth, async (req, res) => {
     try {

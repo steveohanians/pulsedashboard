@@ -78,6 +78,7 @@ export interface IStorage {
   getInsightContext(clientId: string, metricName: string): Promise<InsightContext | undefined>;
   createInsightContext(context: InsertInsightContext): Promise<InsightContext>;
   updateInsightContext(id: string, context: UpdateInsightContext): Promise<InsightContext | undefined>;
+  deleteInsightContext(id: string): Promise<void>;
   
   // Metric Prompts
   getMetricPrompts(): Promise<MetricPrompt[]>;
@@ -530,6 +531,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(insightContexts.id, id))
       .returning();
     return context || undefined;
+  }
+
+  async deleteInsightContext(id: string): Promise<void> {
+    await db
+      .delete(insightContexts)
+      .where(eq(insightContexts.id, id));
   }
 }
 
