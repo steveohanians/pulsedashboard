@@ -13,26 +13,12 @@ export interface MetricConfig {
   bounds?: { min: number; max: number };
 }
 
-// Generate dynamic time periods (consolidated function)
+// Generate dynamic time periods (DEPRECATED - use sampleDataGenerator.generateTimePeriods instead)
+// This function generates only 5 periods and is being phased out
 export function generateTimePeriods(): string[] {
-  const now = new Date();
-  const periods: string[] = [];
-  
-  for (let i = 0; i < 3; i++) {
-    const date = new Date(now);
-    date.setMonth(date.getMonth() - i);
-    periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-  }
-  
-  const prevYear = new Date(now);
-  prevYear.setFullYear(prevYear.getFullYear() - 1);
-  periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
-  
-  const prevQuarter = new Date(now);
-  prevQuarter.setMonth(prevQuarter.getMonth() - 6);
-  periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
-  
-  return Array.from(new Set(periods));
+  // Import the centralized 15-month generator
+  const { generateTimePeriods: generateCentralized } = require('../sampleDataGenerator');
+  return generateCentralized();
 }
 
 // Generate realistic metric values with variations
