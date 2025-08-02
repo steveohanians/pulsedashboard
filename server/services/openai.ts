@@ -432,7 +432,13 @@ async function generateInsightsWithCustomPromptAndContext(
 
     // Ensure the prompt mentions JSON for OpenAI's json_object response format and preserves formatting
     if (!filledPrompt.toLowerCase().includes('json')) {
-      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields. Use **bold** for emphasis and numbered lists (1., 2., 3.) for recommendations.`;
+      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields. Use **bold** for emphasis and MANDATORY numbered lists in this exact format:
+
+1. First recommendation text
+2. Second recommendation text  
+3. Third recommendation text
+
+CRITICAL: Do NOT use paragraph format for recommendations. Use ONLY numbered list format (1., 2., 3.).`;
     }
 
     const response = await openai.chat.completions.create({
