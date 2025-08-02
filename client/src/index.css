@@ -90,20 +90,20 @@
   }
 }
 
-/* Status icon animations */
+/* Status icon animations - CodePen inspired spinning glow effects */
 .status-icon-success {
   animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
-  color: #10b981; /* green-500 */
+  color: #10b981; /* green-500 for success metrics */
 }
 
 .status-icon-warning {
   animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
-  color: #f59e0b; /* amber-500 */
+  color: #f59e0b; /* amber-500 for improvement needed metrics */
 }
 
 .status-icon-error {
   animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
-  color: #ef4444; /* red-500 */
+  color: #ef4444; /* red-500 for error metrics */
 }
 
 /* Test CSS animations - Multiple approaches */
