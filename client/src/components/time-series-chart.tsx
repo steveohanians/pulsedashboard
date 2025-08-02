@@ -60,9 +60,6 @@ function generateRealTimeSeriesData(
   clientUrl?: string,
   metricName?: string
 ): any[] {
-  console.log(`🔥 GENERATING REAL TIME SERIES DATA for ${metricName}`);
-  console.log(`🔥 timeSeriesData:`, timeSeriesData);
-  console.log(`🔥 periods:`, periods);
   
   const data: any[] = [];
   

@@ -38,10 +38,23 @@ export function generateMetricValue(
   // Enhanced variation with period-specific seeds + business/industry variations
   let sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + currentPeriodIndex * 100;
   
-  // Add business size variation
+  // Add business size variation with MAJOR differences for visual impact
   if (businessSize) {
     const businessSizeVariation = businessSize.charCodeAt(0) * 7;
     sourceSeed += businessSizeVariation;
+    
+    // Add MAJOR business size multipliers specifically for Industry_Avg to create obvious visual differences
+    if (sourceType === 'Industry_Avg') {
+      if (businessSize.includes('Small Business')) {
+        sourceSeed += 5000; // Much lower performance for clear visual difference
+      } else if (businessSize.includes('Mid-Market')) {
+        sourceSeed += 10000; // Medium performance  
+      } else if (businessSize.includes('Enterprise') && !businessSize.includes('Global')) {
+        sourceSeed += 15000; // Higher performance
+      } else if (businessSize.includes('Global Enterprise')) {
+        sourceSeed += 20000; // Highest performance for clear visual difference
+      }
+    }
   }
   
   // Add industry vertical variation  
