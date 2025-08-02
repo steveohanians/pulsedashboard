@@ -379,23 +379,21 @@ export function registerRoutes(app: Express): Server {
       const client = await storage.getClient(clientId);
       const competitors = await storage.getCompetitorsByClient(clientId);
       
-      // Get metrics for the requested time period (respect user's selection)
+      // CRITICAL: AI insights are ALWAYS based on last month data only, regardless of user's selected time period
       const periodMapping = generateDynamicPeriodMapping();
-      let targetPeriod: string;
+      const targetPeriod = periodMapping["Last Month"][0]; // Force last month data for AI insights
       
-      // Map the frontend timePeriod to actual period
-      if (timePeriod === "Last Month") {
-        targetPeriod = periodMapping["Last Month"][0];
-      } else if (timePeriod === "Last Quarter") {
-        targetPeriod = periodMapping["Last Quarter"][0]; // Use first month of quarter
-      } else if (timePeriod === "Last Year") {
-        targetPeriod = periodMapping["Last Year"][0]; // Use first month of year
-      } else {
-        // Default fallback to last month if unrecognized
-        targetPeriod = periodMapping["Last Month"][0];
-      }
+      logger.info('🤖 AI INSIGHTS: Forcing last month data only', { 
+        userSelectedPeriod: timePeriod, 
+        aiAnalysisPeriod: targetPeriod,
+        rationale: 'AI insights always use last month data regardless of dashboard filters'
+      });
       
-      logger.info('Using period for insights', { timePeriod, targetPeriod, periodMapping });
+      logger.info('Using period for insights', { 
+        timePeriod, 
+        targetPeriod, 
+        note: 'AI insights always use last month data only' 
+      });
       const clientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
       
       // Build competitor data for this metric with actual names
@@ -867,19 +865,15 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      // Generate default period dynamically (use 1 month before current date in PT)
-      const now = new Date();
-      const ptFormatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Los_Angeles',
-        year: 'numeric',
-        month: '2-digit'
+      // CRITICAL: AI insights are ALWAYS based on last month data only, regardless of any query parameters
+      const periodMapping = generateDynamicPeriodMapping();
+      const lastMonthPeriod = periodMapping["Last Month"][0]; // Force last month data for AI insights
+      
+      logger.info('🤖 AI INSIGHTS: Forcing last month data only', { 
+        queryPeriod: req.query.period,
+        aiAnalysisPeriod: lastMonthPeriod,
+        rationale: 'AI insights always use last month data regardless of dashboard filters'
       });
-      const ptParts = ptFormatter.formatToParts(now);
-      const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-      const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-      const targetDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT (July→June)
-      const defaultPeriod = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
-      const { period = defaultPeriod } = req.query;
       
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
@@ -891,7 +885,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const metrics = await storage.getMetricsByClient(clientId, period as string);
+      const metrics = await storage.getMetricsByClient(clientId, lastMonthPeriod);
       
       // Group metrics by name
       const groupedMetrics = metrics.reduce((acc: any, metric: any) => {
@@ -927,7 +921,7 @@ export function registerRoutes(app: Express): Server {
           const insight = await storage.createAIInsight({
             clientId,
             metricName,
-            timePeriod: period as string,
+            timePeriod: lastMonthPeriod,
             contextText: aiInsight.context,
             insightText: aiInsight.insight,
             recommendationText: aiInsight.recommendation

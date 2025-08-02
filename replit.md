@@ -9,7 +9,7 @@ Filter ordering: Business sizes ordered small to large, industry verticals alpha
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 
 ## Recent Changes
-**August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes, MAJOR TRAFFIC CHANNELS FIX
+**August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes, MAJOR TRAFFIC CHANNELS FIX, AI INSIGHTS CRITICAL FIX
 - **CRITICAL FILTERING FIX**: Resolved multi-period filtering issue where Quarter/Year views didn't show filter changes
   - Root cause: Chart component used `.find()` for first match instead of averaging multiple filtered metrics per period
   - Fixed chart data processing to properly average Industry_Avg values across multiple records per time period
@@ -42,6 +42,11 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
   - Fixed StackedBarChart component to use actual hex colors from CHANNEL_COLORS mapping
   - Enhanced data processing with consistent channel ordering: Organic Search → Direct → Social Media → Paid Search → Email → Other
   - All traffic channel charts now display proper colored bars with correct percentages and consistent visual hierarchy
+- **CRITICAL AI INSIGHTS FIX**: Resolved major issue where OpenAI insights were based on user-selected time periods instead of last month data only
+  - Root cause: Both insight generation routes (`/api/generate-metric-insight/` and `/api/generate-insights/`) used user's selected time period for AI analysis
+  - Fixed to force last month data only for all AI insights regardless of dashboard filters or time period selections
+  - Added comprehensive logging to track AI analysis periods vs user dashboard selections
+  - Ensures consistent AI insights based solely on most recent complete month data as required
 
 
 ## System Architecture
