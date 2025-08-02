@@ -69,5 +69,9 @@
     font-family: 'Poppins', sans-serif;
   }
 
-
+  /* Force consistent placeholder color to prevent flashing */
+  textarea::placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+  }
 }
