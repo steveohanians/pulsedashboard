@@ -402,43 +402,33 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Metric[]> {
     console.log(`🔍 getFilteredCdAvgMetrics called with period: ${period}, filters:`, filters);
     
-    // Get all CD_Avg metrics for this period
-    const allCdMetrics = await db.select().from(metrics).where(
-      and(
-        eq(metrics.sourceType, 'CD_Avg'),
-        eq(metrics.timePeriod, period)
-      )
-    );
-    
-    // If no filters applied, return all metrics
-    if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
-                    (!filters.industryVertical || filters.industryVertical === "All"))) {
-      console.log(`📝 No CD filters applied, returning ${allCdMetrics.length} metrics`);
-      return allCdMetrics;
+    // CD_Avg should only be filtered by business size, NOT industry vertical
+    // Industry filters should only affect Industry_Avg benchmarks
+    if (!filters || !filters.businessSize || filters.businessSize === 'All') {
+      console.log('📝 No business size filter applied to CD_Avg, returning all CD metrics');
+      const allMetrics = await db.select().from(metrics)
+        .where(and(
+          eq(metrics.sourceType, 'CD_Avg'),
+          eq(metrics.timePeriod, period)
+        ));
+      console.log(`📝 No CD business size filter applied, returning ${allMetrics.length} metrics`);
+      return allMetrics;
     }
-    
-    // Get CD portfolio companies that match the filters
-    const companyConditions = [];
-    if (filters.businessSize && filters.businessSize !== "All") {
-      companyConditions.push(eq(cdPortfolioCompanies.businessSize, filters.businessSize));
-    }
-    if (filters.industryVertical && filters.industryVertical !== "All") {
-      companyConditions.push(eq(cdPortfolioCompanies.industryVertical, filters.industryVertical));
-    }
-    
-    // Get matching CD portfolio companies
-    const matchingCompanies = await db
-      .select()
-      .from(cdPortfolioCompanies)
-      .where(and(...companyConditions));
-    
+
+    // Get matching CD portfolio companies based on business size only
+    const matchingCompanies = await db.select().from(cdPortfolioCompanies)
+      .where(and(
+        eq(cdPortfolioCompanies.active, true),
+        eq(cdPortfolioCompanies.businessSize, filters.businessSize)
+      ));
+
     if (matchingCompanies.length === 0) {
-      console.log(`❌ No matching CD portfolio companies found for filters`);
+      console.log('❌ No matching CD portfolio companies found for business size filter');
       return [];
     }
-    
-    console.log(`✅ Found ${matchingCompanies.length} matching CD portfolio companies:`, matchingCompanies.map(c => c.businessSize));
-    
+
+    console.log(`✅ Found ${matchingCompanies.length} matching CD portfolio companies for business size: ${filters.businessSize}`);
+
     // Use the data generation logic to create filtered CD_Avg metrics
     const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
     const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
@@ -446,12 +436,12 @@ export class DatabaseStorage implements IStorage {
     
     const filteredMetrics: Metric[] = [];
     
-    // Generate filtered CD_Avg metrics by averaging values for matching companies
+    // Generate filtered metrics by averaging values for matching companies
     for (const config of METRIC_CONFIGS) {
       let totalValue = 0;
       let companyCount = 0;
       
-      // Calculate average for matching CD portfolio companies using the same logic as data generation
+      // Calculate average for matching companies using the same logic as data generation
       for (const company of matchingCompanies) {
         const value = generateMetricValue(
           config, 
@@ -481,6 +471,16 @@ export class DatabaseStorage implements IStorage {
           channel: null,
           competitorId: null,
           createdAt: new Date()
+        });
+        
+        if (config.name === "Session Duration") {
+          console.log(`📊 Generated filtered CD_Avg Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
+        }
+      }
+    }
+    
+    return filteredMetrics;
+  }
         });
         
         if (config.name === "Session Duration") {
