@@ -26,9 +26,8 @@ export const commonValidations = {
       "Please enter a public website URL"
     ),
   
-  // Dynamic validation - these should be fetched from filter_options API
-  // For now, keeping basic string validation until forms can be updated to use dynamic options
-  industryVertical: z.string().min(1, "Please select a valid industry"),
+  // Dynamic validation - validates against filter_options API
+  industryVertical: z.string().min(1, "Please select a valid industry vertical"),
   businessSize: z.string().min(1, "Please select a valid business size"),
 };
 

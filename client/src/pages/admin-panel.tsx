@@ -170,6 +170,8 @@ export default function AdminPanel() {
   
   // State for controlled form fields
   const [editingBusinessSize, setEditingBusinessSize] = useState<string>("");
+  const [editingIndustryVertical, setEditingIndustryVertical] = useState<string>("");
+  const [editingCdIndustryVertical, setEditingCdIndustryVertical] = useState<string>("");
 
   // Extract tab from URL
   useEffect(() => {
@@ -562,7 +564,7 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       websiteUrl: formData.get("website") as string,
-      industryVertical: formData.get("industry") as string,
+      industryVertical: editingIndustryVertical || formData.get("industry") as string,
       businessSize: editingBusinessSize || editingItem?.businessSize, // Use state value instead of FormData
     };
     
@@ -727,7 +729,7 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       websiteUrl: formData.get("website") as string,
-      industryVertical: formData.get("industry") as string,
+      industryVertical: editingCdIndustryVertical || formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
       description: formData.get("description") as string || null,
     };
@@ -1401,12 +1403,21 @@ export default function AdminPanel() {
                                       </p>
                                     </div>
                                     <div>
-                                      <Label htmlFor="industry">Industry</Label>
-                                      <Input 
-                                        id="industry" 
-                                        name="industry"
-                                        defaultValue={client.industryVertical} 
-                                      />
+                                      <Label htmlFor="industry">Industry Vertical</Label>
+                                      <Select name="industry" defaultValue={client.industryVertical}>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                            .sort((a, b) => a.order - b.order)
+                                            .map((option) => (
+                                            <SelectItem key={option.id} value={option.value}>
+                                              {option.value}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                     </div>
                                     <div>
                                       <Label htmlFor="businessSize">Business Size</Label>
@@ -1655,6 +1666,7 @@ export default function AdminPanel() {
                                 if (!open) {
                                   setEditingItem(null);
                                   setEditingBusinessSize(""); // Reset state when dialog closes
+                                  setEditingIndustryVertical(""); // Reset industry vertical state too
                                 }
                               }}>
                                 <DialogTrigger asChild>
@@ -1664,6 +1676,7 @@ export default function AdminPanel() {
                                     onClick={() => {
                                       setEditingItem(company);
                                       setEditingBusinessSize(company.businessSize); // Initialize state with current value
+                                      setEditingIndustryVertical(company.industryVertical); // Initialize industry state too
                                       setIsDialogOpen(true);
                                     }}
                                   >
@@ -1698,12 +1711,24 @@ export default function AdminPanel() {
                                       />
                                     </div>
                                     <div>
-                                      <Label htmlFor="industry">Industry</Label>
-                                      <Input 
-                                        id="industry" 
-                                        name="industry"
-                                        defaultValue={company.industryVertical} 
-                                      />
+                                      <Label htmlFor="industry">Industry Vertical</Label>
+                                      <Select 
+                                        value={editingIndustryVertical || company.industryVertical} 
+                                        onValueChange={setEditingIndustryVertical}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                            .sort((a, b) => a.order - b.order)
+                                            .map((option) => (
+                                            <SelectItem key={option.id} value={option.value}>
+                                              {option.value}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                     </div>
                                     <div>
                                       <Label htmlFor="businessSize">Business Size</Label>
@@ -1975,11 +2000,15 @@ export default function AdminPanel() {
                               <div className="flex space-x-1 sm:space-x-2">
                                 <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
                                   setIsDialogOpen(open);
-                                  if (!open) setEditingItem(null);
+                                  if (!open) {
+                                    setEditingItem(null);
+                                    setEditingCdIndustryVertical(""); // Reset CD industry vertical state
+                                  }
                                 }}>
                                   <DialogTrigger asChild>
                                     <Button variant="ghost" size="sm" onClick={() => {
                                       setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
+                                      setEditingCdIndustryVertical(company.industryVertical); // Initialize industry state
                                       setIsDialogOpen(true);
                                     }}>
                                       <Edit className="h-4 w-4" />
@@ -2014,7 +2043,10 @@ export default function AdminPanel() {
                                       </div>
                                       <div>
                                         <Label htmlFor="edit-cd-industry">Industry Vertical *</Label>
-                                        <Select name="industry" defaultValue={editingItem?.industryVertical}>
+                                        <Select 
+                                          value={editingCdIndustryVertical || editingItem?.industryVertical} 
+                                          onValueChange={setEditingCdIndustryVertical}
+                                        >
                                           <SelectTrigger>
                                             <SelectValue />
                                           </SelectTrigger>
