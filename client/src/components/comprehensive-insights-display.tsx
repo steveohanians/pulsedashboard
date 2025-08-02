@@ -130,7 +130,7 @@ export default function ComprehensiveInsightsDisplay({
                   <div>
                     <h4 className="font-semibold text-slate-800 mb-1 flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      Strategic Insight
+                      Strategic Insights
                     </h4>
                     <p className="text-sm text-slate-700 leading-relaxed">
                       {dashboardOverview.insightText}
@@ -177,12 +177,12 @@ export default function ComprehensiveInsightsDisplay({
                       </div>
                       
                       <div>
-                        <h5 className="font-medium text-slate-700 mb-1">Analysis</h5>
+                        <h5 className="font-medium text-slate-700 mb-1">Insights</h5>
                         <p className="text-slate-600 leading-relaxed">{insight.insightText}</p>
                       </div>
                       
                       <div>
-                        <h5 className="font-medium text-slate-700 mb-1">Next Steps</h5>
+                        <h5 className="font-medium text-slate-700 mb-1">Recommendations</h5>
                         <p className="text-slate-600 leading-relaxed">{insight.recommendationText}</p>
                       </div>
                     </CardContent>

@@ -351,7 +351,7 @@ export default function AIInsights({
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
-              Insight
+              Insights
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isTyping && showInsight && !insightComplete ? (
@@ -377,7 +377,7 @@ export default function AIInsights({
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
-              Recommendation
+              Recommendations
             </h4>
             <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
               {isTyping && showRecommendation && !recommendationComplete ? (
