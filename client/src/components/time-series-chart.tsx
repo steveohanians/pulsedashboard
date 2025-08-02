@@ -43,8 +43,9 @@ function generateTimeSeriesData(
   periods?: string[],
   metricName?: string
 ): any[] {
-  // If we have actual time-series data, use it
-  if (timeSeriesData && periods && periods.length > 1) {
+  // If we have actual time-series data and multiple periods, use it
+  if (timeSeriesData && periods && periods.length > 0) {
+    console.log(`🎯 Using time-series data for ${metricName}, periods:`, periods);
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
@@ -76,29 +77,40 @@ function generateRealTimeSeriesData(
   
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
-    console.log(`🔥 Period ${period} data for ${metricName}:`, periodData.filter(m => m.metricName === metricName));
+    const relevantData = periodData.filter(m => m.metricName === metricName);
+    console.log(`🎯 Period ${period} filtered data for ${metricName}:`, relevantData);
     
     const dataPoint: any = {
       date: generatePeriodLabel(period)
     };
     
-    // Find data for each source type - filter by metric name too
-    const clientMetric = periodData.find(m => m.sourceType === 'Client' && m.metricName === metricName);
-    const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
-    const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
+    // Find and AVERAGE multiple values for each source type (handles filtered metrics properly)
+    const clientMetrics = relevantData.filter(m => m.sourceType === 'Client');
+    const industryMetrics = relevantData.filter(m => m.sourceType === 'Industry_Avg');
+    const cdMetrics = relevantData.filter(m => m.sourceType === 'CD_Avg');
     
-    dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
-    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
-    dataPoint['Clear Digital Clients Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    // Calculate averages for each source type
+    const avgClient = clientMetrics.length > 0 ? 
+      clientMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / clientMetrics.length : 0;
+    const avgIndustry = industryMetrics.length > 0 ? 
+      industryMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / industryMetrics.length : 0;
+    const avgCD = cdMetrics.length > 0 ? 
+      cdMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / cdMetrics.length : 0;
     
-    console.log(`🔥 Final dataPoint for ${period}:`, dataPoint);
+    dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
+    dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
+    dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
     
-    // Add competitor data
+    console.log(`🎯 Averaged values for ${period}: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
+    
+    // Add competitor data (also average multiple values)
     competitors.forEach(competitor => {
-      const competitorMetric = periodData.find(m => 
-        m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
+      const competitorMetrics = relevantData.filter(m => 
+        m.sourceType === 'Competitor' && m.competitorId === competitor.id
       );
-      dataPoint[competitor.label] = competitorMetric ? Math.round(parseFloat(competitorMetric.value) * 10) / 10 : 0;
+      const avgCompetitor = competitorMetrics.length > 0 ? 
+        competitorMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / competitorMetrics.length : 0;
+      dataPoint[competitor.label] = Math.round(avgCompetitor * 10) / 10;
     });
     
     data.push(dataPoint);
