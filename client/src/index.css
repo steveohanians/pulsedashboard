@@ -68,31 +68,28 @@
   --sidebar-ring: var(--ring);
 }
 
-/* CodePen-style spinning mask with glow effect */
-@keyframes spin-mask {
+/* CodePen CSS custom property for mask rotation */
+@property --mask {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* CodePen spinning mask animation */
+@keyframes spin {
   0% {
-    transform: rotate(0deg);
+    --mask: 0deg;
   }
   100% {
-    transform: rotate(360deg);
+    --mask: 360deg;
   }
 }
 
-@keyframes glow-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 2px currentColor);
-  }
-  50% {
-    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 10px currentColor);
-  }
-}
-
-/* Status icon animations - CodePen spinning mask with glow */
+/* Status icon shimmer container - CodePen style */
 .status-icon-success,
 .status-icon-warning,
 .status-icon-error {
-  position: relative;
-  overflow: hidden;
+  isolation: isolate;
 }
 
 .status-icon-success::before,
@@ -100,60 +97,80 @@
 .status-icon-error::before {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: conic-gradient(
-    transparent 0deg,
-    transparent 270deg,
-    currentColor 300deg,
-    transparent 360deg
-  );
-  animation: spin-mask 2s linear infinite;
-  opacity: 0.6;
+  inset: -8px;
+  border-radius: inherit;
+  opacity: 0.8;
   pointer-events: none;
+  z-index: -1;
 }
 
-.status-icon-success {
-  animation: glow-pulse 3s ease-in-out infinite;
-  color: #10b981 !important; /* green-500 for success metrics */
+/* Success status - green shimmer */
+.status-icon-success::before {
+  box-shadow: 0 0 3px 2px hsl(142deg 76% 80%),
+              0 0 7px 4px hsl(142deg 76% 70%),
+              0 0 13px 8px hsl(142deg 56% 60%),
+              0 0 22px 6px hsl(142deg 36% 40%);
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
+    transparent 100%
+  );
+  mask-size: cover;
+  animation: spin 3s linear infinite;
 }
 
-.status-icon-warning {
-  animation: glow-pulse 3s ease-in-out infinite;
-  color: #f59e0b !important; /* amber-500 for improvement needed metrics */
+/* Warning status - orange shimmer */
+.status-icon-warning::before {
+  box-shadow: 0 0 3px 2px hsl(45deg 93% 80%),
+              0 0 7px 4px hsl(45deg 93% 70%),
+              0 0 13px 8px hsl(45deg 73% 60%),
+              0 0 22px 6px hsl(45deg 53% 40%);
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
+    transparent 100%
+  );
+  mask-size: cover;
+  animation: spin 3s linear infinite;
 }
 
-.status-icon-error {
-  animation: glow-pulse 3s ease-in-out infinite;
-  color: #ef4444 !important; /* red-500 for error metrics */
+/* Error status - red shimmer */
+.status-icon-error::before {
+  box-shadow: 0 0 3px 2px hsl(0deg 84% 80%),
+              0 0 7px 4px hsl(0deg 84% 70%),
+              0 0 13px 8px hsl(0deg 64% 60%),
+              0 0 22px 6px hsl(0deg 44% 40%);
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
+    transparent 100%
+  );
+  mask-size: cover;
+  animation: spin 3s linear infinite;
 }
 
-/* Test CSS animations - Multiple approaches */
-@keyframes ai-icon-spin {
-  0% { 
-    transform: rotate(0deg); 
-  }
-  100% { 
-    transform: rotate(360deg); 
-  }
-}
 
-/* Make sure Tailwind spin works */
-.animate-spin {
-  animation: spin 1s linear infinite !important;
-}
-
-/* Test pulsing animation */
-@keyframes test-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.test-pulse {
-  animation: test-pulse 1s ease-in-out infinite;
-}
 
 .dark {
   /* Base Colors */

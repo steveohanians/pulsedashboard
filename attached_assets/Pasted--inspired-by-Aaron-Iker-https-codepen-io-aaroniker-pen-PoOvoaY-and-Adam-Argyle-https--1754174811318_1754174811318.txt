@@ -1,0 +1,88 @@
+// inspired by Aaron Iker
+// https://codepen.io/aaroniker/pen/PoOvoaY
+// and Adam Argyle
+// https://codepen.io/argyleink/details/abPvZJo
+
+// uses custom properties, so will only work in Chromium Browsers.
+
+let levels = [1, 4, 7];
+
+let btn = document.querySelector("button");
+let radios = document.querySelectorAll("[type=radio]");
+let count = document.querySelector(".count");
+
+let t = document.querySelector("textarea");
+let previousWords = wordCount(t.value);
+let previousLevel = 0;
+let deltaUp = false;
+
+count.innerHTML = levels.at(-1) + 1 -  wordCount(t.value);
+
+function wordCount(str) {
+    return str.trim().split(" ").length;
+}
+
+t.oninput = (e) => {
+    const str = t.value;
+    const words = wordCount(str);
+    let level = 0;
+
+    count.innerHTML = Math.max(levels.at(-1) + 1 - words,0);
+
+    btn.classList.add("disabled");
+    btn.classList.remove("level0");
+    btn.classList.remove("level1");
+    btn.classList.remove("level2");
+    btn.setAttribute("disabled", true);
+    
+    addShine = () => {
+        if (previousLevel < level) {
+            btn.classList.remove("textShine");
+            window.requestAnimationFrame(() => {
+                btn.classList.add("textShine");
+                previousLevel = level;
+            });
+        } else {
+            previousLevel = level;
+        }
+    }
+
+    if (words > levels[2]) {
+        level = 3;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("disabled");
+        btn.classList.remove("level0");
+        btn.classList.remove("level1");
+        btn.classList.add("level2");
+        addShine()
+    } else if (words > levels[1]) {
+        level = 2;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("disabled");
+        btn.classList.remove("level0");
+        btn.classList.add("level1");
+        addShine()
+    } else if (words > levels[0]) {
+        level = 1;
+        btn.removeAttribute("disabled");
+        btn.classList.remove("disabled");
+        btn.classList.add("level0");
+        addShine()
+    } else {
+        level = 0;
+        btn.setAttribute("disabled", true);
+        btn.classList.add("disabled");
+        previousLevel = level;
+    }
+
+    previousWords = words;
+};
+
+radios.forEach((r) => {
+    r.onchange = (e) => {
+        btn.dataset.effect = e.currentTarget.value;
+    };
+    if( r.checked ) {
+        btn.dataset.effect = r.value;
+    }
+});
