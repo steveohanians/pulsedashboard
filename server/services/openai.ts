@@ -154,11 +154,36 @@ CRITICAL FORMATTING REQUIREMENTS:
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
     
+    // Calculate proper status based on performance
+    const calculatedStatus = determineMetricStatus(
+      metricName,
+      clientValue,
+      industryAverage,
+      cdAverage,
+      competitorValues
+    );
+    
+    // Use AI-provided status if available and valid, otherwise use calculated status
+    const finalStatus = (result.status && ['success', 'warning', 'needs_improvement'].includes(result.status)) 
+      ? result.status 
+      : calculatedStatus;
+    
+    logger.info('✅ Regular Insights Status Determination', {
+      metricName,
+      clientValue,
+      industryAverage,
+      cdAverage,
+      competitorValues,
+      calculatedStatus,
+      aiStatus: result.status,
+      finalStatus
+    });
+    
     return {
       context: result.context || "Unable to generate context analysis.",
       insight: result.insight || "Unable to generate insights.",
       recommendation: result.recommendation || "Unable to generate recommendations.",
-      status: result.status || "needs_improvement"
+      status: finalStatus
     };
   } catch (error) {
     logger.error("Error generating custom prompt insights", { 
@@ -358,6 +383,54 @@ Focus on business impact and strategic direction rather than individual metric d
 }
 
 /**
+ * Determine metric status based on performance vs benchmarks
+ */
+function determineMetricStatus(
+  metricName: string,
+  clientValue: number,
+  industryAverage?: number,
+  cdPortfolioAverage?: number,
+  competitorValues?: number[]
+): string {
+  // Determine if lower is better for this metric
+  const isLowerBetter = metricName.includes('Bounce Rate');
+  
+  // Get comparison values, prioritizing industry average
+  const primaryBenchmark = industryAverage || cdPortfolioAverage;
+  const allCompetitorValues = competitorValues || [];
+  
+  if (!primaryBenchmark && allCompetitorValues.length === 0) {
+    // No benchmarks available
+    return 'needs_improvement';
+  }
+  
+  // Calculate performance thresholds
+  let excellent: number, good: number;
+  
+  if (isLowerBetter) {
+    // For bounce rate: lower is better
+    // Excellent: 20% better than benchmark (lower)
+    // Good: 10% better than benchmark (lower)
+    const benchmark = primaryBenchmark || Math.min(...allCompetitorValues);
+    excellent = benchmark * 0.8; // 20% lower than benchmark
+    good = benchmark * 0.9; // 10% lower than benchmark
+    
+    if (clientValue <= excellent) return 'success';
+    if (clientValue <= good) return 'warning';
+    return 'needs_improvement';
+  } else {
+    // For other metrics: higher is better
+    const benchmark = primaryBenchmark || Math.max(...allCompetitorValues);
+    excellent = benchmark * 1.2; // 20% higher than benchmark
+    good = benchmark * 1.1; // 10% higher than benchmark
+    
+    if (clientValue >= excellent) return 'success';
+    if (clientValue >= good) return 'warning';
+    return 'needs_improvement';
+  }
+}
+
+/**
  * Generate metric-specific insights with user-provided context
  */
 export async function generateMetricSpecificInsightsWithContext(
@@ -546,11 +619,36 @@ async function generateInsightsWithCustomPromptAndContext(
       recommendationLength: parsedRecommendation?.length || 0
     });
 
+    // Calculate proper status based on performance
+    const calculatedStatus = determineMetricStatus(
+      metricName,
+      clientValue,
+      industryAverage,
+      cdPortfolioAverage,
+      competitorValues
+    );
+    
+    // Use AI-provided status if available and valid, otherwise use calculated status
+    const finalStatus = (result.status && ['success', 'warning', 'needs_improvement'].includes(result.status)) 
+      ? result.status 
+      : calculatedStatus;
+    
+    logger.info('✅ Status Determination Debug', {
+      metricName,
+      clientValue,
+      industryAverage,
+      cdPortfolioAverage,
+      competitorValues,
+      calculatedStatus,
+      aiStatus: result.status,
+      finalStatus
+    });
+
     return {
       context: parsedContext || "Analysis in progress.",
       insight: parsedInsight || "Insights being generated.",
       recommendation: parsedRecommendation || "Recommendations will be available shortly.",
-      status: result.status || 'needs_improvement'
+      status: finalStatus
     };
 
   } catch (error) {
