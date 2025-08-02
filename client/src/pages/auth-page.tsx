@@ -48,7 +48,7 @@ export default function AuthPage() {
 
   const handleDebugLogin = (role: "Admin" | "User") => {
     loginMutation.mutate({
-      email: role === "Admin" ? "admin@clearsight.com" : "user@clearsight.com",
+      email: role === "Admin" ? "admin@pulsedashboard.com" : "user@pulsedashboard.com",
       password: "password123",
     });
   };

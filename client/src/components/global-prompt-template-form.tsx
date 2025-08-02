@@ -111,7 +111,7 @@ export function GlobalPromptTemplateForm() {
             id="template-name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="e.g., ClearSight Global AI Template"
+            placeholder="e.g., Pulse Dashboard Global AI Template"
             required
           />
         </div>
