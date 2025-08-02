@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
@@ -1455,6 +1455,36 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       logger.error("Error deleting metric prompt", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to delete metric prompt" });
+    }
+  });
+
+  // Global Prompt Template routes
+  app.get("/api/admin/global-prompt-template", requireAdmin, async (req, res) => {
+    try {
+      const template = await storage.getGlobalPromptTemplate();
+      if (!template) {
+        return res.status(404).json({ message: "Global prompt template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      logger.error("Error fetching global prompt template", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch global prompt template" });
+    }
+  });
+
+  app.put("/api/admin/global-prompt-template", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = updateGlobalPromptTemplateSchema.parse(req.body);
+      const template = await storage.updateGlobalPromptTemplate(validatedData);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Global prompt template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      logger.error("Error updating global prompt template", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to update global prompt template" });
     }
   });
 

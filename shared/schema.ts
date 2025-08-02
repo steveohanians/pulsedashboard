@@ -109,6 +109,17 @@ export const aiInsights = pgTable("ai_insights", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const globalPromptTemplate = pgTable("global_prompt_template", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique().default("Global Base Template"),
+  promptTemplate: text("prompt_template").notNull(),
+  description: text("description"), // Help text for admin
+  variables: text("variables"), // JSON array of available variables
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const metricPrompts = pgTable("metric_prompts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   metricName: text("metric_name").notNull().unique(),
@@ -228,6 +239,18 @@ export const insertAIInsightSchema = createInsertSchema(aiInsights).omit({
   createdAt: true,
 });
 
+export const insertGlobalPromptTemplateSchema = createInsertSchema(globalPromptTemplate).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateGlobalPromptTemplateSchema = createInsertSchema(globalPromptTemplate).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertMetricPromptSchema = createInsertSchema(metricPrompts).omit({
   id: true,
   createdAt: true,
@@ -274,6 +297,10 @@ export type Benchmark = typeof benchmarks.$inferSelect;
 export type InsertBenchmark = z.infer<typeof insertBenchmarkSchema>;
 export type AIInsight = typeof aiInsights.$inferSelect;
 export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
+
+export type GlobalPromptTemplate = typeof globalPromptTemplate.$inferSelect;
+export type InsertGlobalPromptTemplate = z.infer<typeof insertGlobalPromptTemplateSchema>;
+export type UpdateGlobalPromptTemplate = z.infer<typeof updateGlobalPromptTemplateSchema>;
 
 export type MetricPrompt = typeof metricPrompts.$inferSelect;
 export type InsertMetricPrompt = z.infer<typeof insertMetricPromptSchema>;

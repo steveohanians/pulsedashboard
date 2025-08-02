@@ -43,6 +43,15 @@ async function generateInsightsWithCustomPrompt(
   competitorNames?: string[]
 ): Promise<MetricAnalysis> {
   try {
+    // Get global prompt template
+    const { storage } = await import("../storage");
+    const globalTemplate = await storage.getGlobalPromptTemplate();
+    
+    if (!globalTemplate) {
+      logger.error("No global prompt template found");
+      throw new Error("Global prompt template not available");
+    }
+
     // Format competitors data properly with actual names
     const competitorsText = competitorValues.length > 0 
       ? competitorValues.map((val, idx) => {
@@ -56,6 +65,7 @@ async function generateInsightsWithCustomPrompt(
     let formattedCdAverage = cdAverage.toString();
     let formattedIndustryAverage = industryAverage.toString();
     let formattedCompetitorsText = competitorsText;
+    let metricDisplayName = metricName;
     
     if (metricName === 'Session Duration') {
       const clientMinutes = Math.floor(clientValue / 60);
@@ -83,7 +93,6 @@ async function generateInsightsWithCustomPrompt(
     // Special handling for Traffic Channels - get actual channel distribution
     if (metricName === 'Traffic Channels') {
       try {
-        const { storage } = await import("../storage");
         const getCurrentPeriod = () => {
           const now = new Date();
           return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -108,15 +117,23 @@ async function generateInsightsWithCustomPrompt(
       }
     }
     
-    // Replace template variables in the custom prompt
-    let processedPrompt = customPrompt.promptTemplate
+    // Merge global template with metric-specific prompt
+    let processedPrompt = globalTemplate.promptTemplate
+      .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, customPrompt.promptTemplate)
+      .replace(/\{\{CONTEXT_INSTRUCTIONS\}\}/g, customPrompt.promptTemplate.includes('CONTEXT ANALYSIS:') 
+        ? customPrompt.promptTemplate.split('CONTEXT ANALYSIS:')[1]?.split('\n')[0]?.trim() || 'Assess metric performance and competitive positioning.'
+        : 'Assess metric performance and competitive positioning.')
+      .replace(/\{\{COMPETITIVE_INSTRUCTIONS\}\}/g, customPrompt.promptTemplate.includes('COMPETITIVE INTELLIGENCE:') 
+        ? customPrompt.promptTemplate.split('COMPETITIVE INTELLIGENCE:')[1]?.split('\n')[0]?.trim() || 'Compare performance against industry and competitors.'
+        : 'Compare performance against industry and competitors.')
       .replace(/\{\{clientName\}\}/g, 'Current Client')
       .replace(/\{\{industry\}\}/g, industryVertical)
       .replace(/\{\{businessSize\}\}/g, businessSize)
       .replace(/\{\{clientValue\}\}/g, formattedClientValue)
       .replace(/\{\{industryAverage\}\}/g, formattedIndustryAverage)
       .replace(/\{\{cdPortfolioAverage\}\}/g, formattedCdAverage)
-      .replace(/\{\{competitors\}\}/g, formattedCompetitorsText);
+      .replace(/\{\{competitors\}\}/g, formattedCompetitorsText)
+      .replace(/\{\{metricDisplayName\}\}/g, metricDisplayName);
 
     // Add specific output format instruction for JSON compatibility
     processedPrompt += `

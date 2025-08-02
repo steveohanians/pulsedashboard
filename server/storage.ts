@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, metricPrompts, insightContexts,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -9,6 +9,7 @@ import {
   type Benchmark, type InsertBenchmark,
   type AIInsight, type InsertAIInsight,
   type PasswordResetToken, type InsertPasswordResetToken,
+  type GlobalPromptTemplate, type InsertGlobalPromptTemplate, type UpdateGlobalPromptTemplate,
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
   type InsightContext, type InsertInsightContext, type UpdateInsightContext
 } from "@shared/schema";
@@ -80,6 +81,10 @@ export interface IStorage {
   updateInsightContext(id: string, context: UpdateInsightContext): Promise<InsightContext | undefined>;
   deleteInsightContext(id: string): Promise<void>;
   clearAllInsightContexts(): Promise<void>;
+  
+  // Global Prompt Template
+  getGlobalPromptTemplate(): Promise<GlobalPromptTemplate | undefined>;
+  updateGlobalPromptTemplate(template: UpdateGlobalPromptTemplate): Promise<GlobalPromptTemplate | undefined>;
   
   // Metric Prompts
   getMetricPrompts(): Promise<MetricPrompt[]>;
@@ -511,6 +516,25 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(metricPrompts)
       .where(eq(metricPrompts.metricName, metricName));
+  }
+
+  // Global Prompt Template
+  async getGlobalPromptTemplate(): Promise<GlobalPromptTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(globalPromptTemplate)
+      .where(eq(globalPromptTemplate.isActive, true))
+      .limit(1);
+    return template || undefined;
+  }
+
+  async updateGlobalPromptTemplate(template: UpdateGlobalPromptTemplate): Promise<GlobalPromptTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(globalPromptTemplate)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(globalPromptTemplate.isActive, true))
+      .returning();
+    return updatedTemplate || undefined;
   }
 
   // Insight Contexts

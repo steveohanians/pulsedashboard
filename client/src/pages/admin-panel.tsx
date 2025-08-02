@@ -19,6 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
+import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -744,7 +745,7 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="w-full mb-4 sm:mb-6">
             <div className="flex overflow-x-auto pb-2 sm:pb-0">
-              <TabsList className="grid grid-cols-6 min-w-max w-full text-xs sm:text-sm">
+              <TabsList className="grid grid-cols-7 min-w-max w-full text-xs sm:text-sm">
                 <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">User Management</span>
                   <span className="sm:hidden">Users</span>
@@ -764,6 +765,10 @@ export default function AdminPanel() {
                 <TabsTrigger value="filters" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">Filter Management</span>
                   <span className="sm:hidden">Filters</span>
+                </TabsTrigger>
+                <TabsTrigger value="global-template" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">Global Template</span>
+                  <span className="sm:hidden">Global</span>
                 </TabsTrigger>
                 <TabsTrigger value="prompts" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">AI Prompts</span>
@@ -2361,6 +2366,26 @@ export default function AdminPanel() {
                     </Button>
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Global Prompt Template Management */}
+              <TabsContent value="global-template">
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                    <div>
+                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">Global Prompt Template</h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Configure the global AI prompt template that applies to all metric insights
+                      </p>
+                    </div>
+                  </div>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <GlobalPromptTemplateForm />
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
         </Tabs>
 
