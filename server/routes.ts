@@ -1121,6 +1121,19 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/admin/clients", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertClientSchema.parse(req.body);
+      
+      // Validate against filter_options table for data integrity
+      const { FilterValidator } = await import("./utils/filterValidation");
+      const validator = new FilterValidator(storage);
+      const filterValidation = await validator.validateEntity({
+        businessSize: validatedData.businessSize,
+        industryVertical: validatedData.industryVertical
+      });
+      
+      if (!filterValidation.isValid) {
+        return res.status(400).json({ message: filterValidation.error });
+      }
+      
       const client = await storage.createClient(validatedData);
       res.status(201).json(client);
     } catch (error) {
@@ -1131,6 +1144,29 @@ export function registerRoutes(app: Express): Server {
   app.put("/api/admin/clients/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Validate filter options if they are being updated
+      if (req.body.businessSize || req.body.industryVertical) {
+        const { FilterValidator } = await import("./utils/filterValidation");
+        const validator = new FilterValidator(storage);
+        
+        // Get current client data to fill in missing fields for validation
+        const currentClient = await storage.getClient(id);
+        if (!currentClient) {
+          return res.status(404).json({ message: "Client not found" });
+        }
+        
+        const dataToValidate = {
+          businessSize: req.body.businessSize || currentClient.businessSize,
+          industryVertical: req.body.industryVertical || currentClient.industryVertical
+        };
+        
+        const filterValidation = await validator.validateEntity(dataToValidate);
+        if (!filterValidation.isValid) {
+          return res.status(400).json({ message: filterValidation.error });
+        }
+      }
+      
       const client = await storage.updateClient(id, req.body);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
@@ -1162,6 +1198,19 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
       const validatedData = insertCdPortfolioCompanySchema.parse(req.body);
+      
+      // Validate against filter_options table for data integrity
+      const { FilterValidator } = await import("./utils/filterValidation");
+      const validator = new FilterValidator(storage);
+      const filterValidation = await validator.validateEntity({
+        businessSize: validatedData.businessSize,
+        industryVertical: validatedData.industryVertical
+      });
+      
+      if (!filterValidation.isValid) {
+        return res.status(400).json({ message: filterValidation.error });
+      }
+      
       const newCompany = await storage.createCdPortfolioCompany(validatedData);
       
       logger.info("Created CD portfolio company", { 
@@ -1205,6 +1254,30 @@ export function registerRoutes(app: Express): Server {
     try {
       const { companyId } = req.params;
       const validatedData = insertCdPortfolioCompanySchema.partial().parse(req.body);
+      
+      // Validate filter options if they are being updated
+      if (validatedData.businessSize || validatedData.industryVertical) {
+        const { FilterValidator } = await import("./utils/filterValidation");
+        const validator = new FilterValidator(storage);
+        
+        // Get current company data to fill in missing fields for validation
+        const allCompanies = await storage.getCdPortfolioCompanies();
+        const currentCompany = allCompanies.find(c => c.id === companyId);
+        if (!currentCompany) {
+          return res.status(404).json({ message: "Company not found" });
+        }
+        
+        const dataToValidate = {
+          businessSize: validatedData.businessSize || currentCompany.businessSize,
+          industryVertical: validatedData.industryVertical || currentCompany.industryVertical
+        };
+        
+        const filterValidation = await validator.validateEntity(dataToValidate);
+        if (!filterValidation.isValid) {
+          return res.status(400).json({ message: filterValidation.error });
+        }
+      }
+      
       const updatedCompany = await storage.updateCdPortfolioCompany(companyId, validatedData);
       
       if (!updatedCompany) {
@@ -1611,6 +1684,19 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertBenchmarkCompanySchema.parse(req.body);
+      
+      // Validate against filter_options table for data integrity
+      const { FilterValidator } = await import("./utils/filterValidation");
+      const validator = new FilterValidator(storage);
+      const filterValidation = await validator.validateEntity({
+        businessSize: validatedData.businessSize,
+        industryVertical: validatedData.industryVertical
+      });
+      
+      if (!filterValidation.isValid) {
+        return res.status(400).json({ message: filterValidation.error });
+      }
+      
       const company = await storage.createBenchmarkCompany(validatedData);
       
       // Auto-generate 15 months of sample data for the new benchmark company
@@ -1636,6 +1722,30 @@ export function registerRoutes(app: Express): Server {
   app.put("/api/admin/benchmark-companies/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Validate filter options if they are being updated
+      if (req.body.businessSize || req.body.industryVertical) {
+        const { FilterValidator } = await import("./utils/filterValidation");
+        const validator = new FilterValidator(storage);
+        
+        // Get current company data to fill in missing fields for validation
+        const allCompanies = await storage.getBenchmarkCompanies();
+        const currentCompany = allCompanies.find(c => c.id === id);
+        if (!currentCompany) {
+          return res.status(404).json({ message: "Company not found" });
+        }
+        
+        const dataToValidate = {
+          businessSize: req.body.businessSize || currentCompany.businessSize,
+          industryVertical: req.body.industryVertical || currentCompany.industryVertical
+        };
+        
+        const filterValidation = await validator.validateEntity(dataToValidate);
+        if (!filterValidation.isValid) {
+          return res.status(400).json({ message: filterValidation.error });
+        }
+      }
+      
       const company = await storage.updateBenchmarkCompany(id, req.body);
       if (!company) {
         return res.status(404).json({ message: "Company not found" });

@@ -9,8 +9,16 @@ Filter ordering: Business sizes ordered small to large, industry verticals alpha
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 
 ## Recent Changes
-**August 2, 2025**: Enhanced AI system with Clear Digital service integration
+**August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes
 - Updated global prompt template to subtly reflect Clear Digital's expertise areas (UX optimization, brand strategy, visual identity, content strategy, analytics, conversion design, responsive design, CMS implementation, interactive content, motion graphics, research, campaigns, custom development) in AI recommendations without direct service naming or sales language
+- **CRITICAL ARCHITECTURE FIX**: Resolved major data integrity issue where clients, benchmark companies, and CD portfolio companies used hardcoded text fields instead of referencing filter_options table
+  - Normalized all existing business size and industry vertical data to match filter_options exactly
+  - Fixed data inconsistencies (em-dash vs hyphen formatting issues)
+  - Added comprehensive server-side validation to ensure all new/updated entities validate against filter_options
+  - Created FilterValidator utility class with database-level validation functions
+  - Updated all admin routes (create/update for clients, benchmark companies, CD portfolio companies) with filter validation
+  - Added PostgreSQL validation functions for business sizes and industry verticals
+- Fixed business size editing "Save Changes" functionality in admin panel by implementing proper state management for shadcn Select components
 - Completed comprehensive data generation consolidation
 - Fixed dual generation systems: All data generation now uses centralized 15-month system
 - Removed legacy individual generators (bounceRate, sessionDuration, etc.) that only generated 5 months
