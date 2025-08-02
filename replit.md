@@ -14,7 +14,7 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
 - Removed legacy individual generators (bounceRate, sessionDuration, etc.) that only generated 5 months
 - All new company functions now generate consistent 15-month datasets
 - Eliminated function naming inconsistencies and clarified architecture documentation
-- **Fixed dateUtils inconsistency**: Updated dashboard filtering from 12 to 15 months to match data generation
+
 
 ## System Architecture
 

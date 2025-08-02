@@ -57,9 +57,9 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
     }
   }
   
-  // Generate last 15 months for "Last Year" (ending with target month) - matches data generation
+  // Generate last 12 months for "Last Year" (ending with target month)
   const yearPeriods = [];
-  for (let i = 14; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
     const monthDate = new Date(targetMonth);
     monthDate.setMonth(monthDate.getMonth() - i);
     const monthPeriod = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
@@ -76,7 +76,7 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   return {
     "Last Month": [currentPeriod], // Last complete month
     "Last Quarter": currentQuarterPeriods, // Current quarter (up to 3 months, ending with last complete month)
-    "Last Year": yearPeriods, // Last 15 months ending with last complete month
+    "Last Year": yearPeriods, // Last 12 months ending with last complete month
     "Custom Date Range": [currentPeriod] // Default to last complete month for custom ranges
   };
 }
@@ -96,9 +96,9 @@ export function getTimePeriodDisplayLabels(): Record<string, string> {
   const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
   const quarterDisplay = `Q${currentQuarter} ${now.getFullYear()}`;
   
-  // Last Year display (15 months ending last month)
+  // Last Year display (12 months ending last month)
   const yearStart = new Date(now);
-  yearStart.setMonth(yearStart.getMonth() - 15);
+  yearStart.setMonth(yearStart.getMonth() - 12);
   const yearEnd = new Date(now);
   yearEnd.setMonth(yearEnd.getMonth() - 1);
   const yearDisplay = `${yearStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${yearEnd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
