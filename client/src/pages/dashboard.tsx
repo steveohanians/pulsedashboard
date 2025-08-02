@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, AlertTriangle, AlertCircle, XCircle, Trash2 } from "lucide-react";
+import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, CheckCircle2, AlertTriangle, AlertCircle, XCircle, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -1510,7 +1510,7 @@ export default function Dashboard() {
                         <div className="ml-4 flex-shrink-0">
                           {metricStatuses[metricName] === 'success' && (
                             <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center" title="Performance is on target">
-                              <CheckCircle className="h-6 w-6 text-white" />
+                              <CheckCircle2 className="h-6 w-6 text-white" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
