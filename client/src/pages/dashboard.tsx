@@ -931,7 +931,32 @@ export default function Dashboard() {
               className="h-6 sm:h-8 md:h-10 w-auto flex-shrink-0"
             />
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+                {/* ANIMATION TEST - Multiple spinning elements */}
+                <div className="flex items-center gap-2">
+                  {/* Test 1: Basic Tailwind */}
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  {/* Test 2: Custom CSS with inline style */}
+                  <div 
+                    className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full"
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  ></div>
+                  {/* Test 3: Custom keyframe */}
+                  <div 
+                    className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full"
+                    style={{ animation: 'ai-icon-spin 1s linear infinite' }}
+                  ></div>
+                  {/* Test 4: Glow effect */}
+                  <div 
+                    className="w-6 h-6 bg-purple-500 rounded-full"
+                    style={{ 
+                      animation: 'ai-icon-spin 2s linear infinite',
+                      boxShadow: '0 0 10px rgba(147, 51, 234, 0.7)'
+                    }}
+                  ></div>
+                </div>
+              </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
                 {client?.websiteUrl && (
