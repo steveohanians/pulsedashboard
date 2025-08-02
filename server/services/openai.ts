@@ -457,10 +457,27 @@ async function generateInsightsWithCustomPromptAndContext(
       responseFields: Object.keys(result)
     });
 
+    // Helper function to parse nested JSON strings
+    const parseNestedJson = (value: any): string => {
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (typeof parsed === 'object') {
+            // Extract meaningful text from nested JSON objects
+            return Object.values(parsed).join(' ');
+          }
+          return parsed;
+        } catch {
+          return value;
+        }
+      }
+      return value || '';
+    };
+
     return {
-      context: result.context || result.context_analysis || "Analysis in progress.",
-      insight: result.insight || result.competitive_intelligence || "Insights being generated.",
-      recommendation: result.recommendation || result.action_plan || "Recommendations will be available shortly.",
+      context: parseNestedJson(result.context || result.context_analysis) || "Analysis in progress.",
+      insight: parseNestedJson(result.insight || result.competitive_intelligence) || "Insights being generated.",
+      recommendation: parseNestedJson(result.recommendation || result.action_plan) || "Recommendations will be available shortly.",
       status: result.status || 'needs_improvement'
     };
 
