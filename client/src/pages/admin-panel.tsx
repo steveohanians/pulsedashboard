@@ -35,6 +35,9 @@ export default function AdminPanel() {
   // Form refs for controlled form handling
   const clientFormRef = useRef<HTMLFormElement>(null);
   const companyFormRef = useRef<HTMLFormElement>(null);
+  
+  // State for controlled form fields
+  const [editingBusinessSize, setEditingBusinessSize] = useState<string>("");
 
   // Extract tab from URL
   useEffect(() => {
@@ -428,7 +431,7 @@ export default function AdminPanel() {
       name: formData.get("name") as string,
       websiteUrl: formData.get("website") as string,
       industryVertical: formData.get("industry") as string,
-      businessSize: formData.get("businessSize") as string,
+      businessSize: editingBusinessSize || editingItem?.businessSize, // Use state value instead of FormData
     };
     
     if (!data.name || !data.websiteUrl) {
@@ -1524,7 +1527,10 @@ export default function AdminPanel() {
                             <div className="flex space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
-                                if (!open) setEditingItem(null);
+                                if (!open) {
+                                  setEditingItem(null);
+                                  setEditingBusinessSize(""); // Reset state when dialog closes
+                                }
                               }}>
                                 <DialogTrigger asChild>
                                   <Button 
@@ -1532,6 +1538,7 @@ export default function AdminPanel() {
                                     size="sm"
                                     onClick={() => {
                                       setEditingItem(company);
+                                      setEditingBusinessSize(company.businessSize); // Initialize state with current value
                                       setIsDialogOpen(true);
                                     }}
                                   >
@@ -1575,7 +1582,10 @@ export default function AdminPanel() {
                                     </div>
                                     <div>
                                       <Label htmlFor="businessSize">Business Size</Label>
-                                      <Select name="businessSize" defaultValue={company.businessSize}>
+                                      <Select 
+                                        value={editingBusinessSize || company.businessSize} 
+                                        onValueChange={setEditingBusinessSize}
+                                      >
                                         <SelectTrigger>
                                           <SelectValue />
                                         </SelectTrigger>
