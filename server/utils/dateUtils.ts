@@ -9,8 +9,21 @@ import logger from "./logger";
  */
 export function generateDynamicPeriodMapping(): Record<string, string[]> {
   // Use centralized Pacific Time parsing
-  const { parsePacificTimeDate } = require('./timePeriodsGenerator');
-  const { year: ptYear, month: ptMonth } = parsePacificTimeDate();
+  import('./timePeriodsGenerator').then(({ parsePacificTimeDate }) => {
+    const { year: ptYear, month: ptMonth } = parsePacificTimeDate();
+  });
+  
+  // Fallback to inline implementation for now
+  const now = new Date();
+  const ptFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit'
+  });
+  
+  const ptParts = ptFormatter.formatToParts(now);
+  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1;
   
   // Create PT date and go back 1 month for target period
   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT date

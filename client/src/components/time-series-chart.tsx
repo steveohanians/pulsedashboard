@@ -1,20 +1,8 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 
-// Custom diamond dot component
-const DiamondDot = (props: any) => {
-  const { cx, cy, fill, stroke, strokeWidth } = props;
-  const size = 3;
-  
-  return (
-    <polygon
-      points={`${cx},${cy-size} ${cx+size},${cy} ${cx},${cy+size} ${cx-size},${cy}`}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-    />
-  );
-};
+// Use shared DiamondDot component
+import { DiamondDot } from './shared/DiamondDot';
 
 interface TimeSeriesChartProps {
   metricName: string;
@@ -406,7 +394,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             dataKey="Industry Avg" 
             stroke={colors['Industry Avg']}
             strokeWidth={2}
-            dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+            dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
             strokeDasharray="5 5"
             animationDuration={isInitialRender ? 800 : 0}
           />
@@ -419,7 +407,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             dataKey="Clear Digital Clients Avg" 
             stroke={colors['Clear Digital Clients Avg']}
             strokeWidth={2}
-            dot={<DiamondDot fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
+            dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
           />
@@ -434,7 +422,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
               dataKey={competitor.label} 
               stroke={competitorColors[index % competitorColors.length]}
               strokeWidth={2}
-              dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
+              dot={(props: any) => <DiamondDot {...props} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
               animationDuration={isInitialRender ? 800 : 0}
             />
           )

@@ -2,27 +2,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useState, useMemo, useEffect } from 'react';
 
 // Custom diamond dot component
-interface DiamondDotProps {
-  cx: number;
-  cy: number;
-  fill: string;
-  stroke: string;
-  strokeWidth: number;
-}
-
-const DiamondDot = (props: DiamondDotProps) => {
-  const { cx, cy, fill, stroke, strokeWidth } = props;
-  const size = 3;
-  
-  return (
-    <polygon
-      points={`${cx},${cy-size} ${cx+size},${cy} ${cx},${cy+size} ${cx-size},${cy}`}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-    />
-  );
-};
+import { DiamondDot } from './shared/DiamondDot';
 
 interface AreaChartProps {
   metricName: string;
