@@ -68,17 +68,53 @@
   --sidebar-ring: var(--ring);
 }
 
-/* Simple glow pulse animation for status icons */
-@keyframes glow-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 1px currentColor);
+/* CodePen-style spinning mask with glow effect */
+@keyframes spin-mask {
+  0% {
+    transform: rotate(0deg);
   }
-  50% {
-    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 6px currentColor);
+  100% {
+    transform: rotate(360deg);
   }
 }
 
-/* Status icon animations - Subtle glow pulse */
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 10px currentColor);
+  }
+}
+
+/* Status icon animations - CodePen spinning mask with glow */
+.status-icon-success,
+.status-icon-warning,
+.status-icon-error {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-icon-success::before,
+.status-icon-warning::before,
+.status-icon-error::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 270deg,
+    currentColor 300deg,
+    transparent 360deg
+  );
+  animation: spin-mask 2s linear infinite;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .status-icon-success {
   animation: glow-pulse 3s ease-in-out infinite;
   color: #10b981 !important; /* green-500 for success metrics */

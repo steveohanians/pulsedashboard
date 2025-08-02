@@ -931,7 +931,13 @@ export default function Dashboard() {
               className="h-6 sm:h-8 md:h-10 w-auto flex-shrink-0"
             />
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+                {/* CodePen spinning mask test */}
+                <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center status-icon-success">
+                  <CheckCircle className="h-6 w-6 text-white relative z-10" />
+                </div>
+              </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
                 {client?.websiteUrl && (
@@ -1600,17 +1606,17 @@ export default function Dashboard() {
                         <div className="ml-4 flex-shrink-0">
                           {metricStatuses[metricName] === 'success' && (
                             <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center status-icon-success" title="Performance is on target">
-                              <CheckCircle2 className="h-6 w-6 text-white" />
+                              <CheckCircle2 className="h-6 w-6 text-white relative z-10" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
                             <div className="w-12 h-12 bg-orange-500/70 rounded-full flex items-center justify-center status-icon-warning" title="Performance needs improvement">
-                              <AlertTriangle className="h-6 w-6 text-white" />
+                              <AlertTriangle className="h-6 w-6 text-white relative z-10" />
                             </div>
                           )}
                           {metricStatuses[metricName] === 'warning' && (
                             <div className="w-12 h-12 bg-red-500/80 rounded-full flex items-center justify-center status-icon-error" title="Performance requires attention">
-                              <XCircle className="h-6 w-6 text-white" />
+                              <XCircle className="h-6 w-6 text-white relative z-10" />
                             </div>
                           )}
                         </div>
