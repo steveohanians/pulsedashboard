@@ -54,12 +54,13 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
   - Enhanced global prompt template to include {{clientName}} placeholder in multiple strategic locations
   - AI insights now correctly reference "Demo Company" instead of generic "Current Client" text
   - Verified fix working through database testing - insights now show proper client name personalization
-- **SPINNING GLOW ANIMATION SUCCESS**: Successfully implemented CodePen-inspired spinning glow effects on AI insight status icons
-  - Created dual keyframe animations: `spinning` (3s rotation) and `glowing` (2s pulsing glow effect)
-  - Status icons now display visual feedback with animated spinning and glowing based on metric performance
-  - Green spinning glow for success metrics (like Bounce Rate), orange spinning glow for improvement-needed metrics (like Session Duration)
-  - Animation uses CSS `currentColor` for dynamic glow colors matching icon status colors
-  - Enhanced user experience with engaging visual cues that draw attention to AI-generated insights
+- **GLOW PULSE ANIMATION SUCCESS**: Successfully implemented simplified glow pulse effects on AI insight status icons
+  - Created elegant `glow-pulse` keyframe animation with `drop-shadow` filter effects (2s ease-in-out infinite)
+  - Status icons in "Pulse™ AI Insight" headers now display subtle pulsing glow based on metric performance
+  - Green glow pulse for success metrics (like Bounce Rate), orange glow pulse for improvement-needed metrics (like Session Duration)  
+  - Applied to actual dashboard status icons (w-12 h-12 circular containers) next to AI insight headers
+  - Enhanced user experience with refined visual feedback that draws attention to AI-generated insights without being distracting
+  - Simplified approach preferred over complex spinning effects for better user experience
 
 
 ## System Architecture

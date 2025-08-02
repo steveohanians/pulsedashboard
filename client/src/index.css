@@ -68,35 +68,30 @@
   --sidebar-ring: var(--ring);
 }
 
-/* CodePen-inspired spinning glow mask animation */
-@keyframes spin-glow {
-  0% {
-    transform: rotate(0deg);
-    filter: drop-shadow(0 0 5px currentColor);
+/* Simple glow pulse animation for status icons */
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px currentColor);
   }
   50% {
-    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 25px currentColor);
-  }
-  100% {
-    transform: rotate(360deg);
-    filter: drop-shadow(0 0 5px currentColor);
+    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor);
   }
 }
 
-/* Status icon animations - Proper CodePen spinning glow implementation */
+/* Status icon animations - Simple glow pulse */
 .status-icon-success {
-  animation: spin-glow 3s ease-in-out infinite;
-  color: #10b981; /* green-500 for success metrics */
+  animation: glow-pulse 2s ease-in-out infinite;
+  color: #10b981 !important; /* green-500 for success metrics */
 }
 
 .status-icon-warning {
-  animation: spin-glow 3s ease-in-out infinite;
-  color: #f59e0b; /* amber-500 for improvement needed metrics */
+  animation: glow-pulse 2s ease-in-out infinite;
+  color: #f59e0b !important; /* amber-500 for improvement needed metrics */
 }
 
 .status-icon-error {
-  animation: spin-glow 3s ease-in-out infinite;
-  color: #ef4444; /* red-500 for error metrics */
+  animation: glow-pulse 2s ease-in-out infinite;
+  color: #ef4444 !important; /* red-500 for error metrics */
 }
 
 /* Test CSS animations - Multiple approaches */

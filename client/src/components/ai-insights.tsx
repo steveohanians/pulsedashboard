@@ -78,10 +78,8 @@ interface AIInsightsProps {
   onRegenerateWithContext?: (context: string) => void;
 }
 
-// Status icon component with spinning glow effect
+// Status icon component with glow pulse effect
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
-  console.debug('🔄 StatusIcon rendered with status:', status);
-  
   if (!status) return null;
   
   const getIconClasses = () => {
@@ -97,7 +95,6 @@ function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'wa
   };
   
   const iconClasses = getIconClasses();
-  console.debug('🎨 Icon classes applied:', iconClasses);
   
   return (
     <div className="flex items-center">
