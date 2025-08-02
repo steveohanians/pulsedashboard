@@ -214,15 +214,18 @@ export default function Dashboard() {
   const processTrafficChannelData = useCallback(() => {
     let trafficMetrics = [];
     
-    if (isTimeSeries && dashboardData?.trafficChannelMetrics) {
-      // For multi-period queries, use preserved traffic channel data
+    if (dashboardData?.trafficChannelMetrics) {
+      // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
+      console.log(`🎯 Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
-      // Fallback: extract from time series data
+      // Fallback: extract from time series data for multi-period
       trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
+      console.log(`🎯 Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
-      // For single-period queries, use regular metrics
+      // For single-period queries without trafficChannelMetrics, use regular metrics
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+      console.log(`🎯 Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     
     console.log(`🔍 Traffic Channel Debug:`, {

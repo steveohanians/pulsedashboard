@@ -169,12 +169,18 @@ export function registerRoutes(app: Express): Server {
           }))
         ];
         
+        // Extract traffic channel data for single-period response
+        const trafficChannelMetrics = processedMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel);
+        console.log(`🔍 Single-period traffic channels being sent: ${trafficChannelMetrics.length} records`);
+        console.log(`🔍 Sample single-period traffic channels:`, trafficChannelMetrics.slice(0, 3).map(m => ({ channel: m.channel, sourceType: m.sourceType, value: m.value })));
+        
         res.json({
           client,
           metrics: processedMetrics,
           competitors,
           insights,
-          isTimeSeries: false
+          isTimeSeries: false,
+          trafficChannelMetrics // Include traffic channel data for single-period too
         });
       } else {
         // For multi-period queries, return time-series data

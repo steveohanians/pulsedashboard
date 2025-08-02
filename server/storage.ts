@@ -317,6 +317,12 @@ export class DatabaseStorage implements IStorage {
     if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
                     (!filters.industryVertical || filters.industryVertical === "All"))) {
       console.log(`📝 No filters applied, returning ${allIndustryMetrics.length} metrics`);
+      
+      // Debug traffic channel data specifically for Industry_Avg
+      const trafficChannels = allIndustryMetrics.filter(r => r.metricName === 'Traffic Channels');
+      const channelsWithNames = trafficChannels.filter(r => r.channel);
+      console.log(`🔍 Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+      
       return allIndustryMetrics;
     }
     
@@ -401,6 +407,7 @@ export class DatabaseStorage implements IStorage {
     // Add actual Traffic Channels data from database to preserve channel information
     const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
     console.log(`🔍 Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
+    console.log(`🔍 Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
     filteredMetrics.push(...trafficChannelsFromDB);
     
     return filteredMetrics;
