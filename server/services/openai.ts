@@ -395,6 +395,9 @@ function determineMetricStatus(
   // Determine if lower is better for this metric
   const isLowerBetter = metricName.includes('Bounce Rate');
   
+  // For most metrics, higher is better (Sessions per User, Pages per Session, Session Duration, etc.)
+  // Only Bounce Rate is lower-is-better
+  
   // Get comparison values, prioritizing industry average
   const primaryBenchmark = industryAverage || cdPortfolioAverage;
   const allCompetitorValues = competitorValues || [];
