@@ -1339,6 +1339,71 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Filter Options management (Admin only)
+  app.get("/api/admin/filter-options", requireAdmin, async (req, res) => {
+    try {
+      const filterOptions = await storage.getFilterOptions();
+      res.json(filterOptions);
+    } catch (error) {
+      logger.error("Error fetching filter options", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch filter options" });
+    }
+  });
+
+  app.post("/api/admin/filter-options", requireAdmin, async (req, res) => {
+    try {
+      const { category, value, order } = req.body;
+      
+      if (!category || !value) {
+        return res.status(400).json({ message: "Category and value are required" });
+      }
+
+      const filterOption = await storage.createFilterOption({
+        category,
+        value,
+        order: order || 0
+      });
+      
+      res.json({ message: "Filter option created successfully", filterOption });
+    } catch (error) {
+      logger.error("Error creating filter option", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to create filter option" });
+    }
+  });
+
+  app.put("/api/admin/filter-options/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { value, order, active } = req.body;
+
+      const updatedOption = await storage.updateFilterOption(id, {
+        value,
+        order,
+        active
+      });
+
+      if (!updatedOption) {
+        return res.status(404).json({ message: "Filter option not found" });
+      }
+
+      res.json({ message: "Filter option updated successfully", filterOption: updatedOption });
+    } catch (error) {
+      logger.error("Error updating filter option", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to update filter option" });
+    }
+  });
+
+  app.delete("/api/admin/filter-options/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteFilterOption(id);
+      res.json({ message: "Filter option deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting filter option", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to delete filter option" });
+    }
+  });
+
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const users = await storage.getUsers();

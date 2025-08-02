@@ -148,6 +148,17 @@ export const insightContexts = pgTable("insight_contexts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Filter options table for custom filter management
+export const filterOptions = pgTable("filter_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(), // 'businessSizes' or 'industryVerticals'
+  value: text("value").notNull(),
+  order: integer("order").default(0).notNull(), // For custom ordering
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
 // Relations
 export const clientsRelations = relations(clients, ({ many }) => ({
   users: many(users),
@@ -276,6 +287,18 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
   createdAt: true,
 });
 
+export const insertFilterOptionSchema = createInsertSchema(filterOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateFilterOptionSchema = createInsertSchema(filterOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertInsightContextSchema = createInsertSchema(insightContexts).omit({
   id: true,
   createdAt: true,
@@ -318,3 +341,6 @@ export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSc
 export type InsightContext = typeof insightContexts.$inferSelect;
 export type InsertInsightContext = z.infer<typeof insertInsightContextSchema>;
 export type UpdateInsightContext = z.infer<typeof updateInsightContextSchema>;
+export type FilterOption = typeof filterOptions.$inferSelect;
+export type InsertFilterOption = z.infer<typeof insertFilterOptionSchema>;
+export type UpdateFilterOption = z.infer<typeof updateFilterOptionSchema>;

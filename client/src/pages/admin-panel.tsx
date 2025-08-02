@@ -74,6 +74,12 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin",
   });
 
+  // Query for filter options
+  const { data: filterOptions } = useQuery<any[]>({
+    queryKey: ["/api/admin/filter-options"],
+    enabled: user?.role === "Admin",
+  });
+
   // Mutations for client management
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -2003,7 +2009,7 @@ export default function AdminPanel() {
                           Add a new option to the filter configuration
                         </DialogDescription>
                       </DialogHeader>
-                      <form onSubmit={(e) => {
+                      <form onSubmit={async (e) => {
                         e.preventDefault();
                         const formData = new FormData(e.currentTarget as HTMLFormElement);
                         const category = formData.get("category") as string;
@@ -2018,12 +2024,35 @@ export default function AdminPanel() {
                           return;
                         }
                         
-                        toast({
-                          title: "Filter option added",
-                          description: `Added "${value}" to ${category} filters.`,
-                        });
-                        setIsDialogOpen(false);
-                        setEditingItem(null);
+                        try {
+                          const response = await fetch('/api/admin/filter-options', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ category, value }),
+                          });
+
+                          if (!response.ok) {
+                            throw new Error('Failed to create filter option');
+                          }
+
+                          toast({
+                            title: "Filter option added",
+                            description: `Added "${value}" to ${category} filters.`,
+                          });
+                          setIsDialogOpen(false);
+                          setEditingItem(null);
+                          
+                          // Refresh filter options data if needed
+                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to add filter option. Please try again.",
+                            variant: "destructive",
+                          });
+                        }
                       }} className="space-y-4">
                         <div>
                           <Label htmlFor="filter-category">Category *</Label>
@@ -2081,41 +2110,70 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {[
-                          "Medium Business (100–500 employees)",
-                          "Large Business (500–1,000 employees)",
-                          "Enterprise (1,000–5,000 employees)",
-                          "Large Enterprise (5,000+ employees)"
-                        ].map((size) => (
-                          <div key={size} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                            <span>{size}</span>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit Business Size</DialogTitle>
-                                  <DialogDescription>
-                                    Update business size category
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="business-size">Business Size</Label>
-                                    <Input id="business-size" defaultValue={size} />
-                                  </div>
-                                  <div className="flex justify-end space-x-2">
-                                    <Button variant="outline">Cancel</Button>
-                                    <Button>Save Changes</Button>
-                                  </div>
+                        {filterOptions && filterOptions.filter(option => option.category === 'businessSizes').length > 0 ? (
+                          filterOptions
+                            .filter(option => option.category === 'businessSizes')
+                            .map((option) => (
+                              <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                                <span>{option.value}</span>
+                                <div className="flex space-x-1">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Edit Business Size</DialogTitle>
+                                        <DialogDescription>
+                                          Update business size category
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div>
+                                          <Label htmlFor="business-size">Business Size</Label>
+                                          <Input id="business-size" defaultValue={option.value} />
+                                        </div>
+                                        <div className="flex justify-end space-x-2">
+                                          <Button variant="outline">Cancel</Button>
+                                          <Button>Save Changes</Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        await fetch(`/api/admin/filter-options/${option.id}`, {
+                                          method: 'DELETE',
+                                        });
+                                        toast({
+                                          title: "Filter option deleted",
+                                          description: `Removed "${option.value}" from business sizes.`,
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to delete filter option.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              </DialogContent>
-                            </Dialog>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center text-slate-500 py-4">
+                            No business size filters configured. Use "Add Filter Option" to create some.
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -2125,49 +2183,70 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {[
-                          "Technology",
-                          "Technology - Artificial Intelligence",
-                          "Technology - Cloud",
-                          "Technology - Cybersecurity", 
-                          "Technology - SaaS",
-                          "Technology - Services",
-                          "Financial Services & Insurance",
-                          "Healthcare",
-                          "Manufacturing",
-                          "Semiconductor",
-                          "Consumer Goods",
-                          "Renewable Energy"
-                        ].map((industry) => (
-                          <div key={industry} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                            <span>{industry}</span>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit Industry Vertical</DialogTitle>
-                                  <DialogDescription>
-                                    Update industry vertical category
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="industry">Industry Vertical</Label>
-                                    <Input id="industry" defaultValue={industry} />
-                                  </div>
-                                  <div className="flex justify-end space-x-2">
-                                    <Button variant="outline">Cancel</Button>
-                                    <Button>Save Changes</Button>
-                                  </div>
+                        {filterOptions && filterOptions.filter(option => option.category === 'industryVerticals').length > 0 ? (
+                          filterOptions
+                            .filter(option => option.category === 'industryVerticals')
+                            .map((option) => (
+                              <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                                <span>{option.value}</span>
+                                <div className="flex space-x-1">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Edit Industry Vertical</DialogTitle>
+                                        <DialogDescription>
+                                          Update industry vertical category
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div>
+                                          <Label htmlFor="industry-vertical">Industry Vertical</Label>
+                                          <Input id="industry-vertical" defaultValue={option.value} />
+                                        </div>
+                                        <div className="flex justify-end space-x-2">
+                                          <Button variant="outline">Cancel</Button>
+                                          <Button>Save Changes</Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        await fetch(`/api/admin/filter-options/${option.id}`, {
+                                          method: 'DELETE',
+                                        });
+                                        toast({
+                                          title: "Filter option deleted",
+                                          description: `Removed "${option.value}" from industry verticals.`,
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to delete filter option.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              </DialogContent>
-                            </Dialog>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center text-slate-500 py-4">
+                            No industry vertical filters configured. Use "Add Filter Option" to create some.
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>

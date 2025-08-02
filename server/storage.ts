@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -11,7 +11,8 @@ import {
   type PasswordResetToken, type InsertPasswordResetToken,
   type GlobalPromptTemplate, type InsertGlobalPromptTemplate, type UpdateGlobalPromptTemplate,
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
-  type InsightContext, type InsertInsightContext, type UpdateInsightContext
+  type InsightContext, type InsertInsightContext, type UpdateInsightContext,
+  type FilterOption, type InsertFilterOption, type UpdateFilterOption
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
@@ -92,6 +93,13 @@ export interface IStorage {
   createMetricPrompt(prompt: InsertMetricPrompt): Promise<MetricPrompt>;
   updateMetricPrompt(metricName: string, prompt: UpdateMetricPrompt): Promise<MetricPrompt | undefined>;
   deleteMetricPrompt(metricName: string): Promise<void>;
+  
+  // Filter Options
+  getFilterOptions(): Promise<FilterOption[]>;
+  getFilterOptionsByCategory(category: string): Promise<FilterOption[]>;
+  createFilterOption(option: InsertFilterOption): Promise<FilterOption>;
+  updateFilterOption(id: string, option: UpdateFilterOption): Promise<FilterOption | undefined>;
+  deleteFilterOption(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -581,6 +589,41 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllInsightContexts(): Promise<void> {
     await db.delete(insightContexts);
+  }
+
+  // Filter Options
+  async getFilterOptions(): Promise<FilterOption[]> {
+    return await db.select().from(filterOptions).where(eq(filterOptions.active, true)).orderBy(filterOptions.category, filterOptions.order);
+  }
+
+  async getFilterOptionsByCategory(category: string): Promise<FilterOption[]> {
+    return await db.select().from(filterOptions).where(
+      and(
+        eq(filterOptions.category, category),
+        eq(filterOptions.active, true)
+      )
+    ).orderBy(filterOptions.order);
+  }
+
+  async createFilterOption(insertOption: InsertFilterOption): Promise<FilterOption> {
+    const [option] = await db
+      .insert(filterOptions)
+      .values(insertOption)
+      .returning();
+    return option;
+  }
+
+  async updateFilterOption(id: string, updateOption: UpdateFilterOption): Promise<FilterOption | undefined> {
+    const [option] = await db
+      .update(filterOptions)
+      .set({ ...updateOption, updatedAt: new Date() })
+      .where(eq(filterOptions.id, id))
+      .returning();
+    return option || undefined;
+  }
+
+  async deleteFilterOption(id: string): Promise<void> {
+    await db.delete(filterOptions).where(eq(filterOptions.id, id));
   }
 }
 
