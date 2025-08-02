@@ -123,6 +123,14 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Eliminated multiple competing system messages for unified AI personality and expertise
   - **Unified Expert Persona**: Added "sr. web analytics strategist and UX strategist" persona to all custom prompt templates for consistent AI expertise across all metric insights
   - **Enhanced Prompt Templates**: Added metric-specific nuances (time formats, percentages, counts), **bold formatting** for key insights, and numbered list format for exactly 3 recommendations per template
+- **Global Prompt Template System (August 2025)**: Implemented centralized AI prompt management architecture
+  - Created `global_prompt_template` database table with admin interface for centralized prompt editing
+  - Refactored OpenAI service to merge global template with metric-specific prompts automatically
+  - Added backend API routes (`/api/admin/global-prompt-template`) and admin panel "Global Template" tab
+  - Built `GlobalPromptTemplateForm` component for web-based template management
+  - **Template Architecture**: Global template handles expert persona, formatting rules, and business context; metric templates focus purely on analysis instructions
+  - **Cleaned Metric Prompts**: Removed redundant content from all 6 metric prompts, eliminating duplication while maintaining analysis quality
+  - **Centralized Control**: Admin users can now modify AI personality, formatting requirements, and business context from single interface
 - **Typewriter Effect & Debug System (August 2025)**: Resolved critical typewriter animation and debugging infrastructure
   - **Typewriter Bug Fixed**: Resolved issue where typewriter effect wouldn't restart after regenerating insights - now works consistently for all new insight generations
   - **Debug Infrastructure**: Added comprehensive debug system with red "Clear Insights" button in header to clear all AI insights from database and localStorage
