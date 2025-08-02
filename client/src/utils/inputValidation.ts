@@ -27,6 +27,19 @@ const BASIC_HTML_PATTERNS = [
   /on\w+\s*=/gi,
 ];
 
+// Profanity patterns (basic client-side detection)
+const BASIC_PROFANITY_PATTERNS = [
+  /\b(fuck|shit|damn|bitch|asshole|bastard)\b/gi,
+  /\b(wtf|stfu|gtfo)\b/gi,
+];
+
+// Off-topic patterns
+const BASIC_OFF_TOPIC_PATTERNS = [
+  /\b(joke|funny|lol|haha|meme)\b/gi,
+  /what\s+is\s+the\s+(weather|time|date)/gi,
+  /\b(i hate|i love|my life|my problems)\b/gi,
+];
+
 const MAX_LENGTH = 1000;
 
 /**
@@ -67,6 +80,28 @@ export function validateUserInput(input: string): ValidationResult {
     if (pattern.test(input)) {
       warnings.push("HTML or script content detected and will be removed");
       break;
+    }
+  }
+
+  // Basic profanity detection
+  for (const pattern of BASIC_PROFANITY_PATTERNS) {
+    if (pattern.test(input)) {
+      return {
+        isValid: false,
+        warnings: [],
+        error: "Content contains inappropriate language"
+      };
+    }
+  }
+
+  // Basic off-topic detection
+  for (const pattern of BASIC_OFF_TOPIC_PATTERNS) {
+    if (pattern.test(input)) {
+      return {
+        isValid: false,
+        warnings: [],
+        error: "Content appears off-topic for business analytics"
+      };
     }
   }
 

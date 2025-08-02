@@ -147,3 +147,10 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Enhanced frontend with visual validation feedback, character counts, and error states
   - Added comprehensive test suite with 15+ attack patterns and edge cases
   - All user-provided context now sanitized before storage and AI prompt assembly
+- **Content Quality & Relevance Validation (August 2025)**: Advanced content filtering system for appropriate business context
+  - Profanity and inappropriate content detection with automatic blocking (hate speech, sexual content, vulgar language)
+  - Off-topic content filtering (personal rants, jokes, unrelated questions, entertainment content)
+  - Business relevance scoring using 25+ analytics keywords for context appropriateness
+  - Content quality checks for vague, repetitive, or poorly structured input
+  - Smart warnings for users with specific improvement suggestions
+  - Only well-formed, clean, relevant content passed to AI prompt generation
