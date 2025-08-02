@@ -380,12 +380,25 @@ export function registerRoutes(app: Express): Server {
       const competitors = await storage.getCompetitorsByClient(clientId);
       
       // CRITICAL: AI insights are ALWAYS based on last month data only, regardless of user's selected time period
-      const periodMapping = generateDynamicPeriodMapping();
-      const targetPeriod = periodMapping["Last Month"][0]; // Force last month data for AI insights
+      // Calculate actual last month (2 months before current PT date to get complete previous month)
+      const now = new Date();
+      const ptFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit'
+      });
+      const ptParts = ptFormatter.formatToParts(now);
+      const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+      const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+      
+      // Go back 2 months to get last complete month for AI insights
+      const lastMonthDate = new Date(ptYear, ptMonth - 2, 1);
+      const targetPeriod = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
       
       logger.info('🤖 AI INSIGHTS: Forcing last month data only', { 
         userSelectedPeriod: timePeriod, 
         aiAnalysisPeriod: targetPeriod,
+        currentPTMonth: `${ptYear}-${String(ptMonth + 1).padStart(2, '0')}`,
         rationale: 'AI insights always use last month data regardless of dashboard filters'
       });
       
@@ -866,12 +879,25 @@ export function registerRoutes(app: Express): Server {
     try {
       const { clientId } = req.params;
       // CRITICAL: AI insights are ALWAYS based on last month data only, regardless of any query parameters
-      const periodMapping = generateDynamicPeriodMapping();
-      const lastMonthPeriod = periodMapping["Last Month"][0]; // Force last month data for AI insights
+      // Calculate actual last month (2 months before current PT date to get complete previous month)
+      const now = new Date();
+      const ptFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit'
+      });
+      const ptParts = ptFormatter.formatToParts(now);
+      const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+      const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+      
+      // Go back 2 months to get last complete month for AI insights
+      const lastMonthDate = new Date(ptYear, ptMonth - 2, 1);
+      const lastMonthPeriod = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
       
       logger.info('🤖 AI INSIGHTS: Forcing last month data only', { 
         queryPeriod: req.query.period,
         aiAnalysisPeriod: lastMonthPeriod,
+        currentPTMonth: `${ptYear}-${String(ptMonth + 1).padStart(2, '0')}`,
         rationale: 'AI insights always use last month data regardless of dashboard filters'
       });
       
