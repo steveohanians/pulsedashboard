@@ -68,41 +68,14 @@
   --sidebar-ring: var(--ring);
 }
 
-/* AI Status Icon Spinning Glow Animations - Based on working CodePen example */
+/* AI Status Icon Spinning Animation - Simple and reliable */
 @keyframes ai-icon-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes ai-icon-glow {
-  0%, 100% { 
-    filter: drop-shadow(0 0 3px currentColor); 
+  0% { 
+    transform: rotate(0deg); 
   }
-  50% { 
-    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor); 
+  100% { 
+    transform: rotate(360deg); 
   }
-}
-
-/* Make animations very obvious for debugging - Maximum priority */
-.ai-status-success {
-  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
-  color: #10b981 !important;
-  transform-origin: center !important;
-  will-change: transform !important;
-}
-
-.ai-status-warning {
-  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
-  color: #f59e0b !important;
-  transform-origin: center !important;
-  will-change: transform !important;
-}
-
-.ai-status-error {
-  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
-  color: #ef4444 !important;
-  transform-origin: center !important;
-  will-change: transform !important;
 }
 
 .dark {

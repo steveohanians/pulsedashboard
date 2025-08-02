@@ -78,23 +78,47 @@ interface AIInsightsProps {
   onRegenerateWithContext?: (context: string) => void;
 }
 
-// Status icon component with spinning glow effects - Using proven CSS approach with debugging
+// Status icon component with spinning glow effects - Direct approach with spinning container
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
   if (!status) return null;
   
-  // Add debugging
-  console.log('🎨 StatusIcon rendering with status:', status);
+  const getColors = () => {
+    switch (status) {
+      case 'success':
+        return { color: '#10b981', glow: 'rgba(16, 185, 129, 0.5)' };
+      case 'needs_improvement':
+        return { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)' };
+      case 'warning':
+        return { color: '#ef4444', glow: 'rgba(239, 68, 68, 0.5)' };
+      default:
+        return { color: '#6b7280', glow: 'rgba(107, 114, 128, 0.5)' };
+    }
+  };
   
-  switch (status) {
-    case 'success':
-      return <CheckCircle className="h-8 w-8 flex-shrink-0 ai-status-success" style={{ willChange: 'transform' }} />;
-    case 'needs_improvement':
-      return <AlertTriangle className="h-8 w-8 flex-shrink-0 ai-status-warning" style={{ willChange: 'transform' }} />;
-    case 'warning':
-      return <AlertCircle className="h-8 w-8 flex-shrink-0 ai-status-error" style={{ willChange: 'transform' }} />;
-    default:
-      return null;
-  }
+  const colors = getColors();
+  
+  return (
+    <div 
+      className="relative w-8 h-8 flex-shrink-0"
+      style={{
+        animation: 'ai-icon-spin 2s linear infinite',
+        filter: `drop-shadow(0 0 6px ${colors.glow})`,
+      }}
+    >
+      <div
+        className="w-full h-full rounded-full border-2 flex items-center justify-center"
+        style={{
+          borderColor: colors.color,
+          backgroundColor: `${colors.color}15`,
+          boxShadow: `0 0 10px ${colors.glow}`,
+        }}
+      >
+        {status === 'success' && <CheckCircle className="h-5 w-5" style={{ color: colors.color }} />}
+        {status === 'needs_improvement' && <AlertTriangle className="h-5 w-5" style={{ color: colors.color }} />}
+        {status === 'warning' && <AlertCircle className="h-5 w-5" style={{ color: colors.color }} />}
+      </div>
+    </div>
+  );
 }
 
 export default function AIInsights({ 
