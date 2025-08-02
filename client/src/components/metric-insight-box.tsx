@@ -187,6 +187,34 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     }
   });
 
+  // Show loading state during any generation process
+  if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending) {
+    return (
+      <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+        <div className="text-center">
+          <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+            Get strategic competitive intelligence and actionable recommendations for <span className="font-medium text-primary">{metricName}</span> for {(() => {
+              const now = new Date();
+              const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            })()}
+          </p>
+          <Button 
+            disabled={true}
+            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg shadow-primary/25 font-medium px-6 py-2.5"
+            size="sm"
+          >
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Generating Insights...
+          </Button>
+          <p className="text-xs text-slate-500 mt-3 animate-pulse">
+            Analyzing competitive data and market trends...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (insight) {
     console.debug('🎭 Rendering AIInsights with isTyping:', insight.isTyping);
     return (

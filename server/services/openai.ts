@@ -425,14 +425,14 @@ async function generateInsightsWithCustomPromptAndContext(
       .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
       .replace(/{{competitors}}/g, competitorString);
 
-    // Append user context to the prompt
+    // Append user context to the prompt with clear instructions
     if (userContext && userContext.trim()) {
-      filledPrompt += `\n\nUser-provided context:\n${userContext.trim()}`;
+      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.`;
     }
 
-    // Ensure the prompt mentions JSON for OpenAI's json_object response format
+    // Ensure the prompt mentions JSON for OpenAI's json_object response format and preserves formatting
     if (!filledPrompt.toLowerCase().includes('json')) {
-      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.`;
+      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields. Use **bold** for emphasis and numbered lists (1., 2., 3.) for recommendations.`;
     }
 
     const response = await openai.chat.completions.create({
@@ -457,7 +457,7 @@ async function generateInsightsWithCustomPromptAndContext(
       responseFields: Object.keys(result)
     });
 
-    // Helper function to parse nested JSON strings and extract readable text
+    // Helper function to parse nested JSON strings while preserving markdown formatting
     const parseNestedJson = (value: any): string => {
       if (!value) return '';
       
@@ -465,7 +465,7 @@ async function generateInsightsWithCustomPromptAndContext(
         try {
           const parsed = JSON.parse(value);
           if (typeof parsed === 'object' && parsed !== null) {
-            // Recursively extract all string values from nested objects
+            // Recursively extract all string values from nested objects while preserving formatting
             const extractText = (obj: any): string[] => {
               const texts: string[] = [];
               for (const val of Object.values(obj)) {
@@ -478,19 +478,20 @@ async function generateInsightsWithCustomPromptAndContext(
               return texts;
             };
             const extractedTexts = extractText(parsed);
-            const result = extractedTexts.join(' ');
+            // Join with proper spacing and preserve formatting
+            const result = extractedTexts.join(' ').trim();
             logger.info('✅ Parsed JSON content', { originalLength: value.length, parsedLength: result.length });
             return result;
           }
           return String(parsed);
         } catch {
-          // If it's not JSON, return as-is
+          // If it's not JSON, return as-is to preserve original formatting
           return value;
         }
       }
       
       if (typeof value === 'object' && value !== null) {
-        // Handle direct objects (not stringified JSON)
+        // Handle direct objects (not stringified JSON) while preserving formatting
         const extractText = (obj: any): string[] => {
           const texts: string[] = [];
           for (const val of Object.values(obj)) {
@@ -503,7 +504,7 @@ async function generateInsightsWithCustomPromptAndContext(
           return texts;
         };
         const extractedTexts = extractText(value);
-        return extractedTexts.join(' ');
+        return extractedTexts.join(' ').trim();
       }
       
       return String(value);
