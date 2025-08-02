@@ -632,44 +632,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async cascadeFilterOptionValueUpdate(category: string, oldValue: string, newValue: string): Promise<void> {
+    console.log(`Starting cascade update: ${category}, ${oldValue} -> ${newValue}`);
+    
     // Update all entities that reference this filter option value
     if (category === 'businessSizes') {
       // Update clients
-      await db
+      const clientsResult = await db
         .update(clients)
         .set({ businessSize: newValue })
-        .where(eq(clients.businessSize, oldValue));
+        .where(eq(clients.businessSize, oldValue))
+        .returning({ id: clients.id });
+      console.log(`Updated ${clientsResult.length} clients`);
 
       // Update benchmark companies
-      await db
+      const benchmarkResult = await db
         .update(benchmarkCompanies)
         .set({ businessSize: newValue })
-        .where(eq(benchmarkCompanies.businessSize, oldValue));
+        .where(eq(benchmarkCompanies.businessSize, oldValue))
+        .returning({ id: benchmarkCompanies.id });
+      console.log(`Updated ${benchmarkResult.length} benchmark companies`);
 
       // Update CD portfolio companies
-      await db
+      const cdPortfolioResult = await db
         .update(cdPortfolioCompanies)
         .set({ businessSize: newValue })
-        .where(eq(cdPortfolioCompanies.businessSize, oldValue));
+        .where(eq(cdPortfolioCompanies.businessSize, oldValue))
+        .returning({ id: cdPortfolioCompanies.id });
+      console.log(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
     } else if (category === 'industryVerticals') {
       // Update clients
-      await db
+      const clientsResult = await db
         .update(clients)
         .set({ industryVertical: newValue })
-        .where(eq(clients.industryVertical, oldValue));
+        .where(eq(clients.industryVertical, oldValue))
+        .returning({ id: clients.id });
+      console.log(`Updated ${clientsResult.length} clients`);
 
       // Update benchmark companies
-      await db
+      const benchmarkResult = await db
         .update(benchmarkCompanies)
         .set({ industryVertical: newValue })
-        .where(eq(benchmarkCompanies.industryVertical, oldValue));
+        .where(eq(benchmarkCompanies.industryVertical, oldValue))
+        .returning({ id: benchmarkCompanies.id });
+      console.log(`Updated ${benchmarkResult.length} benchmark companies`);
 
       // Update CD portfolio companies
-      await db
+      const cdPortfolioResult = await db
         .update(cdPortfolioCompanies)
         .set({ industryVertical: newValue })
-        .where(eq(cdPortfolioCompanies.industryVertical, oldValue));
+        .where(eq(cdPortfolioCompanies.industryVertical, oldValue))
+        .returning({ id: cdPortfolioCompanies.id });
+      console.log(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
     }
+    
+    console.log(`Cascade update completed for ${category}`);
   }
 
   async deleteFilterOption(id: string): Promise<void> {

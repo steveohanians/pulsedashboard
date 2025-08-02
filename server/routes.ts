@@ -1467,11 +1467,24 @@ export function registerRoutes(app: Express): Server {
 
       // If the value changed, cascade the update to all referencing entities
       if (currentOption.value !== value && currentOption.value && value) {
+        logger.info("Cascading filter option value update", {
+          category: currentOption.category,
+          oldValue: currentOption.value,
+          newValue: value,
+          filterId: id
+        });
         await storage.cascadeFilterOptionValueUpdate(
           currentOption.category,
           currentOption.value,
           value
         );
+        logger.info("Cascade update completed");
+      } else {
+        logger.info("No cascade needed", {
+          currentValue: currentOption.value,
+          newValue: value,
+          valuesEqual: currentOption.value === value
+        });
       }
 
       res.json({ message: "Filter option updated successfully", filterOption: updatedOption });
