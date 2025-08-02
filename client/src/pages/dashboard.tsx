@@ -592,19 +592,45 @@ export default function Dashboard() {
         align-items: center;
       `;
       
-      pdfHeader.innerHTML = `
-        <div style="display: flex; align-items: center;">
-          <img src="${clearLogoPath}" alt="Clear Digital" style="height: 40px; margin-right: 20px;" />
-          <div>
-            <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #1f2937;">Pulse Dashboard™</h1>
-            <p style="margin: 0; color: #6b7280; font-size: 14px;">Analytics Report for ${client.name}</p>
-          </div>
-        </div>
-        <div style="text-align: right; color: #6b7280; font-size: 12px;">
-          <p style="margin: 0;">Generated: ${new Date().toLocaleDateString()}</p>
-          <p style="margin: 0;">Period: ${timePeriod}</p>
-        </div>
-      `;
+      // Create header content safely using DOM methods
+      const leftDiv = document.createElement('div');
+      leftDiv.style.cssText = 'display: flex; align-items: center;';
+      
+      const logoImg = document.createElement('img');
+      logoImg.src = clearLogoPath;
+      logoImg.alt = 'Clear Digital';
+      logoImg.style.cssText = 'height: 40px; margin-right: 20px;';
+      
+      const textDiv = document.createElement('div');
+      const titleH1 = document.createElement('h1');
+      titleH1.textContent = 'Pulse Dashboard™';
+      titleH1.style.cssText = 'font-size: 24px; font-weight: bold; margin: 0; color: #1f2937;';
+      
+      const subtitleP = document.createElement('p');
+      subtitleP.textContent = `Analytics Report for ${client.name}`;
+      subtitleP.style.cssText = 'margin: 0; color: #6b7280; font-size: 14px;';
+      
+      textDiv.appendChild(titleH1);
+      textDiv.appendChild(subtitleP);
+      leftDiv.appendChild(logoImg);
+      leftDiv.appendChild(textDiv);
+      
+      const rightDiv = document.createElement('div');
+      rightDiv.style.cssText = 'text-align: right; color: #6b7280; font-size: 12px;';
+      
+      const generatedP = document.createElement('p');
+      generatedP.textContent = `Generated: ${new Date().toLocaleDateString()}`;
+      generatedP.style.margin = '0';
+      
+      const periodP = document.createElement('p');
+      periodP.textContent = `Period: ${timePeriod}`;
+      periodP.style.margin = '0';
+      
+      rightDiv.appendChild(generatedP);
+      rightDiv.appendChild(periodP);
+      
+      pdfHeader.appendChild(leftDiv);
+      pdfHeader.appendChild(rightDiv);
       
       originalElement.insertBefore(pdfHeader, originalElement.firstChild);
       

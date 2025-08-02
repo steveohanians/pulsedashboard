@@ -2,7 +2,15 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useState, useMemo, useEffect } from 'react';
 
 // Custom diamond dot component
-const DiamondDot = (props: any) => {
+interface DiamondDotProps {
+  cx: number;
+  cy: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
+const DiamondDot = (props: DiamondDotProps) => {
   const { cx, cy, fill, stroke, strokeWidth } = props;
   const size = 3;
   
@@ -37,8 +45,22 @@ function seededRandom(seed: number): number {
 }
 
 // Generate stable time series data for area chart
-function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
-  const data: any[] = [];
+interface AreaDataPoint {
+  date: string;
+  client: number;
+  industryAvg: number;
+  cdAvg: number;
+  [key: string]: string | number;
+}
+
+interface CompetitorData {
+  id: string;
+  label: string;
+  value: number;
+}
+
+function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: CompetitorData[], clientUrl?: string): AreaDataPoint[] {
+  const data: AreaDataPoint[] = [];
   
   // Determine the date range based on time period
   let dates: string[] = [];
@@ -107,8 +129,11 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
   // Use actual averaged values for all data points (no artificial variance for tooltips)
   dates.forEach((date, index) => {
     const clientKey = clientUrl || 'Client';
-    const point: any = {
+    const point: AreaDataPoint = {
       date,
+      client: Math.round(clientData * 100) / 100,
+      industryAvg: Math.round(industryAvg * 100) / 100,
+      cdAvg: Math.round(cdAvg * 100) / 100,
       [clientKey]: Math.round(clientData * 100) / 100,
       'Industry Avg': Math.round(industryAvg * 100) / 100,
       'Clear Digital Clients Avg': Math.round(cdAvg * 100) / 100,
