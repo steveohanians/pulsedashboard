@@ -705,17 +705,14 @@ export function registerRoutes(app: Express): Server {
       const competitors = await storage.getCompetitorsByClient(clientId);
       
       const periodMapping = generateDynamicPeriodMapping();
-      let targetPeriod: string;
+      // CRITICAL: AI insights always use July 2025 data regardless of user's dashboard selection
+      const targetPeriod = periodMapping["Last Month"][0]; // Always use "Last Month" (July 2025)
       
-      if (timePeriod === "Last Month") {
-        targetPeriod = periodMapping["Last Month"][0];
-      } else if (timePeriod === "Last Quarter") {
-        targetPeriod = periodMapping["Last Quarter"][0];
-      } else if (timePeriod === "Last Year") {
-        targetPeriod = periodMapping["Last Year"][0];
-      } else {
-        targetPeriod = periodMapping["Last Month"][0];
-      }
+      logger.info('🤖 AI INSIGHTS WITH CONTEXT: Forcing last month data only', {
+        userSelectedPeriod: timePeriod,
+        aiAnalysisPeriod: targetPeriod,
+        rationale: 'AI insights always use July 2025 data regardless of dashboard filters'
+      });
       
       const clientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
       
@@ -731,11 +728,49 @@ export function registerRoutes(app: Express): Server {
         };
       }).filter((c: any) => c.value !== null);
 
-      // Build enriched context with user-provided context
+      // CRITICAL: Get actual client, industry, and CD values for targetPeriod (July 2025) from database, not from frontend averaged data
+      const clientMetricForPeriod = clientMetrics.find((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'Client' // Client data is stored with sourceType 'Client'
+      );
+      
+      const industryMetricsForPeriod = clientMetrics.filter((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'Industry_Avg'
+      );
+      
+      const cdMetricsForPeriod = clientMetrics.filter((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'CD_Avg'
+      );
+
+      // Calculate actual July 2025 database values
+      const clientValueFromDB = clientMetricForPeriod ? parseFloat(clientMetricForPeriod.value as string) : null;
+      const industryAvgFromDB = industryMetricsForPeriod.length > 0 ? 
+        industryMetricsForPeriod.reduce((sum: number, m: any) => sum + parseFloat(m.value as string), 0) / industryMetricsForPeriod.length : null;
+      const cdAvgFromDB = cdMetricsForPeriod.length > 0 ? 
+        cdMetricsForPeriod.reduce((sum: number, m: any) => sum + parseFloat(m.value as string), 0) / cdMetricsForPeriod.length : null;
+
+      logger.info('🎯 AI CONTEXT VALUES DEBUG', {
+        metricName,
+        targetPeriod,
+        clientValueFromDB,
+        clientValueFromFrontend: metricData.Client || metricData,
+        industryAvgFromDB,
+        industryAvgFromFrontend: metricData.Industry_Avg,
+        cdAvgFromDB,
+        cdAvgFromFrontend: metricData.CD_Avg,
+        note: 'AI context should use DB values for specific period, not frontend averaged values'
+      });
+
+      // Build enriched context with actual database values for July 2025
       const enrichedData = {
         metric: {
           name: metricName,
-          clientValue: metricData.Client || metricData,
+          clientValue: clientValueFromDB, // Use DB value instead of frontend average
           timePeriod: timePeriod
         },
         client: {
@@ -745,11 +780,11 @@ export function registerRoutes(app: Express): Server {
           websiteUrl: client?.websiteUrl
         },
         benchmarks: {
-          industryAverage: metricData.Industry_Avg,
-          cdPortfolioAverage: metricData.CD_Avg,
+          industryAverage: industryAvgFromDB, // Use DB value instead of frontend average
+          cdPortfolioAverage: cdAvgFromDB, // Use DB value instead of frontend average
           competitors: competitorData
         },
-        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
+        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValueFromDB} for ${timePeriod}. Industry average: ${industryAvgFromDB}, CD Portfolio average: ${cdAvgFromDB}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
         userContext: sanitizedUserContext // Add sanitized user context to the enriched data
       };
 
