@@ -417,19 +417,62 @@ export function registerRoutes(app: Express): Server {
         competitors: competitorData.map(c => ({ name: c.name, value: c.value }))
       });
 
-      // Build enriched context for OpenAI
+      // CRITICAL: Get actual client value for targetPeriod (July 2025) from database, not from frontend averaged data
+      const clientMetricForPeriod = clientMetrics.find((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'Competitor' // Client data is stored as Competitor sourceType
+      );
+      
+      let clientValue = clientMetricForPeriod ? parseFloat(clientMetricForPeriod.value as string) : (metricData.Client || metricData);
+      
       // Special handling for Traffic Channels - use channel count instead of full object
-      let clientValue = metricData.Client || metricData;
       if (metricName === 'Traffic Channels' && typeof clientValue === 'object') {
         // For Traffic Channels, use the number of channels as clientValue 
         clientValue = Array.isArray(clientValue) ? clientValue.length : Object.keys(clientValue).length;
       }
       
+      logger.info('🎯 AI CLIENT VALUE DEBUG', { 
+        metricName, 
+        targetPeriod,
+        clientValueFromDB: clientMetricForPeriod?.value,
+        clientValueFromFrontend: metricData.Client,
+        finalClientValue: clientValue,
+        note: 'AI should use DB value for specific period, not frontend averaged value'
+      });
+      
+      // CRITICAL: Get actual benchmark values for targetPeriod (July 2025) from database, not frontend averaged data
+      const industryMetricForPeriod = clientMetrics.find((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'Industry_Avg'
+      );
+      
+      const cdMetricForPeriod = clientMetrics.find((m: any) => 
+        m.metricName === metricName && 
+        m.timePeriod === targetPeriod &&
+        m.sourceType === 'CD_Avg'
+      );
+      
+      const industryAverage = industryMetricForPeriod ? parseFloat(industryMetricForPeriod.value as string) : metricData.Industry_Avg;
+      const cdPortfolioAverage = cdMetricForPeriod ? parseFloat(cdMetricForPeriod.value as string) : metricData.CD_Avg;
+      
+      logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
+        metricName, 
+        targetPeriod,
+        industryAvgFromDB: industryMetricForPeriod?.value,
+        industryAvgFromFrontend: metricData.Industry_Avg,
+        cdAvgFromDB: cdMetricForPeriod?.value,
+        cdAvgFromFrontend: metricData.CD_Avg,
+        finalIndustryAvg: industryAverage,
+        finalCdAvg: cdPortfolioAverage
+      });
+
       const enrichedData = {
         metric: {
           name: metricName,
           clientValue: clientValue,
-          timePeriod: timePeriod
+          timePeriod: targetPeriod // Use actual analysis period, not user's selected period
         },
         client: {
           name: client?.name,
@@ -438,11 +481,11 @@ export function registerRoutes(app: Express): Server {
           websiteUrl: client?.websiteUrl
         },
         benchmarks: {
-          industryAverage: metricData.Industry_Avg,
-          cdPortfolioAverage: metricData.CD_Avg,
+          industryAverage: industryAverage,
+          cdPortfolioAverage: cdPortfolioAverage,
           competitors: competitorData
         },
-        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
+        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValue} for ${targetPeriod}. Industry average: ${industryAverage}, CD Portfolio average: ${cdPortfolioAverage}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
       };
 
       // Import OpenAI service dynamically
