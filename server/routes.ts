@@ -739,11 +739,12 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/debug/clear-all-insights", requireAuth, async (req, res) => {
     try {
       await storage.clearAllAIInsights();
-      logger.info("Cleared all AI insights for debugging", { userId: req.user?.id });
-      res.json({ message: "All AI insights cleared successfully" });
+      await storage.clearAllInsightContexts();
+      logger.info("Cleared all AI insights and contexts for debugging", { userId: req.user?.id });
+      res.json({ message: "All AI insights and contexts cleared successfully" });
     } catch (error) {
-      logger.error("Error clearing AI insights", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to clear AI insights" });
+      logger.error("Error clearing AI insights and contexts", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to clear AI insights and contexts" });
     }
   });
 
