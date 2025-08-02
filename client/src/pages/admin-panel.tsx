@@ -71,15 +71,15 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin",
   });
 
-  // Query for metric prompts
-  const { data: metricPrompts } = useQuery<any[]>({
-    queryKey: ["/api/admin/metric-prompts"],
+  // Query for filter options to populate dropdowns dynamically
+  const { data: filterOptions } = useQuery<any[]>({
+    queryKey: ["/api/admin/filter-options"],
     enabled: user?.role === "Admin",
   });
 
-  // Query for filter options
-  const { data: filterOptions } = useQuery<any[]>({
-    queryKey: ["/api/admin/filter-options"],
+  // Query for metric prompts
+  const { data: metricPrompts } = useQuery<any[]>({
+    queryKey: ["/api/admin/metric-prompts"],
     enabled: user?.role === "Admin",
   });
 
@@ -1124,15 +1124,13 @@ export default function AdminPanel() {
                               <SelectValue placeholder="Select industry" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Technology">Technology</SelectItem>
-                              <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
-                              <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
-                              <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
-                              <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
-                              <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
-                              <SelectItem value="Healthcare">Healthcare</SelectItem>
-                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
+                              {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                .sort((a, b) => a.order - b.order)
+                                .map((option) => (
+                                <SelectItem key={option.id} value={option.value}>
+                                  {option.value}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1143,24 +1141,15 @@ export default function AdminPanel() {
                               <SelectValue placeholder="Select business size" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Medium Business (100–500 employees)">Medium Business</SelectItem>
-                              <SelectItem value="Large Business (500–1,000 employees)">Large Business</SelectItem>
-                              <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise</SelectItem>
-                              <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise</SelectItem>
+                              {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                .sort((a, b) => a.order - b.order)
+                                .map((option) => (
+                                <SelectItem key={option.id} value={option.value}>
+                                  {option.value}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="client-gaPropertyId">GA4 Property ID</Label>
-                          <Input 
-                            id="client-gaPropertyId"
-                            name="gaPropertyId" 
-                            placeholder="ex: 412345678901"
-                            className="font-mono"
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                            Google Analytics 4 property ID for data collection
-                          </p>
                         </div>
                         <div className="flex justify-end space-x-2">
                           <Button 
@@ -1294,10 +1283,13 @@ export default function AdminPanel() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
-                                          <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
-                                          <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
-                                          <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                          {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                            .sort((a, b) => a.order - b.order)
+                                            .map((option) => (
+                                            <SelectItem key={option.id} value={option.value}>
+                                              {option.value}
+                                            </SelectItem>
+                                          ))}
                                         </SelectContent>
                                       </Select>
                                     </div>
@@ -1413,15 +1405,13 @@ export default function AdminPanel() {
                               <SelectValue placeholder="Select industry" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Technology">Technology</SelectItem>
-                              <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
-                              <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
-                              <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
-                              <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
-                              <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
-                              <SelectItem value="Healthcare">Healthcare</SelectItem>
-                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
+                              {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                .sort((a, b) => a.order - b.order)
+                                .map((option) => (
+                                <SelectItem key={option.id} value={option.value}>
+                                  {option.value}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1432,10 +1422,13 @@ export default function AdminPanel() {
                               <SelectValue placeholder="Select business size" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Medium Business (100–500 employees)">Medium Business</SelectItem>
-                              <SelectItem value="Large Business (500–1,000 employees)">Large Business</SelectItem>
-                              <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise</SelectItem>
-                              <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise</SelectItem>
+                              {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                .sort((a, b) => a.order - b.order)
+                                .map((option) => (
+                                <SelectItem key={option.id} value={option.value}>
+                                  {option.value}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1590,10 +1583,13 @@ export default function AdminPanel() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
-                                          <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
-                                          <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
-                                          <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                          {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                            .sort((a, b) => a.order - b.order)
+                                            .map((option) => (
+                                            <SelectItem key={option.id} value={option.value}>
+                                              {option.value}
+                                            </SelectItem>
+                                          ))}
                                         </SelectContent>
                                       </Select>
                                     </div>
@@ -1715,15 +1711,13 @@ export default function AdminPanel() {
                                 <SelectValue placeholder="Select industry" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Technology">Technology</SelectItem>
-                                <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
-                                <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
-                                <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
-                                <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
-                                <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
-                                <SelectItem value="Healthcare">Healthcare</SelectItem>
-                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                                <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
+                                {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                  .sort((a, b) => a.order - b.order)
+                                  .map((option) => (
+                                  <SelectItem key={option.id} value={option.value}>
+                                    {option.value}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1734,10 +1728,13 @@ export default function AdminPanel() {
                                 <SelectValue placeholder="Select business size" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
-                                <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
-                                <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
-                                <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                  .sort((a, b) => a.order - b.order)
+                                  .map((option) => (
+                                  <SelectItem key={option.id} value={option.value}>
+                                    {option.value}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1890,15 +1887,13 @@ export default function AdminPanel() {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="Technology">Technology</SelectItem>
-                                            <SelectItem value="Technology - Artificial Intelligence">Technology - AI</SelectItem>
-                                            <SelectItem value="Technology - Cloud">Technology - Cloud</SelectItem>
-                                            <SelectItem value="Technology - Cybersecurity">Technology - Cybersecurity</SelectItem>
-                                            <SelectItem value="Technology - SaaS">Technology - SaaS</SelectItem>
-                                            <SelectItem value="Financial Services & Insurance">Financial Services</SelectItem>
-                                            <SelectItem value="Healthcare">Healthcare</SelectItem>
-                                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                                            <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
+                                            {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                              .sort((a, b) => a.order - b.order)
+                                              .map((option) => (
+                                              <SelectItem key={option.id} value={option.value}>
+                                                {option.value}
+                                              </SelectItem>
+                                            ))}
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -1909,10 +1904,13 @@ export default function AdminPanel() {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="Medium Business (100–500 employees)">Medium Business (100–500 employees)</SelectItem>
-                                            <SelectItem value="Large Business (500–1,000 employees)">Large Business (500–1,000 employees)</SelectItem>
-                                            <SelectItem value="Enterprise (1,000–5,000 employees)">Enterprise (1,000–5,000 employees)</SelectItem>
-                                            <SelectItem value="Large Enterprise (5,000+ employees)">Large Enterprise (5,000+ employees)</SelectItem>
+                                            {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                              .sort((a, b) => a.order - b.order)
+                                              .map((option) => (
+                                              <SelectItem key={option.id} value={option.value}>
+                                                {option.value}
+                                              </SelectItem>
+                                            ))}
                                           </SelectContent>
                                         </Select>
                                       </div>

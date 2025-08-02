@@ -26,17 +26,10 @@ export const commonValidations = {
       "Please enter a public website URL"
     ),
   
-  industryVertical: z.enum([
-    "Technology", "Healthcare", "Finance", "E-commerce", "Education", 
-    "Manufacturing", "Real Estate", "Professional Services", "Other"
-  ], { errorMap: () => ({ message: "Please select a valid industry" }) }),
-  
-  businessSize: z.enum([
-    "Small Business (1-50 employees)",
-    "Medium Business (51-200 employees)", 
-    "Large Business (201-1000 employees)",
-    "Enterprise (1000+ employees)"
-  ], { errorMap: () => ({ message: "Please select a valid business size" }) }),
+  // Dynamic validation - these should be fetched from filter_options API
+  // For now, keeping basic string validation until forms can be updated to use dynamic options
+  industryVertical: z.string().min(1, "Please select a valid industry"),
+  businessSize: z.string().min(1, "Please select a valid business size"),
 };
 
 /**
