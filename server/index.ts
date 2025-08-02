@@ -51,44 +51,71 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    // Test database connection first
+    const { testDatabaseConnection } = await import('./db');
+    const dbConnected = await testDatabaseConnection();
+    
+    if (!dbConnected) {
+      console.warn('Database connection failed - continuing with limited functionality');
+    }
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const server = await registerRoutes(app);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+      logger.error('Request error', { 
+        status, 
+        message, 
+        path: _req.path,
+        method: _req.method 
+      });
+      
+      res.status(status).json({ message });
+    });
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const { APP_CONFIG, validateConfig } = await import('./config');
-  
-  // Validate configuration
-  const configValidation = validateConfig();
-  if (!configValidation.valid) {
-    logger.error("Configuration validation failed", { errors: configValidation.errors });
+    // Set NODE_ENV to development if not set
+    if (!process.env.NODE_ENV) {
+      process.env.NODE_ENV = 'development';
+      app.set('env', 'development');
+    }
+
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const { APP_CONFIG, validateConfig } = await import('./config');
+    
+    // Validate configuration
+    const configValidation = validateConfig();
+    if (!configValidation.valid) {
+      logger.error("Configuration validation failed", { errors: configValidation.errors });
+      process.exit(1);
+    }
+    
+    const port = APP_CONFIG.DEFAULT_PORT;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to start server', { error: errorMessage });
+    console.error('Server startup error:', error);
     process.exit(1);
   }
-  
-  const port = APP_CONFIG.DEFAULT_PORT;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();

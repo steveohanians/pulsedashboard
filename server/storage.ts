@@ -93,11 +93,23 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool, 
-      createTableIfMissing: false,  // We already created the table manually
-      tableName: 'sessions'  // Explicit table name
-    });
+    try {
+      this.sessionStore = new PostgresSessionStore({ 
+        pool, 
+        createTableIfMissing: true,  // Allow creating table if missing
+        tableName: 'sessions',  // Explicit table name
+        // Add error handling for connection issues
+        errorLog: (error: Error) => {
+          console.error('Session store error:', error.message);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize session store:', error);
+      // Fallback to memory store for development
+      const MemoryStore = session.MemoryStore;
+      this.sessionStore = new MemoryStore();
+      console.warn('Using memory store as fallback - sessions will not persist');
+    }
   }
 
   // Users
