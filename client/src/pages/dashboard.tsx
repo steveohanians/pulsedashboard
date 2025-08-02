@@ -933,9 +933,10 @@ export default function Dashboard() {
             <div className="min-w-0">
               <div className="flex items-center gap-4">
                 <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-                {/* CodePen spinning mask test */}
-                <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center status-icon-success">
-                  <CheckCircle className="h-6 w-6 text-white relative z-10" />
+                {/* CodePen spinning mask test - Enhanced */}
+                <div className="w-16 h-16 bg-green-600/70 rounded-full flex items-center justify-center status-icon-success relative">
+                  <CheckCircle className="h-8 w-8 text-white relative z-20" />
+                  <div className="absolute inset-0 rounded-full border-2 border-white/30 z-10"></div>
                 </div>
               </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">

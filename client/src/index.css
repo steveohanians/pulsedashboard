@@ -68,106 +68,97 @@
   --sidebar-ring: var(--ring);
 }
 
-/* CodePen CSS custom property for mask rotation */
-@property --mask {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-
-/* CodePen spinning mask animation */
-@keyframes spin {
+/* Simplified spinning mask with visible glow */
+@keyframes spin-glow {
   0% {
-    --mask: 0deg;
+    transform: rotate(0deg);
   }
   100% {
-    --mask: 360deg;
+    transform: rotate(360deg);
   }
 }
 
-/* Status icon shimmer container - CodePen style */
+/* Status icon shimmer container */
 .status-icon-success,
 .status-icon-warning,
 .status-icon-error {
+  position: relative;
   isolation: isolate;
 }
 
+/* Create the glow layer */
 .status-icon-success::before,
 .status-icon-warning::before,
 .status-icon-error::before {
   content: '';
   position: absolute;
-  inset: -8px;
+  inset: -12px;
   border-radius: inherit;
-  opacity: 0.8;
+  opacity: 1;
   pointer-events: none;
   z-index: -1;
 }
 
+/* Create the spinning mask layer */
+.status-icon-success::after,
+.status-icon-warning::after,
+.status-icon-error::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: inherit;
+  background: conic-gradient(
+    rgba(255, 255, 255, 0.9) 0deg,
+    rgba(255, 255, 255, 0.9) 270deg,
+    transparent 300deg,
+    transparent 330deg,
+    rgba(255, 255, 255, 0.9) 360deg
+  );
+  animation: spin-glow 2s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Success status - green shimmer */
 .status-icon-success::before {
-  box-shadow: 0 0 3px 2px hsl(142deg 76% 80%),
-              0 0 7px 4px hsl(142deg 76% 70%),
-              0 0 13px 8px hsl(142deg 56% 60%),
-              0 0 22px 6px hsl(142deg 36% 40%);
-  mask-image: conic-gradient(
-    from var(--mask, 0deg),
-    transparent 0%,
-    transparent 10%,
-    black 36%,
-    black 45%,
-    transparent 50%,
-    transparent 60%,
-    black 85%,
-    black 95%,
+  background: radial-gradient(circle, 
+    rgba(34, 197, 94, 0.6) 0%,
+    rgba(34, 197, 94, 0.4) 40%,
+    rgba(34, 197, 94, 0.2) 70%,
     transparent 100%
   );
-  mask-size: cover;
-  animation: spin 3s linear infinite;
+  box-shadow: 
+    0 0 10px rgba(34, 197, 94, 0.8),
+    0 0 20px rgba(34, 197, 94, 0.6),
+    0 0 30px rgba(34, 197, 94, 0.4);
 }
 
 /* Warning status - orange shimmer */
 .status-icon-warning::before {
-  box-shadow: 0 0 3px 2px hsl(45deg 93% 80%),
-              0 0 7px 4px hsl(45deg 93% 70%),
-              0 0 13px 8px hsl(45deg 73% 60%),
-              0 0 22px 6px hsl(45deg 53% 40%);
-  mask-image: conic-gradient(
-    from var(--mask, 0deg),
-    transparent 0%,
-    transparent 10%,
-    black 36%,
-    black 45%,
-    transparent 50%,
-    transparent 60%,
-    black 85%,
-    black 95%,
+  background: radial-gradient(circle, 
+    rgba(245, 158, 11, 0.6) 0%,
+    rgba(245, 158, 11, 0.4) 40%,
+    rgba(245, 158, 11, 0.2) 70%,
     transparent 100%
   );
-  mask-size: cover;
-  animation: spin 3s linear infinite;
+  box-shadow: 
+    0 0 10px rgba(245, 158, 11, 0.8),
+    0 0 20px rgba(245, 158, 11, 0.6),
+    0 0 30px rgba(245, 158, 11, 0.4);
 }
 
 /* Error status - red shimmer */
 .status-icon-error::before {
-  box-shadow: 0 0 3px 2px hsl(0deg 84% 80%),
-              0 0 7px 4px hsl(0deg 84% 70%),
-              0 0 13px 8px hsl(0deg 64% 60%),
-              0 0 22px 6px hsl(0deg 44% 40%);
-  mask-image: conic-gradient(
-    from var(--mask, 0deg),
-    transparent 0%,
-    transparent 10%,
-    black 36%,
-    black 45%,
-    transparent 50%,
-    transparent 60%,
-    black 85%,
-    black 95%,
+  background: radial-gradient(circle, 
+    rgba(239, 68, 68, 0.6) 0%,
+    rgba(239, 68, 68, 0.4) 40%,
+    rgba(239, 68, 68, 0.2) 70%,
     transparent 100%
   );
-  mask-size: cover;
-  animation: spin 3s linear infinite;
+  box-shadow: 
+    0 0 10px rgba(239, 68, 68, 0.8),
+    0 0 20px rgba(239, 68, 68, 0.6),
+    0 0 30px rgba(239, 68, 68, 0.4);
 }
 
 
