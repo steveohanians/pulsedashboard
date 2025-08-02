@@ -303,60 +303,94 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    // Query benchmarks table with filters
-    const conditions = [
-      eq(benchmarks.sourceType, 'Industry_Avg'),
-      eq(benchmarks.timePeriod, period)
-    ];
-    
-    if (filters?.businessSize && filters.businessSize !== "All") {
-      conditions.push(eq(benchmarks.businessSize, filters.businessSize));
+    // If no filters applied, return all Industry_Avg metrics for the period
+    if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
+                    (!filters.industryVertical || filters.industryVertical === "All"))) {
+      return await db.select().from(metrics).where(
+        and(
+          eq(metrics.sourceType, 'Industry_Avg'),
+          eq(metrics.timePeriod, period)
+        )
+      );
     }
     
-    if (filters?.industryVertical && filters.industryVertical !== "All") {
-      conditions.push(eq(benchmarks.industryVertical, filters.industryVertical));
+    // Get benchmark companies that match the filters
+    const companyConditions = [];
+    if (filters.businessSize && filters.businessSize !== "All") {
+      companyConditions.push(eq(benchmarkCompanies.businessSize, filters.businessSize));
+    }
+    if (filters.industryVertical && filters.industryVertical !== "All") {
+      companyConditions.push(eq(benchmarkCompanies.industryVertical, filters.industryVertical));
     }
     
-    const benchmarkData = await db
+    // Get matching benchmark companies
+    const matchingCompanies = await db
       .select()
-      .from(benchmarks)
-      .where(and(...conditions));
+      .from(benchmarkCompanies)
+      .where(and(...companyConditions));
     
-    if (benchmarkData.length === 0) {
+    if (matchingCompanies.length === 0) {
       return [];
     }
     
-    // Group by metric and calculate averages
-    const groupedMetrics: Record<string, number[]> = {};
+    // Get Industry_Avg metrics for this period, filtered by business size and industry
+    // Since we generated Industry_Avg metrics with variations based on benchmark companies,
+    // we need to filter them to match the selected business size and industry vertical
+    const allIndustryMetrics = await db.select().from(metrics).where(
+      and(
+        eq(metrics.sourceType, 'Industry_Avg'),
+        eq(metrics.timePeriod, period)
+      )
+    );
     
-    benchmarkData.forEach(benchmark => {
-      if (!groupedMetrics[benchmark.metricName]) {
-        groupedMetrics[benchmark.metricName] = [];
-      }
-      groupedMetrics[benchmark.metricName].push(parseFloat(benchmark.value as string));
-    });
+    // Apply business size and industry vertical variations to Industry_Avg data
+    // by filtering and averaging based on matching benchmark companies
+    const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
+    const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
+    const timePeriods = generateTimePeriods();
     
-    // Calculate averages and return as Metric objects
-    const averagedMetrics: Metric[] = Object.entries(groupedMetrics).map(([metricName, values]) => {
-      const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
-      const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
-        ? Math.round(avgValue * 10) / 10 
-        : Math.round(avgValue);
+    const filteredMetrics: Metric[] = [];
+    
+    // Generate new filtered metrics that represent the average for the selected filters
+    for (const config of METRIC_CONFIGS) {
+      let totalValue = 0;
+      let companyCount = 0;
       
-      return {
-        id: `industry-avg-${metricName}-${period}`,
-        clientId: "", // Not applicable for industry averages
-        metricName,
-        value: finalValue.toString(),
-        sourceType: 'Industry_Avg' as any,
-        timePeriod: period,
-        channel: null,
-        competitorId: null,
-        createdAt: new Date()
-      };
-    });
+      // Calculate average for matching companies
+      for (const company of matchingCompanies) {
+        const value = generateMetricValue(
+          config, 
+          'Industry_Avg', 
+          period, 
+          timePeriods, 
+          company.businessSize, 
+          company.industryVertical
+        );
+        totalValue += value;
+        companyCount++;
+      }
+      
+      if (companyCount > 0) {
+        const avgValue = totalValue / companyCount;
+        const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+          ? Math.round(avgValue * 10) / 10 
+          : Math.round(avgValue);
+        
+        filteredMetrics.push({
+          id: `industry-avg-filtered-${config.name}-${period}`,
+          clientId: "", // Not applicable for industry averages
+          metricName: config.name,
+          value: finalValue.toString(),
+          sourceType: 'Industry_Avg' as any,
+          timePeriod: period,
+          channel: null,
+          competitorId: null,
+          createdAt: new Date()
+        });
+      }
+    }
     
-    return averagedMetrics;
+    return filteredMetrics;
   }
 
   // Metrics
