@@ -416,12 +416,14 @@ export class DatabaseStorage implements IStorage {
 
   // Metrics
   async getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]> {
-    return await db.select().from(metrics).where(
+    const results = await db.select().from(metrics).where(
       and(
         or(eq(metrics.clientId, clientId), isNull(metrics.clientId)),
         eq(metrics.timePeriod, timePeriod)
       )
     );
+    console.log(`🔍 getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
+    return results;
   }
 
   async getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]> {

@@ -193,6 +193,7 @@ export function registerRoutes(app: Express): Server {
           const periodFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays[index] || [];
 
           console.log(`📊 Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
+          console.log(`🚦 Traffic Channel debug for ${timePeriod}: Client=${periodMetrics.filter(m => m.metricName === 'Traffic Channels').length}, Industry=${periodFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels').length}, CD=${periodFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length}`);
           
           const metrics = [
             ...periodMetrics.map(m => ({

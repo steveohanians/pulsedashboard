@@ -221,6 +221,24 @@ export default function Dashboard() {
       // For single-period queries, use regular metrics
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
     }
+    
+    console.log(`🔍 Traffic Channel Debug:`, {
+      isTimeSeries,
+      timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
+      trafficMetricsCount: trafficMetrics.length,
+      trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
+      sampleTrafficChannelData: trafficMetrics.filter((m: any) => m.channel).slice(0, 3) // Only channel data
+    });
+    
+    if (trafficMetrics.length === 0) {
+      console.warn(`⚠️ No traffic metrics found! Debug:`, {
+        metricsCount: metrics.length,
+        timeSeriesData: timeSeriesData ? 'exists' : 'missing',
+        isTimeSeries,
+        sampleMetricNames: metrics.map(m => m.metricName).slice(0, 5)
+      });
+    }
+    
     const result = [];
     
     // Helper function to aggregate channel data across multiple periods
