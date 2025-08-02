@@ -34,6 +34,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
     barIndex: number;
   } | null>(null);
 
+  console.log(`🎯 StackedBarChart received data:`, data);
+
   // Check if we have any valid data
   const hasData = data && data.length > 0;
   
@@ -114,7 +116,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
-                      backgroundColor: channel.color
+                      backgroundColor: CHANNEL_COLORS[channel.name as keyof typeof CHANNEL_COLORS] || channel.color
                     }}
                     onMouseEnter={() => {
                       setHoveredSegment({

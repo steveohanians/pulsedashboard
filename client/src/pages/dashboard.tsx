@@ -256,6 +256,7 @@ export default function Dashboard() {
     
     // Helper function to aggregate channel data across multiple periods
     const aggregateChannelData = (sourceMetrics: any[]) => {
+      console.log(`🎯 aggregateChannelData called with ${sourceMetrics.length} metrics for sourceType:`, sourceMetrics[0]?.sourceType);
       const channelMap = new Map();
       
       sourceMetrics.forEach(metric => {
@@ -264,6 +265,8 @@ export default function Dashboard() {
           // Individual channel record (new format)
           const channelName = metric.channel;
           const value = parseFloat(metric.value);
+          
+          console.log(`🎯 Processing channel: ${channelName} = ${value} (sourceType: ${metric.sourceType})`);
           
           if (channelMap.has(channelName)) {
             channelMap.set(channelName, channelMap.get(channelName) + value);
@@ -288,7 +291,7 @@ export default function Dashboard() {
             }
           } catch (e) {
             // Fallback for invalid JSON
-            // Warning: Invalid traffic channel data: ${metric.value}
+            console.warn(`⚠️ Invalid traffic channel JSON data: ${metric.value}`);
           }
         }
       });
@@ -304,8 +307,11 @@ export default function Dashboard() {
         };
       });
       
+      console.log(`🎯 Aggregated channels for sourceType ${sourceMetrics[0]?.sourceType}:`, channels);
+      
       // Ensure percentages add up to 100%
       const total = channels.reduce((sum, channel) => sum + channel.value, 0);
+      console.log(`🎯 Pre-normalization total for ${sourceMetrics[0]?.sourceType}: ${total}`);
       if (total > 0) {
         let runningTotal = 0;
         channels.forEach((channel, index) => {
@@ -321,6 +327,8 @@ export default function Dashboard() {
           }
         });
       }
+      
+      console.log(`🎯 Post-normalization channels for ${sourceMetrics[0]?.sourceType}:`, channels);
       
       return channels;
     };
@@ -1464,11 +1472,17 @@ export default function Dashboard() {
                           periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Traffic Channels" ? (
-                        <StackedBarChart 
-                          data={processTrafficChannelData()}
-                          title="Traffic Channel Distribution"
-                          description="Percentage breakdown of traffic sources"
-                        />
+                        (() => {
+                          const trafficData = processTrafficChannelData();
+                          console.log(`🎯 Final traffic data being passed to StackedBarChart:`, trafficData);
+                          return (
+                            <StackedBarChart 
+                              data={trafficData}
+                              title="Traffic Channel Distribution"
+                              description="Percentage breakdown of traffic sources"
+                            />
+                          );
+                        })()
                       ) : metricName === "Pages per Session" || metricName === "Sessions per User" ? (
                         <TimeSeriesChart 
                           metricName={metricName}
