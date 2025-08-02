@@ -510,8 +510,8 @@ async function generateInsightsWithCustomPromptAndContext(
     };
 
     const parsedContext = parseNestedJson(result.context || result.context_analysis || result.contextAnalysis);
-    const parsedInsight = parseNestedJson(result.insight || result.competitive_intelligence || result.competitiveIntelligence);
-    const parsedRecommendation = parseNestedJson(result.recommendation || result.action_plan || result.actionPlan);
+    const parsedInsight = parseNestedJson(result.insight || result.competitive_intelligence || result.competitiveIntelligence || result.analysis || result.insight_analysis);
+    const parsedRecommendation = parseNestedJson(result.recommendation || result.action_plan || result.actionPlan || result.recommendations);
 
     logger.info('✅ Content parsing results', {
       metricName,

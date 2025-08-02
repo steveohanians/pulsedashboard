@@ -219,7 +219,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           
-          // Generate with context
+          // Generate with context (mutation pending state will show loading)
           console.debug('🎭 Starting context-based regeneration');
           generateInsightWithContextMutation.mutate(userContext);
         }}
