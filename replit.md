@@ -10,6 +10,13 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
 
 ## Recent Changes
 **August 2, 2025**: Enhanced AI system with Clear Digital service integration and critical data architecture fixes
+- **CRITICAL FILTERING FIX**: Resolved multi-period filtering issue where Quarter/Year views didn't show filter changes
+  - Root cause: Chart component used `.find()` for first match instead of averaging multiple filtered metrics per period
+  - Fixed chart data processing to properly average Industry_Avg values across multiple records per time period
+  - Enhanced business size differentiation with dramatic seed variations (5000-20000) for visual impact
+  - All time periods now properly respond to filter changes: Last Month, Last Quarter, Last Year
+  - Industry Average lines now show significant visual differences when business size/industry filters change
+  - CD Portfolio Average correctly remains constant (unfiltered) as designed
 - Updated global prompt template to subtly reflect Clear Digital's expertise areas (UX optimization, brand strategy, visual identity, content strategy, analytics, conversion design, responsive design, CMS implementation, interactive content, motion graphics, research, campaigns, custom development) in AI recommendations without direct service naming or sales language
 - **CRITICAL ARCHITECTURE FIX**: Resolved major data integrity issue where clients, benchmark companies, and CD portfolio companies used hardcoded text fields instead of referencing filter_options table
   - Normalized all existing business size and industry vertical data to match filter_options exactly
