@@ -109,18 +109,21 @@ export function registerRoutes(app: Express): Server {
       const allMetricsPromises = periodsToQuery.map(p => storage.getMetricsByClient(clientId, p));
       const allCompetitorMetricsPromises = periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p));
       const allFilteredIndustryMetricsPromises = periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters));
+      const allFilteredCdAvgMetricsPromises = periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters));
       
       const [
         allMetricsArrays,
         competitors,
         allCompetitorMetricsArrays,
         allFilteredIndustryMetricsArrays,
+        allFilteredCdAvgMetricsArrays,
         insights
       ] = await Promise.all([
         Promise.all(allMetricsPromises),
         storage.getCompetitorsByClient(clientId),
         Promise.all(allCompetitorMetricsPromises),
         Promise.all(allFilteredIndustryMetricsPromises),
+        Promise.all(allFilteredCdAvgMetricsPromises),
         storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
       ]);
 
@@ -129,6 +132,7 @@ export function registerRoutes(app: Express): Server {
         const allMetrics = allMetricsArrays.flat();
         const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
         const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
+        const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
         
         const processedMetrics = [
           ...allMetrics.map(m => ({
@@ -150,6 +154,13 @@ export function registerRoutes(app: Express): Server {
             metricName: m.metricName,
             value: m.value,
             sourceType: 'Industry_Avg',
+            timePeriod: m.timePeriod,
+            channel: m.channel // Preserve channel information for Traffic Channels
+          })),
+          ...allFilteredCdAvgMetrics.map(m => ({
+            metricName: m.metricName,
+            value: m.value,
+            sourceType: 'CD_Avg',
             timePeriod: m.timePeriod,
             channel: m.channel // Preserve channel information for Traffic Channels
           }))
@@ -179,6 +190,7 @@ export function registerRoutes(app: Express): Server {
           const periodMetrics = allMetricsArrays[index] || [];
           const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
           const periodFilteredIndustryMetrics = allFilteredIndustryMetricsArrays[index] || [];
+          const periodFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays[index] || [];
 
           
           const metrics = [
@@ -201,6 +213,13 @@ export function registerRoutes(app: Express): Server {
               metricName: m.metricName,
               value: m.value,
               sourceType: 'Industry_Avg',
+              channel: m.channel, // Preserve channel information
+              timePeriod
+            })),
+            ...periodFilteredCdAvgMetrics.map(m => ({
+              metricName: m.metricName,
+              value: m.value,
+              sourceType: 'CD_Avg',
               channel: m.channel, // Preserve channel information
               timePeriod
             }))
