@@ -195,6 +195,10 @@ export function registerRoutes(app: Express): Server {
           console.log(`📊 Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
           console.log(`🚦 Traffic Channel debug for ${timePeriod}: Client=${periodMetrics.filter(m => m.metricName === 'Traffic Channels').length}, Industry=${periodFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels').length}, CD=${periodFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length}`);
           
+          // Debug sample traffic channel data
+          const sampleTrafficChannels = periodMetrics.filter(m => m.metricName === 'Traffic Channels').slice(0, 3);
+          console.log(`🔍 Sample traffic channels for ${timePeriod}:`, sampleTrafficChannels.map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+          
           const metrics = [
             ...periodMetrics.map(m => ({
               metricName: m.metricName,
@@ -235,22 +239,30 @@ export function registerRoutes(app: Express): Server {
         });
         
         // Calculate averaged performance values for "Your Performance" display
+        // Traffic Channels should NOT be averaged - they need individual channel data preserved
         const groupedMetrics: Record<string, Record<string, number[]>> = {};
+        const trafficChannelMetrics: any[] = [];
         
-        // Collect all values for each metric and source type across all periods
+        // Separate traffic channel data from other metrics
         Object.values(timeSeriesData).forEach((periodMetrics: any[]) => {
           periodMetrics.forEach((metric: any) => {
-            if (!groupedMetrics[metric.metricName]) {
-              groupedMetrics[metric.metricName] = {};
+            if (metric.metricName === 'Traffic Channels') {
+              // Preserve traffic channel data with channel information
+              trafficChannelMetrics.push(metric);
+            } else {
+              // Group non-traffic channel metrics for averaging
+              if (!groupedMetrics[metric.metricName]) {
+                groupedMetrics[metric.metricName] = {};
+              }
+              if (!groupedMetrics[metric.metricName][metric.sourceType]) {
+                groupedMetrics[metric.metricName][metric.sourceType] = [];
+              }
+              groupedMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
             }
-            if (!groupedMetrics[metric.metricName][metric.sourceType]) {
-              groupedMetrics[metric.metricName][metric.sourceType] = [];
-            }
-            groupedMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
           });
         });
         
-        // Calculate averages for each metric and source type
+        // Calculate averages for non-traffic channel metrics
         const averagedMetrics: Record<string, Record<string, number>> = {};
         Object.entries(groupedMetrics).forEach(([metricName, sources]) => {
           averagedMetrics[metricName] = {};
@@ -259,6 +271,8 @@ export function registerRoutes(app: Express): Server {
           });
         });
         
+        console.log(`🔍 Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
+        
         res.json({
           client,
           timeSeriesData,
@@ -266,7 +280,8 @@ export function registerRoutes(app: Express): Server {
           insights,
           isTimeSeries: true,
           periods: periodsToQuery,
-          metrics: averagedMetrics // Add averaged metrics for "Your Performance" display
+          metrics: averagedMetrics, // Add averaged metrics for "Your Performance" display
+          trafficChannelMetrics // Add preserved traffic channel data
         });
       }
 

@@ -214,8 +214,11 @@ export default function Dashboard() {
   const processTrafficChannelData = useCallback(() => {
     let trafficMetrics = [];
     
-    if (isTimeSeries && timeSeriesData) {
-      // For multi-period queries, flatten all time-series data
+    if (isTimeSeries && dashboardData?.trafficChannelMetrics) {
+      // For multi-period queries, use preserved traffic channel data
+      trafficMetrics = dashboardData.trafficChannelMetrics;
+    } else if (isTimeSeries && timeSeriesData) {
+      // Fallback: extract from time series data
       trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
     } else {
       // For single-period queries, use regular metrics
