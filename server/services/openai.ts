@@ -3,6 +3,22 @@ import logger from "../utils/logger";
 import { storage } from "../storage";
 import type { MetricPrompt } from "@shared/schema";
 
+// Centralized formatting instructions for all OpenAI responses
+const FORMATTING_INSTRUCTIONS = `
+
+FORMATTING REQUIREMENTS:
+- Use **bold text** for key metrics, percentages, and critical insights
+- Format recommendations as numbered list (1. 2. 3.)
+- Bold important phrases like **notable advantage**, **meaningful improvement**, **competitive positioning**
+- Do NOT bold random words, company names, or first words of sentences
+
+MANDATORY numbered lists in this exact format:
+1. First recommendation text
+2. Second recommendation text  
+3. Third recommendation text
+
+CRITICAL: Do NOT use paragraph format for recommendations. Use ONLY numbered list format (1., 2., 3.).`;
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY!
@@ -430,15 +446,9 @@ async function generateInsightsWithCustomPromptAndContext(
       filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.`;
     }
 
-    // Ensure the prompt mentions JSON for OpenAI's json_object response format and preserves formatting
+    // Add centralized formatting instructions
     if (!filledPrompt.toLowerCase().includes('json')) {
-      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields. Use **bold** for emphasis and MANDATORY numbered lists in this exact format:
-
-1. First recommendation text
-2. Second recommendation text  
-3. Third recommendation text
-
-CRITICAL: Do NOT use paragraph format for recommendations. Use ONLY numbered list format (1., 2., 3.).`;
+      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
     }
 
     const response = await openai.chat.completions.create({
@@ -864,7 +874,7 @@ Provide a JSON response with exactly this structure. Use **bold formatting** str
   "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : metricName === 'Traffic Channels' ? 'Recommend specific channel optimization strategies, targeting underutilized channels like increasing organic search to X% or reducing over-dependence on direct traffic.' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
 }
 
-IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.`;
+IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.${FORMATTING_INSTRUCTIONS}`;
 
   logger.info('OpenAI Prompt Details', { 
     metricName,
