@@ -39,26 +39,15 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   previousMonth.setMonth(previousMonth.getMonth() - 1);
   const lastMonthPeriod = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}`;
   
-  // Generate current quarter periods (ending with target month)
-  const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
+  // Generate current quarter periods (ending with target month) in chronological order
   const currentQuarterPeriods = [];
-  for (let i = 0; i < 3; i++) {
-    const quarterMonth = quarterStartMonth + i;
-    if (quarterMonth <= currentMonth) {
-      const quarterDate = new Date(currentYear, quarterMonth, 1);
-      currentQuarterPeriods.push(`${quarterDate.getFullYear()}-${String(quarterDate.getMonth() + 1).padStart(2, '0')}`);
-    }
-  }
   
-  // If current quarter is incomplete, include previous quarter's last months
-  if (currentQuarterPeriods.length < 3) {
-    const prevQuarterMonths = 3 - currentQuarterPeriods.length;
-    for (let i = prevQuarterMonths; i > 0; i--) {
-      const prevMonth = new Date(targetMonth);
-      prevMonth.setMonth(prevMonth.getMonth() - i);
-      const prevPeriod = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
-      currentQuarterPeriods.unshift(prevPeriod);
-    }
+  // Always get exactly 3 months: the 2 months before target month + target month
+  for (let i = 2; i >= 0; i--) {
+    const monthDate = new Date(targetMonth);
+    monthDate.setMonth(monthDate.getMonth() - i);
+    const period = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    currentQuarterPeriods.push(period);
   }
   
   // Generate last 12 months for "Last Year" (ending with target month)
