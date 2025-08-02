@@ -931,7 +931,13 @@ export default function Dashboard() {
               className="h-6 sm:h-8 md:h-10 w-auto flex-shrink-0"
             />
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
+                {/* CodePen proper spinning glow test */}
+                <div className="w-8 h-8 bg-purple-500 rounded-full status-icon-success"></div>
+                {/* Direct status icon test */}
+                <CheckCircle className="h-8 w-8 status-icon-warning" />
+              </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
                 {client?.websiteUrl && (

@@ -68,41 +68,34 @@
   --sidebar-ring: var(--ring);
 }
 
-/* CodePen-inspired spinning glow animations */
-@keyframes spinning {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes glowing {
+/* CodePen-inspired spinning glow mask animation */
+@keyframes spin-glow {
   0% {
-    box-shadow: 0 0 5px currentColor;
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 5px currentColor);
   }
   50% {
-    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 25px currentColor);
   }
   100% {
-    box-shadow: 0 0 5px currentColor;
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 5px currentColor);
   }
 }
 
-/* Status icon animations - CodePen inspired spinning glow effects */
+/* Status icon animations - Proper CodePen spinning glow implementation */
 .status-icon-success {
-  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  animation: spin-glow 3s ease-in-out infinite;
   color: #10b981; /* green-500 for success metrics */
 }
 
 .status-icon-warning {
-  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  animation: spin-glow 3s ease-in-out infinite;
   color: #f59e0b; /* amber-500 for improvement needed metrics */
 }
 
 .status-icon-error {
-  animation: spinning 3s linear infinite, glowing 2s ease-in-out infinite;
+  animation: spin-glow 3s ease-in-out infinite;
   color: #ef4444; /* red-500 for error metrics */
 }
 
