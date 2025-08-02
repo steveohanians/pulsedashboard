@@ -392,6 +392,18 @@ function determineMetricStatus(
   cdPortfolioAverage?: number,
   competitorValues?: number[]
 ): string {
+  // Handle special cases for distribution metrics (Traffic Channels, Device Distribution)
+  // These metrics don't have single client values and should be handled differently
+  if (metricName === 'Traffic Channels' || metricName === 'Device Distribution') {
+    // For distribution metrics, if we have data to analyze, default to warning for neutral stance
+    return 'warning';
+  }
+  
+  // Handle case where client value is null/undefined/0
+  if (!clientValue || clientValue === 0) {
+    return 'needs_improvement';
+  }
+  
   // Determine if lower is better for this metric
   const isLowerBetter = metricName.includes('Bounce Rate');
   
