@@ -55,24 +55,20 @@ export function generateMetricValue(
     config.name === "Bounce Rate" ? 0.5 : 0.1
   );
   
-  // Period-specific variations for clear differentiation
+  // Period-specific variations for clear differentiation across ALL 15 months
   let periodVariation = 0;
   if (config.name === "Session Duration") {
-    if (currentPeriodIndex === 0) periodVariation = 20;
-    if (currentPeriodIndex === 1) periodVariation = 10;
-    if (currentPeriodIndex === 2) periodVariation = 0;
-    if (currentPeriodIndex === 3) periodVariation = -10;
-    if (currentPeriodIndex === 4) periodVariation = -25;
+    const sessionVariations = [20, 10, 0, -10, -25, -15, -5, 5, 15, 25, 10, -5, -20, -10, 0];
+    periodVariation = sessionVariations[currentPeriodIndex] || 0;
   } else if (config.name === "Bounce Rate") {
-    if (currentPeriodIndex === 0) periodVariation = -3;
-    if (currentPeriodIndex === 1) periodVariation = -1;
-    if (currentPeriodIndex === 2) periodVariation = 1;
-    if (currentPeriodIndex === 3) periodVariation = 3;
-    if (currentPeriodIndex === 4) periodVariation = 5;
-  } else {
-    // Pages per Session and Sessions per User
-    const variations = [0.3, 0.1, -0.1, 0.2, -0.5];
-    periodVariation = variations[currentPeriodIndex] || 0;
+    const bounceVariations = [-3, -1, 1, 3, 5, 2, -2, -4, 0, 4, -1, 3, -3, 1, -2];
+    periodVariation = bounceVariations[currentPeriodIndex] || 0;
+  } else if (config.name === "Pages per Session") {
+    const pagesVariations = [0.3, 0.1, -0.1, 0.2, -0.5, -0.2, 0.4, 0.0, -0.3, 0.5, 0.1, -0.4, 0.2, -0.1, 0.3];
+    periodVariation = pagesVariations[currentPeriodIndex] || 0;
+  } else if (config.name === "Sessions per User") {
+    const sessionsVariations = [0.3, 0.1, -0.1, 0.2, -0.5, 0.4, -0.2, 0.1, -0.3, 0.6, -0.1, 0.2, -0.4, 0.3, -0.2];
+    periodVariation = sessionsVariations[currentPeriodIndex] || 0;
   }
   
   const baseValue = range.min + (randomFactor * (range.max - range.min));

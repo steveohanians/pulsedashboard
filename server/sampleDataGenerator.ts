@@ -52,12 +52,15 @@ const METRIC_CONFIGS: MetricConfig[] = [
 ];
 
 // Use centralized time period generation
-export { generateTimePeriods } from './utils/timePeriodsGenerator';
+import { generateTimePeriods } from './utils/timePeriodsGenerator';
 
 const TIME_PERIODS = generateTimePeriods();
 const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
 
-// Generate realistic variance around base value
+// Use centralized metric value generation with proper 15-month variations
+import { generateMetricValue, METRIC_CONFIGS as CORE_CONFIGS } from './utils/dataGeneratorCore';
+
+// Legacy generate value function for compatibility
 function generateValue(baseRange: [number, number], seed: number, timeVariance = 0.1): number {
   const [min, max] = baseRange;
   // Use seed to generate consistent but bounded values (0.2 to 0.8 of range)
@@ -68,7 +71,7 @@ function generateValue(baseRange: [number, number], seed: number, timeVariance =
 }
 
 // Use centralized channel and device generation
-const { generateTrafficChannels, generateDeviceDistribution } = require('./utils/channelDataGenerator');
+import { generateTrafficChannels, generateDeviceDistribution } from './utils/channelDataGenerator';
 
 function getChannelColor(channelName: string): string {
   const colors: Record<string, string> = {
@@ -155,17 +158,30 @@ export async function generateComprehensiveSampleData() {
       for (const sourceType of SOURCE_TYPES) {
         const sourceSeed = periodSeed + sourceType.charCodeAt(0);
         
-        // Generate standard metrics
+        // Generate standard metrics using centralized system with proper variations
         for (const config of METRIC_CONFIGS) {
-          let range: [number, number];
-          if (sourceType === "Client") range = config.clientRange;
-          else if (sourceType === "Industry_Avg") range = config.industryRange;
-          else range = config.cdRange;
+          let finalValue: number;
           
-          const value = generateValue(range, sourceSeed + config.name.charCodeAt(0));
-          const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
-            ? Math.round(value * 10) / 10 
-            : Math.round(value);
+          // Find the corresponding config in the core system
+          const coreConfig = CORE_CONFIGS.find(c => c.name === config.name);
+          if (coreConfig) {
+            // Use the new centralized generation system with proper 15-month variations
+            const value = generateMetricValue(coreConfig, sourceType, timePeriod, TIME_PERIODS);
+            finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+              ? Math.round(value * 10) / 10 
+              : Math.round(value);
+          } else {
+            // Fallback to legacy system if config not found
+            let range: [number, number];
+            if (sourceType === "Client") range = config.clientRange;
+            else if (sourceType === "Industry_Avg") range = config.industryRange;
+            else range = config.cdRange;
+            
+            const value = generateValue(range, sourceSeed + config.name.charCodeAt(0));
+            finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+              ? Math.round(value * 10) / 10 
+              : Math.round(value);
+          }
           
           await storage.createMetric({
             clientId,
@@ -403,7 +419,7 @@ export async function generateDataForNewCompetitor(competitorId: string, clientI
   try {
     // Generate sample metrics for the new competitor
     // Use full 15-month time periods for consistency
-    const timePeriods = generateTimePeriods();
+    const timePeriods = TIME_PERIODS;
 
     const metricNames = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
     
@@ -473,4 +489,16 @@ async function generateCompetitorChannelData(competitorId: string, clientId: str
       channel: device.name
     });
   }
+}
+// Run generation if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  generateComprehensiveSampleData()
+    .then(result => {
+      console.log("Generation completed:", result);
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error("Generation failed:", error);
+      process.exit(1);
+    });
 }
