@@ -267,13 +267,13 @@ export function registerRoutes(app: Express): Server {
       // Use only benchmark companies for industry filters
       const allCompanies = benchmarkCompanies;
       
-      // Define business size order from small to large
+      // Define business size order from small to large (updated to match actual filter options)
       const businessSizeOrder = [
-        "Small Business (1–100 employees)",
-        "Medium Business (100–500 employees)",
-        "Large Business (500–1,000 employees)",
-        "Enterprise (1,000–5,000 employees)",
-        "Large Enterprise (5,000+ employees)"
+        "Small / Startup (25-100 employees)",
+        "Mid-Market (100-500 employees)", 
+        "Large (500-1,000 employees)",
+        "Enterprise (1,000-5,000 employees)",
+        "Global Enterprise (5,000+ employees)"
       ];
       
       // Filter companies based on current selections
