@@ -60,6 +60,10 @@ function generateRealTimeSeriesData(
   clientUrl?: string,
   metricName?: string
 ): any[] {
+  console.log(`🔥 GENERATING REAL TIME SERIES DATA for ${metricName}`);
+  console.log(`🔥 timeSeriesData:`, timeSeriesData);
+  console.log(`🔥 periods:`, periods);
+  
   const data: any[] = [];
   
   // Generate dynamic period labels based on actual periods
@@ -75,6 +79,8 @@ function generateRealTimeSeriesData(
   
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
+    console.log(`🔥 Period ${period} data for ${metricName}:`, periodData.filter(m => m.metricName === metricName));
+    
     const dataPoint: any = {
       date: generatePeriodLabel(period)
     };
@@ -87,6 +93,8 @@ function generateRealTimeSeriesData(
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
     dataPoint['Clear Digital Clients Avg'] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    
+    console.log(`🔥 Final dataPoint for ${period}:`, dataPoint);
     
     // Add competitor data
     competitors.forEach(competitor => {
