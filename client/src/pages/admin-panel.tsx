@@ -21,10 +21,12 @@ import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
 
-// Helper component for editing business size
-function EditBusinessSizeForm({ option, onSuccess }: { option: any; onSuccess: () => void }) {
+// Dialog component for editing business size with controlled state
+function BusinessSizeEditDialog({ option }: { option: any }) {
+  const [isOpen, setIsOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,10 +41,8 @@ function EditBusinessSizeForm({ option, onSuccess }: { option: any; onSuccess: (
         title: "Business size updated",
         description: `Updated to "${value}".`,
       });
-      onSuccess();
-      // Close dialog programmatically
-      const closeBtn = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement;
-      if (closeBtn) closeBtn.click();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+      setIsOpen(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -55,27 +55,44 @@ function EditBusinessSizeForm({ option, onSuccess }: { option: any; onSuccess: (
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="business-size">Business Size</Label>
-        <Input id="business-size" name="value" defaultValue={option.value} required />
-      </div>
-      <div className="flex justify-end space-x-2">
-        <DialogClose asChild>
-          <Button type="button" variant="outline">Cancel</Button>
-        </DialogClose>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save Changes"}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <Edit className="h-4 w-4" />
         </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Business Size</DialogTitle>
+          <DialogDescription>
+            Update business size category
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="business-size">Business Size</Label>
+            <Input id="business-size" name="value" defaultValue={option.value} required />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// Helper component for editing industry vertical
-function EditIndustryVerticalForm({ option, onSuccess }: { option: any; onSuccess: () => void }) {
+// Dialog component for editing industry vertical with controlled state
+function IndustryVerticalEditDialog({ option }: { option: any }) {
+  const [isOpen, setIsOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,10 +107,8 @@ function EditIndustryVerticalForm({ option, onSuccess }: { option: any; onSucces
         title: "Industry vertical updated",
         description: `Updated to "${value}".`,
       });
-      onSuccess();
-      // Close dialog programmatically
-      const closeBtn = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement;
-      if (closeBtn) closeBtn.click();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+      setIsOpen(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -106,20 +121,35 @@ function EditIndustryVerticalForm({ option, onSuccess }: { option: any; onSucces
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="industry-vertical">Industry Vertical</Label>
-        <Input id="industry-vertical" name="value" defaultValue={option.value} required />
-      </div>
-      <div className="flex justify-end space-x-2">
-        <DialogClose asChild>
-          <Button type="button" variant="outline">Cancel</Button>
-        </DialogClose>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save Changes"}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <Edit className="h-4 w-4" />
         </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Industry Vertical</DialogTitle>
+          <DialogDescription>
+            Update industry vertical category
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="industry-vertical">Industry Vertical</Label>
+            <Input id="industry-vertical" name="value" defaultValue={option.value} required />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -2227,24 +2257,7 @@ export default function AdminPanel() {
                               <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                                 <span>{option.value}</span>
                                 <div className="flex space-x-1">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>Edit Business Size</DialogTitle>
-                                        <DialogDescription>
-                                          Update business size category
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <EditBusinessSizeForm option={option} onSuccess={() => {
-                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-                                      }} />
-                                    </DialogContent>
-                                  </Dialog>
+                                  <BusinessSizeEditDialog option={option} />
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -2293,24 +2306,7 @@ export default function AdminPanel() {
                               <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                                 <span>{option.value}</span>
                                 <div className="flex space-x-1">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>Edit Industry Vertical</DialogTitle>
-                                        <DialogDescription>
-                                          Update industry vertical category
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <EditIndustryVerticalForm option={option} onSuccess={() => {
-                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-                                      }} />
-                                    </DialogContent>
-                                  </Dialog>
+                                  <IndustryVerticalEditDialog option={option} />
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
