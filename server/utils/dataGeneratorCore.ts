@@ -21,7 +21,10 @@ export function generateMetricValue(
   config: MetricConfig,
   sourceType: string,
   timePeriod: string,
-  timePeriods: string[]
+  timePeriods: string[],
+  businessSize?: string,
+  industryVertical?: string,
+  competitorId?: string
 ): number {
   const currentPeriodIndex = timePeriods.indexOf(timePeriod);
   const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length + currentPeriodIndex * 100;
@@ -32,8 +35,27 @@ export function generateMetricValue(
     return 0;
   }
   
-  // Enhanced variation with period-specific seeds
-  const sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + currentPeriodIndex * 100;
+  // Enhanced variation with period-specific seeds + business/industry variations
+  let sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + currentPeriodIndex * 100;
+  
+  // Add business size variation
+  if (businessSize) {
+    const businessSizeVariation = businessSize.charCodeAt(0) * 7;
+    sourceSeed += businessSizeVariation;
+  }
+  
+  // Add industry vertical variation  
+  if (industryVertical) {
+    const industryVariation = industryVertical.charCodeAt(0) * 11;
+    sourceSeed += industryVariation;
+  }
+  
+  // Add competitor-specific variation
+  if (competitorId) {
+    const competitorVariation = competitorId.charCodeAt(0) * 13;
+    sourceSeed += competitorVariation;
+  }
+  
   const randomFactor = (Math.sin(sourceSeed * 2.789) + 1) / 2; // 0-1 range
   
   // Strong seasonal effects based on metric type

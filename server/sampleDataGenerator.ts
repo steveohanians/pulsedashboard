@@ -145,83 +145,43 @@ export async function generateComprehensiveSampleData() {
     return { success: false, message: "Sample data generation disabled" };
   }
   
-  logger.info("Generating comprehensive sample data");
+  logger.info("Generating comprehensive sample data with business size and industry variations");
   
   const { getDefaultClientId } = await import('./config');
   const clientId = getDefaultClientId();
   
   try {
-    // Generate standard metrics for all time periods and source types
-    for (const timePeriod of TIME_PERIODS) {
-      const periodSeed = timePeriod.charCodeAt(0) + timePeriod.charCodeAt(1);
-      
-      for (const sourceType of SOURCE_TYPES) {
-        const sourceSeed = periodSeed + sourceType.charCodeAt(0);
-        
-        // Generate standard metrics using centralized system with proper variations
-        for (const config of METRIC_CONFIGS) {
-          let finalValue: number;
-          
-          // Find the corresponding config in the core system
-          const coreConfig = CORE_CONFIGS.find(c => c.name === config.name);
-          if (coreConfig) {
-            // Use the new centralized generation system with proper 15-month variations
-            const value = generateMetricValue(coreConfig, sourceType, timePeriod, TIME_PERIODS);
-            finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
-              ? Math.round(value * 10) / 10 
-              : Math.round(value);
-          } else {
-            // Fallback to legacy system if config not found
-            let range: [number, number];
-            if (sourceType === "Client") range = config.clientRange;
-            else if (sourceType === "Industry_Avg") range = config.industryRange;
-            else range = config.cdRange;
-            
-            const value = generateValue(range, sourceSeed + config.name.charCodeAt(0));
-            finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
-              ? Math.round(value * 10) / 10 
-              : Math.round(value);
-          }
-          
-          await storage.createMetric({
-            clientId,
-            metricName: config.name,
-            value: typeof finalValue === 'string' ? finalValue : finalValue.toString(),
-            sourceType: sourceType as any,
-            timePeriod
-          });
-        }
-        
-        // Generate Traffic Channels data
-        const trafficChannels = generateTrafficChannels(sourceSeed + 100);
-        for (const channel of trafficChannels) {
-          await storage.createMetric({
-            clientId,
-            metricName: "Traffic Channels",
-            value: channel.value.toString(),
-            sourceType: sourceType as any,
-            timePeriod,
-            channel: channel.name
-          });
-        }
-        
-        // Generate Device Distribution data
-        const deviceData = generateDeviceDistribution(sourceSeed + 200);
-        for (const device of deviceData) {
-          await storage.createMetric({
-            clientId,
-            metricName: "Device Distribution",
-            value: device.value.toString(),
-            sourceType: sourceType as any,
-            timePeriod,
-            channel: device.name
-          });
-        }
-      }
+    // Get all entities for variation generation
+    const clients = await storage.getClients();
+    const benchmarkCompanies = await storage.getBenchmarkCompanies();
+    const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
+    // Get competitors by querying all competitors for the demo client
+    const competitors = await storage.getCompetitorsByClient(clientId);
+    
+    logger.info(`Generating data for: ${clients.length} clients, ${benchmarkCompanies.length} benchmark companies, ${cdPortfolioCompanies.length} CD portfolio companies, ${competitors.length} competitors`);
+    
+    // Generate Client metrics with business size and industry variations
+    for (const client of clients) {
+      await generateMetricsForEntity(client, 'Client', TIME_PERIODS, client.businessSize, client.industryVertical);
+    }
+    
+    // Generate benchmark company metrics with variations
+    for (const company of benchmarkCompanies) {
+      await generateMetricsForEntity({ id: company.id, clientId }, 'Industry_Avg', TIME_PERIODS, company.businessSize, company.industryVertical);
+    }
+    
+    // Generate CD Portfolio company metrics with variations
+    for (const company of cdPortfolioCompanies) {
+      await generateMetricsForEntity({ id: company.id, clientId }, 'CD_Avg', TIME_PERIODS, company.businessSize, company.industryVertical);
+    }
+    
+    // Generate competitor metrics with variations
+    for (const competitor of competitors) {
+      await generateCompetitorMetrics(competitor, TIME_PERIODS);
     }
     
     logger.info("Sample data generation completed successfully");
-    return { success: true, message: "Comprehensive sample data generated" };
+    return { success: true, message: "Comprehensive sample data generated with business size and industry variations" };
     
   } catch (error) {
     const err = error as Error;
@@ -229,6 +189,126 @@ export async function generateComprehensiveSampleData() {
     throw error;
   }
 }
+
+// Generate metrics for any entity with business size and industry variations
+async function generateMetricsForEntity(
+  entity: any, 
+  sourceType: string, 
+  timePeriods: string[], 
+  businessSize?: string, 
+  industryVertical?: string
+) {
+  // Use entity's clientId directly for clients, otherwise use the provided clientId
+  const clientId = sourceType === 'Client' ? entity.id : entity.clientId;
+  
+  for (const timePeriod of timePeriods) {
+    // Generate standard metrics using centralized system with business/industry variations
+    for (const config of CORE_CONFIGS) {
+      const value = generateMetricValue(config, sourceType, timePeriod, timePeriods, businessSize, industryVertical);
+      const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+        ? Math.round(value * 10) / 10 
+        : Math.round(value);
+      
+      await storage.createMetric({
+        clientId,
+        metricName: config.name,
+        value: finalValue.toString(),
+        sourceType: sourceType as any,
+        timePeriod
+      });
+    }
+    
+    // Generate traffic and device data with variations
+    const periodSeed = timePeriod.charCodeAt(0) + (businessSize?.charCodeAt(0) || 0) + (industryVertical?.charCodeAt(0) || 0);
+    
+    const trafficChannels = generateTrafficChannels(periodSeed + 100);
+    for (const channel of trafficChannels) {
+      await storage.createMetric({
+        clientId,
+        metricName: "Traffic Channels",
+        value: channel.value.toString(),
+        sourceType: sourceType as any,
+        timePeriod,
+        channel: channel.name
+      });
+    }
+    
+    const deviceData = generateDeviceDistribution(periodSeed + 200);
+    for (const device of deviceData) {
+      await storage.createMetric({
+        clientId,
+        metricName: "Device Distribution",
+        value: device.value.toString(),
+        sourceType: sourceType as any,
+        timePeriod,
+        channel: device.name
+      });
+    }
+  }
+}
+
+// Generate competitor metrics with proper variations
+async function generateCompetitorMetrics(competitor: any, timePeriods: string[]) {
+  const { getDefaultClientId } = await import('./config');
+  const clientId = getDefaultClientId();
+  
+  for (const timePeriod of timePeriods) {
+    // Generate competitor metrics with competitor-specific variations
+    for (const config of CORE_CONFIGS) {
+      // Use Competitor range but with competitor-specific seed
+      const value = generateMetricValue(config, 'Client', timePeriod, timePeriods, undefined, undefined, competitor.id);
+      const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+        ? Math.round(value * 10) / 10 
+        : Math.round(value);
+      
+      await storage.createMetric({
+        clientId,
+        metricName: config.name,
+        value: finalValue.toString(),
+        sourceType: 'Competitor' as any,
+        timePeriod,
+        competitorId: competitor.id
+      });
+    }
+    
+    // Generate traffic and device data for competitors
+    const competitorSeed = timePeriod.charCodeAt(0) + competitor.id.charCodeAt(0) * 17;
+    
+    const trafficChannels = generateTrafficChannels(competitorSeed + 300);
+    for (const channel of trafficChannels) {
+      await storage.createMetric({
+        clientId,
+        metricName: "Traffic Channels",
+        value: channel.value.toString(),
+        sourceType: 'Competitor' as any,
+        timePeriod,
+        channel: channel.name,
+        competitorId: competitor.id
+      });
+    }
+    
+    const deviceData = generateDeviceDistribution(competitorSeed + 400);
+    for (const device of deviceData) {
+      await storage.createMetric({
+        clientId,
+        metricName: "Device Distribution",
+        value: device.value.toString(),
+        sourceType: 'Competitor' as any,
+        timePeriod,
+        channel: device.name,
+        competitorId: competitor.id
+      });
+    }
+  }
+}
+
+// Legacy generation function for backward compatibility - now removed to use the new system
+function generateLegacyCompatibilityData() {
+  // This function is now deprecated in favor of the new variation system
+  logger.info("Legacy generation function deprecated - using new variation system");
+}
+        
+// This legacy generation section is no longer needed as we use the new variation system above
 
 // Generate metrics for CD Portfolio companies to create realistic CD_Avg benchmarks
 async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
