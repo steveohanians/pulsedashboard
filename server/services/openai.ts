@@ -850,7 +850,7 @@ ${metric.competitorNames.length > 0 ?
 TREND ANALYSIS & OPTIMIZATION:
 Focus on trend implications, competitive positioning, and strategic optimization opportunities.`;
 
-    const prompt = globalTemplate.promptTemplate
+    let prompt = globalTemplate.promptTemplate
       .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, enhancedMetricAnalysis)
       .replace(/\{\{clientName\}\}/g, context.client.name)
       .replace(/\{\{industry\}\}/g, context.client.industryVertical)
