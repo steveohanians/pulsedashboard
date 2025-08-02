@@ -457,16 +457,28 @@ async function generateInsightsWithCustomPromptAndContext(
       responseFields: Object.keys(result)
     });
 
-    // Helper function to parse nested JSON strings
+    // Helper function to parse nested JSON strings and extract readable text
     const parseNestedJson = (value: any): string => {
       if (typeof value === 'string') {
         try {
           const parsed = JSON.parse(value);
-          if (typeof parsed === 'object') {
-            // Extract meaningful text from nested JSON objects
-            return Object.values(parsed).join(' ');
+          if (typeof parsed === 'object' && parsed !== null) {
+            // Recursively extract all string values from nested objects
+            const extractText = (obj: any): string[] => {
+              const texts: string[] = [];
+              for (const val of Object.values(obj)) {
+                if (typeof val === 'string') {
+                  texts.push(val);
+                } else if (typeof val === 'object' && val !== null) {
+                  texts.push(...extractText(val));
+                }
+              }
+              return texts;
+            };
+            const extractedTexts = extractText(parsed);
+            return extractedTexts.join(' ');
           }
-          return parsed;
+          return String(parsed);
         } catch {
           return value;
         }
