@@ -481,16 +481,6 @@ export class DatabaseStorage implements IStorage {
     
     return filteredMetrics;
   }
-        });
-        
-        if (config.name === "Session Duration") {
-          console.log(`📊 Generated filtered CD_Avg Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
-        }
-      }
-    }
-    
-    return filteredMetrics;
-  }
 
   // Metrics
   async getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]> {
