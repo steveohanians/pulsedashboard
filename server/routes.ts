@@ -373,10 +373,17 @@ export function registerRoutes(app: Express): Server {
       });
 
       // Build enriched context for OpenAI
+      // Special handling for Traffic Channels - use channel count instead of full object
+      let clientValue = metricData.Client || metricData;
+      if (metricName === 'Traffic Channels' && typeof clientValue === 'object') {
+        // For Traffic Channels, use the number of channels as clientValue 
+        clientValue = Array.isArray(clientValue) ? clientValue.length : Object.keys(clientValue).length;
+      }
+      
       const enrichedData = {
         metric: {
           name: metricName,
-          clientValue: metricData.Client || metricData,
+          clientValue: clientValue,
           timePeriod: timePeriod
         },
         client: {
