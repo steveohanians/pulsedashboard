@@ -69,22 +69,26 @@
     font-family: 'Poppins', sans-serif;
   }
 
-  /* Force consistent placeholder color to prevent flashing */
+  /* Force consistent placeholder color to prevent flashing - highest priority */
   textarea::placeholder,
   textarea::-webkit-input-placeholder,
   textarea::-moz-placeholder,
-  textarea:-ms-input-placeholder {
-    color: #9ca3af !important;
-    opacity: 1 !important;
-    transition: none !important;
-  }
-  
+  textarea:-ms-input-placeholder,
   textarea:focus::placeholder,
   textarea:focus::-webkit-input-placeholder,
   textarea:focus::-moz-placeholder,
-  textarea:focus:-ms-input-placeholder {
+  textarea:focus:-ms-input-placeholder,
+  textarea:hover::placeholder,
+  textarea:hover::-webkit-input-placeholder,
+  textarea:hover::-moz-placeholder,
+  textarea:hover:-ms-input-placeholder,
+  textarea:active::placeholder,
+  textarea:active::-webkit-input-placeholder,
+  textarea:active::-moz-placeholder,
+  textarea:active:-ms-input-placeholder {
     color: #9ca3af !important;
     opacity: 1 !important;
     transition: none !important;
+    animation: none !important;
   }
 }

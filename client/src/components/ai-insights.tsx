@@ -409,15 +409,17 @@ export default function AIInsights({
                         <p className="text-sm text-slate-600">
                           Provide additional context to help our AI generate more relevant insights for your {metricName} metric.
                         </p>
-                        <Textarea
+                        <textarea
                           placeholder="e.g., We recently launched a new marketing campaign targeting mobile users, or our website had technical issues last week..."
                           value={userContext}
                           onChange={(e) => setUserContext(e.target.value)}
                           rows={4}
                           disabled={isLoadingContext || isSavingContext}
-                          className="resize-none"
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none"
                           style={{
-                            '--tw-placeholder-opacity': '1',
+                            color: '#0f172a',
+                            backgroundColor: '#ffffff',
+                            borderColor: '#e2e8f0',
                           } as React.CSSProperties}
                         />
                         <div className="flex justify-end space-x-2">
