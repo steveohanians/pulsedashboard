@@ -441,14 +441,12 @@ async function generateInsightsWithCustomPromptAndContext(
       .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
       .replace(/{{competitors}}/g, competitorString);
 
-    // Add centralized formatting instructions BEFORE user context
-    if (!filledPrompt.toLowerCase().includes('json')) {
-      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
-    }
+    // ALWAYS add formatting instructions for consistency (regardless of custom prompt content)
+    filledPrompt += `${FORMATTING_INSTRUCTIONS}`;
 
     // Append user context to the prompt with clear instructions INCLUDING formatting reminder
     if (userContext && userContext.trim()) {
-      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nREMINDER: Format all recommendations as numbered lists (1. 2. 3.) - do NOT use paragraph format.`;
+      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nCRITICAL: Ensure all recommendations are formatted as numbered lists (1. 2. 3.) - do NOT use paragraph format even when incorporating user context.`;
     }
 
     const response = await openai.chat.completions.create({
