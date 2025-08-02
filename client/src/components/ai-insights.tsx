@@ -415,7 +415,7 @@ export default function AIInsights({
                           onChange={(e) => setUserContext(e.target.value)}
                           rows={4}
                           disabled={isLoadingContext || isSavingContext}
-                          className="resize-none"
+                          className="resize-none placeholder:text-slate-400"
                         />
                         <div className="flex justify-end space-x-2">
                           <Button
