@@ -478,19 +478,48 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "User context is required and must be a string" });
       }
 
+      // Import and apply input sanitization
+      const { validateContextInput } = await import("./utils/inputSanitizer");
+      const sanitizationResult = validateContextInput(userContext);
+      
+      // Block request if input is unsafe
+      if (!sanitizationResult.isValid) {
+        logger.warn('Context save blocked due to unsafe input', { 
+          clientId, 
+          metricName, 
+          error: sanitizationResult.error 
+        });
+        return res.status(400).json({ 
+          message: "Context input blocked due to security concerns",
+          error: sanitizationResult.error
+        });
+      }
+
+      // Use sanitized context for storage
+      const sanitizedUserContext = sanitizationResult.sanitizedContext;
+
+      // Log any warnings
+      if (sanitizationResult.error) {
+        logger.info('Context input sanitized with warnings', { 
+          clientId, 
+          metricName, 
+          warnings: sanitizationResult.error 
+        });
+      }
+
       // Check if context already exists
       const existingContext = await storage.getInsightContext(clientId, metricName);
       
       let savedContext;
       if (existingContext) {
-        // Update existing context
-        savedContext = await storage.updateInsightContext(existingContext.id, { userContext });
+        // Update existing context with sanitized input
+        savedContext = await storage.updateInsightContext(existingContext.id, { userContext: sanitizedUserContext });
       } else {
-        // Create new context
+        // Create new context with sanitized input
         const insertContext = insertInsightContextSchema.parse({
           clientId,
           metricName,
-          userContext
+          userContext: sanitizedUserContext
         });
         savedContext = await storage.createInsightContext(insertContext);
       }
@@ -540,7 +569,40 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      logger.info('Starting metric-specific insight generation with context', { clientId, metricName, timePeriod, hasContext: !!userContext });
+      // Import and apply input sanitization
+      const { validateContextInput } = await import("./utils/inputSanitizer");
+      const sanitizationResult = validateContextInput(userContext || '');
+      
+      // Block request if input is unsafe
+      if (!sanitizationResult.isValid) {
+        logger.warn('Context generation blocked due to unsafe input', { 
+          clientId, 
+          metricName, 
+          error: sanitizationResult.error 
+        });
+        return res.status(400).json({ 
+          message: "Context input blocked due to security concerns",
+          error: sanitizationResult.error
+        });
+      }
+
+      // Log any warnings but allow request to continue
+      if (sanitizationResult.error) {
+        logger.info('Context input sanitized with warnings', { 
+          clientId, 
+          metricName, 
+          warnings: sanitizationResult.error 
+        });
+      }
+
+      const sanitizedUserContext = sanitizationResult.sanitizedContext;
+      logger.info('Starting metric-specific insight generation with context', { 
+        clientId, 
+        metricName, 
+        timePeriod, 
+        hasContext: !!sanitizedUserContext,
+        contextLength: sanitizedUserContext.length
+      });
 
       // Get enriched data for comprehensive analysis (same as regular generation)
       const client = await storage.getClient(clientId);
@@ -592,13 +654,13 @@ export function registerRoutes(app: Express): Server {
           competitors: competitorData
         },
         context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${metricData.Client || metricData} for ${timePeriod}. Industry average: ${metricData.Industry_Avg}, CD Portfolio average: ${metricData.CD_Avg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
-        userContext: userContext // Add user context to the enriched data
+        userContext: sanitizedUserContext // Add sanitized user context to the enriched data
       };
 
       // Import OpenAI service and generate insights with context
       const { generateMetricSpecificInsightsWithContext } = await import('./services/openai.js');
       
-      const insights = await generateMetricSpecificInsightsWithContext(metricName, enrichedData, clientId, userContext);
+      const insights = await generateMetricSpecificInsightsWithContext(metricName, enrichedData, clientId, sanitizedUserContext);
       
       const normalizedInsights = {
         context: (insights as any).context,
@@ -611,7 +673,7 @@ export function registerRoutes(app: Express): Server {
         metricName, 
         hasStatus: !!normalizedInsights.status, 
         status: normalizedInsights.status,
-        hasUserContext: !!userContext
+        hasUserContext: !!sanitizedUserContext
       });
       
       // Store insights in database

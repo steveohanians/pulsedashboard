@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
+import { validateUserInput } from "@/utils/inputValidation";
 
 // Function to render text with bold formatting and numbered lists
 function renderTextWithBold(text: string, isRecommendation = false) {
@@ -121,6 +122,8 @@ export default function AIInsights({
   const [userContext, setUserContext] = useState("");
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [isSavingContext, setIsSavingContext] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [validationError, setValidationError] = useState<string>("");
   
   const { toast } = useToast();
 
@@ -238,13 +241,27 @@ export default function AIInsights({
     try {
       // Save the context first
       if (userContext.trim()) {
-        await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
+        const saveResponse = await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ userContext: userContext.trim() })
         });
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json().catch(() => null);
+          // Check if this is a sanitization error
+          if (saveResponse.status === 400 && errorData?.error?.includes('blocked')) {
+            toast({
+              title: "Input blocked",
+              description: errorData.error || "Context contains unsafe content",
+              variant: "destructive"
+            });
+            return;
+          }
+          throw new Error(errorData?.message || 'Failed to save context');
+        }
       }
 
       // Close modal and trigger regeneration with context
@@ -409,19 +426,61 @@ export default function AIInsights({
                         <p className="text-sm text-slate-600">
                           Provide additional context to help our AI generate more relevant insights for your {metricName} metric.
                         </p>
-                        <textarea
-                          placeholder="e.g., We recently launched a new marketing campaign targeting mobile users, or our website had technical issues last week..."
-                          value={userContext}
-                          onChange={(e) => setUserContext(e.target.value)}
-                          rows={4}
-                          disabled={isLoadingContext || isSavingContext}
-                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none"
-                          style={{
-                            color: '#0f172a',
-                            backgroundColor: '#ffffff',
-                            borderColor: '#e2e8f0',
-                          } as React.CSSProperties}
-                        />
+                        <div className="space-y-2">
+                          <textarea
+                            placeholder="e.g., We recently launched a new marketing campaign targeting mobile users, or our website had technical issues last week..."
+                            value={userContext}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              setUserContext(newValue);
+                              
+                              // Real-time validation
+                              if (newValue.trim()) {
+                                const validation = validateUserInput(newValue);
+                                setValidationWarnings(validation.warnings);
+                                setValidationError(validation.error || "");
+                              } else {
+                                setValidationWarnings([]);
+                                setValidationError("");
+                              }
+                            }}
+                            rows={4}
+                            disabled={isLoadingContext || isSavingContext}
+                            className={`flex min-h-[80px] w-full rounded-md border px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none ${
+                              validationError ? 'border-red-300 bg-red-50' : 'border-input bg-background'
+                            }`}
+                            style={{
+                              color: '#0f172a',
+                              backgroundColor: validationError ? '#fef2f2' : '#ffffff',
+                              borderColor: validationError ? '#fca5a5' : '#e2e8f0',
+                            } as React.CSSProperties}
+                          />
+                          
+                          {/* Character count and validation feedback */}
+                          <div className="flex justify-between items-start text-xs">
+                            <div className="space-y-1">
+                              {validationError && (
+                                <div className="flex items-center text-red-600">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  <span>{validationError}</span>
+                                </div>
+                              )}
+                              {validationWarnings.length > 0 && !validationError && (
+                                <div className="space-y-1">
+                                  {validationWarnings.map((warning, index) => (
+                                    <div key={index} className="flex items-center text-amber-600">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      <span>{warning}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className={`${userContext.length > 1000 ? 'text-red-500' : 'text-slate-500'}`}>
+                              {userContext.length}/1000
+                            </span>
+                          </div>
+                        </div>
                         <div className="flex justify-end space-x-2">
                           <Button
                             variant="outline"
@@ -432,7 +491,7 @@ export default function AIInsights({
                           </Button>
                           <Button
                             onClick={handleRegenerateWithContext}
-                            disabled={isSavingContext || !userContext.trim()}
+                            disabled={isSavingContext || !userContext.trim() || !!validationError}
                           >
                             {isSavingContext ? "Regenerating..." : "Regenerate"}
                           </Button>
