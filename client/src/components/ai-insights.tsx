@@ -211,7 +211,15 @@ export default function AIInsights({
       const response = await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`);
       if (response.ok) {
         const data = await response.json();
-        setUserContext(data.userContext || "");
+        const existingContext = data.userContext || "";
+        setUserContext(existingContext);
+        
+        // Validate existing context for display
+        if (existingContext.trim()) {
+          const validation = validateUserInput(existingContext);
+          setValidationWarnings(validation.warnings);
+          setValidationError(validation.error || "");
+        }
       }
     } catch (error) {
       console.error("Error loading context:", error);
@@ -291,6 +299,8 @@ export default function AIInsights({
   const handleCancelContext = () => {
     setIsContextModalOpen(false);
     setUserContext("");
+    setValidationWarnings([]);
+    setValidationError("");
   }
 
   if (!context && !insight && !recommendation) {
@@ -458,27 +468,43 @@ export default function AIInsights({
                           
                           {/* Character count and validation feedback */}
                           <div className="flex justify-between items-start text-xs">
-                            <div className="space-y-1">
+                            <div className="space-y-1 flex-1 mr-3">
                               {validationError && (
-                                <div className="flex items-center text-red-600">
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  <span>{validationError}</span>
+                                <div className="flex items-start text-red-600">
+                                  <AlertTriangle className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" />
+                                  <span className="leading-tight">{validationError}</span>
                                 </div>
                               )}
                               {validationWarnings.length > 0 && !validationError && (
                                 <div className="space-y-1">
-                                  {validationWarnings.map((warning, index) => (
-                                    <div key={index} className="flex items-center text-amber-600">
-                                      <AlertTriangle className="h-3 w-3 mr-1" />
-                                      <span>{warning}</span>
+                                  {validationWarnings.slice(0, 2).map((warning, index) => (
+                                    <div key={index} className="flex items-start text-amber-600">
+                                      <AlertTriangle className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" />
+                                      <span className="leading-tight">{warning}</span>
                                     </div>
                                   ))}
+                                  {validationWarnings.length > 2 && (
+                                    <div className="text-amber-600 ml-4">
+                                      <span>+{validationWarnings.length - 2} more suggestions</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {!validationError && validationWarnings.length === 0 && userContext.length > 20 && (
+                                <div className="flex items-center text-green-600">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  <span>Content looks good</span>
                                 </div>
                               )}
                             </div>
-                            <span className={`${userContext.length > 1000 ? 'text-red-500' : 'text-slate-500'}`}>
-                              {userContext.length}/1000
-                            </span>
+                            <div className="text-right flex-shrink-0">
+                              <span className={`block ${userContext.length > 1000 ? 'text-red-500' : userContext.length > 800 ? 'text-amber-500' : 'text-slate-500'}`}>
+                                {userContext.length}/1000
+                              </span>
+                              {userContext.length > 900 && (
+                                <span className="text-xs text-amber-600">Almost at limit</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex justify-end space-x-2">
