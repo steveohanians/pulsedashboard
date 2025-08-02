@@ -162,21 +162,25 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
   
   // Define colors for each area
   const colors: Record<string, string> = {
-    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
-    'Industry Avg': '#9ca3af', // Light grey
-    'Clear Digital Clients Avg': '#4b5563', // Dark grey
+    [clientKey]: 'hsl(var(--color-client))',
+    'Industry Avg': 'hsl(var(--color-industry-avg))',
+    'Clear Digital Clients Avg': 'hsl(var(--color-cd-avg))',
   };
 
   // Additional colors for competitors
-  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+  const competitorColors = [
+    'hsl(var(--color-competitor-1))',
+    'hsl(var(--color-competitor-2))', 
+    'hsl(var(--color-competitor-3))'
+  ];
 
   // Calculate fixed Y-axis domain based on all data
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point[clientKey], point['Industry Avg'], point['Clear Digital Clients Avg']);
+    allValues.push(Number(point[clientKey]), Number(point['Industry Avg']), Number(point['Clear Digital Clients Avg']));
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(point[comp.label]);
+        allValues.push(Number(point[comp.label]));
       }
     });
   });
@@ -331,7 +335,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
             stroke={colors['Industry Avg']}
             strokeWidth={2}
             fill="url(#industryGradient)"
-            dot={<DiamondDot fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+            dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
             strokeDasharray="5 5"
             animationDuration={isInitialRender ? 800 : 0}
           />
@@ -345,7 +349,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
             stroke={colors['Clear Digital Clients Avg']}
             strokeWidth={2}
             fill="url(#cdGradient)"
-            dot={<DiamondDot fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
+            dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
           />
@@ -361,7 +365,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
               stroke={competitorColors[index % competitorColors.length]}
               strokeWidth={2}
               fill={`url(#competitorGradient${index % competitorColors.length})`}
-              dot={<DiamondDot fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
+              dot={(props: any) => <DiamondDot {...props} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
               animationDuration={isInitialRender ? 800 : 0}
             />
           )

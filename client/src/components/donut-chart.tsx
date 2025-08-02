@@ -18,10 +18,10 @@ interface DonutChartProps {
 }
 
 const DEVICE_COLORS = {
-  'Desktop': '#3b82f6', // blue-500
-  'Mobile': '#10b981', // emerald-500
-  'Tablet': '#8b5cf6', // violet-500
-  'Other': '#6b7280', // gray-500
+  'Desktop': 'hsl(var(--color-device-desktop))',
+  'Mobile': 'hsl(var(--color-device-mobile))',
+  'Tablet': 'hsl(var(--color-device-tablet))',
+  'Other': 'hsl(var(--color-device-other))',
 };
 
 const CustomTooltip = ({ active, payload }: any) => {

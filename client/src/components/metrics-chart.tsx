@@ -6,11 +6,11 @@ interface MetricsChartProps {
 }
 
 const COLORS = {
-  Client: '#2563eb',
-  CD_Avg: '#4b5563', // Dark grey
-  Industry_Avg: '#9ca3af', // Light grey  
-  Industry: '#9ca3af', // Light grey (fallback)
-  Competitor: '#10b981'
+  Client: 'hsl(var(--color-client))',
+  CD_Avg: 'hsl(var(--color-cd-avg))',
+  Industry_Avg: 'hsl(var(--color-industry-avg))',
+  Industry: 'hsl(var(--color-industry-avg))', // fallback
+  Competitor: 'hsl(var(--color-competitor-1))'
 };
 
 export default function MetricsChart({ metricName, data }: MetricsChartProps) {
@@ -20,17 +20,17 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
     // Mock data for pie charts
     const pieData = metricName.includes('Traffic') 
       ? [
-          { name: 'Organic Search', value: 35, fill: '#2563eb' },
-          { name: 'Direct', value: 28, fill: '#10b981' },
-          { name: 'Social Media', value: 15, fill: '#f59e0b' },
-          { name: 'Referral', value: 12, fill: '#ef4444' },
-          { name: 'Email', value: 6, fill: '#8b5cf6' },
-          { name: 'Paid Search', value: 4, fill: '#06b6d4' }
+          { name: 'Organic Search', value: 35, fill: 'hsl(var(--color-client))' },
+          { name: 'Direct', value: 28, fill: 'hsl(var(--color-competitor-1))' },
+          { name: 'Social Media', value: 15, fill: 'hsl(var(--chart-3))' },
+          { name: 'Referral', value: 12, fill: 'hsl(var(--chart-4))' },
+          { name: 'Email', value: 6, fill: 'hsl(var(--chart-5))' },
+          { name: 'Paid Search', value: 4, fill: 'hsl(var(--color-competitor-2))' }
         ]
       : [
-          { name: 'Mobile', value: 58, fill: '#10b981' },
-          { name: 'Desktop', value: 35, fill: '#2563eb' },
-          { name: 'Tablet', value: 7, fill: '#f59e0b' }
+          { name: 'Mobile', value: 58, fill: 'hsl(var(--color-device-mobile))' },
+          { name: 'Desktop', value: 35, fill: 'hsl(var(--color-device-desktop))' },
+          { name: 'Tablet', value: 7, fill: 'hsl(var(--color-device-tablet))' }
         ];
 
     return (
