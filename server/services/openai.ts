@@ -430,6 +430,11 @@ async function generateInsightsWithCustomPromptAndContext(
       filledPrompt += `\n\nUser-provided context:\n${userContext.trim()}`;
     }
 
+    // Ensure the prompt mentions JSON for OpenAI's json_object response format
+    if (!filledPrompt.toLowerCase().includes('json')) {
+      filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.`;
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [

@@ -181,6 +181,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onError: (error) => {
       console.error('Failed to generate insight with context:', error);
+      // Fallback to regular regeneration if context generation fails
+      console.debug('🎭 Context generation failed, falling back to regular regeneration');
+      generateInsightMutation.mutate();
     }
   });
 
