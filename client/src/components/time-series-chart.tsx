@@ -80,12 +80,9 @@ function generateRealTimeSeriesData(
     };
     
     // Find data for each source type - filter by metric name too
-    console.log(`🔍 Looking for ${metricName} in period ${period}, data available:`, periodData.map(m => `${m.metricName}:${m.sourceType}`));
     const clientMetric = periodData.find(m => m.sourceType === 'Client' && m.metricName === metricName);
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
-    
-    console.log(`📊 Found metrics for ${metricName} in ${period}: Industry=${industryMetric?.value}, CD=${cdMetric?.value}`);
     
     dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;

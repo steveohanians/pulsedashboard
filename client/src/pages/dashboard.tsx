@@ -1390,6 +1390,7 @@ export default function Dashboard() {
                     <div className={`relative ${metricName === "Device Distribution" ? "overflow-visible" : metricName === "Traffic Channels" ? "overflow-visible" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}>
                       {metricName === "Bounce Rate" ? (
                         <TimeSeriesChart 
+                          key={`${metricName}-${timePeriod}-${businessSize}-${industryVertical}`}
                           metricName={metricName}
                           timePeriod={timePeriod}
                           clientData={metricData.Client || 0}
@@ -1440,6 +1441,7 @@ export default function Dashboard() {
                         />
                       ) : metricName === "Pages per Session" || metricName === "Sessions per User" ? (
                         <TimeSeriesChart 
+                          key={`${metricName}-${timePeriod}-${businessSize}-${industryVertical}`}
                           metricName={metricName}
                           timePeriod={timePeriod}
                           clientData={metricData.Client || 0}
