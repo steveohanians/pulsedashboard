@@ -2138,16 +2138,36 @@ export default function AdminPanel() {
                                           Update business size category
                                         </DialogDescription>
                                       </DialogHeader>
-                                      <div className="space-y-4">
+                                      <form onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.target as HTMLFormElement);
+                                        const value = formData.get('value') as string;
+                                        
+                                        try {
+                                          await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+                                          toast({
+                                            title: "Business size updated",
+                                            description: `Updated to "${value}".`,
+                                          });
+                                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                          setIsDialogOpen(false);
+                                        } catch (error) {
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to update business size.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }} className="space-y-4">
                                         <div>
                                           <Label htmlFor="business-size">Business Size</Label>
-                                          <Input id="business-size" defaultValue={option.value} />
+                                          <Input id="business-size" name="value" defaultValue={option.value} required />
                                         </div>
                                         <div className="flex justify-end space-x-2">
-                                          <Button variant="outline">Cancel</Button>
-                                          <Button>Save Changes</Button>
+                                          <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                                          <Button type="submit">Save Changes</Button>
                                         </div>
-                                      </div>
+                                      </form>
                                     </DialogContent>
                                   </Dialog>
                                   <Button 
@@ -2211,16 +2231,36 @@ export default function AdminPanel() {
                                           Update industry vertical category
                                         </DialogDescription>
                                       </DialogHeader>
-                                      <div className="space-y-4">
+                                      <form onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.target as HTMLFormElement);
+                                        const value = formData.get('value') as string;
+                                        
+                                        try {
+                                          await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+                                          toast({
+                                            title: "Industry vertical updated",
+                                            description: `Updated to "${value}".`,
+                                          });
+                                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                          setIsDialogOpen(false);
+                                        } catch (error) {
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to update industry vertical.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }} className="space-y-4">
                                         <div>
                                           <Label htmlFor="industry-vertical">Industry Vertical</Label>
-                                          <Input id="industry-vertical" defaultValue={option.value} />
+                                          <Input id="industry-vertical" name="value" defaultValue={option.value} required />
                                         </div>
                                         <div className="flex justify-end space-x-2">
-                                          <Button variant="outline">Cancel</Button>
-                                          <Button>Save Changes</Button>
+                                          <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                                          <Button type="submit">Save Changes</Button>
                                         </div>
-                                      </div>
+                                      </form>
                                     </DialogContent>
                                   </Dialog>
                                   <Button 
