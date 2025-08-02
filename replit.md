@@ -168,6 +168,7 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - **Fixed Fallback Functions**: Updated `generateDefaultInsightsWithContext` to use global template with fallback metric analysis
   - **Comprehensive Insights Integration**: Updated `generateComprehensiveInsights` to use global template for dashboard summaries
   - **Enhanced Metric Insights Fix**: Updated `generateEnhancedMetricInsights` to use global template instead of hardcoded prompts
-  - **100% Template Coverage**: Now ALL 5 AI generation paths (regular, context-enhanced, fallback, dashboard summary, enhanced) use global template
-  - **Eliminated ALL Hardcoded Prompts**: No remaining bypass paths or hardcoded system messages in entire AI service
+  - **CRITICAL FALLBACK FIX**: Eliminated massive hardcoded fallback system in `generateMetricSpecificInsights` (lines 990-1125) that completely bypassed global template
+  - **100% Template Coverage**: Now ALL 6 AI generation paths (regular, context-enhanced, fallback, dashboard summary, enhanced, specific) use global template
+  - **Eliminated ALL Hardcoded Prompts**: No remaining bypass paths, hardcoded system messages, or fallback prompts in entire AI service
   - **Consistent Expert Persona**: Single source of truth for AI personality, formatting, and business context across all insight types

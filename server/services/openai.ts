@@ -987,151 +987,45 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
     });
   }
   
-  // ⚠️ FALLBACK: Using hardcoded prompts (should rarely execute)
-  logger.warn('⚠️ USING HARDCODED FALLBACK PROMPT', { metricName });
-  const clientInfo = getMetricDisplayInfo(metricName, enrichedData.metric?.clientValue);
-  const industryInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.industryAverage);
-  const cdInfo = getMetricDisplayInfo(metricName, enrichedData.benchmarks?.cdPortfolioAverage);
+  // Use global template for fallback instead of hardcoded prompts
+  logger.warn('⚠️ USING GLOBAL TEMPLATE FALLBACK (NO CUSTOM PROMPT FOUND)', { metricName });
   
-  // Special handling for Traffic Channels - get actual channel distribution
-  let trafficChannelData = '';
-  if (metricName === 'Traffic Channels') {
-    try {
-      const { storage } = await import("../storage");
-      const currentPeriod = enrichedData.metric?.timePeriod || 'Last Month';
-      
-      // Get channel distribution data for client, industry, and CD averages
-      const clientChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'Client');
-      const industryChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'Industry_Avg');
-      const cdChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', currentPeriod, 'CD_Avg');
-      
-      const formatChannelData = (channels: any[], label: string) => {
-        if (!channels.length) return `${label}: No data available`;
-        const channelList = channels.map(c => `${c.channel}: ${c.value}%`).join(', ');
-        return `${label}: ${channelList}`;
-      };
-      
-      trafficChannelData = `
-TRAFFIC CHANNEL DISTRIBUTION:
-- ${formatChannelData(clientChannels, 'Client')}
-- ${formatChannelData(industryChannels, 'Industry Average')}
-- ${formatChannelData(cdChannels, 'CD Portfolio Average')}`;
-    } catch (error) {
-      logger.warn('Failed to get traffic channel distribution data', { error: (error as Error).message });
-      trafficChannelData = 'Traffic channel distribution data temporarily unavailable.';
-    }
+  // Get global prompt template for fallback too
+  const globalTemplate = await storage.getGlobalPromptTemplate();
+  
+  if (!globalTemplate) {
+    logger.error("No global prompt template found for generateMetricSpecificInsights fallback");
+    throw new Error("Global prompt template not available");
   }
+
+  // Use generateDefaultInsightsWithContext which already has global template integration
+  return await generateDefaultInsightsWithContext(metricName, enrichedData, '');
+
+  // Alternative: if we wanted to build this fallback inline, we'd use global template:
+  /*
+  const fallbackAnalysis = `LEGACY FALLBACK ANALYSIS:
+Provide analysis for ${metricName} when no custom prompt template is available. Assess performance, competitive positioning, and optimization opportunities.`;
+
+  const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
+  const competitorNames = enrichedData.benchmarks?.competitors?.map((c: any) => c.name) || [];
   
-  // Convert competitor values too
-  const competitorText = enrichedData.benchmarks?.competitors?.map((c: any) => {
-    const compInfo = getMetricDisplayInfo(metricName, c.value);
-    if (metricName === 'Session Duration') {
-      const seconds = c.value;
-      const minutes = Math.floor(seconds / 60);
-      const remainingSecs = seconds % 60;
-      return `${c.name} (${minutes}m ${remainingSecs}s)`;
-    }
-    return `${c.name} (${compInfo.displayValue}${compInfo.unit})`;
-  }).join(', ') || 'No competitor data available';
-  
-  const prompt = `As an expert web analytics consultant, analyze this specific metric and provide insights:
+  const prompt = globalTemplate.promptTemplate
+    .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, fallbackAnalysis)
+    .replace(/\{\{clientName\}\}/g, enrichedData.client?.name || 'Current Client')
+    .replace(/\{\{industry\}\}/g, enrichedData.client?.industry || 'Unknown')
+    .replace(/\{\{businessSize\}\}/g, enrichedData.client?.businessSize || 'Unknown')
+    .replace(/\{\{clientValue\}\}/g, String(enrichedData.metric?.clientValue))
+    .replace(/\{\{industryAverage\}\}/g, String(enrichedData.benchmarks?.industryAverage || 'N/A'))
+    .replace(/\{\{cdPortfolioAverage\}\}/g, String(enrichedData.benchmarks?.cdPortfolioAverage || 'N/A'))
+    .replace(/\{\{competitors\}\}/g, competitorNames.map((name, i) => `${name}: ${competitorValues[i]}`).join(', ') || 'No competitor data')
+    .replace(/\{\{metricDisplayName\}\}/g, metricName);
 
-METRIC ANALYSIS REQUEST:
-- Metric: ${metricName} (stored as ${clientInfo.rawUnit}, displayed as ${clientInfo.unit})
-- Client: ${enrichedData.client?.name} (${enrichedData.client?.industry}, ${enrichedData.client?.businessSize})
-- Current Value: ${metricName === 'Session Duration' ? 
-    `${Math.floor(enrichedData.metric?.clientValue / 60)}m ${enrichedData.metric?.clientValue % 60}s` : 
-    `${clientInfo.displayValue}${clientInfo.unit}`}
-- Time Period: ${enrichedData.metric?.timePeriod}
-
-BENCHMARK COMPARISON:
-- Industry Average: ${metricName === 'Session Duration' ? 
-    `${Math.floor(enrichedData.benchmarks?.industryAverage / 60)}m ${enrichedData.benchmarks?.industryAverage % 60}s` : 
-    `${industryInfo.displayValue}${industryInfo.unit}`}
-- CD Portfolio Average: ${metricName === 'Session Duration' ? 
-    `${Math.floor(enrichedData.benchmarks?.cdPortfolioAverage / 60)}m ${enrichedData.benchmarks?.cdPortfolioAverage % 60}s` : 
-    `${cdInfo.displayValue}${cdInfo.unit}`}
-- Competitors: ${competitorText}
-${metricName === 'Traffic Channels' ? trafficChannelData : ''}
-
-FULL CONTEXT: ${enrichedData.context}
-
-Provide a JSON response with exactly this structure. Use **bold formatting** strategically for emphasis:
-{
-  "context": "Brief explanation of what this metric measures and why it matters for this business. ${metricName === 'Session Duration' ? 'Use minutes and seconds format (e.g., 5m 12s)' : metricName === 'Traffic Channels' ? 'Explain that this measures traffic source diversification and the effectiveness of different acquisition channels, NOT just counting channels. Focus on channel utilization and distribution quality.' : `Include the metric unit (${clientInfo.unit})`} in your explanation (2-3 sentences)",
-  "insights": "Detailed analysis comparing the client's performance to benchmarks. Use **bold** to emphasize the key insight or competitive advantage (e.g., **significantly outperforming competitors** or **lagging behind industry standards**). Include specific numbers but bold the interpretation, not just the numbers. ${metricName === 'Session Duration' ? 'Use format like 5m 12s for time values and describe differences meaningfully' : metricName === 'Traffic Channels' ? 'Focus on channel mix effectiveness, over-reliance on specific channels, or opportunities for diversification. Analyze the percentage distribution, not just the count.' : `Always use ${clientInfo.unit} as the unit`} (2-3 sentences)", 
-  "recommendations": "Specific, actionable recommendations with **bold** emphasis on the key action or improvement strategy (e.g., **focus on content optimization** or **implement exit-intent popups**). Include specific targets but bold the strategic recommendation. ${metricName === 'Session Duration' ? 'Use practical time targets and improvement strategies' : metricName === 'Traffic Channels' ? 'Recommend specific channel optimization strategies, targeting underutilized channels like increasing organic search to X% or reducing over-dependence on direct traffic.' : `Include specific ${clientInfo.unit} targets where relevant`} (2-3 sentences)"
-}
-
-IMPORTANT: Always use ${clientInfo.unit} as the unit in your response, not ${clientInfo.rawUnit}. The values provided are already converted to the proper display format.${FORMATTING_INSTRUCTIONS}`;
-
-  logger.info('OpenAI Prompt Details', { 
-    metricName,
-    clientName: enrichedData.client?.name,
-    clientValue: enrichedData.metric?.clientValue,
-    industryAvg: enrichedData.benchmarks?.industryAverage,
-    cdAvg: enrichedData.benchmarks?.cdPortfolioAverage,
-    competitorCount: enrichedData.benchmarks?.competitors?.length || 0,
-    fullPrompt: prompt.substring(0, 500)
-  });
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert web analytics consultant. Provide clear, actionable insights in the exact JSON format requested."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 500
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
-    logger.info('Raw OpenAI response', { response: response.substring(0, 200) });
-
-    // Clean the response - remove markdown code blocks if present
-    let cleanResponse = response.trim();
-    
-    // Remove ```json at the start and ``` at the end
-    if (cleanResponse.startsWith('```json')) {
-      cleanResponse = cleanResponse.replace(/^```json\s*/, '');
-    }
-    if (cleanResponse.endsWith('```')) {
-      cleanResponse = cleanResponse.replace(/\s*```$/, '');
-    }
-    
-    logger.info('Cleaned response', { cleanResponse: cleanResponse.substring(0, 200) });
-    
-    const insights = JSON.parse(cleanResponse);
-    
-    return {
-      context: insights.context,
-      insights: insights.insights,
-      recommendations: insights.recommendations
-    };
-
-  } catch (error) {
-    logger.error('Error generating metric-specific insights with OpenAI', { 
-      error: (error as Error).message,
-      metricName,
-      clientId
-    });
-    
-    // Fallback insights
-    return {
-      context: `${metricName} is a key performance indicator that helps measure website effectiveness and user engagement.`,
-      insights: `Your current ${metricName} performance shows opportunities for optimization based on industry standards.`,
-      recommendations: `Focus on improving ${metricName} through targeted optimization strategies and regular monitoring.`
-    };
-  }
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "user",
+        content: prompt + `\n\nProvide JSON response with fields: context, insights, recommendations.${FORMATTING_INSTRUCTIONS}`
+      }
+    ],*/
 }
