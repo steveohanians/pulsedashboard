@@ -378,7 +378,7 @@ export default function AIInsights({
               <div className="flex items-center space-x-2">
                 {/* Context Badge - Show first if this insight was generated with custom context */}
                 {hasCustomContext && (
-                  <div className="flex items-center space-x-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-pink-50 text-primary rounded-md text-xs border border-primary/20">
                     <MessageCircle className="h-3 w-3" />
                     <span>Enhanced</span>
                   </div>
