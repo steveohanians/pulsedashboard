@@ -111,23 +111,7 @@ export function validateUserInput(input: string): ValidationResult {
     warnings.push("Input contains many special characters which may be modified");
   }
 
-  // Check business relevance (basic client-side version)
-  const businessKeywords = ['website', 'traffic', 'users', 'customers', 'marketing', 'campaign', 'analytics', 'metrics', 'business', 'conversion', 'bounce', 'session'];
-  const lowerInput = input.toLowerCase();
-  const hasBusinessTerms = businessKeywords.some(keyword => lowerInput.includes(keyword));
-  
-  if (!hasBusinessTerms && input.length > 50) {
-    warnings.push("Consider adding more specific business or analytics context");
-  }
-
-  // Check for vague content
-  const vagueWords = ['thing', 'stuff', 'something', 'somehow', 'maybe', 'probably'];
-  const words = input.toLowerCase().split(/\s+/);
-  const vagueCount = words.filter(word => vagueWords.includes(word)).length;
-  
-  if (vagueCount > words.length * 0.15) {
-    warnings.push("Content appears vague - try being more specific");
-  }
+  // Removed validation warnings per user request - keeping only character count
 
   return {
     isValid,

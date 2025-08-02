@@ -466,38 +466,9 @@ export default function AIInsights({
                             } as React.CSSProperties}
                           />
                           
-                          {/* Character count and validation feedback */}
-                          <div className="flex justify-between items-start text-xs">
-                            <div className="space-y-1 flex-1 mr-3">
-                              {validationError && (
-                                <div className="flex items-start text-red-600">
-                                  <AlertTriangle className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" />
-                                  <span className="leading-tight">{validationError}</span>
-                                </div>
-                              )}
-                              {validationWarnings.length > 0 && !validationError && (
-                                <div className="space-y-1">
-                                  {validationWarnings.slice(0, 2).map((warning, index) => (
-                                    <div key={index} className="flex items-start text-amber-600">
-                                      <AlertTriangle className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" />
-                                      <span className="leading-tight">{warning}</span>
-                                    </div>
-                                  ))}
-                                  {validationWarnings.length > 2 && (
-                                    <div className="text-amber-600 ml-4">
-                                      <span>+{validationWarnings.length - 2} more suggestions</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              {!validationError && validationWarnings.length === 0 && userContext.length > 20 && (
-                                <div className="flex items-center text-green-600">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  <span>Content looks good</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right flex-shrink-0">
+                          {/* Character count only */}
+                          <div className="flex justify-end text-xs">
+                            <div className="text-right">
                               <span className={`block ${userContext.length > 1000 ? 'text-red-500' : userContext.length > 800 ? 'text-amber-500' : 'text-slate-500'}`}>
                                 {userContext.length}/1000
                               </span>
