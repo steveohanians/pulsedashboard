@@ -1,3 +1,11 @@
+// Database schema definitions using Drizzle ORM
+//
+// ARCHITECTURE ENTITIES:
+// - clients: Actual customers using the dashboard
+// - cdPortfolioCompanies: Clear Digital's client portfolio (generates CD_Avg benchmarks)
+// - benchmarkCompanies: Industry reference companies (generates Industry_Avg benchmarks)  
+// - competitors: Client-specific competitor companies (generates Competitor sourceType data)
+//
 import { sql } from "drizzle-orm";
 import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";

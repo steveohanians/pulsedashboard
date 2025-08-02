@@ -33,7 +33,12 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 
 ### Key Components and Design Patterns
 - **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/Viewer) for protected routes.
-- **Data Models**: Structured around entities like Clients, Users, Competitors, BenchmarkCompanies, Metrics, Benchmarks, and AIInsights.
+- **Data Models**: Structured around distinct entities:
+  - **Clients**: Actual customers using the dashboard
+  - **CD Portfolio Companies**: Clear Digital's client portfolio (generates CD_Avg benchmarks)
+  - **Benchmark Companies**: Industry reference companies (generates Industry_Avg benchmarks)
+  - **Competitors**: Client-specific competitor companies (generates Competitor data)
+  - **Users, Metrics, Benchmarks, AIInsights**: Supporting entities
 - **API Architecture**: Segregated into Public, Admin, Data Ingestion (webhooks), and AI Integration endpoints.
 - **Frontend Components**: Core UI elements include Dashboard, Admin Panel, Authentication forms, Charts, and Modals.
 - **Data Flow**: Automated data ingestion from various sources, processing, normalization, and an analytics pipeline that includes benchmark calculations and AI analysis for insights. User interactions are managed through session-based authentication, data filtering, and real-time updates.

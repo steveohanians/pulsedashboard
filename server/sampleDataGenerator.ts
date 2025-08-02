@@ -1,4 +1,11 @@
 // Comprehensive sample data generator for all metrics and time periods
+// 
+// ARCHITECTURE CLARIFICATION:
+// - Clients: Actual customers using the dashboard
+// - CD Portfolio Companies: Clear Digital's client portfolio (generates CD_Avg benchmarks)
+// - Benchmark Companies: Industry reference companies (generates Industry_Avg benchmarks)
+// - Competitors: Client-specific competitor companies (generates Competitor data)
+//
 import { storage } from "./storage";
 import logger from "./utils/logger";
 
@@ -425,46 +432,26 @@ export async function generateDataForNewCdPortfolioCompany(companyId: string) {
   }
 }
 
-// Auto-generate data when new benchmark company is added
-export async function generateDataForNewBenchmarkCompany(companyId: string, clientId: string) {
+// Auto-generate data when new competitor is added
+export async function generateDataForNewCompetitor(competitorId: string, clientId: string) {
   const { shouldGenerateForNewCompanies } = await import("./sampleDataConfig");
   
   if (!shouldGenerateForNewCompanies()) {
-    logger.info("Auto-generation disabled for new benchmark companies");
+    logger.info("Auto-generation disabled for new competitors");
     return { success: false, message: "Auto-generation disabled" };
   }
   
-  logger.info(`Auto-generating data for new benchmark company: ${companyId} (client: ${clientId})`);
+  logger.info(`Auto-generating data for new competitor: ${competitorId} (client: ${clientId})`);
   
   try {
-    // Generate sample metrics for the new benchmark company
-    // Generate dynamic time periods for new company data
-    const generateNewCompanyTimePeriods = (): string[] => {
-      const now = new Date();
-      const periods: string[] = [];
-      
-      for (let i = 0; i < 3; i++) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-      }
-      
-      const prevYear = new Date(now);
-      prevYear.setFullYear(prevYear.getFullYear() - 1);
-      periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
-      
-      const prevQuarter = new Date(now);
-      prevQuarter.setMonth(prevQuarter.getMonth() - 6);
-      periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
-      
-      return Array.from(new Set(periods));
-    }
-    
-    const timePeriods = generateNewCompanyTimePeriods();
+    // Generate sample metrics for the new competitor
+    // Use full 15-month time periods for consistency
+    const timePeriods = generateTimePeriods();
+
     const metricNames = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
     
     for (const period of timePeriods) {
-      const periodSeed = period.charCodeAt(0) + companyId.charCodeAt(0);
+      const periodSeed = period.charCodeAt(0) + competitorId.charCodeAt(0);
       
       for (const metricName of metricNames) {
         const config = METRIC_CONFIGS.find(c => c.name === metricName);
@@ -477,21 +464,56 @@ export async function generateDataForNewBenchmarkCompany(companyId: string, clie
           : Math.round(value);
         
         await storage.createMetric({
-          competitorId: companyId,
+          clientId: clientId,
+          competitorId: competitorId,
           metricName,
-          value: finalValue,
+          value: finalValue.toString(),
           timePeriod: period,
           sourceType: "Competitor"
         });
       }
+      
+      // Generate Traffic Channels and Device Distribution data for competitors
+      await generateCompetitorChannelData(competitorId, clientId, period, periodSeed);
     }
     
-    logger.info("Successfully generated data for new benchmark company");
-    return { success: true, message: "Benchmark company data generated" };
+    logger.info("Successfully generated data for new competitor");
+    return { success: true, message: "Competitor data generated" };
     
   } catch (error) {
     const err = error as Error;
-    logger.error("Error generating data for new benchmark company", { error: err.message, companyId });
+    logger.error("Error generating data for new competitor", { error: err.message, competitorId });
     throw error;
+  }
+}
+
+// Generate channel data for competitors (Traffic Channels and Device Distribution)
+async function generateCompetitorChannelData(competitorId: string, clientId: string, timePeriod: string, seed: number) {
+  // Traffic Channels
+  const trafficChannels = generateTrafficChannels(seed + 100);
+  for (const channel of trafficChannels) {
+    await storage.createMetric({
+      clientId: clientId,
+      competitorId: competitorId,
+      metricName: "Traffic Channels",
+      value: channel.value.toString(),
+      sourceType: "Competitor",
+      timePeriod,
+      channel: channel.name
+    });
+  }
+  
+  // Device Distribution
+  const deviceData = generateDeviceDistribution(seed + 200);
+  for (const device of deviceData) {
+    await storage.createMetric({
+      clientId: clientId,
+      competitorId: competitorId,
+      metricName: "Device Distribution",
+      value: device.value.toString(),
+      sourceType: "Competitor",
+      timePeriod,
+      channel: device.name
+    });
   }
 }

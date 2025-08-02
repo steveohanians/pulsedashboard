@@ -916,107 +916,21 @@ export function registerRoutes(app: Express): Server {
 
       const competitor = await storage.createCompetitor(validatedData);
       
-      // Use the same time period generation as the sample data generator to ensure consistency
-      const { generateTimePeriods } = await import("./sampleDataGenerator");
-      const generateCompetitorTimePeriods = generateTimePeriods;
+      // Use the new competitor data generation function for consistency
+      const { generateDataForNewCompetitor } = await import("./sampleDataGenerator");
       
-      const timePeriods = generateCompetitorTimePeriods();
-      logger.info("Generated time periods for new competitor", { 
-        competitorId: competitor.id, 
-        timePeriods, 
-        periodCount: timePeriods.length 
-      });
-      
-
-      
-      const metricNames = [
-        "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
-        "Traffic Channels", "Device Distribution"
-      ];
-      
-      for (const period of timePeriods) {
-        for (const metricName of metricNames) {
-          let sampleValue: any;
-          
-          if (metricName === "Traffic Channels") {
-            // Generate individual channel metrics with proper database structure
-            const channels = ["Organic Search", "Direct", "Social Media", "Paid Search", "Email"];
-            const baseValues = [40, 25, 15, 12, 8];
-            
-            for (let i = 0; i < channels.length; i++) {
-              const variance = (competitor.id.charCodeAt(i % competitor.id.length) % 10) - 5;
-              const channelValue = Math.max(5, baseValues[i] + variance);
-              
-              await storage.createMetric({
-                clientId: validatedData.clientId,
-                competitorId: competitor.id,
-                metricName,
-                value: channelValue.toString(),
-                sourceType: "Competitor",
-                timePeriod: period,
-                channel: channels[i]
-              });
-            }
-            continue; // Skip the general metric creation for Traffic Channels
-          } else if (metricName === "Device Distribution") {
-            // Generate individual device metrics with proper database structure
-            const devices = ["Desktop", "Mobile", "Tablet"];
-            const baseDeviceValues = [50, 42, 8];
-            
-            for (let i = 0; i < devices.length; i++) {
-              const variance = (competitor.id.charCodeAt((i + 1) % competitor.id.length) % 8) - 4;
-              const deviceValue = Math.max(5, baseDeviceValues[i] + variance);
-              
-              await storage.createMetric({
-                clientId: validatedData.clientId,
-                competitorId: competitor.id,
-                metricName,
-                value: deviceValue.toString(),
-                sourceType: "Competitor",
-                timePeriod: period,
-                channel: devices[i]
-              });
-            }
-            continue; // Skip the general metric creation for Device Distribution
-          } else {
-            // Generate realistic values for other metrics with competitor-specific variance
-            const competitorId = competitor.id;
-            const seed = competitorId.length + period.charCodeAt(0);
-            const baseValues = {
-              "Bounce Rate": Math.floor(40 + (Math.sin(seed * 1.1) * 15)) + Math.floor(Math.random() * 10),
-              "Session Duration": Math.floor(150 + (Math.sin(seed * 2.2) * 90)) + Math.floor(Math.random() * 30),
-              "Pages per Session": parseFloat((1.8 + (Math.sin(seed * 3.3) * 1.2) + Math.random() * 0.5).toFixed(1)),
-              "Sessions per User": parseFloat((1.2 + (Math.sin(seed * 4.4) * 0.6) + Math.random() * 0.3).toFixed(1))
-            };
-            sampleValue = baseValues[metricName as keyof typeof baseValues];
-          }
-          
-          try {
-            await storage.createMetric({
-              clientId: validatedData.clientId,
-              competitorId: competitor.id,
-              metricName,
-              value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
-              sourceType: "Competitor",
-              timePeriod: period
-            });
-            
-            logger.info("Created metric for competitor", { 
-              competitorId: competitor.id, 
-              metricName, 
-              period, 
-              value: sampleValue 
-            });
-          } catch (metricError) {
-            logger.error("Failed to create metric for competitor", { 
-              competitorId: competitor.id, 
-              metricName, 
-              period, 
-              value: sampleValue,
-              error: (metricError as Error).message 
-            });
-          }
-        }
+      // Call the centralized competitor data generation
+      const result = await generateDataForNewCompetitor(competitor.id, validatedData.clientId);
+      if (result.success) {
+        logger.info("Successfully generated data for new competitor using centralized function", { 
+          competitorId: competitor.id, 
+          clientId: validatedData.clientId 
+        });
+      } else {
+        logger.warn("Competitor data generation was disabled", { 
+          competitorId: competitor.id, 
+          message: result.message 
+        });
       }
       
       res.status(201).json(competitor);
@@ -1167,93 +1081,23 @@ export function registerRoutes(app: Express): Server {
         const existingMetrics = await storage.getMetricsByCompetitors(clientId, currentPeriod);
         const competitorHasData = existingMetrics.some(m => m.competitorId === competitor.id);
         
-        // Always regenerate data for competitors (remove the check)
+        // Always regenerate data for competitors using centralized function
         {
-          // Generate sample data for this competitor (dynamic periods)
-          const generateExistingCompetitorPeriods = (): string[] => {
-            const now = new Date();
-            const periods: string[] = [];
-            
-            for (let i = 0; i < 3; i++) {
-              const date = new Date(now);
-              date.setMonth(date.getMonth() - i);
-              periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-            }
-            
-            const prevYear = new Date(now);
-            prevYear.setFullYear(prevYear.getFullYear() - 1);
-            periods.push(`${prevYear.getFullYear()}-${String(prevYear.getMonth() + 1).padStart(2, '0')}`);
-            
-            const prevQuarter = new Date(now);
-            prevQuarter.setMonth(prevQuarter.getMonth() - 6);
-            periods.push(`${prevQuarter.getFullYear()}-${String(prevQuarter.getMonth() + 1).padStart(2, '0')}`);
-            
-            return Array.from(new Set(periods));
-          };
+          const { generateDataForNewCompetitor } = await import("./sampleDataGenerator");
+          const result = await generateDataForNewCompetitor(competitor.id, clientId);
           
-          const timePeriods = generateExistingCompetitorPeriods();
-          const metricNames = [
-            "Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User",
-            "Traffic Channels", "Device Distribution"
-          ];
-          
-          for (const period of timePeriods) {
-            for (const metricName of metricNames) {
-              let sampleValue: any;
-              
-              if (metricName === "Traffic Channels") {
-                // Generate individual channel entries like client data
-                const channels = [
-                  { name: "Organic Search", baseValue: 35 + Math.floor(Math.random() * 20) },
-                  { name: "Direct", baseValue: 20 + Math.floor(Math.random() * 15) },
-                  { name: "Social Media", baseValue: 15 + Math.floor(Math.random() * 10) },
-                  { name: "Paid Search", baseValue: 10 + Math.floor(Math.random() * 8) },
-                  { name: "Email", baseValue: 5 + Math.floor(Math.random() * 5) }
-                ];
-                
-                // Create separate metrics for each channel
-                for (const channel of channels) {
-                  await storage.createMetric({
-                    competitorId: competitor.id,
-                    metricName: "Traffic Channels",
-                    value: channel.baseValue.toString(),
-                    timePeriod: period,
-                    sourceType: "Competitor",
-                    channel: channel.name
-                  });
-                }
-                continue; // Skip the regular metric creation for Traffic Channels
-              } else if (metricName === "Device Distribution") {
-                const desktop = Math.floor(Math.random() * 20) + 45;
-                const mobile = Math.floor(Math.random() * 15) + 35;
-                const tablet = Math.floor(Math.random() * 8) + 8;
-                const other = 100 - (desktop + mobile + tablet);
-                sampleValue = [
-                  { name: "Desktop", value: desktop, percentage: desktop, color: "#3b82f6" },
-                  { name: "Mobile", value: mobile, percentage: mobile, color: "#10b981" },
-                  { name: "Tablet", value: tablet, percentage: tablet, color: "#8b5cf6" },
-                  { name: "Other", value: other, percentage: other, color: "#6b7280" }
-                ];
-              } else {
-                const baseValues = {
-                  "Bounce Rate": Math.floor(Math.random() * 20) + 40,
-                  "Session Duration": Math.floor(Math.random() * 60) + 120,
-                  "Pages per Session": (Math.random() * 1.5 + 1.8).toFixed(1),
-                  "Sessions per User": (Math.random() * 0.8 + 1.2).toFixed(1)
-                };
-                sampleValue = baseValues[metricName as keyof typeof baseValues];
-              }
-              
-              await storage.createMetric({
-                competitorId: competitor.id,
-                metricName,
-                value: typeof sampleValue === 'string' ? sampleValue : sampleValue.toString(),
-                timePeriod: period,
-                sourceType: "Competitor"
-              });
-            }
+          if (result.success) {
+            dataGenerated++;
+            logger.info("Successfully regenerated data for existing competitor", { 
+              competitorId: competitor.id, 
+              clientId: clientId 
+            });
+          } else {
+            logger.warn("Competitor data regeneration was disabled", { 
+              competitorId: competitor.id, 
+              message: result.message 
+            });
           }
-          dataGenerated++;
         }
       }
       

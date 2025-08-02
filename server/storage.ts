@@ -187,6 +187,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(competitors).where(eq(competitors.clientId, clientId));
   }
 
+  // Competitors (Client-specific competitors for Competitor sourceType data)
   async createCompetitor(insertCompetitor: InsertCompetitor): Promise<Competitor> {
     const [competitor] = await db
       .insert(competitors)
@@ -210,6 +211,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
   }
 
+  // Benchmark Companies (Industry Reference for Industry_Avg benchmarks)
   async createBenchmarkCompany(insertCompany: InsertBenchmarkCompany): Promise<BenchmarkCompany> {
     const [company] = await db
       .insert(benchmarkCompanies)
@@ -236,6 +238,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.active, true));
   }
 
+  // CD Portfolio Companies (Clear Digital's portfolio for CD_Avg benchmarks)
   async createCdPortfolioCompany(insertCompany: InsertCdPortfolioCompany): Promise<CdPortfolioCompany> {
     const [company] = await db
       .insert(cdPortfolioCompanies)

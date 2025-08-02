@@ -1344,10 +1344,11 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
 
-              {/* Benchmark Companies */}
+              {/* Benchmark Companies (Industry Reference) */}
               <TabsContent value="benchmark">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <h2 className="text-base sm:text-lg font-semibold text-slate-900">Benchmark Companies</h2>
+                  <p className="text-sm text-slate-600">Industry reference companies used for Industry_Avg benchmarks</p>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       variant="outline"
@@ -1373,7 +1374,7 @@ export default function AdminPanel() {
                       <DialogHeader>
                         <DialogTitle>Add Benchmark Company</DialogTitle>
                         <DialogDescription>
-                          Add a new company to the benchmark dataset
+                          Add a new industry reference company to generate Industry_Avg benchmark data
                         </DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleCreateBenchmarkCompany} className="space-y-4">
@@ -1640,7 +1641,7 @@ export default function AdminPanel() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <div>
                     <h2 className="text-base sm:text-lg font-semibold text-slate-900">Clear Digital Portfolio</h2>
-                    <p className="text-sm text-slate-600 mt-1">Manage companies included in CD benchmark calculations</p>
+                    <p className="text-sm text-slate-600 mt-1">Clear Digital's client portfolio used for CD_Avg benchmarks</p>
                   </div>
                   <div className="flex gap-2">
                     <Dialog open={isDialogOpen && editingItem?.type === 'add-cd-company'} onOpenChange={(open) => {
@@ -1660,7 +1661,7 @@ export default function AdminPanel() {
                         <DialogHeader>
                           <DialogTitle>Add Company to CD Portfolio</DialogTitle>
                           <DialogDescription>
-                            Add a new company to the Clear Digital portfolio for benchmark calculations
+                            Add a new company to the Clear Digital portfolio to generate CD_Avg benchmark data
                           </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleCreateCdPortfolioCompany} className="space-y-4">
