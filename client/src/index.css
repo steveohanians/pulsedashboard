@@ -68,17 +68,24 @@
   --sidebar-ring: var(--ring);
 }
 
-/* Simplified spinning mask with visible glow */
-@keyframes spin-glow {
+/* CodePen CSS custom property for mask rotation */
+@property --mask {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* CodePen spinning mask animation */
+@keyframes spin {
   0% {
-    transform: rotate(0deg);
+    --mask: 0deg;
   }
   100% {
-    transform: rotate(360deg);
+    --mask: 360deg;
   }
 }
 
-/* Status icon shimmer container */
+/* Status icon shimmer container - exact CodePen style */
 .status-icon-success,
 .status-icon-warning,
 .status-icon-error {
@@ -86,79 +93,86 @@
   isolation: isolate;
 }
 
-/* Create the glow layer */
+/* Shimmer effect container - CodePen .shimmer equivalent */
 .status-icon-success::before,
 .status-icon-warning::before,
 .status-icon-error::before {
   content: '';
   position: absolute;
-  inset: -12px;
+  inset: -8px;
   border-radius: inherit;
-  opacity: 1;
+  mix-blend-mode: color-dodge;
   pointer-events: none;
   z-index: -1;
 }
 
-/* Create the spinning mask layer */
-.status-icon-success::after,
-.status-icon-warning::after,
-.status-icon-error::after {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border-radius: inherit;
-  background: conic-gradient(
-    rgba(255, 255, 255, 0.9) 0deg,
-    rgba(255, 255, 255, 0.9) 270deg,
-    transparent 300deg,
-    transparent 330deg,
-    rgba(255, 255, 255, 0.9) 360deg
-  );
-  animation: spin-glow 2s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Success status - green shimmer */
+/* Success status shimmer with spinning mask */
 .status-icon-success::before {
-  background: radial-gradient(circle, 
-    rgba(34, 197, 94, 0.6) 0%,
-    rgba(34, 197, 94, 0.4) 40%,
-    rgba(34, 197, 94, 0.2) 70%,
+  box-shadow: 0 0 3px 2px hsl(142deg 20% 95%),
+              0 0 7px 4px hsl(142deg 20% 80%),
+              0 0 13px 8px hsl(142deg 40% 60%),
+              0 0 22px 6px hsl(142deg 20% 40%);
+  opacity: 1;
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
     transparent 100%
   );
-  box-shadow: 
-    0 0 10px rgba(34, 197, 94, 0.8),
-    0 0 20px rgba(34, 197, 94, 0.6),
-    0 0 30px rgba(34, 197, 94, 0.4);
+  mask-size: cover;
+  animation: spin 3s linear infinite both;
 }
 
-/* Warning status - orange shimmer */
+/* Warning status shimmer with spinning mask */
 .status-icon-warning::before {
-  background: radial-gradient(circle, 
-    rgba(245, 158, 11, 0.6) 0%,
-    rgba(245, 158, 11, 0.4) 40%,
-    rgba(245, 158, 11, 0.2) 70%,
+  box-shadow: 0 0 3px 2px hsl(45deg 20% 95%),
+              0 0 7px 4px hsl(45deg 20% 80%),
+              0 0 13px 8px hsl(45deg 40% 60%),
+              0 0 22px 6px hsl(45deg 20% 40%);
+  opacity: 1;
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
     transparent 100%
   );
-  box-shadow: 
-    0 0 10px rgba(245, 158, 11, 0.8),
-    0 0 20px rgba(245, 158, 11, 0.6),
-    0 0 30px rgba(245, 158, 11, 0.4);
+  mask-size: cover;
+  animation: spin 3s linear infinite both;
 }
 
-/* Error status - red shimmer */
+/* Error status shimmer with spinning mask */
 .status-icon-error::before {
-  background: radial-gradient(circle, 
-    rgba(239, 68, 68, 0.6) 0%,
-    rgba(239, 68, 68, 0.4) 40%,
-    rgba(239, 68, 68, 0.2) 70%,
+  box-shadow: 0 0 3px 2px hsl(0deg 20% 95%),
+              0 0 7px 4px hsl(0deg 20% 80%),
+              0 0 13px 8px hsl(0deg 40% 60%),
+              0 0 22px 6px hsl(0deg 20% 40%);
+  opacity: 1;
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
     transparent 100%
   );
-  box-shadow: 
-    0 0 10px rgba(239, 68, 68, 0.8),
-    0 0 20px rgba(239, 68, 68, 0.6),
-    0 0 30px rgba(239, 68, 68, 0.4);
+  mask-size: cover;
+  animation: spin 3s linear infinite both;
 }
 
 
