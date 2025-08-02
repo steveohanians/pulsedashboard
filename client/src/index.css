@@ -83,19 +83,26 @@
   }
 }
 
+/* Make animations very obvious for debugging - Maximum priority */
 .ai-status-success {
-  animation: ai-icon-spin 4s linear infinite, ai-icon-glow 2s ease-in-out infinite;
-  color: #10b981;
+  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
+  color: #10b981 !important;
+  transform-origin: center !important;
+  will-change: transform !important;
 }
 
 .ai-status-warning {
-  animation: ai-icon-spin 3s linear infinite, ai-icon-glow 2s ease-in-out infinite;
-  color: #f59e0b;
+  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
+  color: #f59e0b !important;
+  transform-origin: center !important;
+  will-change: transform !important;
 }
 
 .ai-status-error {
-  animation: ai-icon-spin 2s linear infinite, ai-icon-glow 2s ease-in-out infinite;
-  color: #ef4444;
+  animation: ai-icon-spin 1s linear infinite, ai-icon-glow 1s ease-in-out infinite !important;
+  color: #ef4444 !important;
+  transform-origin: center !important;
+  will-change: transform !important;
 }
 
 .dark {

@@ -78,17 +78,20 @@ interface AIInsightsProps {
   onRegenerateWithContext?: (context: string) => void;
 }
 
-// Status icon component with spinning glow effects - Using proven CSS approach
+// Status icon component with spinning glow effects - Using proven CSS approach with debugging
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
   if (!status) return null;
   
+  // Add debugging
+  console.log('🎨 StatusIcon rendering with status:', status);
+  
   switch (status) {
     case 'success':
-      return <CheckCircle className="h-6 w-6 flex-shrink-0 ai-status-success" />;
+      return <CheckCircle className="h-8 w-8 flex-shrink-0 ai-status-success" style={{ willChange: 'transform' }} />;
     case 'needs_improvement':
-      return <AlertTriangle className="h-6 w-6 flex-shrink-0 ai-status-warning" />;
+      return <AlertTriangle className="h-8 w-8 flex-shrink-0 ai-status-warning" style={{ willChange: 'transform' }} />;
     case 'warning':
-      return <AlertCircle className="h-6 w-6 flex-shrink-0 ai-status-error" />;
+      return <AlertCircle className="h-8 w-8 flex-shrink-0 ai-status-error" style={{ willChange: 'transform' }} />;
     default:
       return null;
   }
