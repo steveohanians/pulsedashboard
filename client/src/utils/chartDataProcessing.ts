@@ -6,18 +6,18 @@
  */
 export const CHART_COLORS = {
   TRAFFIC_CHANNELS: {
-    'Organic Search': '#10b981',
-    'Direct': '#3b82f6',
-    'Social Media': '#8b5cf6',
-    'Paid Search': '#f59e0b',
-    'Email': '#ec4899',
-    'Other': '#6b7280'
+    'Organic Search': 'hsl(var(--color-competitor-1))',
+    'Direct': 'hsl(var(--color-client))', 
+    'Social Media': 'hsl(var(--color-competitor-1))',
+    'Paid Search': 'hsl(var(--chart-3))',
+    'Email': 'hsl(var(--chart-5))',
+    'Other': 'hsl(var(--color-device-other))'
   },
   DEVICES: {
-    'Desktop': '#3b82f6',
-    'Mobile': '#10b981',
-    'Tablet': '#8b5cf6',
-    'Other': '#6b7280'
+    'Desktop': 'hsl(var(--color-device-desktop))',
+    'Mobile': 'hsl(var(--color-device-mobile))',
+    'Tablet': 'hsl(var(--color-device-tablet))',
+    'Other': 'hsl(var(--color-device-other))'
   }
 } as const;
 

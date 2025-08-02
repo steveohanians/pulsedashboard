@@ -13,13 +13,8 @@ export interface MetricConfig {
   bounds?: { min: number; max: number };
 }
 
-// Generate dynamic time periods (DEPRECATED - use sampleDataGenerator.generateTimePeriods instead)
-// This function generates only 5 periods and is being phased out
-export function generateTimePeriods(): string[] {
-  // Import the centralized 15-month generator
-  const { generateTimePeriods: generateCentralized } = require('../sampleDataGenerator');
-  return generateCentralized();
-}
+// Use centralized time period generation
+export { generateTimePeriods } from './timePeriodsGenerator';
 
 // Generate realistic metric values with variations
 export function generateMetricValue(

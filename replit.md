@@ -15,6 +15,7 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
 - All new company functions now generate consistent 15-month datasets
 - Eliminated function naming inconsistencies and clarified architecture documentation
 - **CSS Consolidation**: Removed 95%+ duplicate color values, consolidated into semantic variables (--brand-primary, --neutral-light, etc.), added missing sidebar variables, improved maintainability
+- **Variable Consolidation**: Created centralized utilities for time periods, traffic/device generation, eliminated duplicate functions across multiple files, established single source of truth for core utilities
 
 
 ## System Architecture

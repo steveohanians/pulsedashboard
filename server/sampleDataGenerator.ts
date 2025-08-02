@@ -51,34 +51,8 @@ const METRIC_CONFIGS: MetricConfig[] = [
   }
 ];
 
-// Generate dynamic time periods based on current date in Pacific Time
-export function generateTimePeriods(): string[] {
-  // Use Pacific Time properly with Intl API
-  const now = new Date();
-  const ptFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit'
-  });
-  
-  // Get current date in Pacific Time
-  const ptParts = ptFormatter.formatToParts(now);
-  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-  
-  const periods: string[] = [];
-  
-  // Generate 15 months of historical data, starting from 1 month before current PT date
-  // July 31st PT should show June as latest (1 month before current)
-  const latestDate = new Date(ptYear, ptMonth - 1, 1); // 1 month before current
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(latestDate);
-    date.setMonth(latestDate.getMonth() - i);
-    periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-  }
-  
-  return Array.from(new Set(periods)); // Remove duplicates and return
-}
+// Use centralized time period generation
+export { generateTimePeriods } from './utils/timePeriodsGenerator';
 
 const TIME_PERIODS = generateTimePeriods();
 const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
@@ -93,50 +67,8 @@ function generateValue(baseRange: [number, number], seed: number, timeVariance =
   return Math.max(min, Math.min(max, baseValue + variance));
 }
 
-// Generate traffic channel data
-function generateTrafficChannels(seed: number) {
-  const channels = [
-    { name: "Organic Search", base: 45, variance: 15 },
-    { name: "Direct", base: 25, variance: 10 },
-    { name: "Social Media", base: 15, variance: 8 },
-    { name: "Paid Search", base: 10, variance: 5 },
-    { name: "Email", base: 5, variance: 3 }
-  ];
-
-  const values = channels.map(channel => {
-    const variance = (Math.sin(seed * channel.base) - 0.5) * channel.variance;
-    return Math.max(1, channel.base + variance);
-  });
-
-  // Normalize to 100%
-  const total = values.reduce((sum, val) => sum + val, 0);
-  const normalized = values.map(val => Math.round((val / total) * 100));
-
-  return channels.map((channel, index) => ({
-    name: channel.name,
-    value: normalized[index],
-    percentage: normalized[index],
-    color: getChannelColor(channel.name)
-  }));
-}
-
-// Generate device distribution data
-function generateDeviceDistribution(seed: number) {
-  const desktop = 50 + (Math.sin(seed * 1.1) * 15);
-  const mobile = 40 + (Math.sin(seed * 2.2) * 12);
-  const tablet = 10 + (Math.sin(seed * 3.3) * 3);
-  
-  const total = desktop + mobile + tablet;
-  const desktopNorm = Math.round((desktop / total) * 100);
-  const mobileNorm = Math.round((mobile / total) * 100);
-  const tabletNorm = 100 - desktopNorm - mobileNorm;
-
-  return [
-    { name: "Desktop", value: desktopNorm, percentage: desktopNorm, color: "#3b82f6" },
-    { name: "Mobile", value: mobileNorm, percentage: mobileNorm, color: "#10b981" },
-    { name: "Tablet", value: tabletNorm, percentage: tabletNorm, color: "#8b5cf6" }
-  ];
-}
+// Use centralized channel and device generation
+const { generateTrafficChannels, generateDeviceDistribution } = require('./utils/channelDataGenerator');
 
 function getChannelColor(channelName: string): string {
   const colors: Record<string, string> = {
