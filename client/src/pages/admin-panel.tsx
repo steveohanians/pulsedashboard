@@ -46,6 +46,7 @@ function BusinessSizeEditDialog({ option }: { option: any }) {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/filters'] }); // Dashboard filters
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -116,6 +117,7 @@ function IndustryVerticalEditDialog({ option }: { option: any }) {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/filters'] }); // Dashboard filters
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -2224,8 +2226,9 @@ export default function AdminPanel() {
                           setIsDialogOpen(false);
                           setEditingItem(null);
                           
-                          // Refresh filter options data if needed
+                          // Refresh filter options data and dashboard filters
                           queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/filters'] });
                         } catch (error) {
                           toast({
                             title: "Error",
