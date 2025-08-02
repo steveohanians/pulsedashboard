@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,108 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
+
+// Helper component for editing business size
+function EditBusinessSizeForm({ option, onSuccess }: { option: any; onSuccess: () => void }) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const value = formData.get('value') as string;
+    
+    try {
+      await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+      toast({
+        title: "Business size updated",
+        description: `Updated to "${value}".`,
+      });
+      onSuccess();
+      // Close dialog programmatically
+      const closeBtn = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement;
+      if (closeBtn) closeBtn.click();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update business size.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="business-size">Business Size</Label>
+        <Input id="business-size" name="value" defaultValue={option.value} required />
+      </div>
+      <div className="flex justify-end space-x-2">
+        <DialogClose asChild>
+          <Button type="button" variant="outline">Cancel</Button>
+        </DialogClose>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Helper component for editing industry vertical
+function EditIndustryVerticalForm({ option, onSuccess }: { option: any; onSuccess: () => void }) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const value = formData.get('value') as string;
+    
+    try {
+      await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+      toast({
+        title: "Industry vertical updated",
+        description: `Updated to "${value}".`,
+      });
+      onSuccess();
+      // Close dialog programmatically
+      const closeBtn = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement;
+      if (closeBtn) closeBtn.click();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update industry vertical.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="industry-vertical">Industry Vertical</Label>
+        <Input id="industry-vertical" name="value" defaultValue={option.value} required />
+      </div>
+      <div className="flex justify-end space-x-2">
+        <DialogClose asChild>
+          <Button type="button" variant="outline">Cancel</Button>
+        </DialogClose>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -2138,36 +2240,9 @@ export default function AdminPanel() {
                                           Update business size category
                                         </DialogDescription>
                                       </DialogHeader>
-                                      <form onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.target as HTMLFormElement);
-                                        const value = formData.get('value') as string;
-                                        
-                                        try {
-                                          await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
-                                          toast({
-                                            title: "Business size updated",
-                                            description: `Updated to "${value}".`,
-                                          });
-                                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-                                          setIsDialogOpen(false);
-                                        } catch (error) {
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to update business size.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }} className="space-y-4">
-                                        <div>
-                                          <Label htmlFor="business-size">Business Size</Label>
-                                          <Input id="business-size" name="value" defaultValue={option.value} required />
-                                        </div>
-                                        <div className="flex justify-end space-x-2">
-                                          <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                          <Button type="submit">Save Changes</Button>
-                                        </div>
-                                      </form>
+                                      <EditBusinessSizeForm option={option} onSuccess={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                      }} />
                                     </DialogContent>
                                   </Dialog>
                                   <Button 
@@ -2231,36 +2306,9 @@ export default function AdminPanel() {
                                           Update industry vertical category
                                         </DialogDescription>
                                       </DialogHeader>
-                                      <form onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.target as HTMLFormElement);
-                                        const value = formData.get('value') as string;
-                                        
-                                        try {
-                                          await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
-                                          toast({
-                                            title: "Industry vertical updated",
-                                            description: `Updated to "${value}".`,
-                                          });
-                                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-                                          setIsDialogOpen(false);
-                                        } catch (error) {
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to update industry vertical.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }} className="space-y-4">
-                                        <div>
-                                          <Label htmlFor="industry-vertical">Industry Vertical</Label>
-                                          <Input id="industry-vertical" name="value" defaultValue={option.value} required />
-                                        </div>
-                                        <div className="flex justify-end space-x-2">
-                                          <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                          <Button type="submit">Save Changes</Button>
-                                        </div>
-                                      </form>
+                                      <EditIndustryVerticalForm option={option} onSuccess={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
+                                      }} />
                                     </DialogContent>
                                   </Dialog>
                                   <Button 
