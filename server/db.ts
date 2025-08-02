@@ -13,15 +13,19 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Enhanced pool configuration with timeout and error handling
+// Simplified pool configuration for better reliability
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Add connection timeout to prevent hanging
+  // Shorter timeout to fail fast
   connectionTimeoutMillis: 5000,
-  // Allow some retries
-  max: 10,
-  // Prevent idle connections from hanging
-  idleTimeoutMillis: 30000
+  // Single connection for simplicity
+  max: 1,
+  // Don't keep idle connections
+  idleTimeoutMillis: 1000,
+  // Allow connection reuse
+  maxUses: Infinity,
+  // Exit when idle
+  allowExitOnIdle: true
 });
 
 export const db = drizzle({ client: pool, schema });
