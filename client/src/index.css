@@ -68,53 +68,59 @@
   --sidebar-ring: var(--ring);
 }
 
-/* AI Status Icon Glow Animations */
-@keyframes pulse-glow-green {
-  0%, 100% {
-    filter: drop-shadow(0 0 4px rgb(34, 197, 94, 0.4));
-  }
-  50% {
-    filter: drop-shadow(0 0 8px rgb(34, 197, 94, 0.7)) drop-shadow(0 0 12px rgb(34, 197, 94, 0.3));
-  }
-}
-
-@keyframes pulse-glow-orange {
-  0%, 100% {
-    filter: drop-shadow(0 0 4px rgb(249, 115, 22, 0.4));
-  }
-  50% {
-    filter: drop-shadow(0 0 8px rgb(249, 115, 22, 0.7)) drop-shadow(0 0 12px rgb(249, 115, 22, 0.3));
-  }
-}
-
-@keyframes pulse-glow-red {
-  0%, 100% {
-    filter: drop-shadow(0 0 4px rgb(239, 68, 68, 0.4));
-  }
-  50% {
-    filter: drop-shadow(0 0 8px rgb(239, 68, 68, 0.7)) drop-shadow(0 0 12px rgb(239, 68, 68, 0.3));
-  }
-}
-
-@keyframes spin-slow {
-  from {
+/* AI Status Icon Glow and Spin Animations */
+@keyframes spin-glow-success {
+  0% {
     transform: rotate(0deg);
+    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
   }
-  to {
+  50% {
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.9)) drop-shadow(0 0 16px rgba(34, 197, 94, 0.4));
+  }
+  100% {
     transform: rotate(360deg);
+    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
   }
 }
 
-.status-icon-success {
-  animation: pulse-glow-green 2s ease-in-out infinite, spin-slow 8s linear infinite;
+@keyframes spin-glow-warning {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.9)) drop-shadow(0 0 16px rgba(249, 115, 22, 0.4));
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
+  }
 }
 
-.status-icon-warning {
-  animation: pulse-glow-orange 2s ease-in-out infinite, spin-slow 6s linear infinite;
+@keyframes spin-glow-error {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9)) drop-shadow(0 0 16px rgba(239, 68, 68, 0.4));
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+  }
 }
 
-.status-icon-error {
-  animation: pulse-glow-red 2s ease-in-out infinite, spin-slow 4s linear infinite;
+.ai-status-success {
+  animation: spin-glow-success 8s ease-in-out infinite;
+}
+
+.ai-status-warning {
+  animation: spin-glow-warning 6s ease-in-out infinite;
+}
+
+.ai-status-error {
+  animation: spin-glow-error 4s ease-in-out infinite;
 }
 
 .dark {

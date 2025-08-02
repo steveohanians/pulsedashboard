@@ -82,48 +82,13 @@ interface AIInsightsProps {
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
   if (!status) return null;
   
-  const baseClasses = "h-5 w-5 flex-shrink-0";
-  
   switch (status) {
     case 'success':
-      return (
-        <div className="relative">
-          <CheckCircle 
-            className={`${baseClasses} text-green-600 animate-spin`}
-            style={{ 
-              animationDuration: '8s',
-              filter: 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.8)) drop-shadow(0 0 12px rgba(34, 197, 94, 0.4))',
-              animation: 'spin 8s linear infinite, pulse 2s ease-in-out infinite'
-            }} 
-          />
-        </div>
-      );
+      return <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 ai-status-success" />;
     case 'needs_improvement':
-      return (
-        <div className="relative">
-          <AlertTriangle 
-            className={`${baseClasses} text-orange-500 animate-spin`}
-            style={{ 
-              animationDuration: '6s',
-              filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.8)) drop-shadow(0 0 12px rgba(249, 115, 22, 0.4))',
-              animation: 'spin 6s linear infinite, pulse 2s ease-in-out infinite'
-            }} 
-          />
-        </div>
-      );
+      return <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 ai-status-warning" />;
     case 'warning':
-      return (
-        <div className="relative">
-          <AlertCircle 
-            className={`${baseClasses} text-red-500 opacity-80 animate-spin`}
-            style={{ 
-              animationDuration: '4s',
-              filter: 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 12px rgba(239, 68, 68, 0.4))',
-              animation: 'spin 4s linear infinite, pulse 2s ease-in-out infinite'
-            }} 
-          />
-        </div>
-      );
+      return <AlertCircle className="h-5 w-5 text-red-500 opacity-80 flex-shrink-0 ai-status-error" />;
     default:
       return null;
   }
