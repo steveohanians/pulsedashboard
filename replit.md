@@ -129,3 +129,8 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - **localStorage Integration**: Fixed localStorage persistence issues by correctly clearing `pulse_dashboard_insights` key during debug operations
   - **Enhanced Debugging**: Added detailed console logging throughout typewriter animation process with faster 5ms typing speed for better user experience
   - **Component State Management**: Improved insight regeneration flow with proper state resets and cache invalidation for reliable typewriter effect restart
+- **UI/UX Polish (August 2025)**: Enhanced interface consistency and user experience
+  - **Enhanced Badge Styling**: Updated context-enhanced insights badge with primary pink branding, sparkle icon, and leftmost positioning
+  - **Centralized Formatting**: Consolidated all AI formatting instructions into single source of truth to ensure consistent numbered lists and bold formatting across all generation paths
+  - **Button Layout Optimization**: Reordered action buttons with Enhanced badge first, followed by Add Context, Copy, Regenerate, and Clear buttons
+  - **Known Issue**: Placeholder text flashing in context modal remains unresolved despite comprehensive CSS fixes across all browser prefixes and component approaches
