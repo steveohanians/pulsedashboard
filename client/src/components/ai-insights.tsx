@@ -78,45 +78,46 @@ interface AIInsightsProps {
   onRegenerateWithContext?: (context: string) => void;
 }
 
-// Status icon component with spinning glow effects - Direct approach with spinning container
+// Status icon component - Testing basic CSS animations
 function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'warning' }) {
   if (!status) return null;
   
   const getColors = () => {
     switch (status) {
       case 'success':
-        return { color: '#10b981', glow: 'rgba(16, 185, 129, 0.5)' };
+        return { color: '#10b981', bg: '#10b98120' };
       case 'needs_improvement':
-        return { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)' };
+        return { color: '#f59e0b', bg: '#f59e0b20' };
       case 'warning':
-        return { color: '#ef4444', glow: 'rgba(239, 68, 68, 0.5)' };
+        return { color: '#ef4444', bg: '#ef444420' };
       default:
-        return { color: '#6b7280', glow: 'rgba(107, 114, 128, 0.5)' };
+        return { color: '#6b7280', bg: '#6b728020' };
     }
   };
   
   const colors = getColors();
   
   return (
-    <div 
-      className="relative w-8 h-8 flex-shrink-0"
-      style={{
-        animation: 'ai-icon-spin 2s linear infinite',
-        filter: `drop-shadow(0 0 6px ${colors.glow})`,
-      }}
-    >
-      <div
-        className="w-full h-full rounded-full border-2 flex items-center justify-center"
-        style={{
-          borderColor: colors.color,
-          backgroundColor: `${colors.color}15`,
-          boxShadow: `0 0 10px ${colors.glow}`,
-        }}
-      >
-        {status === 'success' && <CheckCircle className="h-5 w-5" style={{ color: colors.color }} />}
-        {status === 'needs_improvement' && <AlertTriangle className="h-5 w-5" style={{ color: colors.color }} />}
-        {status === 'warning' && <AlertCircle className="h-5 w-5" style={{ color: colors.color }} />}
-      </div>
+    <div className="flex items-center gap-2">
+      {/* Test 1: Basic Tailwind animate-spin */}
+      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      
+      {/* Test 2: Tailwind spin with custom timing */}
+      <div 
+        className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full"
+        style={{ animation: 'spin 1s linear infinite' }}
+      ></div>
+      
+      {/* Test 3: Custom keyframe */}
+      <div 
+        className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"
+        style={{ animation: 'ai-icon-spin 1s linear infinite' }}
+      ></div>
+      
+      {/* Original icon */}
+      {status === 'success' && <CheckCircle className="h-6 w-6" style={{ color: colors.color }} />}
+      {status === 'needs_improvement' && <AlertTriangle className="h-6 w-6" style={{ color: colors.color }} />}
+      {status === 'warning' && <AlertCircle className="h-6 w-6" style={{ color: colors.color }} />}
     </div>
   );
 }

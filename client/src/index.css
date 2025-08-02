@@ -68,7 +68,7 @@
   --sidebar-ring: var(--ring);
 }
 
-/* AI Status Icon Spinning Animation - Simple and reliable */
+/* Test CSS animations - Multiple approaches */
 @keyframes ai-icon-spin {
   0% { 
     transform: rotate(0deg); 
@@ -76,6 +76,21 @@
   100% { 
     transform: rotate(360deg); 
   }
+}
+
+/* Make sure Tailwind spin works */
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+}
+
+/* Test pulsing animation */
+@keyframes test-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.test-pulse {
+  animation: test-pulse 1s ease-in-out infinite;
 }
 
 .dark {
