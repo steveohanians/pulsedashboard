@@ -441,8 +441,8 @@ async function generateInsightsWithCustomPromptAndContext(
       .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
       .replace(/{{competitors}}/g, competitorString);
 
-    // ALWAYS add formatting instructions for consistency (regardless of custom prompt content)
-    filledPrompt += `${FORMATTING_INSTRUCTIONS}`;
+    // ALWAYS add JSON requirement and formatting instructions for consistency
+    filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
 
     // Append user context to the prompt with clear instructions INCLUDING formatting reminder
     if (userContext && userContext.trim()) {
