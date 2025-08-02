@@ -1449,6 +1449,12 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { value, order, active } = req.body;
 
+      // Get the current filter option to compare values
+      const currentOption = await storage.getFilterOptionById(id);
+      if (!currentOption) {
+        return res.status(404).json({ message: "Filter option not found" });
+      }
+
       const updatedOption = await storage.updateFilterOption(id, {
         value,
         order,
@@ -1457,6 +1463,15 @@ export function registerRoutes(app: Express): Server {
 
       if (!updatedOption) {
         return res.status(404).json({ message: "Filter option not found" });
+      }
+
+      // If the value changed, cascade the update to all referencing entities
+      if (currentOption.value !== value && currentOption.value && value) {
+        await storage.cascadeFilterOptionValueUpdate(
+          currentOption.category,
+          currentOption.value,
+          value
+        );
       }
 
       res.json({ message: "Filter option updated successfully", filterOption: updatedOption });

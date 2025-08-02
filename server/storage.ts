@@ -622,6 +622,56 @@ export class DatabaseStorage implements IStorage {
     return option || undefined;
   }
 
+  async getFilterOptionById(id: string): Promise<FilterOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(filterOptions)
+      .where(eq(filterOptions.id, id))
+      .limit(1);
+    return option || undefined;
+  }
+
+  async cascadeFilterOptionValueUpdate(category: string, oldValue: string, newValue: string): Promise<void> {
+    // Update all entities that reference this filter option value
+    if (category === 'businessSizes') {
+      // Update clients
+      await db
+        .update(clients)
+        .set({ businessSize: newValue })
+        .where(eq(clients.businessSize, oldValue));
+
+      // Update benchmark companies
+      await db
+        .update(benchmarkCompanies)
+        .set({ businessSize: newValue })
+        .where(eq(benchmarkCompanies.businessSize, oldValue));
+
+      // Update CD portfolio companies
+      await db
+        .update(cdPortfolioCompanies)
+        .set({ businessSize: newValue })
+        .where(eq(cdPortfolioCompanies.businessSize, oldValue));
+    } else if (category === 'industryVerticals') {
+      // Update clients
+      await db
+        .update(clients)
+        .set({ industryVertical: newValue })
+        .where(eq(clients.industryVertical, oldValue));
+
+      // Update benchmark companies
+      await db
+        .update(benchmarkCompanies)
+        .set({ industryVertical: newValue })
+        .where(eq(benchmarkCompanies.industryVertical, oldValue));
+
+      // Update CD portfolio companies
+      await db
+        .update(cdPortfolioCompanies)
+        .set({ industryVertical: newValue })
+        .where(eq(cdPortfolioCompanies.industryVertical, oldValue));
+    }
+  }
+
   async deleteFilterOption(id: string): Promise<void> {
     await db.delete(filterOptions).where(eq(filterOptions.id, id));
   }
