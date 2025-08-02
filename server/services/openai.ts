@@ -318,14 +318,23 @@ export async function generateComprehensiveInsights(
   }>;
 }> {
   try {
-    // Generate overall dashboard summary
-    const summaryPrompt = `You are a senior digital marketing consultant analyzing a comprehensive dashboard for ${context.client.name}, a ${context.client.businessSize} company in the ${context.client.industryVertical} industry.
+    // Get global prompt template for comprehensive insights too
+    const { storage } = await import("../storage");
+    const globalTemplate = await storage.getGlobalPromptTemplate();
+    
+    if (!globalTemplate) {
+      logger.error("No global prompt template found for comprehensive insights");
+      throw new Error("Global prompt template not available");
+    }
+
+    // Generate overall dashboard summary using global template
+    const dashboardAnalysis = `COMPREHENSIVE DASHBOARD ANALYSIS:
+Provide strategic overview across all metrics for ${context.client.name}. Assess overall digital marketing effectiveness and competitive positioning.
 
 DASHBOARD OVERVIEW:
 - Analysis Period: ${context.period} (vs. previous period ${context.previousPeriod})
 - Total Competitors Tracked: ${context.totalCompetitors}
 - Industry Benchmarks Available: ${context.hasIndustryData ? 'Yes' : 'No'}
-- Clear Digital Portfolio Data: ${context.hasCdPortfolioData ? 'Yes' : 'No'}
 
 KEY METRICS SUMMARY:
 ${context.metrics.map((m: any) => `
@@ -334,20 +343,25 @@ ${context.metrics.map((m: any) => `
   Competitors: ${m.competitorValues.length > 0 ? m.competitorValues.join(', ') : 'None'}
 `).join('')}
 
-Provide a strategic overview in JSON format with:
-1. "context" - High-level performance summary across all metrics (2-3 sentences)
-2. "insight" - Strategic analysis of overall digital marketing effectiveness (2-3 sentences)  
-3. "recommendation" - Top 2-3 strategic priorities for the next period (2-3 sentences)
+OPTIMIZATION PRIORITIES:
+Focus on strategic direction and business impact across all digital marketing channels.`;
 
-Focus on business impact and strategic direction rather than individual metric details.`;
+    let summaryPrompt = globalTemplate.promptTemplate
+      .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, dashboardAnalysis)
+      .replace(/\{\{clientName\}\}/g, context.client.name)
+      .replace(/\{\{industry\}\}/g, context.client.industryVertical)
+      .replace(/\{\{businessSize\}\}/g, context.client.businessSize)
+      .replace(/\{\{clientValue\}\}/g, 'Multi-metric Performance')
+      .replace(/\{\{industryAverage\}\}/g, 'Industry Benchmarks')
+      .replace(/\{\{cdPortfolioAverage\}\}/g, 'CD Portfolio Averages')
+      .replace(/\{\{competitors\}\}/g, `${context.totalCompetitors} competitors tracked`)
+      .replace(/\{\{metricDisplayName\}\}/g, 'Dashboard Overview');
+
+    summaryPrompt += `\n\nProvide strategic overview in JSON format with fields: context, insight, recommendation.${FORMATTING_INSTRUCTIONS}`;
 
     const summaryResponse = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content: "You are a senior digital marketing consultant providing strategic dashboard analysis in JSON format."
-        },
         {
           role: "user",
           content: summaryPrompt
@@ -531,27 +545,38 @@ async function generateInsightsWithCustomPromptAndContext(
   userContext: string
 ): Promise<any> {
   try {
+    // Get global prompt template
+    const { storage } = await import("../storage");
+    const globalTemplate = await storage.getGlobalPromptTemplate();
+    
+    if (!globalTemplate) {
+      logger.error("No global prompt template found for context generation");
+      throw new Error("Global prompt template not available");
+    }
+
     // Build competitor string for prompt
     const competitorString = competitorNames.length > 0 
       ? competitorNames.map((name, i) => `${name}: ${competitorValues[i]}`).join(', ')
       : 'No competitor data available';
 
-    // Fill in the custom prompt template with actual data
-    let filledPrompt = customPrompt.promptTemplate
-      .replace(/{{clientName}}/g, clientName || 'Client')
-      .replace(/{{industry}}/g, industry || 'Unknown')
-      .replace(/{{businessSize}}/g, businessSize || 'Unknown')
-      .replace(/{{clientValue}}/g, String(clientValue))
-      .replace(/{{industryAverage}}/g, String(industryAverage || 'N/A'))
-      .replace(/{{cdPortfolioAverage}}/g, String(cdPortfolioAverage || 'N/A'))
-      .replace(/{{competitors}}/g, competitorString);
+    // Merge global template with metric-specific prompt
+    let processedPrompt = globalTemplate.promptTemplate
+      .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, customPrompt.promptTemplate)
+      .replace(/\{\{clientName\}\}/g, clientName || 'Current Client')
+      .replace(/\{\{industry\}\}/g, industry || 'Unknown')
+      .replace(/\{\{businessSize\}\}/g, businessSize || 'Unknown')
+      .replace(/\{\{clientValue\}\}/g, String(clientValue))
+      .replace(/\{\{industryAverage\}\}/g, String(industryAverage || 'N/A'))
+      .replace(/\{\{cdPortfolioAverage\}\}/g, String(cdPortfolioAverage || 'N/A'))
+      .replace(/\{\{competitors\}\}/g, competitorString)
+      .replace(/\{\{metricDisplayName\}\}/g, metricName);
 
-    // ALWAYS add JSON requirement and formatting instructions for consistency
-    filledPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
+    // Add JSON requirement and formatting instructions
+    processedPrompt += `\n\nPlease provide your response in JSON format with the required fields.${FORMATTING_INSTRUCTIONS}`;
 
-    // Append user context to the prompt with clear instructions INCLUDING formatting reminder
+    // Append user context to the prompt with clear instructions
     if (userContext && userContext.trim()) {
-      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nABSOLUTE REQUIREMENT: The action_plan field MUST be formatted as:\n1. First recommendation text\n2. Second recommendation text\n3. Third recommendation text\n\nDo NOT provide recommendations in paragraph format. Each recommendation must start with a number followed by a period.`;
+      processedPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nABSOLUTE REQUIREMENT: The action_plan field MUST be formatted as:\n1. First recommendation text\n2. Second recommendation text\n3. Third recommendation text\n\nDo NOT provide recommendations in paragraph format. Each recommendation must start with a number followed by a period.`;
     }
 
     const response = await openai.chat.completions.create({
@@ -559,7 +584,7 @@ async function generateInsightsWithCustomPromptAndContext(
       messages: [
         {
           role: "user",
-          content: filledPrompt
+          content: processedPrompt
         }
       ],
       response_format: { type: "json_object" },
@@ -702,25 +727,42 @@ async function generateDefaultInsightsWithContext(
   userContext: string
 ): Promise<any> {
   try {
+    // Get global prompt template - this function should use the global template too
+    const { storage } = await import("../storage");
+    const globalTemplate = await storage.getGlobalPromptTemplate();
+    
+    if (!globalTemplate) {
+      logger.error("No global prompt template found for default context generation");
+      throw new Error("Global prompt template not available");
+    }
+
     const competitiveContext = enrichedData.benchmarks?.competitors?.length > 0
-      ? `Competitors: ${enrichedData.benchmarks.competitors.map((c: any) => `${c.name}: ${c.value}`).join(', ')}`
+      ? `${enrichedData.benchmarks.competitors.map((c: any) => `${c.name}: ${c.value}`).join(', ')}`
       : 'No competitor data available';
 
-    let prompt = `Analyze this web analytics metric for ${enrichedData.client?.name} (${enrichedData.client?.businessSize}, ${enrichedData.client?.industry}):
+    // Use global template with fallback metric analysis
+    const fallbackMetricAnalysis = `METRIC ANALYSIS:
+Assess ${metricName} performance and competitive positioning. Evaluate current performance level and identify optimization opportunities.
 
-METRIC PERFORMANCE:
-- ${metricName}: ${enrichedData.metric.clientValue}
-- Industry Average: ${enrichedData.benchmarks?.industryAverage || 'N/A'}
-- Clear Digital Average: ${enrichedData.benchmarks?.cdPortfolioAverage || 'N/A'}
-- ${competitiveContext}
+COMPETITIVE INTELLIGENCE:
+Compare performance against industry standards and competitors. Identify specific factors driving performance differences.
 
-Provide analysis in JSON format:
-1. "context" - Performance interpretation with competitive positioning
-2. "insight" - Why this performance is occurring and business implications
-3. "recommendation" - Specific, actionable next steps for this metric
-4. "status" - Overall assessment: "success", "needs_improvement", or "warning"
+OPTIMIZATION PRIORITIES:
+Focus on highest-impact improvements that enhance metric performance and business outcomes.`;
 
-Focus on practical business impact and competitive advantage.${FORMATTING_INSTRUCTIONS}`;
+    let prompt = globalTemplate.promptTemplate
+      .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, fallbackMetricAnalysis)
+      .replace(/\{\{clientName\}\}/g, enrichedData.client?.name || 'Current Client')
+      .replace(/\{\{industry\}\}/g, enrichedData.client?.industry || 'Unknown')
+      .replace(/\{\{businessSize\}\}/g, enrichedData.client?.businessSize || 'Unknown')
+      .replace(/\{\{clientValue\}\}/g, String(enrichedData.metric.clientValue))
+      .replace(/\{\{industryAverage\}\}/g, String(enrichedData.benchmarks?.industryAverage || 'N/A'))
+      .replace(/\{\{cdPortfolioAverage\}\}/g, String(enrichedData.benchmarks?.cdPortfolioAverage || 'N/A'))
+      .replace(/\{\{competitors\}\}/g, competitiveContext)
+      .replace(/\{\{metricDisplayName\}\}/g, metricName);
+
+    // Add JSON requirement
+    prompt += `\n\nProvide analysis in JSON format with fields: context, insight, recommendation, status.${FORMATTING_INSTRUCTIONS}`;
 
     // Append user context if provided with formatting reminder
     if (userContext && userContext.trim()) {
@@ -730,10 +772,6 @@ Focus on practical business impact and competitive advantage.${FORMATTING_INSTRU
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content: "You are a digital marketing analytics expert providing metric-specific insights in JSON format."
-        },
         {
           role: "user",
           content: prompt
@@ -774,22 +812,32 @@ async function generateEnhancedMetricInsights(
   recommendation: string;
 }> {
   try {
+    // Get global prompt template for enhanced insights too
+    const { storage } = await import("../storage");
+    const globalTemplate = await storage.getGlobalPromptTemplate();
+    
+    if (!globalTemplate) {
+      logger.error("No global prompt template found for enhanced metric insights");
+      throw new Error("Global prompt template not available");
+    }
+
     const trendText = metric.percentageChange 
       ? `${metric.trendDirection} ${Math.abs(metric.percentageChange).toFixed(1)}% from last period`
       : `${metric.trendDirection} trend`;
 
     const competitiveContext = metric.competitorValues.length > 0
-      ? `Competitors average: ${(metric.competitorValues.reduce((a: number, b: number) => a + b, 0) / metric.competitorValues.length).toFixed(1)}`
+      ? `${metric.competitorNames.map((name: string, i: number) => `${name}: ${metric.competitorValues[i]}`).join(', ')}`
       : 'No competitor data available';
 
-    const prompt = `Analyze this web analytics metric for ${context.client.name} (${context.client.businessSize}, ${context.client.industryVertical}):
+    // Enhanced metric analysis for comprehensive insights
+    const enhancedMetricAnalysis = `ENHANCED METRIC ANALYSIS:
+Provide comprehensive analysis of ${metric.metricName} performance with trend analysis and competitive intelligence.
 
 METRIC PERFORMANCE:
 - ${metric.metricName}: ${metric.clientValue} (${trendText})
 - Previous Period: ${metric.previousPeriodValue || 'N/A'}
 - Clear Digital Average: ${metric.cdAverage || 'N/A'}
 - Industry Average: ${metric.industryAverage || 'N/A'}
-- ${competitiveContext}
 
 COMPETITIVE LANDSCAPE:
 ${metric.competitorNames.length > 0 ? 
@@ -799,20 +847,25 @@ ${metric.competitorNames.length > 0 ?
   'No competitor data available'
 }
 
-Provide analysis in JSON format:
-1. "context" - Performance interpretation with trend and competitive positioning (2 sentences)
-2. "insight" - Why this performance is occurring and business implications (2 sentences)
-3. "recommendation" - Specific, actionable next steps for this metric (2 sentences)
+TREND ANALYSIS & OPTIMIZATION:
+Focus on trend implications, competitive positioning, and strategic optimization opportunities.`;
 
-Focus on practical business impact and competitive advantage.`;
+    const prompt = globalTemplate.promptTemplate
+      .replace(/\{\{METRIC_SPECIFIC_ANALYSIS\}\}/g, enhancedMetricAnalysis)
+      .replace(/\{\{clientName\}\}/g, context.client.name)
+      .replace(/\{\{industry\}\}/g, context.client.industryVertical)
+      .replace(/\{\{businessSize\}\}/g, context.client.businessSize)
+      .replace(/\{\{clientValue\}\}/g, String(metric.clientValue))
+      .replace(/\{\{industryAverage\}\}/g, String(metric.industryAverage || 'N/A'))
+      .replace(/\{\{cdPortfolioAverage\}\}/g, String(metric.cdAverage || 'N/A'))
+      .replace(/\{\{competitors\}\}/g, competitiveContext)
+      .replace(/\{\{metricDisplayName\}\}/g, metric.metricName);
+
+    prompt += `\n\nProvide analysis in JSON format with fields: context, insight, recommendation.${FORMATTING_INSTRUCTIONS}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content: "You are a digital marketing analytics expert providing metric-specific insights in JSON format."
-        },
         {
           role: "user",
           content: prompt

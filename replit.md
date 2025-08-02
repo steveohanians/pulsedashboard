@@ -162,3 +162,12 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - Content quality checks for vague, repetitive, or poorly structured input
   - Smart warnings for users with specific improvement suggestions
   - Only well-formed, clean, relevant content passed to AI prompt generation
+- **Complete Global Template Integration (August 2025)**: Final implementation ensuring ALL AI generation paths use centralized global template
+  - **CRITICAL FIX**: Eliminated duplicate active global templates (reduced from 2 to 1 active template)
+  - **Enhanced Context Generation**: Updated `generateInsightsWithCustomPromptAndContext` to use global template system
+  - **Fixed Fallback Functions**: Updated `generateDefaultInsightsWithContext` to use global template with fallback metric analysis
+  - **Comprehensive Insights Integration**: Updated `generateComprehensiveInsights` to use global template for dashboard summaries
+  - **Enhanced Metric Insights Fix**: Updated `generateEnhancedMetricInsights` to use global template instead of hardcoded prompts
+  - **100% Template Coverage**: Now ALL 5 AI generation paths (regular, context-enhanced, fallback, dashboard summary, enhanced) use global template
+  - **Eliminated ALL Hardcoded Prompts**: No remaining bypass paths or hardcoded system messages in entire AI service
+  - **Consistent Expert Persona**: Single source of truth for AI personality, formatting, and business context across all insight types
