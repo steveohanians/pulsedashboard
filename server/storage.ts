@@ -395,91 +395,23 @@ export class DatabaseStorage implements IStorage {
     return filteredMetrics;
   }
 
-  // Get filtered CD Average metrics based on portfolio company data  
+  // Get CD Average metrics - NO filtering should ever be applied
   async getFilteredCdAvgMetrics(
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    console.log(`🔍 getFilteredCdAvgMetrics called with period: ${period}, filters:`, filters);
+    console.log(`🔍 getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
     
-    // CD_Avg should only be filtered by business size, NOT industry vertical
-    // Industry filters should only affect Industry_Avg benchmarks
-    if (!filters || !filters.businessSize || filters.businessSize === 'All') {
-      console.log('📝 No business size filter applied to CD_Avg, returning all CD metrics');
-      const allMetrics = await db.select().from(metrics)
-        .where(and(
-          eq(metrics.sourceType, 'CD_Avg'),
-          eq(metrics.timePeriod, period)
-        ));
-      console.log(`📝 No CD business size filter applied, returning ${allMetrics.length} metrics`);
-      return allMetrics;
-    }
-
-    // Get matching CD portfolio companies based on business size only
-    const matchingCompanies = await db.select().from(cdPortfolioCompanies)
+    // CD_Avg should NEVER be filtered by any criteria
+    // It always represents the full CD portfolio regardless of industry filters
+    console.log('📝 CD_Avg should NEVER be filtered - returning all CD metrics for period');
+    const allMetrics = await db.select().from(metrics)
       .where(and(
-        eq(cdPortfolioCompanies.active, true),
-        eq(cdPortfolioCompanies.businessSize, filters.businessSize)
+        eq(metrics.sourceType, 'CD_Avg'),
+        eq(metrics.timePeriod, period)
       ));
-
-    if (matchingCompanies.length === 0) {
-      console.log('❌ No matching CD portfolio companies found for business size filter');
-      return [];
-    }
-
-    console.log(`✅ Found ${matchingCompanies.length} matching CD portfolio companies for business size: ${filters.businessSize}`);
-
-    // Use the data generation logic to create filtered CD_Avg metrics
-    const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
-    const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
-    const timePeriods = generateTimePeriods();
-    
-    const filteredMetrics: Metric[] = [];
-    
-    // Generate filtered metrics by averaging values for matching companies
-    for (const config of METRIC_CONFIGS) {
-      let totalValue = 0;
-      let companyCount = 0;
-      
-      // Calculate average for matching companies using the same logic as data generation
-      for (const company of matchingCompanies) {
-        const value = generateMetricValue(
-          config, 
-          'CD_Avg', 
-          period, 
-          timePeriods, 
-          company.businessSize, 
-          company.industryVertical
-        );
-        totalValue += value;
-        companyCount++;
-      }
-      
-      if (companyCount > 0) {
-        const avgValue = totalValue / companyCount;
-        const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
-          ? Math.round(avgValue * 10) / 10 
-          : Math.round(avgValue);
-        
-        filteredMetrics.push({
-          id: `cd-avg-filtered-${config.name}-${period}`,
-          clientId: "", // Not applicable for CD averages
-          metricName: config.name,
-          value: finalValue.toString(),
-          sourceType: 'CD_Avg' as any,
-          timePeriod: period,
-          channel: null,
-          competitorId: null,
-          createdAt: new Date()
-        });
-        
-        if (config.name === "Session Duration") {
-          console.log(`📊 Generated filtered CD_Avg Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
-        }
-      }
-    }
-    
-    return filteredMetrics;
+    console.log(`📝 Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
+    return allMetrics;
   }
 
   // Metrics

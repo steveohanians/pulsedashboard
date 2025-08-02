@@ -185,13 +185,14 @@ export function registerRoutes(app: Express): Server {
           channel?: string; // Include channel for traffic channels
         }>> = {};
         
-        // Process each time period separately
+        // Process each time period separately with FILTERED metrics
         periodsToQuery.forEach((timePeriod, index) => {
           const periodMetrics = allMetricsArrays[index] || [];
           const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
           const periodFilteredIndustryMetrics = allFilteredIndustryMetricsArrays[index] || [];
           const periodFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays[index] || [];
 
+          console.log(`📊 Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
           
           const metrics = [
             ...periodMetrics.map(m => ({
