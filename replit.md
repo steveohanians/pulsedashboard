@@ -1,7 +1,7 @@
 # Pulse Dashboard™
 
 ## Overview
-Pulse Dashboard™ is a full-stack analytics benchmarking dashboard for Clear Digital's B2B clients. It provides comprehensive web analytics by comparing client performance against competitors, industry averages, and Clear Digital's portfolio averages. The system integrates with Google Analytics 4, external data sources, and leverages AI for actionable recommendations. Its purpose is to deliver AI-powered insights for web analytics, enhancing client performance through competitive benchmarking.
+Pulse Dashboard™ is a full-stack analytics benchmarking dashboard designed for Clear Digital's B2B clients. Its primary purpose is to deliver AI-powered insights for web analytics by comparing client performance against competitors, industry averages, and Clear Digital's portfolio averages. This system integrates with Google Analytics 4 and other external data sources to provide comprehensive web analytics and actionable recommendations, ultimately enhancing client performance through competitive benchmarking. The project aims to provide a robust solution for understanding and improving digital performance.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -10,7 +10,7 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
 
 ## System Architecture
 
-Pulse Dashboard™ follows a modern full-stack architecture with clear separation between frontend, backend, and data layers.
+Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear separation between frontend, backend, and data layers.
 
 ### Frontend Architecture
 - **Framework**: React 18 with TypeScript
@@ -31,144 +31,26 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
 - **ORM**: Drizzle ORM
 - **Migrations**: Drizzle Kit
 
-### Key Components
-- **Authentication & Authorization**: JWT-based session auth, role-based access control (Admin/Viewer), protected routes.
-- **Data Models**: Clients, Users, Competitors, BenchmarkCompanies, Metrics, Benchmarks, AIInsights.
-- **API Architecture**: Public, Admin, Data Ingestion (webhooks), and AI Integration endpoints.
-- **Frontend Components**: Dashboard, Admin Panel, Authentication forms, Charts, Modals.
-
-### Data Flow
-- **Data Collection**: Automated ingestion via n8n from GA4, SEMrush, DataForSEO; external data pushed via API webhooks; data processing and normalization.
-- **Analytics Pipeline**: Raw metrics from GA4, benchmark calculation, OpenAI AI analysis for insights, dashboard rendering.
-- **User Interaction**: Session-based authentication, data filtering (time, industry, size), real-time updates via TanStack Query, administrative actions.
+### Key Components and Design Patterns
+- **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/Viewer) for protected routes.
+- **Data Models**: Structured around entities like Clients, Users, Competitors, BenchmarkCompanies, Metrics, Benchmarks, and AIInsights.
+- **API Architecture**: Segregated into Public, Admin, Data Ingestion (webhooks), and AI Integration endpoints.
+- **Frontend Components**: Core UI elements include Dashboard, Admin Panel, Authentication forms, Charts, and Modals.
+- **Data Flow**: Automated data ingestion from various sources, processing, normalization, and an analytics pipeline that includes benchmark calculations and AI analysis for insights. User interactions are managed through session-based authentication, data filtering, and real-time updates.
+- **Security Features**: Includes robust session security (httpOnly, sameSite, secure cookies), rate limiting for various actions, comprehensive security headers (CSP, HSTS, XSS protection), structured authentication logging, Zod schema-based input validation, and Scrypt hashing for password security.
+- **Production Readiness**: Features health checks, structured logging (Winston-style), comprehensive error handling, templated email service integration, and environment-driven configuration.
+- **White-Label Capability**: Designed for flexible deployment with centralized configuration and dynamic company branding.
+- **AI Prompt System**: Centralized AI prompt management architecture via a `global_prompt_template` database table and admin interface, ensuring consistent AI personality and formatting across all insight generation paths. All AI generation paths leverage this global template, eliminating hardcoded prompts and ensuring a unified expert persona (sr. web analytics strategist and UX strategist).
+- **Input Sanitization**: Implemented server-side input sanitization for prompt injection detection, HTML/script removal, and content quality validation, ensuring only clean and relevant user context is passed to the AI.
 
 ## External Dependencies
 
 ### Core Infrastructure
 - **Neon PostgreSQL**: Serverless database hosting.
-- **OpenAI API**: GPT-4o for AI-powered insights.
-- **n8n**: Workflow automation for data collection.
+- **OpenAI API**: Utilized for AI-powered insights (GPT-4o).
+- **n8n**: Workflow automation platform for data collection.
 
 ### Data Sources
-- **Google Analytics 4**: Client website performance metrics.
-- **SEMrush**: SEO and competitive intelligence data.
-- **DataForSEO**: Additional search engine optimization metrics.
-
-### Development Tools
-- **Vite**: Frontend build tooling.
-- **Drizzle Kit**: Database migration management.
-- **ESBuild**: Backend bundling.
-
-## Security & Production Features
-
-### Security Enhancements (Completed)
-- **Session Security**: httpOnly cookies, sameSite: 'strict', secure flag in production
-- **Rate Limiting**: Authentication (5/15min), uploads (10/hour), admin actions (50/5min), general API (100/15min)
-- **Security Headers**: CSP, HSTS, XSS protection, frame options, MIME sniffing prevention
-- **Authentication Logging**: Security events logged with structured format
-- **Input Validation**: Zod schemas prevent injection attacks
-- **Password Security**: Scrypt hashing with salt and timing-safe comparison
-
-### Production Readiness (Completed)
-- **Health Checks**: /health, /ready, /live endpoints for monitoring
-- **Structured Logging**: Replaced all console.log with winston-style logger
-- **Error Handling**: Comprehensive error tracking with structured metadata
-- **Email Service**: Template ready for SendGrid/AWS SES integration
-- **Environment Configuration**: Production-ready .env template
-- **TypeScript Compliance**: All type errors resolved
-
-### Application Cleanup (August 2025)
-- **Password Reset Flow**: Complete implementation with secure token-based reset system
-  - Backend routes for `/api/forgot-password` and `/api/reset-password`
-  - Database table `password_reset_tokens` with expiration and usage tracking
-  - Frontend pages at `/forgot-password` and `/reset-password/:token`
-  - Integrated "Forgot Password" link in main auth page
-- **Last Login Tracking**: Authentication system now updates `lastLogin` timestamp on successful login
-- **AI Insights Integration**: OpenAI service connected to `aiInsights` table with endpoint `/api/generate-insights/:clientId`
-- **Field Utilization**: Description field added to CD Portfolio forms (create and edit) with Textarea components
-- **Database Schema**: All tables properly utilized with clean separation of concerns
-- **Statistics Consistency**: Benchmark coverage correctly shows 0% when no companies exist
-- **Sample Data Management**: Complete configuration system for controlling sample data generation
-  - Environment-based controls (SAMPLE_DATA_ENABLED, AUTO_GENERATE_SAMPLE_DATA)
-  - Auto-generation when new CD Portfolio or benchmark companies are added
-  - Dynamic benchmark calculation based on actual company data
-  - Production safety controls to disable sample data by default
-- **Complete Configuration System**: Eliminated ALL hardcoded values for full deployment flexibility
-  - Centralized configuration in `server/config.ts` with environment variable support
-  - Dynamic company branding throughout application (charts, footer, UI components)
-  - Configurable demo client IDs and admin user IDs via environment variables
-  - Frontend environment variables (VITE_*) for client-side branding
-  - Comprehensive `.env.example` template with deployment instructions
-  - Production-ready white-label deployment capability
-- **Code Cleanup (August 2025)**: Comprehensive codebase cleanup completed
-  - Replaced all console.log statements with proper structured logging using winston logger
-  - Fixed TypeScript errors and LSP diagnostics across the entire codebase
-  - Converted nested function declarations to arrow functions for ES5 compliance
-  - Removed duplicate code references and cleaned up redundant implementations
-  - Improved error handling with consistent logging patterns
-  - Enhanced debugging information with comment-based debug messages in frontend
-- **Competitor UX & Data Fix (August 2025)**: Enhanced competitor management experience
-  - Added loading states for competitor deletion with smooth visual transitions
-  - Fixed competitor deletion flash by persisting loading state until data refresh completes
-  - **CRITICAL FIX**: Resolved sample data bug where new competitors only received sparse time periods
-  - New competitors now generate complete 15-month historical data using same logic as main sample data
-  - Ensured Pacific Time consistency across all time period calculations
-  - Added comprehensive error handling and logging for competitor metric creation
-  - **UX Enhancement**: Added loading spinner to "+ Add" button in competitor modal during data generation
-- **AI Prompt System Fix (August 2025)**: Critical prompt system consolidation completed
-  - Fixed inconsistent AI prompt usage where individual metric insights bypassed custom prompt templates
-  - Updated `generateMetricSpecificInsights` to prioritize admin panel custom prompts over hardcoded prompts
-  - Ensured all 6 active custom prompt templates (Bounce Rate, Traffic Channels, etc.) are used consistently
-  - Enhanced Traffic Channels analysis to use actual channel distribution data instead of simple counts
-  - Eliminated multiple competing system messages for unified AI personality and expertise
-  - **Unified Expert Persona**: Added "sr. web analytics strategist and UX strategist" persona to all custom prompt templates for consistent AI expertise across all metric insights
-  - **Enhanced Prompt Templates**: Added metric-specific nuances (time formats, percentages, counts), **bold formatting** for key insights, and numbered list format for exactly 3 recommendations per template
-- **Global Prompt Template System (August 2025)**: Implemented centralized AI prompt management architecture
-  - Created `global_prompt_template` database table with admin interface for centralized prompt editing
-  - Refactored OpenAI service to merge global template with metric-specific prompts automatically
-  - Added backend API routes (`/api/admin/global-prompt-template`) and admin panel "Global Template" tab
-  - Built `GlobalPromptTemplateForm` component for web-based template management
-  - **Template Architecture**: Global template handles expert persona, formatting rules, and business context; metric templates focus purely on analysis instructions
-  - **Cleaned Metric Prompts**: Removed redundant content from all 6 metric prompts, eliminating duplication while maintaining analysis quality
-  - **Centralized Control**: Admin users can now modify AI personality, formatting requirements, and business context from single interface
-- **Typewriter Effect & Debug System (August 2025)**: Resolved critical typewriter animation and debugging infrastructure
-  - **Typewriter Bug Fixed**: Resolved issue where typewriter effect wouldn't restart after regenerating insights - now works consistently for all new insight generations
-  - **Debug Infrastructure**: Added comprehensive debug system with red "Clear Insights" button in header to clear all AI insights from database and localStorage
-  - **localStorage Integration**: Fixed localStorage persistence issues by correctly clearing `pulse_dashboard_insights` key during debug operations
-  - **Enhanced Debugging**: Added detailed console logging throughout typewriter animation process with faster 5ms typing speed for better user experience
-  - **Component State Management**: Improved insight regeneration flow with proper state resets and cache invalidation for reliable typewriter effect restart
-- **UI/UX Polish (August 2025)**: Enhanced interface consistency and user experience
-  - **Enhanced Badge Styling**: Updated context-enhanced insights badge with primary pink branding, sparkle icon, and leftmost positioning
-  - **Centralized Formatting**: Consolidated all AI formatting instructions into single source of truth to ensure consistent numbered lists and bold formatting across all generation paths
-  - **Button Layout Optimization**: Reordered action buttons with Enhanced badge first, followed by Add Context, Copy, Regenerate, and Clear buttons
-  - **Admin Security Enhancement**: Disabled delete action for AI metric prompts to prevent accidental removal of custom templates
-  - **Known Issue**: Placeholder text flashing in context modal remains unresolved despite comprehensive CSS fixes across all browser prefixes and component approaches
-- **Data Regeneration Fix (August 2025)**: Resolved critical data gap where demo client was missing historical Client metrics
-  - Regenerated comprehensive sample data spanning 17 time periods (2024-03 to 2025-07)
-  - Created 68 Client metric records across all historical periods for complete analytics coverage
-  - Fixed sample data generation system to ensure consistent historical data for all core metrics
-  - Verified data integrity with proper Client records for Bounce Rate, Session Duration, Pages per Session, and Sessions per User
-- **Input Sanitization & Security (August 2025)**: Comprehensive prompt injection protection system implemented
-  - Added server-side input sanitization with prompt injection detection, HTML/script removal, length limits (1000 chars)
-  - Created client-side validation with real-time feedback for user context input
-  - Implemented security patterns blocking: "ignore instructions", role manipulation, system message injection
-  - Enhanced frontend with visual validation feedback, character counts, and error states
-  - Added comprehensive test suite with 15+ attack patterns and edge cases
-  - All user-provided context now sanitized before storage and AI prompt assembly
-- **Content Quality & Relevance Validation (August 2025)**: Advanced content filtering system for appropriate business context
-  - Profanity and inappropriate content detection with automatic blocking (hate speech, sexual content, vulgar language)
-  - Off-topic content filtering (personal rants, jokes, unrelated questions, entertainment content)
-  - Business relevance scoring using 25+ analytics keywords for context appropriateness
-  - Content quality checks for vague, repetitive, or poorly structured input
-  - Smart warnings for users with specific improvement suggestions
-  - Only well-formed, clean, relevant content passed to AI prompt generation
-- **Complete Global Template Integration (August 2025)**: Final implementation ensuring ALL AI generation paths use centralized global template
-  - **CRITICAL FIX**: Eliminated duplicate active global templates (reduced from 2 to 1 active template)
-  - **Enhanced Context Generation**: Updated `generateInsightsWithCustomPromptAndContext` to use global template system
-  - **Fixed Fallback Functions**: Updated `generateDefaultInsightsWithContext` to use global template with fallback metric analysis
-  - **Comprehensive Insights Integration**: Updated `generateComprehensiveInsights` to use global template for dashboard summaries
-  - **Enhanced Metric Insights Fix**: Updated `generateEnhancedMetricInsights` to use global template instead of hardcoded prompts
-  - **CRITICAL FALLBACK FIX**: Eliminated massive hardcoded fallback system in `generateMetricSpecificInsights` (lines 990-1125) that completely bypassed global template
-  - **100% Template Coverage**: Now ALL 6 AI generation paths (regular, context-enhanced, fallback, dashboard summary, enhanced, specific) use global template
-  - **Eliminated ALL Hardcoded Prompts**: No remaining bypass paths, hardcoded system messages, or fallback prompts in entire AI service
-  - **Consistent Expert Persona**: Single source of truth for AI personality, formatting, and business context across all insight types
+- **Google Analytics 4**: Primary source for client website performance metrics.
+- **SEMrush**: Provides SEO and competitive intelligence data.
+- **DataForSEO**: Supplies additional search engine optimization metrics.
