@@ -84,11 +84,11 @@ function StatusIcon({ status }: { status?: 'success' | 'needs_improvement' | 'wa
   
   switch (status) {
     case 'success':
-      return <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 ai-status-success" />;
+      return <CheckCircle className="h-8 w-8 text-green-500 flex-shrink-0 animate-spin" style={{ animationDuration: '1s' }} />;
     case 'needs_improvement':
-      return <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 ai-status-warning" />;
+      return <AlertTriangle className="h-8 w-8 text-orange-500 flex-shrink-0 animate-spin" style={{ animationDuration: '1s' }} />;
     case 'warning':
-      return <AlertCircle className="h-5 w-5 text-red-500 opacity-80 flex-shrink-0 ai-status-error" />;
+      return <AlertCircle className="h-8 w-8 text-red-500 flex-shrink-0 animate-spin" style={{ animationDuration: '1s' }} />;
     default:
       return null;
   }
