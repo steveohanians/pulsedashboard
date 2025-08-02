@@ -133,4 +133,5 @@ Pulse Dashboard™ follows a modern full-stack architecture with clear separatio
   - **Enhanced Badge Styling**: Updated context-enhanced insights badge with primary pink branding, sparkle icon, and leftmost positioning
   - **Centralized Formatting**: Consolidated all AI formatting instructions into single source of truth to ensure consistent numbered lists and bold formatting across all generation paths
   - **Button Layout Optimization**: Reordered action buttons with Enhanced badge first, followed by Add Context, Copy, Regenerate, and Clear buttons
+  - **Admin Security Enhancement**: Disabled delete action for AI metric prompts to prevent accidental removal of custom templates
   - **Known Issue**: Placeholder text flashing in context modal remains unresolved despite comprehensive CSS fixes across all browser prefixes and component approaches

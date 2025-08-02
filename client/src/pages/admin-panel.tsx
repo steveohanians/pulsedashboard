@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -388,25 +389,7 @@ export default function AdminPanel() {
     },
   });
 
-  const deleteMetricPromptMutation = useMutation({
-    mutationFn: async (metricName: string) => {
-      await apiRequest("DELETE", `/api/admin/metric-prompts/${metricName}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
-      toast({
-        title: "Custom prompt deleted",
-        description: "Metric prompt has been removed. Default prompt will be used.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to delete prompt",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   // Handle save operations
   const handleSaveClient = (event: React.FormEvent) => {
@@ -549,9 +532,7 @@ export default function AdminPanel() {
     updateMetricPromptMutation.mutate({ metricName, data });
   };
 
-  const handleDeleteMetricPrompt = (metricName: string) => {
-    deleteMetricPromptMutation.mutate(metricName);
-  };;
+
 
   const handleCreateBenchmarkCompany = (event: React.FormEvent) => {
     event.preventDefault();
@@ -2358,30 +2339,7 @@ export default function AdminPanel() {
                                     </form>
                                   </DialogContent>
                                 </Dialog>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Custom Prompt</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete the custom prompt for "{prompt.metricName}"? The system will fall back to the default prompt.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        onClick={() => handleDeleteMetricPrompt(prompt.metricName)}
-                                      >
-                                        Delete Prompt
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+
                               </div>
                             </TableCell>
                           </TableRow>
