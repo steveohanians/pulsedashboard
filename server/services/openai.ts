@@ -446,7 +446,7 @@ async function generateInsightsWithCustomPromptAndContext(
 
     // Append user context to the prompt with clear instructions INCLUDING formatting reminder
     if (userContext && userContext.trim()) {
-      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nCRITICAL: Ensure all recommendations are formatted as numbered lists (1. 2. 3.) - do NOT use paragraph format even when incorporating user context.`;
+      filledPrompt += `\n\nIMPORTANT - User-provided business context:\n${userContext.trim()}\n\nPlease incorporate this specific context into your analysis and recommendations. Reference the user's situation directly in your insights.\n\nABSOLUTE REQUIREMENT: The action_plan field MUST be formatted as:\n1. First recommendation text\n2. Second recommendation text\n3. Third recommendation text\n\nDo NOT provide recommendations in paragraph format. Each recommendation must start with a number followed by a period.`;
     }
 
     const response = await openai.chat.completions.create({
@@ -527,6 +527,14 @@ async function generateInsightsWithCustomPromptAndContext(
     const parsedContext = parseNestedJson(result.context || result.context_analysis || result.contextAnalysis);
     const parsedInsight = parseNestedJson(result.insight || result.competitive_intelligence || result.competitiveIntelligence || result.analysis || result.insight_analysis);
     const parsedRecommendation = parseNestedJson(result.recommendation || result.action_plan || result.actionPlan || result.recommendations);
+
+    // Debug the raw recommendation to see formatting
+    logger.info('🔍 Raw recommendation debug', {
+      metricName,
+      rawRecommendation: result.action_plan || result.recommendation || 'NOT_FOUND',
+      hasNumberedFormat: (parsedRecommendation || '').includes('1.'),
+      parsedLength: parsedRecommendation?.length || 0
+    });
 
     logger.info('✅ Content parsing results', {
       metricName,
