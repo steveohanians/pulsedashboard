@@ -1827,7 +1827,7 @@ export default function AdminPanel() {
                                     <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-h-[90vh] overflow-y-auto" key={`client-dialog-${client.id}-${client.ga4PropertyId || 'none'}-${Date.now()}`}>
+                                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" key={`client-dialog-${client.id}-${client.ga4PropertyId || 'none'}`}>
                                   <DialogHeader>
                                     <DialogTitle>Edit Client</DialogTitle>
                                     <DialogDescription>
@@ -1856,7 +1856,7 @@ export default function AdminPanel() {
                                     </div>
                                     <GA4IntegrationPanel 
                                       clientId={client.id}
-                                      currentGA4PropertyId={client.ga4PropertyId || ""}
+                                      currentGA4PropertyId={client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : ""}
                                       onGA4PropertyUpdate={(propertyId) => {
                                         // Update hidden form field for submission
                                         const input = document.querySelector(`#hidden-gaPropertyId-${client.id}`) as HTMLInputElement;
@@ -1869,7 +1869,7 @@ export default function AdminPanel() {
                                       }}
                                     />
                                     {/* Hidden input for form submission */}
-                                    <input type="hidden" id={`hidden-gaPropertyId-${client.id}`} name="gaPropertyId" defaultValue={client.ga4PropertyId || ""} />
+                                    <input type="hidden" id={`hidden-gaPropertyId-${client.id}`} name="gaPropertyId" defaultValue={client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : ""} />
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
                                       <Select name="industry" defaultValue={client.industryVertical}>

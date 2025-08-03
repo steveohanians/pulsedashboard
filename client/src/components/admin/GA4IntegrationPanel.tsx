@@ -59,22 +59,25 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
   const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
   
-  // Initialize component state from props only once
+  // Initialize component state from props and reset form state
   useEffect(() => {
+    console.log("Initializing GA4 panel with property ID:", currentGA4PropertyId);
     setPropertyId(currentGA4PropertyId);
     setHasTestedConnection(false);
+    // Reset service account selection to force re-population
+    setSelectedServiceAccount("");
   }, [currentGA4PropertyId]);
 
-  // Auto-populate service account from property access data (but don't reset during refetch)
+  // Auto-populate service account from property access data
   useEffect(() => {
-    if (propertyAccess && propertyId && !selectedServiceAccount) {
+    if (propertyAccess && propertyId) {
       const accessForCurrentProperty = propertyAccess.find(access => access.propertyId === propertyId);
-      if (accessForCurrentProperty) {
+      if (accessForCurrentProperty && !selectedServiceAccount) {
         setSelectedServiceAccount(accessForCurrentProperty.serviceAccountId);
-        console.log("Auto-populated service account:", accessForCurrentProperty.serviceAccountId);
+        console.log("Auto-populated service account:", accessForCurrentProperty.serviceAccountId, "for property:", propertyId);
       }
     }
-  }, [propertyAccess, propertyId, selectedServiceAccount]);
+  }, [propertyAccess, propertyId]);
   
   // Only show status while testing or if we just completed a test (not for existing saved data)
   const [hasTestedConnection, setHasTestedConnection] = useState(false);
