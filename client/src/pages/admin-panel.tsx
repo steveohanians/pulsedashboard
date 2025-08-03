@@ -2379,7 +2379,6 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2894,7 +2893,6 @@ export default function AdminPanel() {
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
-                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
