@@ -249,8 +249,8 @@ export class ServerErrorHandler {
     return ErrorFactory.database(error.message, { code: error.code });
   }
 
-  static handleZodError(error: any): StandardError {
-    const messages = error.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`) || [error.message];
+  static handleZodError(error: { errors?: Array<{ path: string[]; message: string }>; message: string }): StandardError {
+    const messages = error.errors?.map((e: { path: string[]; message: string }) => `${e.path.join('.')}: ${e.message}`) || [error.message];
     return ErrorFactory.validation(messages.join(', '), { zodErrors: error.errors });
   }
 

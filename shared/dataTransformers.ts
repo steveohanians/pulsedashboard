@@ -265,7 +265,7 @@ export class ArrayTransformer {
   /**
    * Sort array by multiple criteria
    */
-  static sortBy<T>(array: T[], ...sortFns: Array<(item: T) => any>): T[] {
+  static sortBy<T>(array: T[], ...sortFns: Array<(item: T) => unknown>): T[] {
     return [...array].sort((a, b) => {
       for (const sortFn of sortFns) {
         const aVal = sortFn(a);
@@ -325,8 +325,8 @@ export class ObjectTransformer {
    */
   static clone<T>(obj: T): T {
     if (obj === null || typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return new Date(obj.getTime()) as any;
-    if (obj instanceof Array) return obj.map(this.clone) as any;
+    if (obj instanceof Date) return new Date(obj.getTime()) as T;
+    if (obj instanceof Array) return obj.map(this.clone) as T;
     
     const cloned = {} as T;
     for (const key in obj as any) {

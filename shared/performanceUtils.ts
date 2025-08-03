@@ -7,7 +7,7 @@ export interface PerformanceMetric {
   endTime?: number;
   duration?: number;
   category: 'api' | 'database' | 'render' | 'calculation' | 'external';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -22,7 +22,7 @@ export class PerformanceMonitor {
   /**
    * Start timing an operation
    */
-  static start(name: string, category: PerformanceMetric['category'], metadata?: Record<string, any>): void {
+  static start(name: string, category: PerformanceMetric['category'], metadata?: Record<string, unknown>): void {
     const metric: PerformanceMetric = {
       name,
       startTime: performance.now(),

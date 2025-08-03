@@ -34,7 +34,7 @@ export class RequestLogger {
       const originalSend = res.send;
       const originalJson = res.json;
       
-      let responseBody: any;
+      let responseBody: unknown;
       
       // Intercept response to capture data
       res.send = function(body) {
@@ -59,7 +59,7 @@ export class RequestLogger {
           responseTime,
           userAgent: req.get('User-Agent'),
           ip: req.ip || req.connection.remoteAddress || 'unknown',
-          userId: (req as any).user?.id,
+          userId: (req as { user?: { id: string } }).user?.id,
           sessionId: req.sessionID
         };
         

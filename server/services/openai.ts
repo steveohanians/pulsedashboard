@@ -561,13 +561,13 @@ export async function generateMetricSpecificInsightsWithContext(
  * Generate insights using custom prompt template with user context
  */
 async function generateInsightsWithCustomPromptAndContext(
-  customPrompt: any,
+  customPrompt: { promptTemplate: string; isActive: boolean },
   metricName: string,
-  clientValue: any,
+  clientValue: number,
   competitorValues: number[],
   competitorNames: string[],
-  industryAverage: any,
-  cdPortfolioAverage: any,
+  industryAverage: number,
+  cdPortfolioAverage: number,
   clientName: string,
   industry: string,
   businessSize: string,
@@ -631,7 +631,7 @@ async function generateInsightsWithCustomPromptAndContext(
     });
 
     // Helper function to parse nested JSON strings while preserving markdown formatting
-    const parseNestedJson = (value: any): string => {
+    const parseNestedJson = (value: unknown): string => {
       if (!value) return '';
       
       if (typeof value === 'string') {
@@ -973,7 +973,19 @@ function getMetricDisplayInfo(metricName: string, value: any): { unit: string; d
 }
 
 // Generate insights for a specific metric
-export async function generateMetricSpecificInsights(metricName: string, enrichedData: any, clientId: string) {
+export async function generateMetricSpecificInsights(
+  metricName: string, 
+  enrichedData: {
+    metric?: { clientValue: number };
+    benchmarks?: {
+      competitors?: Array<{ value: number; name: string }>;
+      industryAverage?: number;
+      cdPortfolioAverage?: number;
+    };
+    client?: { name?: string; industry?: string; businessSize?: string };
+  }, 
+  clientId: string
+) {
   const { storage } = await import("../storage");
   
   // First try to use custom prompt templates from the admin panel

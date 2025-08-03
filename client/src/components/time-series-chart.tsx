@@ -62,14 +62,14 @@ function generateTimeSeriesData(
 
 // Generate real time-series data from database
 function generateRealTimeSeriesData(
-  timeSeriesData: Record<string, any[]>,
+  timeSeriesData: Record<string, Array<{ metricName: string; value: string; sourceType: string; competitorId?: string }>>,
   periods: string[],
-  competitors: any[],
+  competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
   metricName?: string
-): any[] {
+): Array<Record<string, unknown>> {
   
-  const data: any[] = [];
+  const data: Array<Record<string, unknown>> = [];
   
   // Generate dynamic period labels based on actual periods (now imported from chartUtilities)
   
@@ -80,7 +80,7 @@ function generateRealTimeSeriesData(
     const relevantData = periodData.filter(m => m.metricName === metricName);
     logger.component('TimeSeriesChart', `Period ${period} filtered data for ${metricName}:`, relevantData);
     
-    const dataPoint: any = {
+    const dataPoint: Record<string, unknown> = {
       date: generatePeriodLabel(period)
     };
     
