@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -939,6 +939,7 @@ export default function AdminPanel() {
                   { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
                   { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
                   { value: 'filters', label: 'Filter Management', icon: Filter },
+                  { value: 'ga4-accounts', label: 'GA4 Accounts', icon: Key },
                   { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
                 ].map((tab) => {
                   const IconComponent = tab.icon;
@@ -985,6 +986,7 @@ export default function AdminPanel() {
               { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
               { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
               { value: 'filters', label: 'Filter Management', icon: Filter },
+              { value: 'ga4-accounts', label: 'GA4 Accounts', icon: Key },
               { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
             ].map((tab) => {
               const IconComponent = tab.icon;
@@ -3136,6 +3138,45 @@ export default function AdminPanel() {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              </TabsContent>
+
+              {/* GA4 Service Account Management */}
+              <TabsContent value="ga4-accounts">
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                    <div>
+                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">Google Analytics Service Accounts</h2>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Manage Google service accounts for GA4 API access and client property integration
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex">
+                      <Key className="h-5 w-5 text-blue-500 mt-0.5 mr-2" />
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-800">GA4 Integration Architecture</h3>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Each Google service account can access multiple client GA4 properties. Clients must add Clear Digital's service account email as a guest user to their GA4 properties for data access.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-center py-12 text-slate-500">
+                    <Key className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                    <h3 className="text-lg font-medium mb-2">GA4 Service Account Management</h3>
+                    <p className="text-sm mb-4">Service account management interface will be implemented here.</p>
+                    <p className="text-xs text-slate-400 mb-4">
+                      This section will include:
+                      <br />• Service account configuration and credentials management
+                      <br />• Property access verification and monitoring
+                      <br />• Client-to-service-account assignment
+                      <br />• Access analytics and error tracking
+                    </p>
+                  </div>
                 </div>
               </TabsContent>
 

@@ -70,6 +70,36 @@ export const benchmarkCompanies = pgTable("benchmark_companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Google Service Account Management for GA4 API access
+export const ga4ServiceAccounts = pgTable("ga4_service_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "Clear Digital Main", "Client Batch A"
+  serviceAccountEmail: text("service_account_email").notNull().unique(),
+  credentialsPath: text("credentials_path").notNull(), // Path to JSON key file
+  credentialsJson: jsonb("credentials_json"), // Encrypted JSON credentials (alternative to file)
+  description: text("description"), // Usage notes
+  maxProperties: integer("max_properties").default(50), // Limit for this account
+  active: boolean("active").default(true).notNull(),
+  lastUsed: timestamp("last_used"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// GA4 Property Access Tracking
+export const ga4PropertyAccess = pgTable("ga4_property_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  serviceAccountId: varchar("service_account_id").references(() => ga4ServiceAccounts.id).notNull(),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name"), // Fetched from GA4 API
+  accessLevel: text("access_level"), // Viewer, Analyst, Editor, etc.
+  accessVerified: boolean("access_verified").default(false).notNull(),
+  lastVerified: timestamp("last_verified"),
+  lastDataSync: timestamp("last_data_sync"),
+  syncStatus: text("sync_status").default("pending"), // pending, success, failed, blocked
+  errorMessage: text("error_message"), // Store API errors
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // CD Portfolio companies for company benchmarking (separate from clients)
 export const cdPortfolioCompanies = pgTable("cd_portfolio_companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -166,6 +196,22 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   metrics: many(metrics),
   aiInsights: many(aiInsights),
   insightContexts: many(insightContexts),
+  ga4PropertyAccess: many(ga4PropertyAccess),
+}));
+
+export const ga4ServiceAccountsRelations = relations(ga4ServiceAccounts, ({ many }) => ({
+  propertyAccess: many(ga4PropertyAccess),
+}));
+
+export const ga4PropertyAccessRelations = relations(ga4PropertyAccess, ({ one }) => ({
+  client: one(clients, {
+    fields: [ga4PropertyAccess.clientId],
+    references: [clients.id],
+  }),
+  serviceAccount: one(ga4ServiceAccounts, {
+    fields: [ga4PropertyAccess.serviceAccountId],
+    references: [ga4ServiceAccounts.id],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -299,6 +345,29 @@ export const updateFilterOptionSchema = createInsertSchema(filterOptions).omit({
   updatedAt: true,
 }).partial();
 
+export const insertGA4ServiceAccountSchema = createInsertSchema(ga4ServiceAccounts).omit({
+  id: true,
+  createdAt: true,
+  lastUsed: true,
+});
+
+export const updateGA4ServiceAccountSchema = createInsertSchema(ga4ServiceAccounts).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export const insertGA4PropertyAccessSchema = createInsertSchema(ga4PropertyAccess).omit({
+  id: true,
+  createdAt: true,
+  lastVerified: true,
+  lastDataSync: true,
+});
+
+export const updateGA4PropertyAccessSchema = createInsertSchema(ga4PropertyAccess).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
 export const insertInsightContextSchema = createInsertSchema(insightContexts).omit({
   id: true,
   createdAt: true,
@@ -344,3 +413,11 @@ export type UpdateInsightContext = z.infer<typeof updateInsightContextSchema>;
 export type FilterOption = typeof filterOptions.$inferSelect;
 export type InsertFilterOption = z.infer<typeof insertFilterOptionSchema>;
 export type UpdateFilterOption = z.infer<typeof updateFilterOptionSchema>;
+
+export type GA4ServiceAccount = typeof ga4ServiceAccounts.$inferSelect;
+export type InsertGA4ServiceAccount = z.infer<typeof insertGA4ServiceAccountSchema>;
+export type UpdateGA4ServiceAccount = z.infer<typeof updateGA4ServiceAccountSchema>;
+
+export type GA4PropertyAccess = typeof ga4PropertyAccess.$inferSelect;
+export type InsertGA4PropertyAccess = z.infer<typeof insertGA4PropertyAccessSchema>;
+export type UpdateGA4PropertyAccess = z.infer<typeof updateGA4PropertyAccessSchema>;

@@ -10,6 +10,7 @@ import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimit
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import ga4Routes from "./routes/ga4Routes";
+import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -2149,6 +2150,9 @@ export function registerRoutes(app: Express): Server {
 
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
+  
+  // GA4 Service Account Management routes
+  app.use("/api/admin", ga4ServiceAccountRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
