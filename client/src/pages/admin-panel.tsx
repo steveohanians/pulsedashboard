@@ -306,15 +306,16 @@ export default function AdminPanel() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const res = await apiRequest("PUT", `/api/admin/users/${id}`, data);
       if (!res.ok) {
-        const errorData = await res.text();
-        throw new Error(errorData || `HTTP ${res.status}`);
+        let errorMessage;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || `HTTP ${res.status}`;
+        } catch {
+          errorMessage = `HTTP ${res.status}`;
+        }
+        throw new Error(errorMessage);
       }
-      // Try to parse JSON, but don't fail if it's not JSON
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return res.json();
-      }
-      return { success: true };
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -378,15 +379,16 @@ export default function AdminPanel() {
     mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
       const res = await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
       if (!res.ok) {
-        const errorData = await res.text();
-        throw new Error(errorData || `HTTP ${res.status}`);
+        let errorMessage;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || `HTTP ${res.status}`;
+        } catch {
+          errorMessage = `HTTP ${res.status}`;
+        }
+        throw new Error(errorMessage);
       }
-      // Try to parse JSON, but don't fail if it's not JSON
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return res.json();
-      }
-      return { success: true };
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
