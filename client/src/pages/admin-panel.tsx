@@ -577,10 +577,12 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       websiteUrl: formData.get("website") as string,
-      gaPropertyId: formData.get("gaPropertyId") as string,
+      ga4PropertyId: formData.get("gaPropertyId") as string,
       industryVertical: formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
     };
+    
+    console.log("Client save data:", data); // Debug logging
     
     if (!data.name || !data.websiteUrl) {
       toast({
@@ -1844,7 +1846,7 @@ export default function AdminPanel() {
                                     </div>
                                     <GA4IntegrationPanel 
                                       clientId={client.id}
-                                      currentGA4PropertyId={client.gaPropertyId || ""}
+                                      currentGA4PropertyId={client.ga4PropertyId || ""}
                                       onGA4PropertyUpdate={(propertyId) => {
                                         // Update hidden form field for submission
                                         const input = document.querySelector('#hidden-gaPropertyId') as HTMLInputElement;
@@ -1852,7 +1854,7 @@ export default function AdminPanel() {
                                       }}
                                     />
                                     {/* Hidden input for form submission */}
-                                    <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
+                                    <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.ga4PropertyId || ""} />
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
                                       <Select name="industry" defaultValue={client.industryVertical}>
