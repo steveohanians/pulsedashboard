@@ -9,6 +9,7 @@ import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
+import ga4Routes from "./routes/ga4Routes";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -2145,6 +2146,9 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // GA4 Integration Routes
+  app.use("/api/ga4", ga4Routes);
 
   const httpServer = createServer(app);
   return httpServer;

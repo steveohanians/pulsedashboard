@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
+import { GA4TestPanel } from "@/components/admin/GA4TestPanel";
 import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
@@ -899,7 +900,7 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="w-full mb-4 sm:mb-6">
             <div className="flex overflow-x-auto pb-2 sm:pb-0">
-              <TabsList className="grid grid-cols-7 min-w-max w-full text-xs sm:text-sm">
+              <TabsList className="grid grid-cols-8 min-w-max w-full text-xs sm:text-sm">
                 <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">User Management</span>
                   <span className="sm:hidden">Users</span>
@@ -927,6 +928,10 @@ export default function AdminPanel() {
                 <TabsTrigger value="prompts" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">AI Prompts</span>
                   <span className="sm:hidden">Prompts</span>
+                </TabsTrigger>
+                <TabsTrigger value="ga4-integration" className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                  <span className="hidden sm:inline">GA4 Integration</span>
+                  <span className="sm:hidden">GA4</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -2603,6 +2608,11 @@ export default function AdminPanel() {
                   </Card>
                 </div>
               </TabsContent>
+
+            {/* GA4 Integration */}
+            <TabsContent value="ga4-integration">
+              <GA4TestPanel />
+            </TabsContent>
         </Tabs>
 
         {/* CSV Import Modal */}

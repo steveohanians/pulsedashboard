@@ -8,7 +8,8 @@
  * 4. Data is processed and stored in Pulse Dashboard™ for benchmarking
  */
 
-// import { google } from 'googleapis'; // TODO: Install googleapis package
+// Google APIs integration will be enabled when googleapis package is installed
+// import { google } from 'googleapis';
 import logger from '../utils/logger';
 
 export interface GA4MetricData {
@@ -29,6 +30,7 @@ class GA4IntegrationService {
   constructor() {
     // Initialize Google Analytics Data API
     // This will use service account credentials for Clear Digital's access
+    // Initialize Google Analytics Data API
     this.analytics = google.analyticsdata('v1beta');
   }
 
