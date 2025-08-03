@@ -269,16 +269,20 @@ export default function AdminPanel() {
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Deleting client with ID:", id);
       await apiRequest("DELETE", `/api/admin/clients/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      console.log("Delete client success - invalidating cache");
+      // Force refetch instead of just invalidating
+      queryClient.refetchQueries({ queryKey: ["/api/admin/clients"] });
       toast({
         title: "Client deleted",
         description: "Client has been successfully deleted.",
       });
     },
     onError: (error: Error) => {
+      console.error("Delete client error:", error);
       toast({
         title: "Failed to delete client",
         description: error.message,
