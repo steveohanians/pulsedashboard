@@ -673,8 +673,8 @@ export default function AdminPanel() {
     const formData = new FormData(event.currentTarget as HTMLFormElement);
     const data = {
       name: formData.get("name") as string,
-      websiteUrl: formData.get("websiteUrl") as string,
-      industryVertical: formData.get("industryVertical") as string,
+      websiteUrl: formData.get("website") as string,
+      industryVertical: formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
       ga4PropertyId: formData.get("ga4PropertyId") as string || null,
     };
@@ -1489,113 +1489,13 @@ export default function AdminPanel() {
               <TabsContent value="clients">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <h2 className="text-base sm:text-lg font-semibold text-slate-900">Client Management</h2>
-                  <Dialog open={isDialogOpen && editingItem?.type === 'add-client'} onOpenChange={(open) => {
-                    setIsDialogOpen(open);
-                    if (!open) setEditingItem(null);
+                  <Button onClick={() => {
+                    setEditingItem({ type: 'client' });
+                    setIsDialogOpen(true);
                   }}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => {
-                        setEditingItem({ type: 'add-client' });
-                        setIsDialogOpen(true);
-                      }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Client
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Add New Client</DialogTitle>
-                        <DialogDescription>
-                          Create a new client for analytics tracking
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateClient} className="space-y-4">
-                        <div>
-                          <Label htmlFor="client-name">Name *</Label>
-                          <Input 
-                            id="client-name" 
-                            name="name"
-                            placeholder="Enter client name"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="client-websiteUrl">Website URL *</Label>
-                          <Input 
-                            id="client-websiteUrl"
-                            name="websiteUrl" 
-                            type="url"
-                            placeholder="https://client-website.com"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="client-gaPropertyId">GA4 Property ID</Label>
-                          <Input 
-                            id="client-gaPropertyId"
-                            name="gaPropertyId" 
-                            placeholder="123456789"
-                            className="font-mono"
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                            Google Analytics 4 property ID for data collection (expandable integration available after creation)
-                          </p>
-                        </div>
-                        <div>
-                          <Label htmlFor="client-industryVertical">Industry Vertical *</Label>
-                          <Select name="industryVertical" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select industry" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
-                                .sort((a, b) => a.order - b.order)
-                                .map((option) => (
-                                <SelectItem key={option.id} value={option.value}>
-                                  {option.value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="client-businessSize">Business Size *</Label>
-                          <Select name="businessSize" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select business size" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
-                                .sort((a, b) => a.order - b.order)
-                                .map((option) => (
-                                <SelectItem key={option.id} value={option.value}>
-                                  {option.value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setIsDialogOpen(false);
-                              setEditingItem(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            type="submit"
-                            disabled={createClientMutation.isPending}
-                          >
-                            {createClientMutation.isPending ? "Creating..." : "Create Client"}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Client
+                  </Button>
                 </div>
                 {/* Mobile Card Layout */}
                 <div className="block sm:hidden space-y-3">
@@ -1620,114 +1520,17 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <div className="flex space-x-1">
-                            <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
-                              setIsDialogOpen(open);
-                              if (!open) setEditingItem(null);
-                            }}>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    setEditingItem(client);
-                                    setIsDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit Client</DialogTitle>
-                                  <DialogDescription>
-                                    Update client information and settings
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleSaveClient} className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="name">Name *</Label>
-                                    <Input 
-                                      id="name" 
-                                      name="name"
-                                      defaultValue={client.name} 
-                                      required
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="website">Website *</Label>
-                                    <Input 
-                                      id="website" 
-                                      name="website"
-                                      type="url"
-                                      defaultValue={client.websiteUrl} 
-                                      required
-                                    />
-                                  </div>
-                                  <GA4IntegrationPanel 
-                                    clientId={client.id}
-                                    currentGA4PropertyId={client.gaPropertyId || ""}
-                                    onGA4PropertyUpdate={(propertyId) => {
-                                      const input = document.querySelector('#hidden-gaPropertyId') as HTMLInputElement;
-                                      if (input) input.value = propertyId;
-                                    }}
-                                  />
-                                  <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
-                                  <div>
-                                    <Label htmlFor="industry">Industry Vertical</Label>
-                                    <Select name="industry" defaultValue={client.industryVertical}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
-                                          .sort((a, b) => a.order - b.order)
-                                          .map((option) => (
-                                          <SelectItem key={option.id} value={option.value}>
-                                            {option.value}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="businessSize">Business Size</Label>
-                                    <Select name="businessSize" defaultValue={client.businessSize}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
-                                          .sort((a, b) => a.order - b.order)
-                                          .map((option) => (
-                                          <SelectItem key={option.id} value={option.value}>
-                                            {option.value}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="flex justify-end space-x-2">
-                                    <Button 
-                                      type="button"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setIsDialogOpen(false);
-                                        setEditingItem(null);
-                                      }}
-                                    >
-                                      Cancel
-                                    </Button>
-                                    <Button 
-                                      type="submit"
-                                      disabled={updateClientMutation.isPending}
-                                    >
-                                      {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
-                                    </Button>
-                                  </div>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setEditingItem(client);
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1954,6 +1757,132 @@ export default function AdminPanel() {
                   </Table>
                   </div>
                 </div>
+
+                {/* Unified Client Dialog for Add/Edit */}
+                <Dialog open={isDialogOpen && editingItem?.type === 'client'} onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) setEditingItem(null);
+                }} key={`client-dialog-${editingItem?.id || 'new'}`}>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem?.id ? "Edit Client" : "Add New Client"}</DialogTitle>
+                      <DialogDescription>
+                        {editingItem?.id ? "Update client information and settings" : "Create a new client for analytics tracking"}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={editingItem?.id ? handleSaveClient : handleCreateClient} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Name *</Label>
+                        <Input 
+                          id="name" 
+                          name="name"
+                          defaultValue={editingItem?.name || ""} 
+                          placeholder={editingItem?.id ? "" : "Enter client name"}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="website">Website URL *</Label>
+                        <Input 
+                          id="website" 
+                          name="website"
+                          type="url"
+                          defaultValue={editingItem?.websiteUrl || ""} 
+                          placeholder={editingItem?.id ? "" : "https://client-website.com"}
+                          required
+                        />
+                      </div>
+                      {editingItem?.id ? (
+                        <>
+                          <GA4IntegrationPanel 
+                            clientId={editingItem.id}
+                            currentGA4PropertyId={editingItem.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
+                            onGA4PropertyUpdate={(propertyId) => {
+                              // Update hidden form field for submission
+                              const input = document.querySelector(`#hidden-gaPropertyId-${editingItem.id}`) as HTMLInputElement;
+                              if (input) {
+                                input.value = propertyId;
+                                console.log("Updated hidden input with:", propertyId);
+                              } else {
+                                console.error("Hidden input not found");
+                              }
+                            }}
+                          />
+                          {/* Hidden input for form submission */}
+                          <input type="hidden" id={`hidden-gaPropertyId-${editingItem.id}`} name="gaPropertyId" defaultValue={editingItem.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} />
+                        </>
+                      ) : (
+                        <div>
+                          <Label htmlFor="gaPropertyId">GA4 Property ID</Label>
+                          <Input 
+                            id="gaPropertyId"
+                            name="gaPropertyId" 
+                            placeholder="123456789"
+                            className="font-mono"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">
+                            Google Analytics 4 property ID for data collection (full integration available after creation)
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <Label htmlFor="industry">Industry Vertical *</Label>
+                        <Select name="industry" defaultValue={editingItem?.industryVertical || ""} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select industry" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                              .sort((a, b) => a.order - b.order)
+                              .map((option) => (
+                              <SelectItem key={option.id} value={option.value}>
+                                {option.value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="businessSize">Business Size *</Label>
+                        <Select name="businessSize" defaultValue={editingItem?.businessSize || ""} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select business size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                              .sort((a, b) => a.order - b.order)
+                              .map((option) => (
+                              <SelectItem key={option.id} value={option.value}>
+                                {option.value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsDialogOpen(false);
+                            setEditingItem(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit"
+                          disabled={editingItem?.id ? updateClientMutation.isPending : createClientMutation.isPending}
+                        >
+                          {editingItem?.id 
+                            ? (updateClientMutation.isPending ? "Saving..." : "Save Changes")
+                            : (createClientMutation.isPending ? "Creating..." : "Create Client")
+                          }
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
 
               {/* Benchmark Companies (Industry Reference) */}
