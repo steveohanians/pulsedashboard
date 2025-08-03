@@ -77,6 +77,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   }, [currentGA4PropertyId]);
 
   const handlePropertyIdChange = (value: string) => {
+    console.log("GA4 Property ID changed to:", value);
     setPropertyId(value);
     onGA4PropertyUpdate(value);
     // Reset test status when property ID changes

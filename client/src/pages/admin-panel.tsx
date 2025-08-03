@@ -1859,12 +1859,17 @@ export default function AdminPanel() {
                                       currentGA4PropertyId={client.ga4PropertyId || ""}
                                       onGA4PropertyUpdate={(propertyId) => {
                                         // Update hidden form field for submission
-                                        const input = document.querySelector('#hidden-gaPropertyId') as HTMLInputElement;
-                                        if (input) input.value = propertyId;
+                                        const input = document.querySelector(`#hidden-gaPropertyId-${client.id}`) as HTMLInputElement;
+                                        if (input) {
+                                          input.value = propertyId;
+                                          console.log("Updated hidden input with:", propertyId);
+                                        } else {
+                                          console.error("Hidden input not found");
+                                        }
                                       }}
                                     />
                                     {/* Hidden input for form submission */}
-                                    <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.ga4PropertyId || ""} />
+                                    <input type="hidden" id={`hidden-gaPropertyId-${client.id}`} name="gaPropertyId" defaultValue={client.ga4PropertyId || ""} />
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
                                       <Select name="industry" defaultValue={client.industryVertical}>
