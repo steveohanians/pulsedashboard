@@ -62,8 +62,9 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   // Don't auto-populate from existing property access - user should manually enter values
   // This prevents showing cached data that wasn't explicitly entered by the user
   
-  // Only show status if currently testing connection or if there's a manually verified connection for the entered property ID
-  const showStatus = isTestingConnection || (propertyId && currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified);
+  // Only show status while testing or if we just completed a test (not for existing saved data)
+  const [hasTestedConnection, setHasTestedConnection] = useState(false);
+  const showStatus = isTestingConnection || hasTestedConnection;
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -72,12 +73,16 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   const handlePropertyIdChange = (value: string) => {
     setPropertyId(value);
     onGA4PropertyUpdate(value);
+    // Reset test status when property ID changes
+    setHasTestedConnection(false);
   };
 
   const handleTestConnection = async () => {
     if (!propertyId || !selectedServiceAccount) return;
     
     setIsTestingConnection(true);
+    setHasTestedConnection(false);
+    
     try {
       // Check if property access already exists
       const existingAccess = currentAccess;
@@ -100,10 +105,12 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         // Wait a moment for verification to complete
         setTimeout(() => {
           refetchPropertyAccess();
+          setHasTestedConnection(true);
         }, 1500);
       }
     } catch (error) {
       console.error("Connection test failed:", error);
+      setHasTestedConnection(true); // Show status even on error
     } finally {
       setIsTestingConnection(false);
     }
@@ -196,51 +203,56 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {showStatus && currentAccess && (
+        {showStatus && (
           <div className="border rounded-lg p-3 bg-slate-50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Current Status</span>
+              <span className="text-sm font-medium">Connection Test Results</span>
               <div className="flex items-center gap-2">
-                <Badge className={getStatusColor(currentAccess.syncStatus)}>
-                  {getStatusIcon(currentAccess.syncStatus)}
-                  <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
-                </Badge>
-                {currentAccess.syncStatus !== 'success' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => refetchPropertyAccess()}
-                    className="h-6 w-6 p-0"
-                    title="Refresh status"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
+                {isTestingConnection ? (
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    Testing...
+                  </Badge>
+                ) : currentAccess ? (
+                  <Badge className={getStatusColor(currentAccess.syncStatus)}>
+                    {getStatusIcon(currentAccess.syncStatus)}
+                    <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
+                  </Badge>
+                ) : (
+                  <Badge className="bg-red-100 text-red-800">
+                    <X className="h-3 w-3 mr-1" />
+                    Failed
+                  </Badge>
                 )}
               </div>
             </div>
             
-            {currentAccess.propertyName && (
-              <p className="text-sm text-slate-600 mb-1">
-                <strong>Property:</strong> {currentAccess.propertyName}
-              </p>
-            )}
-            
-            {currentAccess.accessLevel && (
-              <p className="text-sm text-slate-600 mb-1">
-                <strong>Access Level:</strong> {currentAccess.accessLevel}
-              </p>
-            )}
-            
-            {currentAccess.lastVerified && (
-              <p className="text-sm text-slate-600 mb-1">
-                <strong>Last Verified:</strong> {new Date(currentAccess.lastVerified).toLocaleDateString()}
-              </p>
-            )}
-            
-            {currentAccess.errorMessage && (
-              <p className="text-sm text-red-600 mt-2">
-                <strong>Error:</strong> {currentAccess.errorMessage}
-              </p>
+            {!isTestingConnection && currentAccess && (
+              <>
+                {currentAccess.propertyName && (
+                  <p className="text-sm text-slate-600 mb-1">
+                    <strong>Property:</strong> {currentAccess.propertyName}
+                  </p>
+                )}
+                
+                {currentAccess.accessLevel && (
+                  <p className="text-sm text-slate-600 mb-1">
+                    <strong>Access Level:</strong> {currentAccess.accessLevel}
+                  </p>
+                )}
+                
+                {currentAccess.lastVerified && (
+                  <p className="text-sm text-slate-600 mb-1">
+                    <strong>Verified:</strong> {new Date(currentAccess.lastVerified).toLocaleDateString()}
+                  </p>
+                )}
+                
+                {currentAccess.errorMessage && (
+                  <p className="text-sm text-red-600 mt-2">
+                    <strong>Error:</strong> {currentAccess.errorMessage}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
