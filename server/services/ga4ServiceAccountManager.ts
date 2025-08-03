@@ -451,11 +451,48 @@ class GA4ServiceAccountManager {
                   propertyName = propertySummary.displayName;
                   logger.info('Found real property name', { propertyId, displayName: propertyName });
                 }
-                // If we can see it in account summaries, we have at least Editor access
-                accessLevel = 'Editor';
                 break;
               }
             }
+          }
+          
+          // Now try to determine the actual access level by checking specific permissions
+          try {
+            // Try to access property user links to determine if we have admin permissions
+            const userLinksResponse = await fetch(`https://analyticsadmin.googleapis.com/v1alpha/properties/${propertyId}/userLinks`, {
+              headers: {
+                'Authorization': `Bearer ${serviceAccount.accessToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (userLinksResponse.ok) {
+              // If we can list user links, we have Administrator access
+              accessLevel = 'Administrator';
+              logger.info('Detected Administrator access level', { propertyId });
+            } else if (userLinksResponse.status === 403) {
+              // Try to check if we can modify property settings (Editor level)
+              const propertyResponse = await fetch(`https://analyticsadmin.googleapis.com/v1alpha/properties/${propertyId}`, {
+                headers: {
+                  'Authorization': `Bearer ${serviceAccount.accessToken}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (propertyResponse.ok) {
+                const propertyData = await propertyResponse.json();
+                // If we can read detailed property configuration, we likely have Editor access
+                accessLevel = 'Editor';
+                logger.info('Detected Editor access level', { propertyId });
+              } else {
+                // If we can only access basic reporting, we're likely Viewer or Analyst
+                accessLevel = 'Viewer';
+                logger.info('Detected Viewer access level', { propertyId });
+              }
+            }
+          } catch (error) {
+            logger.debug('Could not determine specific access level, using default', { propertyId });
+            accessLevel = 'Viewer'; // Conservative default
           }
         } else {
           const adminError = await adminResponse.text();
