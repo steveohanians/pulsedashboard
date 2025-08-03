@@ -1,3 +1,7 @@
+// PERFORMANCE TIMER - Start immediately at server boot
+const SERVER_BOOT_TIME = Date.now();
+console.log(`🚀 [SERVER-BOOT] Server starting at: ${new Date(SERVER_BOOT_TIME).toISOString()}`);
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -5,6 +9,9 @@ import { setupSecurityHeaders } from "./middleware/security";
 import { setupHealthCheck } from "./middleware/healthCheck";
 import { generalLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
+
+// Make boot time available globally
+(global as any).SERVER_BOOT_TIME = SERVER_BOOT_TIME;
 
 const app = express();
 

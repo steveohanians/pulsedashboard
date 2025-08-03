@@ -32,6 +32,11 @@ function requireAdmin(req: any, res: any, next: any) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Expose server boot time for performance measurement
+  app.get("/api/server-boot-time", (req, res) => {
+    res.json({ bootTime: (global as any).SERVER_BOOT_TIME || Date.now() });
+  });
+
   // Configure multer for CSV file uploads
   const upload = multer({
     storage: multer.memoryStorage(),
