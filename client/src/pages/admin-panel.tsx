@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -364,6 +365,26 @@ export default function AdminPanel() {
     },
   });
 
+  const toggleUserActiveMutation = useMutation({
+    mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
+      await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User status updated",
+        description: "User access has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update user status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create mutations for adding new items
   const createClientMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -612,6 +633,7 @@ export default function AdminPanel() {
       email: formData.get("email") as string,
       role: formData.get("role") as string,
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
+      status: formData.get("status") ? "Active" : "Inactive" as "Active" | "Inactive",
     };
     
     if (!data.name || !data.email) {
@@ -1304,10 +1326,18 @@ export default function AdminPanel() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-6 px-2 text-xs bg-green-100 text-green-600 border-green-200 hover:bg-green-200 cursor-default"
-                              disabled
+                              className={`h-6 px-2 text-xs ${
+                                user.status === 'Active' 
+                                  ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                              }`}
+                              onClick={() => toggleUserActiveMutation.mutate({ 
+                                userId: user.id, 
+                                status: user.status === 'Active' ? 'Inactive' : 'Active'
+                              })}
+                              disabled={toggleUserActiveMutation.isPending}
                             >
-                              Active
+                              {user.status}
                             </Button>
                           </TableCell>
                           <TableCell className="hidden xl:table-cell text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
@@ -1384,6 +1414,10 @@ export default function AdminPanel() {
                                           ))}
                                         </SelectContent>
                                       </Select>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Switch id="edit-user-status" name="status" defaultChecked={user.status === 'Active'} />
+                                      <Label htmlFor="edit-user-status">Active</Label>
                                     </div>
                                     <div className="flex justify-between">
                                       <Button 
@@ -2588,9 +2622,18 @@ export default function AdminPanel() {
                             <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
 
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-6 px-2 text-xs cursor-default ${
+                                  company.active 
+                                    ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                }`}
+                                disabled
+                              >
                                 {company.active ? "Active" : "Inactive"}
-                              </Badge>
+                              </Button>
                             </div>
                           </div>
                           <div className="flex space-x-1">
@@ -2782,9 +2825,18 @@ export default function AdminPanel() {
                             <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
 
                             <TableCell>
-                              <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-6 px-2 text-xs cursor-default ${
+                                  company.active 
+                                    ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                }`}
+                                disabled
+                              >
                                 {company.active ? "Active" : "Inactive"}
-                              </Badge>
+                              </Button>
                             </TableCell>
                             <TableCell className="w-20">
                             <div className="flex space-x-1">
@@ -3341,9 +3393,18 @@ export default function AdminPanel() {
                             <TableCell className="font-medium text-xs">{prompt.metricName}</TableCell>
                             <TableCell className="max-w-xs truncate text-xs">{prompt.description || 'No description'}</TableCell>
                             <TableCell>
-                              <Badge variant={prompt.isActive ? "default" : "secondary"}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-6 px-2 text-xs cursor-default ${
+                                  prompt.isActive 
+                                    ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                }`}
+                                disabled
+                              >
                                 {prompt.isActive ? "Active" : "Inactive"}
-                              </Badge>
+                              </Button>
                             </TableCell>
                             <TableCell className="text-xs">{new Date(prompt.updatedAt).toLocaleDateString()}</TableCell>
                             <TableCell>
@@ -3397,7 +3458,7 @@ export default function AdminPanel() {
                                         </p>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <input type="checkbox" id="edit-prompt-active" name="isActive" defaultChecked={prompt.isActive} />
+                                        <Switch id="edit-prompt-active" name="isActive" defaultChecked={prompt.isActive} />
                                         <Label htmlFor="edit-prompt-active">Active</Label>
                                       </div>
                                       <div className="flex justify-end space-x-2">
