@@ -17,6 +17,28 @@
 - [ ] Configure email service (SendGrid/AWS SES/Mailgun)
 - [ ] Set `NODE_ENV=production`
 
+## 🔑 Google OAuth 2.0 Configuration
+
+### OAuth Credentials Setup
+- [ ] Verify Google Cloud Console project is configured
+- [ ] Confirm required APIs are enabled:
+  - Google Analytics Reporting API v4
+  - Google Analytics Data API v1
+  - Google Analytics Admin API v1
+- [ ] OAuth consent screen configured with proper scopes
+- [ ] OAuth 2.0 client credentials created
+- [ ] GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET added to production secrets
+
+### Production Redirect URI Update
+- [ ] **CRITICAL**: Update Google Cloud Console OAuth client with production redirect URI
+  - Go to Google Cloud Console → APIs & Services → Credentials
+  - Edit your OAuth 2.0 client
+  - Add production redirect URI: `https://YOUR_PRODUCTION_DOMAIN/api/oauth/google/callback`
+  - Keep the development URI for testing: `https://e74fcffb-82e3-4375-a72b-e621ccc03f8e-00-30he2hiv708v4.janeway.replit.dev/api/oauth/google/callback`
+  - Save changes
+- [ ] Test OAuth flow on production domain
+- [ ] Verify GA4 service account authorization works in production
+
 ## 📱 Application Configuration
 - [ ] Configure domain name in environment
 - [ ] Set up SSL certificates
