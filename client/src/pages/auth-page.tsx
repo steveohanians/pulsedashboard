@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartLine, TrendingUp, BarChart3, PieChart } from "lucide-react";
+import { ChartLine, TrendingUp, BarChart3, PieChart, Bug } from "lucide-react";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
@@ -43,6 +43,13 @@ export default function AuthPage() {
       clientId: import.meta.env.VITE_DEMO_CLIENT_ID || "demo-client-id", // Configurable demo client ID
       role: "User",
       status: "Active",
+    });
+  };
+
+  const handleDebugLogin = (role: "Admin" | "User") => {
+    loginMutation.mutate({
+      email: role === "Admin" ? "admin@demo.com" : "user@demo.com",
+      password: "demo123",
     });
   };
 
@@ -165,7 +172,36 @@ export default function AuthPage() {
             </CardContent>
           </Card>
 
-
+          {/* Debug Mode */}
+          <Card className="mt-4 border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-orange-800">
+                <Bug className="h-5 w-5 mr-2" />
+                Debug Mode
+              </CardTitle>
+              <CardDescription className="text-orange-600">
+                Quick login for testing (Development Only)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => handleDebugLogin("Admin")}
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                disabled={loginMutation.isPending}
+              >
+                Login as Admin
+              </Button>
+              <Button
+                onClick={() => handleDebugLogin("User")}
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                disabled={loginMutation.isPending}
+              >
+                Login as User
+              </Button>
+            </CardContent>
+          </Card>
           </div>
         </div>
 
