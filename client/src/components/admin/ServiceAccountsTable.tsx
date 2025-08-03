@@ -207,8 +207,12 @@ export function ServiceAccountsTable() {
                   <TableCell>
                     <Button
                       size="sm"
-                      variant={account.serviceAccount.active ? "default" : "outline"}
-                      className="h-6 px-2 text-xs"
+                      variant="outline"
+                      className={`h-6 px-2 text-xs ${
+                        account.serviceAccount.active 
+                          ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                          : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                      }`}
                       onClick={() => toggleActiveMutation.mutate({ 
                         accountId: account.serviceAccount.id, 
                         active: !account.serviceAccount.active 
