@@ -10,18 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles } from "lucide-react";
 import { Link } from "wouter";
-// Lazy load heavy chart components for performance
-// import MetricsChart from "@/components/metrics-chart";
-// import TimeSeriesChart from "@/components/time-series-chart";
-// import SessionDurationAreaChart from "@/components/area-chart";
-// import MetricBarChart from "@/components/bar-chart";
-// import { StackedBarChart } from "@/components/stacked-bar-chart";
-// import { DonutChart } from "@/components/donut-chart";
-// import LollipopChart from "@/components/lollipop-chart";
-// import AIInsights from "@/components/ai-insights";
-// import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
-// import MetricInsightBox from "@/components/metric-insight-box";
-// import CompetitorModal from "@/components/competitor-modal";
+import MetricsChart from "@/components/metrics-chart";
+import TimeSeriesChart from "@/components/time-series-chart";
+import SessionDurationAreaChart from "@/components/area-chart";
+import MetricBarChart from "@/components/bar-chart";
+import { StackedBarChart } from "@/components/stacked-bar-chart";
+import { DonutChart } from "@/components/donut-chart";
+import LollipopChart from "@/components/lollipop-chart";
+import AIInsights from "@/components/ai-insights";
+import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
+import MetricInsightBox from "@/components/metric-insight-box";
+import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
@@ -140,7 +139,7 @@ export default function Dashboard() {
         localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
         logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
         
-        // localStorage clearing disabled for performance optimization
+          // localStorage operations disabled for performance
       } catch (error) {
         logger.warn("Failed to clear localStorage:", error);
       }
@@ -188,30 +187,28 @@ export default function Dashboard() {
 
 
 
-  // Group metrics by name for chart display - use averaged metrics for multi-period queries
+  // Group metrics by name for chart display - SIMPLIFIED for performance
   const groupedMetrics = useMemo(() => {
-    if (isTimeSeries && Object.keys(averagedMetrics).length > 0) {
-      // Use pre-calculated averages for multi-period queries
+    // Quick return for empty states
+    if (!dashboardData) return {};
+    
+    if (isTimeSeries && averagedMetrics && Object.keys(averagedMetrics).length > 0) {
       return averagedMetrics as Record<string, Record<string, number>>;
     }
     
-    // Use regular metrics for single-period queries
-    return metrics.reduce((acc: Record<string, Record<string, number>>, metric) => {
-      if (!acc[metric.metricName]) {
-        acc[metric.metricName] = {};
+    // Fast grouping without complex operations
+    const result: Record<string, Record<string, number>> = {};
+    for (const metric of metrics) {
+      if (!result[metric.metricName]) {
+        result[metric.metricName] = {};
       }
-      acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
-      return acc;
-    }, {} as Record<string, Record<string, number>>);
-  }, [metrics, averagedMetrics, isTimeSeries]);
+      result[metric.metricName][metric.sourceType] = Number(metric.value) || 0;
+    }
+    return result;
+  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);
 
-  // Disable expensive data processing for performance
+  // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
-    return []; // Return empty for performance
-  };
-  
-  // Original expensive processing disabled for performance
-  const processTrafficChannelDataOriginal = useCallback(() => {
     let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {
@@ -430,10 +427,10 @@ export default function Dashboard() {
     });
 
     return result;
-  }, [metrics, timeSeriesData, isTimeSeries, competitors, client?.name, periods]);
+  };
 
   // Process device distribution data for donut charts
-  const processDeviceDistributionData = useCallback(() => {
+  const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
     const DEVICE_COLORS = {
@@ -575,7 +572,7 @@ export default function Dashboard() {
     });
 
     return result;
-  }, [metrics, competitors, client?.name]);
+  };
 
   const metricNames = [
     "Bounce Rate", 
