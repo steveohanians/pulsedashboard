@@ -327,6 +327,13 @@ class GA4ServiceAccountManager {
       }
 
       // Make request to Google Analytics Admin API to get property details
+      logger.info('Making GA4 API request', { 
+        propertyId, 
+        url: `https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`,
+        hasAccessToken: !!serviceAccount.accessToken,
+        tokenPrefix: serviceAccount.accessToken ? serviceAccount.accessToken.substring(0, 20) + '...' : 'none'
+      });
+
       const response = await fetch(`https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`, {
         headers: {
           'Authorization': `Bearer ${serviceAccount.accessToken}`,
@@ -334,7 +341,15 @@ class GA4ServiceAccountManager {
         }
       });
 
+      logger.info('GA4 API response', { 
+        status: response.status, 
+        statusText: response.statusText,
+        propertyId 
+      });
+
       if (response.status === 403) {
+        const errorText = await response.text();
+        logger.error('GA4 API 403 error details', { propertyId, errorText });
         return {
           success: false,
           error: 'Insufficient permissions. Service account not added to this GA4 property.'
@@ -342,6 +357,8 @@ class GA4ServiceAccountManager {
       }
 
       if (response.status === 404) {
+        const errorText = await response.text();
+        logger.error('GA4 API 404 error details', { propertyId, errorText });
         return {
           success: false,
           error: 'Property not found. Please verify the property ID is correct.'
@@ -350,10 +367,15 @@ class GA4ServiceAccountManager {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error('GA4 API error', { status: response.status, error: errorText });
+        logger.error('GA4 API error details', { 
+          status: response.status, 
+          statusText: response.statusText,
+          errorText,
+          propertyId 
+        });
         return {
           success: false,
-          error: `GA4 API error: ${response.status} ${errorText}`
+          error: `GA4 API error: ${response.status} - ${errorText}`
         };
       }
 
