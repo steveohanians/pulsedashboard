@@ -1655,7 +1655,7 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Link href="/admin-panel">
+              <Link href="/admin">
                 <Button className="w-full h-14 flex items-center justify-center text-base font-semibold shadow-md hover:shadow-[0_0_20px_rgba(255,20,147,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90">
                   <Settings className="h-5 w-5 mr-3" />
                   <span>Go to Admin Panel</span>

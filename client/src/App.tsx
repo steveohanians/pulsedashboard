@@ -22,7 +22,7 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/admin-panel" component={AdminPanel} />
+      <ProtectedRoute path="/admin" component={AdminPanel} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
