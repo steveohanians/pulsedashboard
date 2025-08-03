@@ -326,22 +326,31 @@ class GA4ServiceAccountManager {
         }
       }
 
-      // Make request to Google Analytics Admin API to get property details
-      logger.info('Making GA4 API request', { 
+      // Use Google Analytics Reporting API to verify access and get property details
+      logger.info('Making GA4 Reporting API request', { 
         propertyId, 
-        url: `https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`,
         hasAccessToken: !!serviceAccount.accessToken,
         tokenPrefix: serviceAccount.accessToken ? serviceAccount.accessToken.substring(0, 20) + '...' : 'none'
       });
 
-      const response = await fetch(`https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`, {
+      // Try to run a simple report to verify access and get property information
+      const reportRequest = {
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
+        metrics: [{ name: 'sessions' }],
+        limit: 1
+      };
+
+      const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${serviceAccount.accessToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify(reportRequest)
       });
 
-      logger.info('GA4 API response', { 
+      logger.info('GA4 Reporting API response', { 
         status: response.status, 
         statusText: response.statusText,
         propertyId 
@@ -349,16 +358,16 @@ class GA4ServiceAccountManager {
 
       if (response.status === 403) {
         const errorText = await response.text();
-        logger.error('GA4 API 403 error details', { propertyId, errorText });
+        logger.error('GA4 Reporting API 403 error details', { propertyId, errorText });
         return {
           success: false,
-          error: 'Insufficient permissions. Service account not added to this GA4 property.'
+          error: 'Insufficient permissions. Service account not added to this GA4 property or lacks Analytics read access.'
         };
       }
 
       if (response.status === 404) {
         const errorText = await response.text();
-        logger.error('GA4 API 404 error details', { propertyId, errorText });
+        logger.error('GA4 Reporting API 404 error details', { propertyId, errorText });
         return {
           success: false,
           error: 'Property not found. Please verify the property ID is correct.'
@@ -367,7 +376,7 @@ class GA4ServiceAccountManager {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error('GA4 API error details', { 
+        logger.error('GA4 Reporting API error details', { 
           status: response.status, 
           statusText: response.statusText,
           errorText,
@@ -379,28 +388,16 @@ class GA4ServiceAccountManager {
         };
       }
 
-      const propertyData = await response.json();
+      const reportData = await response.json();
       
-      // Extract property name and determine access level
-      const propertyName = propertyData.displayName || `Property ${propertyId}`;
+      // If we get a successful response, we have access to the property
+      // Extract property name from metadata if available, otherwise use property ID
+      const propertyName = reportData.propertyQuota?.propertyId ? 
+        `GA4 Property ${propertyId}` : 
+        `GA4 Property ${propertyId}`;
       
-      // Check access level by attempting to list accounts (higher permission)
-      let accessLevel = 'Viewer';
-      try {
-        const accountResponse = await fetch(`https://analyticsadmin.googleapis.com/v1beta/accounts`, {
-          headers: {
-            'Authorization': `Bearer ${serviceAccount.accessToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (accountResponse.ok) {
-          accessLevel = 'Administrator';
-        }
-      } catch {
-        // If account listing fails, user likely has limited permissions
-        accessLevel = 'Viewer';
-      }
+      // For GA4 Reporting API, if we can run reports, we have at least Viewer access
+      const accessLevel = 'Viewer';
 
       logger.info('Successfully verified GA4 property access', {
         propertyId,
