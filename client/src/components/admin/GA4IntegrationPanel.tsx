@@ -16,11 +16,16 @@ interface GA4IntegrationPanelProps {
 }
 
 interface ServiceAccount {
-  id: string;
-  name: string;
-  serviceAccountEmail: string;
-  verified: boolean;
-  active: boolean;
+  serviceAccount: {
+    id: string;
+    name: string;
+    serviceAccountEmail: string;
+    verified: boolean;
+    active: boolean;
+  };
+  totalProperties: number;
+  verifiedProperties: number;
+  activeClients: number;
 }
 
 interface PropertyAccess {
@@ -46,11 +51,11 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
   // Fetch current property access for this client
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess[]>({
-    queryKey: ["/api/admin/ga4-property-access", clientId],
+    queryKey: ["/api/admin/ga4-property-access/client", clientId],
   });
 
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
-  const activeServiceAccounts = serviceAccounts?.filter(sa => sa.active && sa.verified) || [];
+  const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -66,7 +71,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
     
     setIsTestingConnection(true);
     try {
-      await apiRequest("POST", "/api/admin/ga4-test-connection", {
+      await apiRequest("POST", "/api/admin/ga4-property-access", {
         clientId,
         propertyId,
         serviceAccountId: selectedServiceAccount,
@@ -130,8 +135,8 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
             </SelectTrigger>
             <SelectContent>
               {activeServiceAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name} ({account.serviceAccountEmail})
+                <SelectItem key={account.serviceAccount.id} value={account.serviceAccount.id}>
+                  {account.serviceAccount.name} ({account.serviceAccount.serviceAccountEmail})
                 </SelectItem>
               ))}
             </SelectContent>
