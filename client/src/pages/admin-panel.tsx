@@ -1490,6 +1490,7 @@ export default function AdminPanel() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <h2 className="text-base sm:text-lg font-semibold text-slate-900">Client Management</h2>
                   <Button onClick={() => {
+                    console.log("Add Client clicked - Setting type: client");
                     setEditingItem({ type: 'client' });
                     setIsDialogOpen(true);
                   }}>
@@ -1525,6 +1526,7 @@ export default function AdminPanel() {
                               size="sm"
                               className="h-8 w-8 p-0"
                               onClick={() => {
+                                console.log("Edit client clicked (desktop):", client.name, "Setting type: client");
                                 setEditingItem({ ...client, type: 'client' });
                                 setIsDialogOpen(true);
                               }}
@@ -1619,6 +1621,7 @@ export default function AdminPanel() {
                                 size="sm"
                                 className="h-8 w-8 p-0"
                                 onClick={() => {
+                                  console.log("Edit client clicked (mobile):", client.name, "Setting type: client");
                                   setEditingItem({ ...client, type: 'client' });
                                   setIsDialogOpen(true);
                                 }}
@@ -1657,6 +1660,7 @@ export default function AdminPanel() {
 
                 {/* Unified Client Dialog for Add/Edit */}
                 <Dialog open={isDialogOpen && editingItem?.type === 'client'} onOpenChange={(open) => {
+                  console.log("Unified dialog open change:", open, "editingItem:", editingItem);
                   setIsDialogOpen(open);
                   if (!open) setEditingItem(null);
                 }} key={`client-dialog-${editingItem?.id || 'new'}`}>
