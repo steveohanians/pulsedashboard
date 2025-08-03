@@ -12,8 +12,8 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Enums
-export const roleEnum = pgEnum("role", ["Admin", "User"]);
+// Enums  
+export const roleEnum = pgEnum("role", ["Admin", "Client"]);
 export const statusEnum = pgEnum("status", ["Active", "Inactive", "Invited"]);
 export const sourceTypeEnum = pgEnum("source_type", ["Client", "CD_Avg", "Industry", "Competitor", "Industry_Avg", "Competitor_Avg"]);
 
@@ -35,7 +35,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: roleEnum("role").default("User").notNull(),
+  role: roleEnum("role").default("Client").notNull(),
   status: statusEnum("status").default("Active").notNull(),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

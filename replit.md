@@ -32,7 +32,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Migrations**: Drizzle Kit
 
 ### Key Components and Design Patterns
-- **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/Viewer) for protected routes.
+- **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/Client) for protected routes. Clients are always "Client" role users who view their own analytics data, while Clear Digital staff have "Admin" role for platform management.
 - **Data Models**: Structured around distinct entities: Clients, CD Portfolio Companies, Benchmark Companies, Competitors, Users, Metrics, Benchmarks, and AIInsights.
 - **API Architecture**: Segregated into Public, Admin, Data Ingestion (webhooks), and AI Integration endpoints.
 - **Frontend Components**: Core UI elements include Dashboard, Admin Panel, Authentication forms, Charts, and Modals.
@@ -53,6 +53,9 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 
 ### Data Sources
 - **Google Analytics 4**: Primary source for client website performance metrics.
+  - **Integration Model**: Clients add Clear Digital as guest users to their GA4 properties
+  - **Data Access**: Clear Digital pulls data via GA4 Reporting API using guest permissions
+  - **Client Setup**: Clients only need to provide their GA4 Property ID and grant guest access
 - **SEMrush**: Provides SEO and competitive intelligence data.
 - **DataForSEO**: Supplies additional search engine optimization metrics.
 
@@ -96,5 +99,25 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - Performance Anomaly Detection: Automatic alerts for significant changes
 - Goal Tracking: Set and monitor specific performance targets
 - Custom Dashboard Alerts: User-defined triggers for important metrics
+
+## GA4 Integration Architecture
+
+### Client Onboarding Process
+1. **Client Setup**: Client provides GA4 Property ID to Clear Digital
+2. **Access Grant**: Client adds Clear Digital service account as guest user to their GA4 property
+3. **Verification**: Clear Digital tests property access and confirms data availability
+4. **Data Sync**: Automated daily/weekly data pulls via GA4 Reporting API
+
+### Technical Implementation
+- **Service Account**: Clear Digital uses Google service account for API access
+- **Guest Permissions**: Read-only access to client GA4 properties
+- **Data Pipeline**: Automated ETL process transforms GA4 data into Pulse Dashboard™ metrics
+- **Error Handling**: Comprehensive logging and retry mechanisms for failed data pulls
+
+### Client Benefits
+- **Zero GA4 Admin Work**: Clients never need admin access or complex setup
+- **Data Privacy**: Clients maintain full control over their GA4 properties
+- **Seamless Integration**: Simple property ID sharing enables instant access
+- **Real-Time Insights**: Fresh data automatically synced for benchmarking
 
 *Documented: August 3, 2025*
