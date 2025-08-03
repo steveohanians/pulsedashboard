@@ -939,7 +939,6 @@ export default function AdminPanel() {
                   { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
                   { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
                   { value: 'filters', label: 'Filter Management', icon: Filter },
-                  { value: 'global-template', label: 'Global Template', icon: Settings },
                   { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
                 ].map((tab) => {
                   const IconComponent = tab.icon;
@@ -986,7 +985,6 @@ export default function AdminPanel() {
               { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
               { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
               { value: 'filters', label: 'Filter Management', icon: Filter },
-              { value: 'global-template', label: 'Global Template', icon: Settings },
               { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
             ].map((tab) => {
               const IconComponent = tab.icon;
@@ -3141,11 +3139,32 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
 
-              {/* Metric Prompts Management */}
+              {/* AI Prompts Management */}
               <TabsContent value="prompts">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">AI Metric Prompts</h2>
-                  <Dialog open={isDialogOpen && editingItem?.type === 'add-prompt'} onOpenChange={(open) => {
+                <div className="space-y-6">
+                  {/* Global Template Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Global Prompt Template
+                      </CardTitle>
+                      <p className="text-xs text-slate-600">
+                        Configure the global AI prompt template that applies to all metric insights
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <GlobalPromptTemplateForm />
+                    </CardContent>
+                  </Card>
+
+                  {/* Metric-Specific Prompts Section */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3 sm:gap-0">
+                    <div>
+                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">Custom Metric Prompts</h2>
+                      <p className="text-xs text-slate-600">Override the global template for specific metrics</p>
+                    </div>
+                    <Dialog open={isDialogOpen && editingItem?.type === 'add-prompt'} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (!open) setEditingItem(null);
                   }}>
@@ -3215,9 +3234,9 @@ export default function AdminPanel() {
                       </form>
                     </DialogContent>
                   </Dialog>
-                </div>
+                  </div>
 
-                {metricPrompts && metricPrompts.length > 0 ? (
+                  {metricPrompts && metricPrompts.length > 0 ? (
                   <div className="bg-white rounded-lg border">
                     <Table>
                       <TableHeader>
@@ -3334,27 +3353,10 @@ export default function AdminPanel() {
                     </Button>
                   </div>
                 )}
-              </TabsContent>
-
-              {/* Global Prompt Template Management */}
-              <TabsContent value="global-template">
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                    <div>
-                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">Global Prompt Template</h2>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Configure the global AI prompt template that applies to all metric insights
-                      </p>
-                    </div>
-                  </div>
-
-                  <Card>
-                    <CardContent className="p-6">
-                      <GlobalPromptTemplateForm />
-                    </CardContent>
-                  </Card>
                 </div>
               </TabsContent>
+
+
 
 
         </Tabs>
