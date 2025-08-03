@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
-import { GA4TestPanel } from "@/components/admin/GA4TestPanel";
+import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
@@ -900,7 +900,7 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="w-full mb-4 sm:mb-6">
             <div className="flex overflow-x-auto pb-2 sm:pb-0">
-              <TabsList className="grid grid-cols-8 min-w-max w-full text-xs sm:text-sm">
+              <TabsList className="grid grid-cols-7 min-w-max w-full text-xs sm:text-sm">
                 <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">User Management</span>
                   <span className="sm:hidden">Users</span>
@@ -928,10 +928,6 @@ export default function AdminPanel() {
                 <TabsTrigger value="prompts" className="px-2 sm:px-4 py-2 whitespace-nowrap">
                   <span className="hidden sm:inline">AI Prompts</span>
                   <span className="sm:hidden">Prompts</span>
-                </TabsTrigger>
-                <TabsTrigger value="ga4-integration" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">GA4 Integration</span>
-                  <span className="sm:hidden">GA4</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1264,7 +1260,7 @@ export default function AdminPanel() {
                             className="font-mono"
                           />
                           <p className="text-xs text-slate-500 mt-1">
-                            Google Analytics 4 property ID for data collection
+                            Google Analytics 4 property ID for data collection (expandable integration available after creation)
                           </p>
                         </div>
                         <div>
@@ -1405,19 +1401,17 @@ export default function AdminPanel() {
                                         required
                                       />
                                     </div>
-                                    <div>
-                                      <Label htmlFor="gaPropertyId">GA4 Property ID</Label>
-                                      <Input 
-                                        id="gaPropertyId" 
-                                        name="gaPropertyId"
-                                        defaultValue={client.gaPropertyId || ""} 
-                                        placeholder="ex: 412345678901"
-                                        className="font-mono"
-                                      />
-                                      <p className="text-xs text-slate-500 mt-1">
-                                        Google Analytics 4 property ID for data collection
-                                      </p>
-                                    </div>
+                                    <GA4IntegrationPanel 
+                                      clientId={client.id}
+                                      currentGA4PropertyId={client.gaPropertyId || ""}
+                                      onGA4PropertyUpdate={(propertyId) => {
+                                        // Update form field value for submission
+                                        const input = document.querySelector('#gaPropertyId') as HTMLInputElement;
+                                        if (input) input.value = propertyId;
+                                      }}
+                                    />
+                                    {/* Hidden input for form submission */}
+                                    <input type="hidden" id="gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
                                       <Select name="industry" defaultValue={client.industryVertical}>
@@ -2609,10 +2603,7 @@ export default function AdminPanel() {
                 </div>
               </TabsContent>
 
-            {/* GA4 Integration */}
-            <TabsContent value="ga4-integration">
-              <GA4TestPanel />
-            </TabsContent>
+
         </Tabs>
 
         {/* CSV Import Modal */}
