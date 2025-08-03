@@ -1639,31 +1639,27 @@ export default function Dashboard() {
               </Card>
             );
           })}
+
+          {/* Admin Panel Link - positioned after Device Distribution */}
+          {user?.role === "Admin" && (
+            <div className="mt-6">
+              <hr className="my-6 border-slate-200" />
+              <div className="flex items-center justify-center">
+                <Link href="/admin">
+                  <Button 
+                    variant="ghost" 
+                    className="h-12 px-6 flex items-center space-x-3 text-slate-600 hover:text-primary hover:bg-primary/5 transition-colors duration-200 rounded-xl border border-slate-200 hover:border-primary/20"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="font-medium">Admin Panel</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Keep the original Pulse™ AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
-
-        {/* Enhanced Admin Panel Link */}
-        {user?.role === "Admin" && (
-          <Card className="mt-16 border-slate-200/60 shadow-lg hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-lg font-bold">
-                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-3">
-                  <Settings className="h-4 w-4 text-primary" />
-                </div>
-                Admin Panel
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link href="/admin">
-                <Button className="w-full h-14 flex items-center justify-center text-base font-semibold shadow-md hover:shadow-[0_0_20px_rgba(255,20,147,0.3)] transition-all duration-200 bg-gradient-to-r from-primary to-primary/90">
-                  <Settings className="h-5 w-5 mr-3" />
-                  <span>Go to Admin Panel</span>
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
         </div>
 
         {/* Competitor Modal */}
