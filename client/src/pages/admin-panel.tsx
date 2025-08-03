@@ -1757,7 +1757,6 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                           <TableCell className="min-w-24">
-                            <div className="flex space-x-1 sm:space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) setEditingItem(null);
@@ -1888,7 +1887,6 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2243,7 +2241,6 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
@@ -2379,7 +2376,6 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2758,7 +2754,6 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                             <TableCell className="w-20">
-                              <div className="flex space-x-1">
                                 <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
                                   setIsDialogOpen(open);
                                   if (!open) {
@@ -2894,7 +2889,6 @@ export default function AdminPanel() {
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
-                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
