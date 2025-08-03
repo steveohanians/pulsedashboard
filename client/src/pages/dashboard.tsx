@@ -24,19 +24,12 @@ import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
-// Heavy PDF libraries lazy loaded for performance
-// import html2canvas from 'html2canvas';
-// import { jsPDF } from 'jspdf';
+// PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 import { markDashboardComplete } from "@/utils/server-start-timer";
-import { DashboardSkeleton } from "@/components/dashboard-skeleton";
-import { usePreloadData } from "@/hooks/use-preload";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
-  
-  // Preload critical data
-  usePreloadData();
   
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();

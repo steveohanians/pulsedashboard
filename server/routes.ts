@@ -315,19 +315,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Optimized filters endpoint with caching and compression
+  // Filters endpoint with dynamic interdependent options
   app.get("/api/filters", requireAuth, async (req, res) => {
     try {
-      // Use optimized caching for static filter data
-      const filters = await getFiltersOptimized();
-      
-      // Set aggressive cache headers
-      res.set({
-        'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min browser, 10 min CDN
-        'ETag': `"${Buffer.from(JSON.stringify(filters)).toString('base64').slice(0, 16)}"`
-      });
-      
-      return res.json(filters);
+      const { currentBusinessSize, currentIndustryVertical } = req.query;
       
       // Get benchmark companies data ONLY (not CD Portfolio companies)
       const benchmarkCompanies = await storage.getBenchmarkCompanies();

@@ -47,19 +47,17 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-// Optimized query client for enterprise performance
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 2 * 60 * 1000, // 2 minutes - faster cache invalidation
-      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-      retry: 1, // Single retry for failed requests
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: false,
     },
     mutations: {
-      retry: 1,
+      retry: false,
     },
   },
 });
