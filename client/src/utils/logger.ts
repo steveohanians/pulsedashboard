@@ -14,7 +14,7 @@ class ClientLogger {
 
   constructor() {
     this.isDevelopment = import.meta.env.DEV;
-    this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
+    this.level = this.isDevelopment ? LogLevel.ERROR : LogLevel.ERROR;
   }
 
   private shouldLog(level: LogLevel): boolean {

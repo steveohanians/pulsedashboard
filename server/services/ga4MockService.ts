@@ -25,8 +25,8 @@ export class GA4MockService {
   async fetchGA4Data(propertyId: string, dateRange: { startDate: string; endDate: string }): Promise<MockGA4Data> {
     logger.info(`Mock GA4: Fetching data for property ${propertyId}`, { dateRange });
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // API delay disabled for performance
+    // await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Generate realistic mock data
     const sessions = Math.floor(Math.random() * 20000) + 10000; // 10k-30k sessions
@@ -69,8 +69,8 @@ export class GA4MockService {
   async testConnection(propertyId: string): Promise<{ success: boolean; message: string }> {
     logger.info(`Mock GA4: Testing connection to property ${propertyId}`);
     
-    // Simulate connection test
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Connection test delay disabled for performance
+    // await new Promise(resolve => setTimeout(resolve, 500));
     
     // Mock validation - simple property ID format check
     if (!propertyId || propertyId.length < 8) {
