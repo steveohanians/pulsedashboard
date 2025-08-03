@@ -1,9 +1,11 @@
 // Side navigation component for dashboard
-import { TrendingUp, BarChart3, Users2, Globe, Smartphone, Clock } from 'lucide-react';
+import { TrendingUp, BarChart3, Users2, Globe, Smartphone, Clock, Settings } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface SideNavigationProps {
   activeSection: string;
   onSectionClick: (section: string) => void;
+  userRole?: string;
   className?: string;
 }
 
@@ -43,6 +45,7 @@ const navigationItems = [
 export default function SideNavigation({
   activeSection,
   onSectionClick,
+  userRole,
   className = ""
 }: SideNavigationProps) {
   return (
@@ -85,6 +88,25 @@ export default function SideNavigation({
           </button>
         );
       })}
+
+      {/* Admin Panel Link */}
+      {userRole === "Admin" && (
+        <>
+          <hr className="my-4 border-slate-200" />
+          <Link href="/admin">
+            <button className="w-full text-left p-3 rounded-lg transition-all duration-200 group text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+              <div className="flex items-start space-x-3">
+                <Settings className="h-4 w-4 mt-0.5 flex-shrink-0 text-slate-400 group-hover:text-slate-600" />
+                <div className="min-w-0">
+                  <div className="font-medium text-sm text-slate-700 group-hover:text-slate-900">
+                    Admin Panel
+                  </div>
+                </div>
+              </div>
+            </button>
+          </Link>
+        </>
+      )}
     </nav>
   );
 }

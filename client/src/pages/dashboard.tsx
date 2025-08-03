@@ -1084,7 +1084,7 @@ export default function Dashboard() {
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
-              {metricNames.map((metricName) => (
+              {metricNames.map((metricName, index) => (
                 <li key={metricName}>
                   <button
                     onClick={() => handleNavigationClick(metricName)}
@@ -1098,6 +1098,25 @@ export default function Dashboard() {
                   </button>
                 </li>
               ))}
+              
+              {/* Admin Panel Link after Device Distribution */}
+              {user?.role === "Admin" && (
+                <>
+                  <li key="admin-separator" className="my-4">
+                    <hr className="border-slate-200" />
+                  </li>
+                  <li key="admin-panel">
+                    <Link href="/admin">
+                      <button className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary">
+                        <div className="flex items-center space-x-2">
+                          <Settings className="h-3 w-3 text-slate-400" />
+                          <span>Admin Panel</span>
+                        </div>
+                      </button>
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </nav>
@@ -1640,23 +1659,7 @@ export default function Dashboard() {
             );
           })}
 
-          {/* Admin Panel Link - positioned after Device Distribution */}
-          {user?.role === "Admin" && (
-            <div className="mt-6">
-              <hr className="my-6 border-slate-200" />
-              <div className="flex items-center justify-center">
-                <Link href="/admin">
-                  <Button 
-                    variant="ghost" 
-                    className="h-12 px-6 flex items-center space-x-3 text-slate-600 hover:text-primary hover:bg-primary/5 transition-colors duration-200 rounded-xl border border-slate-200 hover:border-primary/20"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span className="font-medium">Admin Panel</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Keep the original Pulse™ AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
