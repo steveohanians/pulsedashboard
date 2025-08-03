@@ -290,11 +290,40 @@ class GA4ServiceAccountManager {
       // Check if token is expired and refresh if needed
       if (serviceAccount.tokenExpiry && new Date() > serviceAccount.tokenExpiry) {
         logger.warn('Access token expired, attempting to refresh', { serviceAccountId: serviceAccount.id });
-        // TODO: Implement token refresh logic
-        return {
-          success: false,
-          error: 'Access token expired. Please re-authenticate the service account.'
-        };
+        
+        if (!serviceAccount.refreshToken) {
+          return {
+            success: false,
+            error: 'Access token expired and no refresh token available. Please re-authenticate the service account.'
+          };
+        }
+
+        try {
+          const refreshedTokens = await this.refreshAccessToken(serviceAccount.refreshToken);
+          
+          // Update service account with new tokens
+          await db.update(ga4ServiceAccounts)
+            .set({
+              accessToken: refreshedTokens.access_token,
+              tokenExpiry: new Date(refreshedTokens.expiry_date)
+            })
+            .where(eq(ga4ServiceAccounts.id, serviceAccount.id));
+
+          // Update the serviceAccount object for this request
+          serviceAccount.accessToken = refreshedTokens.access_token;
+          serviceAccount.tokenExpiry = new Date(refreshedTokens.expiry_date);
+          
+          logger.info('Successfully refreshed access token', { serviceAccountId: serviceAccount.id });
+        } catch (error) {
+          logger.error('Failed to refresh access token', { 
+            serviceAccountId: serviceAccount.id, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+          return {
+            success: false,
+            error: 'Failed to refresh access token. Please re-authenticate the service account.'
+          };
+        }
       }
 
       // Make request to Google Analytics Admin API to get property details
@@ -376,6 +405,43 @@ class GA4ServiceAccountManager {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  private async refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expiry_date: number }> {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      throw new Error('Google OAuth credentials not configured');
+    }
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Token refresh failed: ${response.status} ${errorText}`);
+    }
+
+    const tokens = await response.json();
+    
+    return {
+      access_token: tokens.access_token,
+      expiry_date: Date.now() + (tokens.expires_in * 1000)
+    };
   }
 
   /**
