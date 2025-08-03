@@ -105,6 +105,34 @@ class GA4ServiceAccountManager {
   }
 
   /**
+   * Permanently delete a service account
+   */
+  async deleteServiceAccount(id: string): Promise<void> {
+    try {
+      // First delete any associated property access records
+      await db.delete(ga4PropertyAccess)
+        .where(eq(ga4PropertyAccess.serviceAccountId, id));
+      
+      // Then delete the service account
+      const result = await db.delete(ga4ServiceAccounts)
+        .where(eq(ga4ServiceAccounts.id, id))
+        .returning();
+      
+      if (!result.length) {
+        throw new Error(`Service account ${id} not found`);
+      }
+      
+      logger.info(`Deleted GA4 service account: ${result[0].name}`, {
+        serviceAccountId: id,
+        email: result[0].serviceAccountEmail
+      });
+    } catch (error) {
+      logger.error('Failed to delete service account:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Test Google account access (OAuth-based authentication)
    */
   async testAccountAccess(serviceAccountId: string): Promise<boolean> {

@@ -123,26 +123,24 @@ router.put('/ga4-service-accounts/:id', async (req, res) => {
 
 /**
  * DELETE /api/admin/ga4-service-accounts/:id
- * Deactivate a service account (soft delete)
+ * Permanently delete a service account
  */
 router.delete('/ga4-service-accounts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const serviceAccount = await ga4ServiceAccountManager.updateServiceAccount(id, { 
-      active: false 
-    });
+    await ga4ServiceAccountManager.deleteServiceAccount(id);
     
-    logger.info('Service account deactivated by admin', {
+    logger.info('Service account deleted by admin', {
       serviceAccountId: id,
       adminId: req.user?.id
     });
     
-    res.json({ message: 'Service account deactivated successfully' });
+    res.json({ message: 'Service account deleted successfully' });
   } catch (error) {
-    logger.error('Failed to deactivate service account:', error);
+    logger.error('Failed to delete service account:', error);
     res.status(500).json({ 
-      message: 'Failed to deactivate service account',
+      message: 'Failed to delete service account',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
