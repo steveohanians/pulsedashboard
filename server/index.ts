@@ -9,6 +9,7 @@ import { setupSecurityHeaders } from "./middleware/security";
 import { setupHealthCheck } from "./middleware/healthCheck";
 import { generalLimiter } from "./middleware/rateLimiter";
 import { setupPreloading } from "./middleware/preload";
+// Compression handled by Vite in production
 import logger from "./utils/logger";
 
 // Make boot time available globally
@@ -18,6 +19,8 @@ const app = express();
 
 // Security headers (must be early in middleware stack)
 setupSecurityHeaders(app);
+
+// Compression will be handled by deployment CDN
 
 // Resource preloading for performance
 setupPreloading(app);
