@@ -397,8 +397,7 @@ export default function AdminPanel() {
   // Create mutations for adding new items
   const createClientMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/admin/clients", data);
-      return res.json();
+      return await apiRequest("POST", "/api/admin/clients", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
@@ -420,8 +419,7 @@ export default function AdminPanel() {
 
   const createBenchmarkCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/admin/benchmark-companies", data);
-      return res.json();
+      return await apiRequest("POST", "/api/admin/benchmark-companies", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
@@ -443,8 +441,7 @@ export default function AdminPanel() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/admin/users/invite", data);
-      return res.json();
+      return await apiRequest("POST", "/api/admin/users/invite", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -467,8 +464,7 @@ export default function AdminPanel() {
   // CD Portfolio Company mutations
   const createCdPortfolioCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/admin/cd-portfolio", data);
-      return res.json();
+      return await apiRequest("POST", "/api/admin/cd-portfolio", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
@@ -490,8 +486,7 @@ export default function AdminPanel() {
 
   const updateCdPortfolioCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest("PUT", `/api/admin/cd-portfolio/${id}`, data);
-      return res.json();
+      return await apiRequest("PUT", `/api/admin/cd-portfolio/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
