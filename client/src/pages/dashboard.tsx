@@ -28,9 +28,15 @@ import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } fr
 // import html2canvas from 'html2canvas';
 // import { jsPDF } from 'jspdf';
 import { logger } from "@/utils/logger";
+import { performanceTimer } from "@/utils/performance-timer";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  
+  // Start performance timing
+  useEffect(() => {
+    performanceTimer.start();
+  }, []);
   const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
   const [customDateRange, setCustomDateRange] = useState("");
@@ -843,6 +849,15 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isLoading, metricNames, activeSection, manualClick]);
 
+  // Mark performance complete when dashboard is fully loaded and rendered
+  useEffect(() => {
+    if (!isLoading && dashboardData && client) {
+      // Wait for charts to render
+      setTimeout(() => {
+        performanceTimer.markComplete();
+      }, 500);
+    }
+  }, [isLoading, dashboardData, client]);
 
 
   if (isLoading) {
