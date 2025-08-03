@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Footer from "@/components/Footer";
+
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
@@ -908,7 +908,7 @@ export default function AdminPanel() {
 
       <div className="flex">
         {/* Content Area */}
-        <div className="flex-1 lg:ml-64 p-4 sm:p-6 max-w-7xl mx-auto w-full">
+        <div className="flex-1 lg:ml-64 p-4 sm:p-6 w-full">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
@@ -927,12 +927,12 @@ export default function AdminPanel() {
               </div>
             </div>
             <div className="p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Admin Sections</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Admin Settings</h3>
               <ul className="space-y-2">
                 {[
                   { value: 'users', label: 'User Management', icon: Users },
                   { value: 'clients', label: 'Client Management', icon: Building2 },
-                  { value: 'cd-clients', label: 'CD Portfolio', icon: Building2 },
+                  { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
                   { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
                   { value: 'filters', label: 'Filter Management', icon: Filter },
                   { value: 'global-template', label: 'Global Template', icon: Settings },
@@ -972,14 +972,14 @@ export default function AdminPanel() {
       )}
 
       {/* Desktop Sidebar Navigation */}
-      <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+      <nav className="w-64 bg-white border-r border-slate-200 fixed top-[88px] left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
         <div className="p-4">
-          <h2 className="text-base font-bold text-slate-800 mb-4">Admin Sections</h2>
+          <h2 className="text-base font-bold text-slate-800 mb-4">Admin Settings</h2>
           <ul className="space-y-2">
             {[
               { value: 'users', label: 'User Management', icon: Users },
               { value: 'clients', label: 'Client Management', icon: Building2 },
-              { value: 'cd-clients', label: 'CD Portfolio', icon: Building2 },
+              { value: 'cd-clients', label: 'CD Portfolio', icon: Briefcase },
               { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
               { value: 'filters', label: 'Filter Management', icon: Filter },
               { value: 'global-template', label: 'Global Template', icon: Settings },
@@ -2691,7 +2691,6 @@ export default function AdminPanel() {
         />
         </div>
       </div>
-      <Footer />
     </div>
   );
 }
