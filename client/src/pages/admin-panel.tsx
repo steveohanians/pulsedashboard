@@ -284,8 +284,8 @@ export default function AdminPanel() {
         return filtered;
       });
       
-      // Also invalidate to ensure fresh data on next fetch
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      // Don't invalidate immediately to avoid overriding our optimistic update
+      // The cache will be refreshed naturally on next page load
       
       toast({
         title: "Client deleted",
