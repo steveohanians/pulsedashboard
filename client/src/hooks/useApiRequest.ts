@@ -4,12 +4,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
+  onSuccess?: (data: unknown) => void;
+  onError?: (error: Error) => void;
   successMessage?: string;
   errorMessage?: string;
   invalidateQueries?: string[];
@@ -20,7 +20,7 @@ interface ApiRequestOptions {
  * Generic API request hook
  * Consolidates repeated patterns for API calls with error handling and toast notifications
  */
-export function useApiRequest<TData = any, TVariables = any>(
+export function useApiRequest<TData = unknown, TVariables = unknown>(
   endpoint: string,
   options: ApiRequestOptions = {}
 ) {
@@ -39,7 +39,7 @@ export function useApiRequest<TData = any, TVariables = any>(
 
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables: TVariables): Promise<TData> => {
-      const requestOptions: any = { method };
+      const requestOptions: RequestInit = { method };
       
       if (method !== 'GET' && variables) {
         requestOptions.body = JSON.stringify(variables);
@@ -48,7 +48,11 @@ export function useApiRequest<TData = any, TVariables = any>(
         };
       }
 
-      return await apiRequest(endpoint, requestOptions);
+      const response = await fetch(endpoint, requestOptions);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
     },
     onSuccess: (data, variables) => {
       // Invalidate specified queries
@@ -87,13 +91,13 @@ export function useApiRequest<TData = any, TVariables = any>(
  * Data fetching hook with standardized error handling
  * Consolidates query patterns across components
  */
-export function useApiQuery<TData = any>(
+export function useApiQuery<TData = unknown>(
   queryKey: string | string[],
   endpoint?: string,
   options: {
     enabled?: boolean;
     refetchInterval?: number;
-    onError?: (error: any) => void;
+    onError?: (error: Error) => void;
     showErrorToast?: boolean;
   } = {}
 ) {
@@ -103,23 +107,34 @@ export function useApiQuery<TData = any>(
   const keyArray = Array.isArray(queryKey) ? queryKey : [queryKey];
   const actualEndpoint = endpoint || keyArray[0];
 
-  return useQuery<TData>({
+  const query = useQuery<TData>({
     queryKey: keyArray,
     queryFn: async (): Promise<TData> => {
-      return await apiRequest(actualEndpoint);
+      const response = await fetch(actualEndpoint);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
     },
-    ...options,
-    onError: (error: any) => {
+    enabled: options.enabled,
+    refetchInterval: options.refetchInterval,
+  });
+
+  // Handle errors in useEffect for TanStack Query v5
+  React.useEffect(() => {
+    if (query.error) {
       if (showErrorToast) {
         toast({
           title: "Error",
-          description: error.message || "Failed to fetch data",
+          description: query.error.message || "Failed to fetch data",
           variant: "destructive",
         });
       }
-      onError?.(error);
-    },
-  });
+      onError?.(query.error);
+    }
+  }, [query.error, showErrorToast, onError, toast]);
+
+  return query;
 }
 
 /**
@@ -138,11 +153,15 @@ export function useOptimisticUpdate<TData, TVariables>(
 
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables: TVariables): Promise<TData> => {
-      return await apiRequest(endpoint, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: JSON.stringify(variables),
         headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
     },
     onMutate: async (variables) => {
       if (!optimisticUpdate) return;
@@ -162,7 +181,7 @@ export function useOptimisticUpdate<TData, TVariables>(
     },
     onError: (error, variables, context) => {
       // Rollback on error
-      if (context?.previousData) {
+      if (context && typeof context === 'object' && 'previousData' in context && context.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
       requestOptions.onError?.(error);
@@ -178,7 +197,7 @@ export function useOptimisticUpdate<TData, TVariables>(
  * Form submission hook
  * Consolidates form submission patterns with loading states
  */
-export function useFormSubmission<TData = any, TVariables = any>(
+export function useFormSubmission<TData = unknown, TVariables = unknown>(
   endpoint: string,
   options: ApiRequestOptions & {
     resetForm?: () => void;

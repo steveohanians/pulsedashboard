@@ -74,7 +74,14 @@ interface AIInsightsProps {
   clientId?: string;
   metricName?: string;
   timePeriod?: string;
-  metricData?: any;
+  metricData?: {
+    metricName: string;
+    clientValue: number | null;
+    industryAverage: number | null;
+    cdAverage: number | null;
+    competitorValues: number[];
+    competitorNames: string[];
+  };
   hasCustomContext?: boolean;
   onRegenerateWithContext?: (context: string) => void;
 }

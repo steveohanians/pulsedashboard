@@ -1,7 +1,7 @@
 // Consolidated API patterns to eliminate duplicate request/response handling
 // This replaces duplicate API patterns across client hooks and server routes
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -170,7 +170,7 @@ export const QueryBuilder = {
  * Consolidates error processing logic
  */
 export const ErrorHandlers = {
-  network: (error: any): ApiError => ({
+  network: (error: Error | unknown): ApiError => ({
     message: 'Network error - please check your connection',
     code: 'NETWORK_ERROR'
   }),

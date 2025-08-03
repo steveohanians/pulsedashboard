@@ -306,8 +306,25 @@ export async function generateBulkInsights(
 /**
  * Generate comprehensive dashboard insights from aggregated context
  */
+interface InsightGenerationContext {
+  client: { name: string; industryVertical: string; businessSize: string };
+  period: string;
+  previousPeriod: string;
+  totalCompetitors: number;
+  hasIndustryData: boolean;
+  metrics: Array<{
+    metricName: string;
+    clientValue: number | null;
+    trendDirection: string;
+    percentageChange?: number;
+    cdAverage: number | null;
+    industryAverage: number | null;
+    competitorValues: number[];
+  }>;
+}
+
 export async function generateComprehensiveInsights(
-  context: any // InsightGenerationContext
+  context: InsightGenerationContext
 ): Promise<{
   dashboardSummary: {
     context: string;
@@ -485,7 +502,15 @@ function determineMetricStatus(
  */
 export async function generateMetricSpecificInsightsWithContext(
   metricName: string,
-  enrichedData: any,
+  enrichedData: {
+    metric: { clientValue: number | null };
+    benchmarks?: {
+      competitors?: Array<{ value: number; name: string }>;
+      industryAverage?: number;
+      cdPortfolioAverage?: number;
+    };
+    client?: { name?: string; industry?: string; businessSize?: string };
+  },
   clientId: string,
   userContext: string
 ): Promise<any> {

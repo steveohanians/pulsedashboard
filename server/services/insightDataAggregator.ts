@@ -1,5 +1,6 @@
 import logger from '../utils/logger.js';
 import type { IStorage } from '../storage.js';
+import type { Metric, Competitor } from '@shared/schema';
 
 export interface AggregatedMetricData {
   metricName: string;
@@ -133,15 +134,15 @@ export class InsightDataAggregator {
    * Process and aggregate metrics data with trend analysis
    */
   private processMetricsData(
-    currentMetrics: any[],
-    previousMetrics: any[],
-    competitors: any[]
+    currentMetrics: Metric[],
+    previousMetrics: Metric[],
+    competitors: Competitor[]
   ): AggregatedMetricData[] {
     // Group current metrics by name
     const currentGrouped = this.groupMetricsByName(currentMetrics);
     const previousGrouped = this.groupMetricsByName(previousMetrics);
     
-    const competitorMap = new Map(competitors.map(c => [c.id, c.name]));
+    const competitorMap = new Map(competitors.map(c => [c.id, c.domain || c.label || `Competitor ${c.id}`]));
 
     const result: AggregatedMetricData[] = [];
 
@@ -156,14 +157,14 @@ export class InsightDataAggregator {
         if (sourceType.startsWith('Competitor_')) {
           const competitorId = sourceType.replace('Competitor_', '');
           const competitorName = competitorMap.get(competitorId) || `Competitor ${competitorId}`;
-          competitorValues.push(parseFloat(value as string));
+          competitorValues.push(typeof value === 'number' ? value : parseFloat(String(value)));
           competitorNames.push(competitorName);
         }
       });
 
       // Calculate trend
-      const currentClientValue = currentData.Client ? parseFloat(currentData.Client as string) : null;
-      const previousClientValue = previousData.Client ? parseFloat(previousData.Client as string) : null;
+      const currentClientValue = currentData.Client ? (typeof currentData.Client === 'number' ? currentData.Client : parseFloat(String(currentData.Client))) : null;
+      const previousClientValue = previousData.Client ? (typeof previousData.Client === 'number' ? previousData.Client : parseFloat(String(previousData.Client))) : null;
       
       const { trendDirection, percentageChange } = this.calculateTrend(
         currentClientValue,
@@ -173,8 +174,8 @@ export class InsightDataAggregator {
       result.push({
         metricName,
         clientValue: currentClientValue,
-        cdAverage: currentData.CD_Avg ? parseFloat(currentData.CD_Avg as string) : null,
-        industryAverage: currentData.Industry_Avg ? parseFloat(currentData.Industry_Avg as string) : null,
+        cdAverage: currentData.CD_Avg ? (typeof currentData.CD_Avg === 'number' ? currentData.CD_Avg : parseFloat(String(currentData.CD_Avg))) : null,
+        industryAverage: currentData.Industry_Avg ? (typeof currentData.Industry_Avg === 'number' ? currentData.Industry_Avg : parseFloat(String(currentData.Industry_Avg))) : null,
         competitorValues,
         competitorNames,
         previousPeriodValue: previousClientValue,
@@ -189,8 +190,8 @@ export class InsightDataAggregator {
   /**
    * Group metrics by name and source type
    */
-  private groupMetricsByName(metrics: any[]): Record<string, Record<string, any>> {
-    return metrics.reduce((acc, metric) => {
+  private groupMetricsByName(metrics: Metric[]): Record<string, Record<string, any>> {
+    return metrics.reduce((acc: Record<string, Record<string, any>>, metric) => {
       if (!acc[metric.metricName]) {
         acc[metric.metricName] = {};
       }

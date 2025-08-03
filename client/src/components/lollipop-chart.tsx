@@ -10,7 +10,12 @@ interface LollipopChartProps {
   competitors: Array<{
     id: string;
     label: string;
-    value: any;
+    value: {
+      Desktop: number;
+      Mobile: number;
+      Tablet: number;
+      Other?: number;
+    };
   }>;
   clientUrl?: string;
   clientName?: string;
@@ -53,7 +58,7 @@ export default function LollipopChart({
     return parts[0] || 'Demo Company';
   };
   // Convert percentages to proportions (0-1 scale)
-  const normalizeData = (deviceData: any) => ({
+  const normalizeData = (deviceData: Record<string, number>) => ({
     Desktop: (deviceData.Desktop || 0) / 100,
     Mobile: (deviceData.Mobile || 0) / 100,
     Tablet: (deviceData.Tablet || 0) / 100,

@@ -6,8 +6,10 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
+import type { Request, Response, NextFunction } from 'express';
+
 function createRateLimiter(windowMs: number, maxRequests: number, errorMessage: string) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || req.connection.remoteAddress;
     const key = `${ip}:${req.route?.path || req.path}`;
     const now = Date.now();

@@ -3,7 +3,7 @@
  * Run this to verify security measures are working properly
  */
 import { sanitizeUserInput, validateContextInput } from './inputSanitizer';
-import { logger } from './logger';
+import logger from './logger';
 
 interface TestCase {
   name: string;
@@ -192,7 +192,7 @@ export function testPromptInjectionPatterns(): string[] {
 // Export for manual testing
 if (require.main === module) {
   runSanitizationTests().then(results => {
-    console.log('Test Results:', results);
+    logger.info('Test Results:', results);
     process.exit(results.failed > 0 ? 1 : 0);
   });
 }

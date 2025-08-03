@@ -35,7 +35,7 @@ export function createRequestLogger(options: LogOptions = {}) {
       return next();
     }
 
-    let capturedJsonResponse: Record<string, any> | undefined = undefined;
+    let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
     let responseBody: string | undefined = undefined;
 
     // Capture response data
@@ -54,7 +54,7 @@ export function createRequestLogger(options: LogOptions = {}) {
     };
 
     // Log request details
-    const requestData: any = {
+    const requestData: Record<string, unknown> = {
       method,
       path,
       ip: req.ip || req.connection.remoteAddress,

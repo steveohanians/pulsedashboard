@@ -36,7 +36,7 @@ export interface StandardError {
   category: ErrorCategory;
   severity: ErrorSeverity;
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stack?: string;
   userId?: string;
   sessionId?: string;
@@ -83,7 +83,7 @@ export class ErrorLogger {
  * Consolidates error creation patterns
  */
 export class ErrorFactory {
-  static validation(message: string, context?: Record<string, any>): StandardError {
+  static validation(message: string, context?: Record<string, unknown>): StandardError {
     return this.create(message, ErrorCategory.VALIDATION, ErrorSeverity.MEDIUM, context);
   }
 
@@ -99,7 +99,7 @@ export class ErrorFactory {
     return this.create(message, ErrorCategory.NETWORK, ErrorSeverity.MEDIUM);
   }
 
-  static database(message: string, context?: Record<string, any>): StandardError {
+  static database(message: string, context?: Record<string, unknown>): StandardError {
     return this.create(message, ErrorCategory.DATABASE, ErrorSeverity.HIGH, context);
   }
 
@@ -112,11 +112,11 @@ export class ErrorFactory {
     );
   }
 
-  static businessLogic(message: string, context?: Record<string, any>): StandardError {
+  static businessLogic(message: string, context?: Record<string, unknown>): StandardError {
     return this.create(message, ErrorCategory.BUSINESS_LOGIC, ErrorSeverity.MEDIUM, context);
   }
 
-  static system(message: string, context?: Record<string, any>): StandardError {
+  static system(message: string, context?: Record<string, unknown>): StandardError {
     return this.create(message, ErrorCategory.SYSTEM, ErrorSeverity.CRITICAL, context);
   }
 
@@ -124,7 +124,7 @@ export class ErrorFactory {
     message: string,
     category: ErrorCategory,
     severity: ErrorSeverity,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ): StandardError {
     return {
       id: this.generateId(),
@@ -198,7 +198,7 @@ export class ErrorRecovery {
  * Consolidates React error handling patterns
  */
 export class ClientErrorHandler {
-  static handleApiError(error: any): ApiError {
+  static handleApiError(error: unknown): ApiError {
     if (error.name === 'AbortError') {
       return { message: 'Request was cancelled', code: 'CANCELLED' };
     }
@@ -237,7 +237,7 @@ export class ClientErrorHandler {
  * Consolidates Express error handling patterns
  */
 export class ServerErrorHandler {
-  static handleDatabaseError(error: any): StandardError {
+  static handleDatabaseError(error: unknown): StandardError {
     if (error.code === '23505') { // PostgreSQL unique violation
       return ErrorFactory.validation('Resource already exists', { sqlCode: error.code });
     }

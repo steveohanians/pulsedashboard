@@ -26,6 +26,7 @@ import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.p
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { logger } from "@/utils/logger";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
@@ -84,6 +85,7 @@ export default function Dashboard() {
     }>;
     isTimeSeries?: boolean;
     periods?: string[];
+    trafficChannelMetrics?: any[];
   }
 
   interface FiltersData {
@@ -111,7 +113,7 @@ export default function Dashboard() {
   // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
     mutationFn: async () => {
-      console.log("🧹 Starting to clear all AI insights...");
+      logger.info("Starting to clear all AI insights...");
       const response = await fetch("/api/debug/clear-all-insights", {
         method: "DELETE",
         headers: {
@@ -128,13 +130,13 @@ export default function Dashboard() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("🧹 Successfully cleared AI insights:", data);
+      logger.info("Successfully cleared AI insights:", data);
       // Reset all metric statuses to empty
       setMetricStatuses({});
       // Clear localStorage insights to prevent loading from cache
       try {
         localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
-        console.log("🧹 Cleared localStorage insights cache (pulse_dashboard_insights)");
+        logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
         
         // Also clear any other potential insight-related keys
         const keysToRemove = [];
@@ -145,9 +147,9 @@ export default function Dashboard() {
           }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
-        console.log(`🧹 Cleared ${keysToRemove.length} additional insight-related keys`);
+        logger.info(`Cleared ${keysToRemove.length} additional insight-related keys`);
       } catch (error) {
-        console.warn("Failed to clear localStorage:", error);
+        logger.warn("Failed to clear localStorage:", error);
       }
       // Invalidate and refetch all related queries
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
@@ -155,16 +157,16 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
       // Force refetch the dashboard data immediately
       dashboardQuery.refetch();
-      console.log("🧹 State reset, cache invalidated, localStorage cleared, and dashboard refetched");
+      logger.info("State reset, cache invalidated, localStorage cleared, and dashboard refetched");
       // Force page reload to ensure all components reset their state
       window.location.reload();
     },
     onError: (error) => {
-      console.error("❌ Failed to clear AI insights:", error);
+      logger.error("Failed to clear AI insights:", error);
       // Log more details about the error
       if (error instanceof Error) {
-        console.error("❌ Error message:", error.message);
-        console.error("❌ Error stack:", error.stack);
+        logger.error("Error message:", error.message);
+        logger.error("Error stack:", error.stack);
       }
     }
   });
@@ -217,18 +219,18 @@ export default function Dashboard() {
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
-      console.log(`🎯 Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
+      logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
       trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
-      console.log(`🎯 Using timeSeriesData fallback: ${trafficMetrics.length} records`);
+      logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-      console.log(`🎯 Using regular metrics fallback: ${trafficMetrics.length} records`);
+      logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     
-    console.log(`🔍 Traffic Channel Debug:`, {
+    logger.debug(`Traffic Channel Debug:`, {
       isTimeSeries,
       timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
       dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
@@ -240,11 +242,11 @@ export default function Dashboard() {
     });
     
     if (dashboardData?.trafficChannelMetrics) {
-      console.log(`🎯 TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
+      logger.debug(`TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
     }
     
     if (trafficMetrics.length === 0) {
-      console.warn(`⚠️ No traffic metrics found! Debug:`, {
+      logger.warn(`No traffic metrics found! Debug:`, {
         metricsCount: metrics.length,
         timeSeriesData: timeSeriesData ? 'exists' : 'missing',
         isTimeSeries,
@@ -291,7 +293,7 @@ export default function Dashboard() {
             }
           } catch (e) {
             // Fallback for invalid JSON
-            console.warn(`⚠️ Invalid traffic channel JSON data: ${metric.value}`);
+            logger.warn(`Invalid traffic channel JSON data: ${metric.value}`);
           }
         }
       });
@@ -1625,7 +1627,7 @@ export default function Dashboard() {
                       timePeriod={timePeriod}
                       metricData={metricData}
                       onStatusChange={(status) => {
-                        console.debug(`✅ Status change for ${metricName}:`, status);
+                        logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
                           ...prev,
                           [metricName]: status

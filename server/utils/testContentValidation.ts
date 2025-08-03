@@ -3,7 +3,7 @@
  * Tests profanity filtering, topic relevance, and quality checks
  */
 import { sanitizeUserInput, validateContextInput } from './inputSanitizer';
-import { logger } from './logger';
+import logger from './logger';
 
 interface ContentTestCase {
   name: string;
@@ -219,7 +219,7 @@ export function testSpecificContentScenarios(): void {
 if (require.main === module) {
   runContentValidationTests().then(results => {
     testSpecificContentScenarios();
-    console.log('Content Validation Results:', results);
+    logger.info('Content Validation Results:', results);
     process.exit(results.failed > 0 ? 1 : 0);
-  }).catch(console.error);
+  }).catch(logger.error);
 }

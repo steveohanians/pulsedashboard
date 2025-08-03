@@ -2,6 +2,7 @@
 // This eliminates seededRandom, generatePeriodLabel, and data generation patterns
 
 import { seededRandom as sharedSeededRandom } from '@shared/seededRandom';
+import { logger } from '@/utils/logger';
 
 /**
  * Seeded random number generator for consistent chart data
@@ -201,7 +202,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
         }
       } catch (e) {
         // Fallback for invalid JSON - skip this metric
-        console.warn('Invalid JSON in metric value:', metric.value);
+        logger.warn('Invalid JSON in metric value:', metric.value);
       }
     }
   });

@@ -35,11 +35,11 @@ function processTimeSeriesForBar(
     competitorId?: string;
   }>>,
   periods: string[],
-  competitors: any[],
+  competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
   metricName?: string
-): any[] {
-  const data: any[] = [];
+): Array<Record<string, unknown>> {
+  const data: Array<Record<string, unknown>> = [];
   
   // Generate dynamic period labels based on actual periods
   // generatePeriodLabel now imported from chartUtilities
@@ -48,7 +48,7 @@ function processTimeSeriesForBar(
   
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
-    const dataPoint: any = {
+    const dataPoint: Record<string, unknown> = {
       period: generatePeriodLabel(period)
     };
     

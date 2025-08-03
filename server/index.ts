@@ -57,7 +57,7 @@ app.use((req, res, next) => {
     const dbConnected = await testDatabaseConnection();
     
     if (!dbConnected) {
-      console.warn('Database connection failed - continuing with limited functionality');
+      logger.warn('Database connection failed - continuing with limited functionality');
     }
 
     const server = await registerRoutes(app);
@@ -115,7 +115,7 @@ app.use((req, res, next) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Failed to start server', { error: errorMessage });
-    console.error('Server startup error:', error);
+    logger.error('Server startup error:', error);
     process.exit(1);
   }
 })();

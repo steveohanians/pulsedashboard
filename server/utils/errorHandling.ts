@@ -10,7 +10,7 @@ import logger from './logger';
 interface ErrorResponse {
   message: string;
   status?: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -18,7 +18,7 @@ interface ErrorResponse {
  * Consolidates the try/catch + logger.error + res.status pattern
  */
 export function handleApiError(
-  error: any, 
+  error: Error & { status?: number; statusCode?: number }, 
   req: Request, 
   res: Response, 
   context: string = 'API operation'
@@ -42,7 +42,7 @@ export function handleApiError(
  * Eliminates the need for try/catch in every route handler
  */
 export function asyncHandler(
-  fn: (req: Request, res: Response) => Promise<any>
+  fn: (req: Request, res: Response) => Promise<unknown>
 ) {
   return (req: Request, res: Response) => {
     Promise.resolve(fn(req, res)).catch(error => 

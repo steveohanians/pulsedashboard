@@ -11,7 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 interface CompetitorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  competitors: any[];
+  competitors: Array<{
+    id: string;
+    domain: string;
+    label: string;
+    status: string;
+  }>;
   clientId: string;
 }
 

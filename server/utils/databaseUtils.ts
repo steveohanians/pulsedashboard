@@ -9,8 +9,8 @@ import logger from './logger';
  * Generic CRUD operations builder
  * Consolidates repeated database operation patterns
  */
-export class DatabaseRepository<T extends Record<string, any>, InsertT> {
-  constructor(private table: any, private entityName: string) {}
+export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
+  constructor(private table: unknown, private entityName: string) {}
 
   async findById(id: string): Promise<T | undefined> {
     try {
@@ -22,7 +22,7 @@ export class DatabaseRepository<T extends Record<string, any>, InsertT> {
     }
   }
 
-  async findAll(filters?: Record<string, any>): Promise<T[]> {
+  async findAll(filters?: Record<string, unknown>): Promise<T[]> {
     try {
       let query = db.select().from(this.table);
       

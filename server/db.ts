@@ -2,6 +2,7 @@ import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
+import logger from "./utils/logger";
 
 // Configure WebSocket for Neon serverless
 neonConfig.webSocketConstructor = ws;
@@ -35,10 +36,10 @@ export async function testDatabaseConnection(): Promise<boolean> {
   try {
     // Simple query to test connection
     await pool.query('SELECT 1');
-    console.log('Database connection successful');
+    logger.info('Database connection successful');
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    logger.error('Database connection failed:', error);
     return false;
   }
 }

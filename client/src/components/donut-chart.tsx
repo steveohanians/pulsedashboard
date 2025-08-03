@@ -24,7 +24,7 @@ const DEVICE_COLORS = {
   'Other': 'hsl(var(--color-device-other))',
 };
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any }) => {
   if (!active || !payload || !payload.length) return null;
   
   const data = payload[0];

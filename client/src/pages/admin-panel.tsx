@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
+import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: any }) {
@@ -672,7 +673,7 @@ export default function AdminPanel() {
     };
     
     // Debug logging
-    console.debug("Form data:", { metricName, data });
+    logger.debug("Form data:", { metricName, data });
     
     if (!data.promptTemplate || !metricName) {
       toast({

@@ -47,7 +47,7 @@ export default function InsightGenerationButton({
       onInsightsGenerated?.();
       setIsGenerating(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to Generate Insights",
         description: error.message || "Unable to generate AI insights at this time. Please try again.",

@@ -574,11 +574,11 @@ async function generateCompetitorChannelData(competitorId: string, clientId: str
 if (import.meta.url === `file://${process.argv[1]}`) {
   generateComprehensiveSampleData()
     .then(result => {
-      console.log("Generation completed:", result);
+      logger.info("Generation completed:", result);
       process.exit(0);
     })
     .catch(error => {
-      console.error("Generation failed:", error);
+      logger.error("Generation failed:", error);
       process.exit(1);
     });
 }

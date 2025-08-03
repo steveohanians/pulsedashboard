@@ -20,6 +20,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import { DatabaseRepository } from "./utils/databaseUtils";
+import logger from "./utils/logger";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -125,15 +126,15 @@ export class DatabaseStorage implements IStorage {
         tableName: 'sessions',  // Explicit table name
         // Add error handling for connection issues
         errorLog: (error: Error) => {
-          console.error('Session store error:', error.message);
+          logger.error('Session store error:', error.message);
         }
       });
     } catch (error) {
-      console.error('Failed to initialize session store:', error);
+      logger.error('Failed to initialize session store:', error);
       // Fallback to memory store for development
       const MemoryStore = session.MemoryStore;
       this.sessionStore = new MemoryStore();
-      console.warn('Using memory store as fallback - sessions will not persist');
+      logger.warn('Using memory store as fallback - sessions will not persist');
     }
   }
 
@@ -273,7 +274,7 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    console.log(`🔍 getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
+    logger.debug(`getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
     
     // Get all Industry_Avg metrics for this period
     const allIndustryMetrics = await db.select().from(metrics).where(
@@ -286,12 +287,12 @@ export class DatabaseStorage implements IStorage {
     // If no filters applied, return all metrics
     if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
                     (!filters.industryVertical || filters.industryVertical === "All"))) {
-      console.log(`📝 No filters applied, returning ${allIndustryMetrics.length} metrics`);
+      logger.debug(`No filters applied, returning ${allIndustryMetrics.length} metrics`);
       
       // Debug traffic channel data specifically for Industry_Avg
       const trafficChannels = allIndustryMetrics.filter(r => r.metricName === 'Traffic Channels');
       const channelsWithNames = trafficChannels.filter(r => r.channel);
-      console.log(`🔍 Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+      logger.debug(`Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
       
       return allIndustryMetrics;
     }
@@ -312,11 +313,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...companyConditions));
     
     if (matchingCompanies.length === 0) {
-      console.log(`❌ No matching companies found for filters`);
+      logger.debug(`No matching companies found for filters`);
       return [];
     }
     
-    console.log(`✅ Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
+    logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
     // Use the data generation logic to create filtered metrics that match the selected filters
     const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
@@ -329,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     // IMPORTANT: Skip Traffic Channels - they need actual database records to preserve channel information
     for (const config of METRIC_CONFIGS) {
       if (config.name === 'Traffic Channels') {
-        console.log(`🔍 Skipping Traffic Channels generation - will use actual database records`);
+        logger.debug(`Skipping Traffic Channels generation - will use actual database records`);
         continue; // Skip traffic channels - use actual database records instead
       }
       
@@ -369,15 +370,15 @@ export class DatabaseStorage implements IStorage {
         });
         
         if (config.name === "Session Duration") {
-          console.log(`📊 Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
+          logger.debug(`Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
         }
       }
     }
     
     // Add actual Traffic Channels data from database to preserve channel information
     const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
-    console.log(`🔍 Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
-    console.log(`🔍 Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+    logger.debug(`Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
+    logger.debug(`Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
     filteredMetrics.push(...trafficChannelsFromDB);
     
     return filteredMetrics;
@@ -388,11 +389,11 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    console.log(`🔍 getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
+    logger.debug(`getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
     
     // CD_Avg should NEVER be filtered by any criteria
     // It always represents the full CD portfolio regardless of industry filters
-    console.log('📝 CD_Avg should NEVER be filtered - returning all CD metrics for period');
+    logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
     const allMetrics = await db.select().from(metrics)
       .where(and(
         eq(metrics.sourceType, 'CD_Avg'),
@@ -402,9 +403,9 @@ export class DatabaseStorage implements IStorage {
     // Debug traffic channel data specifically for CD_Avg
     const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
     const channelsWithNames = trafficChannels.filter(r => r.channel);
-    console.log(`🔍 CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+    logger.debug(`CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
     
-    console.log(`📝 Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
+    logger.debug(`Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
     return allMetrics;
   }
 
@@ -416,12 +417,12 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.timePeriod, timePeriod)
       )
     );
-    console.log(`🔍 getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
+    logger.debug(`getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
     
     // Debug traffic channel data specifically
     const trafficChannels = results.filter(r => r.metricName === 'Traffic Channels');
     const channelsWithNames = trafficChannels.filter(r => r.channel);
-    console.log(`🔍 Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
+    logger.debug(`Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
     
     return results;
   }
@@ -668,7 +669,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async cascadeFilterOptionValueUpdate(category: string, oldValue: string, newValue: string): Promise<void> {
-    console.log(`Starting cascade update: ${category}, ${oldValue} -> ${newValue}`);
+    logger.info(`Starting cascade update: ${category}, ${oldValue} -> ${newValue}`);
     
     // Update all entities that reference this filter option value
     if (category === 'businessSizes') {
@@ -678,7 +679,7 @@ export class DatabaseStorage implements IStorage {
         .set({ businessSize: newValue })
         .where(eq(clients.businessSize, oldValue))
         .returning({ id: clients.id });
-      console.log(`Updated ${clientsResult.length} clients`);
+      logger.info(`Updated ${clientsResult.length} clients`);
 
       // Update benchmark companies
       const benchmarkResult = await db
@@ -686,7 +687,7 @@ export class DatabaseStorage implements IStorage {
         .set({ businessSize: newValue })
         .where(eq(benchmarkCompanies.businessSize, oldValue))
         .returning({ id: benchmarkCompanies.id });
-      console.log(`Updated ${benchmarkResult.length} benchmark companies`);
+      logger.info(`Updated ${benchmarkResult.length} benchmark companies`);
 
       // Update CD portfolio companies
       const cdPortfolioResult = await db
@@ -694,7 +695,7 @@ export class DatabaseStorage implements IStorage {
         .set({ businessSize: newValue })
         .where(eq(cdPortfolioCompanies.businessSize, oldValue))
         .returning({ id: cdPortfolioCompanies.id });
-      console.log(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
+      logger.info(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
     } else if (category === 'industryVerticals') {
       // Update clients
       const clientsResult = await db
@@ -702,7 +703,7 @@ export class DatabaseStorage implements IStorage {
         .set({ industryVertical: newValue })
         .where(eq(clients.industryVertical, oldValue))
         .returning({ id: clients.id });
-      console.log(`Updated ${clientsResult.length} clients`);
+      logger.info(`Updated ${clientsResult.length} clients`);
 
       // Update benchmark companies
       const benchmarkResult = await db
@@ -710,7 +711,7 @@ export class DatabaseStorage implements IStorage {
         .set({ industryVertical: newValue })
         .where(eq(benchmarkCompanies.industryVertical, oldValue))
         .returning({ id: benchmarkCompanies.id });
-      console.log(`Updated ${benchmarkResult.length} benchmark companies`);
+      logger.info(`Updated ${benchmarkResult.length} benchmark companies`);
 
       // Update CD portfolio companies
       const cdPortfolioResult = await db
@@ -718,10 +719,10 @@ export class DatabaseStorage implements IStorage {
         .set({ industryVertical: newValue })
         .where(eq(cdPortfolioCompanies.industryVertical, oldValue))
         .returning({ id: cdPortfolioCompanies.id });
-      console.log(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
+      logger.info(`Updated ${cdPortfolioResult.length} CD portfolio companies`);
     }
     
-    console.log(`Cascade update completed for ${category}`);
+    logger.info(`Cascade update completed for ${category}`);
   }
 
   async deleteFilterOption(id: string): Promise<void> {
