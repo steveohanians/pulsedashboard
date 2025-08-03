@@ -213,7 +213,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                     <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                     Testing...
                   </Badge>
-                ) : currentAccess ? (
+                ) : currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified ? (
                   <Badge className={getStatusColor(currentAccess.syncStatus)}>
                     {getStatusIcon(currentAccess.syncStatus)}
                     <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
@@ -227,7 +227,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
               </div>
             </div>
             
-            {!isTestingConnection && currentAccess && (
+            {!isTestingConnection && currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified && (
               <>
                 {currentAccess.propertyName && (
                   <p className="text-sm text-slate-600 mb-1">
@@ -246,13 +246,13 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                     <strong>Verified:</strong> {new Date(currentAccess.lastVerified).toLocaleDateString()}
                   </p>
                 )}
-                
-                {currentAccess.errorMessage && (
-                  <p className="text-sm text-red-600 mt-2">
-                    <strong>Error:</strong> {currentAccess.errorMessage}
-                  </p>
-                )}
               </>
+            )}
+            
+            {!isTestingConnection && currentAccess && (currentAccess.syncStatus === 'failed' || !currentAccess.accessVerified) && currentAccess.errorMessage && (
+              <p className="text-sm text-red-600 mt-2">
+                <strong>Error:</strong> {currentAccess.errorMessage}
+              </p>
             )}
           </div>
         )}
