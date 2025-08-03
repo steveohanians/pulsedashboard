@@ -33,7 +33,7 @@ class GoogleOAuthService {
     // Initialize OAuth2 configuration
     this.clientId = process.env.GOOGLE_CLIENT_ID || '';
     this.clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-    this.redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.REPLIT_DEV_DOMAIN}/api/oauth/google/callback`;
+    this.redirectUri = process.env.GOOGLE_REDIRECT_URI || `https://${process.env.REPLIT_DEV_DOMAIN}/api/oauth/google/callback`;
   }
 
   /**
