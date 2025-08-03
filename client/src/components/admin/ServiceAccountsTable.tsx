@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pencil, Trash2, Key, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, Key, CheckCircle, XCircle, Loader2, RefreshCw, Power, PowerOff, Wifi, WifiOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ServiceAccountForm } from "./ServiceAccountForm";
@@ -37,9 +37,11 @@ export function ServiceAccountsTable() {
     retry: false
   });
 
-  const deleteMutation = useMutation({
+  const deactivateMutation = useMutation({
     mutationFn: async (accountId: string) => {
-      return await apiRequest('DELETE', `/api/admin/ga4-service-accounts/${accountId}`);
+      return await apiRequest('PUT', `/api/admin/ga4-service-accounts/${accountId}`, {
+        active: false
+      });
     },
     onSuccess: () => {
       toast({
@@ -52,6 +54,26 @@ export function ServiceAccountsTable() {
       toast({
         title: "Error",
         description: error.message || "Failed to deactivate service account.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      return await apiRequest('DELETE', `/api/admin/ga4-service-accounts/${accountId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Service account deleted",
+        description: "Service account has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/ga4-service-accounts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete service account.",
         variant: "destructive",
       });
     }
@@ -136,6 +158,7 @@ export function ServiceAccountsTable() {
                 <TableHead className="text-xs">Google Account Email</TableHead>
                 <TableHead className="text-xs">Properties</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs">Connection</TableHead>
                 <TableHead className="text-xs">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -157,24 +180,28 @@ export function ServiceAccountsTable() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge 
-                        variant={account.serviceAccount.active ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {account.serviceAccount.active ? "Active" : "Inactive"}
-                      </Badge>
-                      <Badge 
-                        variant={account.serviceAccount.verified ? "default" : "outline"}
-                        className="text-xs"
-                      >
-                        {account.serviceAccount.verified ? (
-                          <><CheckCircle className="h-3 w-3 mr-1" />OAuth Verified</>
-                        ) : (
-                          <><XCircle className="h-3 w-3 mr-1" />Not Authorized</>
-                        )}
-                      </Badge>
-                    </div>
+                    <Badge 
+                      variant={account.serviceAccount.active ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {account.serviceAccount.active ? (
+                        <><Power className="h-3 w-3 mr-1" />Active</>
+                      ) : (
+                        <><PowerOff className="h-3 w-3 mr-1" />Inactive</>
+                      )}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={account.serviceAccount.verified ? "default" : "outline"}
+                      className="text-xs"
+                    >
+                      {account.serviceAccount.verified ? (
+                        <><Wifi className="h-3 w-3 mr-1" />Connected</>
+                      ) : (
+                        <><WifiOff className="h-3 w-3 mr-1" />Not Connected</>
+                      )}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-1">
@@ -238,22 +265,60 @@ export function ServiceAccountsTable() {
                         </DialogContent>
                       </Dialog>
 
+                      {account.serviceAccount.active ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              title="Deactivate Account"
+                            >
+                              <PowerOff className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Deactivate Service Account</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will deactivate "{account.serviceAccount.name}" and prevent it from accessing GA4 properties. 
+                                This action can be reversed later by editing the account.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deactivateMutation.mutate(account.serviceAccount.id)}
+                                disabled={deactivateMutation.isPending}
+                                className="bg-orange-600 hover:bg-orange-700"
+                              >
+                                {deactivateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Deactivate
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            title="Delete Account Permanently"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Deactivate Service Account</AlertDialogTitle>
+                            <AlertDialogTitle>Delete Service Account</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will deactivate the service account "{account.serviceAccount.name}". 
-                              Existing property access will be preserved, but new assignments will not use this account.
+                              This will permanently delete "{account.serviceAccount.name}" and all associated data. 
+                              This action cannot be undone and may break existing client integrations.
+                              <br /><br />
+                              <strong>Warning:</strong> This could affect active clients using this service account for GA4 data access.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -261,9 +326,10 @@ export function ServiceAccountsTable() {
                             <AlertDialogAction
                               onClick={() => deleteMutation.mutate(account.serviceAccount.id)}
                               disabled={deleteMutation.isPending}
+                              className="bg-red-600 hover:bg-red-700"
                             >
                               {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                              Deactivate
+                              Delete Permanently
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

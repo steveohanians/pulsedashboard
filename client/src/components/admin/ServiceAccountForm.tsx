@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { DialogClose } from "@/components/ui/dialog";
-import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, Wifi, WifiOff, Calendar, Power, PowerOff, Key } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -83,6 +84,46 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {serviceAccount && (
+        <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-slate-600">Account Status</div>
+            <Badge 
+              variant={serviceAccount.active ? "default" : "secondary"}
+              className="text-xs"
+            >
+              {serviceAccount.active ? (
+                <><Power className="h-3 w-3 mr-1" />Active</>
+              ) : (
+                <><PowerOff className="h-3 w-3 mr-1" />Inactive</>
+              )}
+            </Badge>
+          </div>
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-slate-600">OAuth Status</div>
+            <Badge 
+              variant={serviceAccount.verified ? "default" : "outline"}
+              className="text-xs"
+            >
+              {serviceAccount.verified ? (
+                <><Wifi className="h-3 w-3 mr-1" />Connected</>
+              ) : (
+                <><WifiOff className="h-3 w-3 mr-1" />Not Connected</>
+              )}
+            </Badge>
+          </div>
+          {serviceAccount.lastUsed && (
+            <div className="space-y-2 col-span-2">
+              <div className="text-xs font-medium text-slate-600">Last Used</div>
+              <div className="text-xs text-slate-500 flex items-center">
+                <Calendar className="h-3 w-3 mr-1" />
+                {new Date(serviceAccount.lastUsed).toLocaleDateString()}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {validationError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
