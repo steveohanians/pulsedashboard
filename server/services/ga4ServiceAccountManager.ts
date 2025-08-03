@@ -359,6 +359,14 @@ class GA4ServiceAccountManager {
       if (response.status === 403) {
         const errorText = await response.text();
         logger.error('GA4 Reporting API 403 error details', { propertyId, errorText });
+        // Check if it's an API not enabled error
+        if (errorText.includes('has not been used in project') || errorText.includes('is disabled')) {
+          return {
+            success: false,
+            error: 'Google Analytics Data API needs to be enabled in your Google Cloud project. Please enable it in the Google Cloud Console and try again.'
+          };
+        }
+        
         return {
           success: false,
           error: 'Insufficient permissions. Service account not added to this GA4 property or lacks Analytics read access.'
