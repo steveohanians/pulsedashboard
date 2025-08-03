@@ -219,31 +219,33 @@ export default function Dashboard() {
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
-      logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
+      // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
       trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
-      logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
+      // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-      logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
+      // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     
-    logger.debug(`Traffic Channel Debug:`, {
-      isTimeSeries,
-      timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
-      dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
-      trafficChannelMetricsExists: !!dashboardData?.trafficChannelMetrics,
-      trafficChannelMetricsCount: dashboardData?.trafficChannelMetrics?.length || 0,
-      trafficMetricsCount: trafficMetrics.length,
-      trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
-      sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
-    });
+    // Debug logging disabled for performance
+    // logger.debug(`Traffic Channel Debug:`, {
+    //   isTimeSeries,
+    //   timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
+    //   dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
+    //   trafficChannelMetricsExists: !!dashboardData?.trafficChannelMetrics,
+    //   trafficChannelMetricsCount: dashboardData?.trafficChannelMetrics?.length || 0,
+    //   trafficMetricsCount: trafficMetrics.length,
+    //   trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
+    //   sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
+    // });
     
-    if (dashboardData?.trafficChannelMetrics) {
-      logger.debug(`TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
-    }
+    // Debug logging disabled for performance
+    // if (dashboardData?.trafficChannelMetrics) {
+    //   logger.debug(`TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
+    // }
     
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {

@@ -301,7 +301,7 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    logger.debug(`getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
+    // Debug logging disabled for performance - logger.debug(`getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
     
     // Get all Industry_Avg metrics for this period
     const allIndustryMetrics = await db.select().from(metrics).where(
@@ -314,12 +314,13 @@ export class DatabaseStorage implements IStorage {
     // If no filters applied, return all metrics
     if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
                     (!filters.industryVertical || filters.industryVertical === "All"))) {
-      logger.debug(`No filters applied, returning ${allIndustryMetrics.length} metrics`);
+      // Debug logging disabled for performance
+      // logger.debug(`No filters applied, returning ${allIndustryMetrics.length} metrics`);
       
-      // Debug traffic channel data specifically for Industry_Avg
-      const trafficChannels = allIndustryMetrics.filter(r => r.metricName === 'Traffic Channels');
-      const channelsWithNames = trafficChannels.filter(r => r.channel);
-      logger.debug(`Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+      // Debug traffic channel data specifically for Industry_Avg - disabled for performance
+      // const trafficChannels = allIndustryMetrics.filter(r => r.metricName === 'Traffic Channels');
+      // const channelsWithNames = trafficChannels.filter(r => r.channel);
+      // logger.debug(`Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
       
       return allIndustryMetrics;
     }
@@ -340,11 +341,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...companyConditions));
     
     if (matchingCompanies.length === 0) {
-      logger.debug(`No matching companies found for filters`);
+      // Debug logging disabled for performance - logger.debug(`No matching companies found for filters`);
       return [];
     }
     
-    logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
+    // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
     // Use the data generation logic to create filtered metrics that match the selected filters
     const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
@@ -357,7 +358,7 @@ export class DatabaseStorage implements IStorage {
     // IMPORTANT: Skip Traffic Channels - they need actual database records to preserve channel information
     for (const config of METRIC_CONFIGS) {
       if (config.name === 'Traffic Channels') {
-        logger.debug(`Skipping Traffic Channels generation - will use actual database records`);
+        // Debug logging disabled for performance - logger.debug(`Skipping Traffic Channels generation - will use actual database records`);
         continue; // Skip traffic channels - use actual database records instead
       }
       
@@ -396,16 +397,18 @@ export class DatabaseStorage implements IStorage {
           createdAt: new Date()
         });
         
-        if (config.name === "Session Duration") {
-          logger.debug(`Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
-        }
+        // Debug logging disabled for performance
+        // if (config.name === "Session Duration") {
+        //   logger.debug(`Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
+        // }
       }
     }
     
     // Add actual Traffic Channels data from database to preserve channel information
     const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
-    logger.debug(`Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
-    logger.debug(`Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+    // Debug logging disabled for performance
+    // logger.debug(`Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
+    // logger.debug(`Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
     filteredMetrics.push(...trafficChannelsFromDB);
     
     return filteredMetrics;
@@ -416,23 +419,24 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    logger.debug(`getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
+    // Debug logging disabled for performance
+    // logger.debug(`getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
     
     // CD_Avg should NEVER be filtered by any criteria
     // It always represents the full CD portfolio regardless of industry filters
-    logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
+    // logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
     const allMetrics = await db.select().from(metrics)
       .where(and(
         eq(metrics.sourceType, 'CD_Avg'),
         eq(metrics.timePeriod, period)
       ));
     
-    // Debug traffic channel data specifically for CD_Avg
-    const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
-    const channelsWithNames = trafficChannels.filter(r => r.channel);
-    logger.debug(`CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
+    // Debug traffic channel data specifically for CD_Avg - disabled for performance
+    // const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
+    // const channelsWithNames = trafficChannels.filter(r => r.channel);
+    // logger.debug(`CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
     
-    logger.debug(`Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
+    // logger.debug(`Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
     return allMetrics;
   }
 
@@ -444,12 +448,13 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.timePeriod, timePeriod)
       )
     );
-    logger.debug(`getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
+    // Debug logging disabled for performance
+    // logger.debug(`getMetricsByClient(${clientId}, ${timePeriod}): ${results.length} metrics, Traffic Channels: ${results.filter(r => r.metricName === 'Traffic Channels').length}`);
     
-    // Debug traffic channel data specifically
-    const trafficChannels = results.filter(r => r.metricName === 'Traffic Channels');
-    const channelsWithNames = trafficChannels.filter(r => r.channel);
-    logger.debug(`Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
+    // Debug traffic channel data specifically - disabled for performance
+    // const trafficChannels = results.filter(r => r.metricName === 'Traffic Channels');
+    // const channelsWithNames = trafficChannels.filter(r => r.channel);
+    // logger.debug(`Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
     
     return results;
   }

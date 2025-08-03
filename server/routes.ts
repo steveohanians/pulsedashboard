@@ -137,8 +137,9 @@ export function registerRoutes(app: Express): Server {
         const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
         const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
         
-        logger.debug(`Single-period traffic channel debug: Client=${allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, Industry=${allFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, CD=${allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}`);
-        logger.debug(`Sample single-period traffic channels:`, allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+        // Debug logging disabled for performance
+        // logger.debug(`Single-period traffic channel debug: Client=${allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, Industry=${allFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, CD=${allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}`);
+        // logger.debug(`Sample single-period traffic channels:`, allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
         
         const processedMetrics = [
           ...allMetrics.map(m => ({
@@ -174,8 +175,9 @@ export function registerRoutes(app: Express): Server {
         
         // Extract traffic channel data for single-period response
         const trafficChannelMetrics = processedMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel);
-        logger.debug(`Single-period traffic channels being sent: ${trafficChannelMetrics.length} records`);
-        logger.debug(`Sample single-period traffic channels:`, trafficChannelMetrics.slice(0, 3).map(m => ({ channel: m.channel, sourceType: m.sourceType, value: m.value })));
+        // Debug logging disabled for performance
+        // logger.debug(`Single-period traffic channels being sent: ${trafficChannelMetrics.length} records`);
+        // logger.debug(`Sample single-period traffic channels:`, trafficChannelMetrics.slice(0, 3).map(m => ({ channel: m.channel, sourceType: m.sourceType, value: m.value })));
         
         res.json({
           client,
@@ -204,12 +206,13 @@ export function registerRoutes(app: Express): Server {
           const periodFilteredIndustryMetrics = allFilteredIndustryMetricsArrays[index] || [];
           const periodFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays[index] || [];
 
-          logger.debug(`Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
-          logger.debug(`Traffic Channel debug for ${timePeriod}: Client=${periodMetrics.filter(m => m.metricName === 'Traffic Channels').length}, Industry=${periodFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels').length}, CD=${periodFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length}`);
+          // Debug logging disabled for performance
+          // logger.debug(`Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
+          // logger.debug(`Traffic Channel debug for ${timePeriod}: Client=${periodMetrics.filter(m => m.metricName === 'Traffic Channels').length}, Industry=${periodFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels').length}, CD=${periodFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length}`);
           
-          // Debug sample traffic channel data
-          const sampleTrafficChannels = periodMetrics.filter(m => m.metricName === 'Traffic Channels').slice(0, 3);
-          logger.debug(`Sample traffic channels for ${timePeriod}:`, sampleTrafficChannels.map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+          // Debug sample traffic channel data - disabled for performance
+          // const sampleTrafficChannels = periodMetrics.filter(m => m.metricName === 'Traffic Channels').slice(0, 3);
+          // logger.debug(`Sample traffic channels for ${timePeriod}:`, sampleTrafficChannels.map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
           
           const metrics = [
             ...periodMetrics.map(m => ({
@@ -283,8 +286,9 @@ export function registerRoutes(app: Express): Server {
           });
         });
         
-        logger.debug(`Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
-        logger.debug(`Sample preserved traffic channels:`, trafficChannelMetrics.slice(0, 3).map(t => ({ channel: t.channel, value: t.value, sourceType: t.sourceType })));
+        // Debug logging disabled for performance
+        // logger.debug(`Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
+        // logger.debug(`Sample preserved traffic channels:`, trafficChannelMetrics.slice(0, 3).map(t => ({ channel: t.channel, value: t.value, sourceType: t.sourceType })));
         
         res.json({
           client,
