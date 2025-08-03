@@ -58,8 +58,18 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
   const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
   
+  // If we have property access data and no property ID set, use the first one
+  useEffect(() => {
+    if (propertyAccess && propertyAccess.length > 0 && !propertyId) {
+      const firstProperty = propertyAccess[0];
+      setPropertyId(firstProperty.propertyId);
+      onGA4PropertyUpdate(firstProperty.propertyId);
+    }
+  }, [propertyAccess, propertyId, onGA4PropertyUpdate]);
+  
   // Only show status if connection has been tested (not just when property ID is entered)
-  const showStatus = currentAccess && (isTestingConnection || currentAccess.lastVerified);
+  // Show if we have a verified connection OR if we're currently testing
+  const showStatus = isTestingConnection || (currentAccess && currentAccess.syncStatus !== 'pending');
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -192,7 +202,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {showStatus && (
+        {showStatus && currentAccess && (
           <div className="border rounded-lg p-3 bg-slate-50">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Current Status</span>
