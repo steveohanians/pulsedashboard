@@ -598,6 +598,10 @@ export default function AdminPanel() {
     deleteCompanyMutation.mutate(id);
   };
 
+  const handleDeleteCdPortfolioCompany = (id: string) => {
+    deleteCdPortfolioCompanyMutation.mutate(id);
+  };
+
   const handleSaveUser = (event: React.FormEvent) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget as HTMLFormElement);
@@ -1226,8 +1230,8 @@ export default function AdminPanel() {
                             </Dialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
-                                  <Trash2 className="h-3 w-3" />
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -1683,8 +1687,8 @@ export default function AdminPanel() {
                             </Dialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
-                                  <Trash2 className="h-3 w-3" />
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -2165,8 +2169,8 @@ export default function AdminPanel() {
                             </Dialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
-                                  <Trash2 className="h-3 w-3" />
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -2553,7 +2557,7 @@ export default function AdminPanel() {
                             </div>
                             <div className="text-xs text-gray-500">Industry: {company.industryVertical}</div>
                             <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
-                            <div className="text-xs text-gray-500">{company.description || "No description"}</div>
+
                             <div className="flex items-center gap-2 mt-2">
                               <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
                                 {company.active ? "Active" : "Inactive"}
@@ -2680,8 +2684,8 @@ export default function AdminPanel() {
                             </Dialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
-                                  <Trash2 className="h-3 w-3" />
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -2720,7 +2724,7 @@ export default function AdminPanel() {
                           <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
                           <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="hidden xl:table-cell w-32">Description</TableHead>
+
                           <TableHead className="w-20">Status</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
@@ -2737,7 +2741,7 @@ export default function AdminPanel() {
                                   </a>
                                 </div>
                                 <div className="text-xs text-gray-500 md:hidden">{company.businessSize}</div>
-                                <div className="text-xs text-gray-500 xl:hidden">{company.description || "No description"}</div>
+
                               </div>
                             </TableCell>
                             <TableCell className="hidden lg:table-cell text-sm">
@@ -2747,16 +2751,14 @@ export default function AdminPanel() {
                             </TableCell>
                             <TableCell className="text-sm">{company.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-sm">{company.businessSize}</TableCell>
-                            <TableCell className="hidden xl:table-cell text-xs">
-                              {company.description || "No description"}
-                            </TableCell>
+
                             <TableCell>
                               <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
                                 {company.active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="min-w-24">
-                              <div className="flex space-x-1 sm:space-x-2">
+                            <TableCell className="w-20">
+                              <div className="flex space-x-1">
                                 <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
                                   setIsDialogOpen(open);
                                   if (!open) {
