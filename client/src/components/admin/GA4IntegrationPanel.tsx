@@ -59,22 +59,11 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
   const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
   
-  // If we have property access data and no property ID set, use the first one
-  useEffect(() => {
-    if (propertyAccess && propertyAccess.length > 0 && !propertyId) {
-      const firstProperty = propertyAccess[0];
-      setPropertyId(firstProperty.propertyId);
-      onGA4PropertyUpdate(firstProperty.propertyId);
-      // Also pre-select the service account
-      if (firstProperty.serviceAccountId) {
-        setSelectedServiceAccount(firstProperty.serviceAccountId);
-      }
-    }
-  }, [propertyAccess, propertyId, onGA4PropertyUpdate]);
+  // Don't auto-populate from existing property access - user should manually enter values
+  // This prevents showing cached data that wasn't explicitly entered by the user
   
-  // Only show status if connection has been tested AND successful
-  // Don't show for just entering property ID - only show after successful verification
-  const showStatus = currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified;
+  // Only show status if currently testing connection or if there's a manually verified connection for the entered property ID
+  const showStatus = isTestingConnection || (propertyId && currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified);
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -256,10 +245,10 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {propertyId && !showStatus && (
+        {propertyId && selectedServiceAccount && !showStatus && (
           <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
             <p className="text-sm text-blue-700">
-              <strong>Setup Required:</strong> Select a service account and test the connection to enable automated data collection.
+              <strong>Ready to Test:</strong> Click "Test Connection" to verify access to this GA4 property.
             </p>
           </div>
         )}

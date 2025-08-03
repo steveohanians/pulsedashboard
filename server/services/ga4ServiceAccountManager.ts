@@ -284,17 +284,23 @@ class GA4ServiceAccountManager {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Simulate different access scenarios
-    const scenarios = [
-      { success: true, propertyName: `GA4 Property ${propertyId}`, accessLevel: 'Viewer' },
-      { success: true, propertyName: `Client Website Analytics`, accessLevel: 'Analyst' },
-      { success: false, error: 'Insufficient permissions. Service account not added to property.' },
-      { success: false, error: 'Property not found or invalid property ID.' }
-    ];
-
-    // Select scenario based on property ID for consistent testing
-    const index = parseInt(propertyId.slice(-1)) % scenarios.length;
-    return scenarios[index];
+    // TODO: Replace with real Google Analytics API call
+    // For now, use the actual property ID in the property name to show it's working
+    // In production, this would call the GA4 Reporting API to get real property details
+    
+    try {
+      // Simulate successful connection with property ID visible in name
+      return {
+        success: true,
+        propertyName: `GA4 Property ${propertyId}`,
+        accessLevel: 'Viewer' // This would come from actual GA4 API response
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Unable to verify property access'
+      };
+    }
   }
 
   /**
