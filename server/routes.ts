@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
+import { ga4DataService } from "./services/ga4DataService";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
@@ -13,6 +14,7 @@ import { getFiltersOptimized, getDashboardDataOptimized } from "./utils/queryOpt
 import { performanceCache } from "./cache/performance-cache";
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
+import ga4DataRoute from "./routes/ga4DataRoute";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
 
@@ -145,6 +147,30 @@ export function registerRoutes(app: Express): Server {
         businessSize: businessSize as string,
         industryVertical: industryVertical as string
       };
+
+      // 🔥 GA4 INTEGRATION: Fetch real GA4 data for Demo Company
+      if (clientId === "demo-client-id") {
+        logger.info(`Fetching real GA4 data for Demo Company (${clientId})`);
+        
+        try {
+          // Fetch GA4 data for each period
+          for (const period of periodsToQuery) {
+            const { startDate, endDate } = ga4DataService.getDateRangeForPeriod(period);
+            const ga4Data = await ga4DataService.fetchGA4Data(clientId, startDate, endDate);
+            
+            if (ga4Data) {
+              // Store the GA4 metrics in database
+              await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
+              logger.info(`Successfully stored GA4 data for Demo Company period: ${period}`);
+            } else {
+              logger.warn(`No GA4 data available for Demo Company period: ${period}`);
+            }
+          }
+        } catch (ga4Error) {
+          logger.error(`GA4 data fetch failed for Demo Company: ${(ga4Error as Error).message}`);
+          // Continue with sample data if GA4 fails
+        }
+      }
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
       const result = await getDashboardDataOptimized(
@@ -2107,6 +2133,7 @@ export function registerRoutes(app: Express): Server {
 
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
+  app.use("/api/ga4-data", ga4DataRoute);
   
   // GA4 Service Account Management routes
   app.use("/api/admin", ga4ServiceAccountRoutes);

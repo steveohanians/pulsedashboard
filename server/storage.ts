@@ -107,6 +107,10 @@ export interface IStorage {
   
   // GA4 Property Access
   createGA4PropertyAccess(access: InsertGA4PropertyAccess): Promise<GA4PropertyAccess>;
+  getGA4PropertyAccessByClient(clientId: string): Promise<GA4PropertyAccess | undefined>;
+  
+  // GA4 Service Accounts
+  getGA4ServiceAccount(serviceAccountId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -765,6 +769,24 @@ export class DatabaseStorage implements IStorage {
   async createGA4PropertyAccess(access: InsertGA4PropertyAccess): Promise<GA4PropertyAccess> {
     const [result] = await db.insert(ga4PropertyAccess).values(access).returning();
     return result;
+  }
+
+  async getGA4PropertyAccessByClient(clientId: string): Promise<GA4PropertyAccess | undefined> {
+    const [result] = await db
+      .select()
+      .from(ga4PropertyAccess)
+      .where(eq(ga4PropertyAccess.clientId, clientId))
+      .limit(1);
+    return result || undefined;
+  }
+
+  // GA4 Service Accounts
+  async getGA4ServiceAccount(serviceAccountId: string): Promise<any> {
+    // For now, return a mock service account - this will be implemented when we add the ga4ServiceAccounts table
+    return {
+      id: serviceAccountId,
+      accessToken: process.env.GA4_ACCESS_TOKEN || 'mock-access-token'
+    };
   }
 }
 
