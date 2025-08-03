@@ -1757,7 +1757,7 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                           <TableCell className="min-w-24">
-                            <div>
+                            <div className="flex space-x-1">
                               <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) setEditingItem(null);
@@ -1766,12 +1766,13 @@ export default function AdminPanel() {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
+                                    className="h-8 w-8 p-0"
                                     onClick={() => {
                                       setEditingItem(client);
                                       setIsDialogOpen(true);
                                     }}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -2243,7 +2244,7 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                           <TableCell>
-                            <div>
+                            <div className="flex space-x-1">
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
@@ -2256,6 +2257,7 @@ export default function AdminPanel() {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
+                                    className="h-8 w-8 p-0"
                                     onClick={() => {
                                       setEditingItem(company);
                                       setEditingBusinessSize(company.businessSize); // Initialize state with current value
@@ -2263,7 +2265,7 @@ export default function AdminPanel() {
                                       setIsDialogOpen(true);
                                     }}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -2758,7 +2760,7 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                             <TableCell className="w-20">
-                            <div>
+                            <div className="flex space-x-1">
                                 <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
                                   setIsDialogOpen(open);
                                   if (!open) {
@@ -2767,12 +2769,12 @@ export default function AdminPanel() {
                                   }
                                 }}>
                                   <DialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" onClick={() => {
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                                       setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
                                       setEditingCdIndustryVertical(company.industryVertical); // Initialize industry state
                                       setIsDialogOpen(true);
                                     }}>
-                                      <Edit className="h-4 w-4" />
+                                      <Edit className="h-3 w-3" />
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent>
