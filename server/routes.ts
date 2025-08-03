@@ -9,6 +9,7 @@ import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
+import { getFiltersOptimized, getDashboardDataOptimized } from "./utils/queryOptimizer";
 import ga4Routes from "./routes/ga4Routes";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
@@ -314,10 +315,19 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Filters endpoint with dynamic interdependent options
+  // Optimized filters endpoint with caching and compression
   app.get("/api/filters", requireAuth, async (req, res) => {
     try {
-      const { currentBusinessSize, currentIndustryVertical } = req.query;
+      // Use optimized caching for static filter data
+      const filters = await getFiltersOptimized();
+      
+      // Set aggressive cache headers
+      res.set({
+        'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min browser, 10 min CDN
+        'ETag': `"${Buffer.from(JSON.stringify(filters)).toString('base64').slice(0, 16)}"`
+      });
+      
+      return res.json(filters);
       
       // Get benchmark companies data ONLY (not CD Portfolio companies)
       const benchmarkCompanies = await storage.getBenchmarkCompanies();

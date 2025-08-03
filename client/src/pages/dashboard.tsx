@@ -29,9 +29,14 @@ import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } fr
 // import { jsPDF } from 'jspdf';
 import { logger } from "@/utils/logger";
 import { markDashboardComplete } from "@/utils/server-start-timer";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
+import { usePreloadData } from "@/hooks/use-preload";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  
+  // Preload critical data
+  usePreloadData();
   
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();

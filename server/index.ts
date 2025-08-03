@@ -8,6 +8,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupSecurityHeaders } from "./middleware/security";
 import { setupHealthCheck } from "./middleware/healthCheck";
 import { generalLimiter } from "./middleware/rateLimiter";
+import { setupPreloading } from "./middleware/preload";
 import logger from "./utils/logger";
 
 // Make boot time available globally
@@ -18,14 +19,18 @@ const app = express();
 // Security headers (must be early in middleware stack)
 setupSecurityHeaders(app);
 
+// Resource preloading for performance
+setupPreloading(app);
+
 // Health checks (before rate limiting)
 setupHealthCheck(app);
 
 // Rate limiting (after health checks)
 app.use('/api', generalLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Optimized body parsing with size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
