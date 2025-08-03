@@ -81,9 +81,34 @@ export function ServiceAccountsTable() {
 
   const authorizeOAuthMutation = useMutation({
     mutationFn: async (accountId: string) => {
-      // Open OAuth authorization in new tab to avoid browser security restrictions
-      window.open(`/api/oauth/google/authorize/${accountId}`, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
-      return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        // Open OAuth authorization in new tab to avoid browser security restrictions
+        const popup = window.open(`/api/oauth/google/authorize/${accountId}`, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
+        
+        // Listen for messages from the popup
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'oauth_success' && event.data?.serviceAccountId === accountId) {
+            window.removeEventListener('message', handleMessage);
+            toast({
+              title: "OAuth authorization successful",
+              description: "Google account has been authorized successfully.",
+            });
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/ga4-service-accounts'] });
+            resolve();
+          }
+        };
+        
+        window.addEventListener('message', handleMessage);
+        
+        // Handle popup being closed without success
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener('message', handleMessage);
+            resolve(); // Don't reject, just resolve silently
+          }
+        }, 1000);
+      });
     }
   });
 

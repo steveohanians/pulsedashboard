@@ -48,11 +48,21 @@ router.get('/callback', async (req, res) => {
     
     if (error) {
       logger.error('OAuth authorization failed:', error);
-      return res.redirect('/admin?oauth=error&message=' + encodeURIComponent(error as string));
+      return res.send(`
+        <script>
+          alert('OAuth authorization failed: ${error}');
+          window.close();
+        </script>
+      `);
     }
     
     if (!code || !state) {
-      return res.redirect('/admin?oauth=error&message=Missing authorization code or state');
+      return res.send(`
+        <script>
+          alert('Missing authorization code or state');
+          window.close();
+        </script>
+      `);
     }
     
     const serviceAccountId = state as string;
@@ -68,13 +78,28 @@ router.get('/callback', async (req, res) => {
       scopes: tokens.scope
     });
     
-    // Redirect back to admin panel with success
-    res.redirect('/admin?oauth=success&tab=ga4-accounts');
+    // Close popup and notify parent window of success
+    res.send(`
+      <script>
+        // Send success message to parent window
+        if (window.opener) {
+          window.opener.postMessage({ 
+            type: 'oauth_success', 
+            serviceAccountId: '${serviceAccountId}' 
+          }, '*');
+        }
+        // Close popup
+        window.close();
+      </script>
+    `);
   } catch (error) {
     logger.error('OAuth callback error:', error);
-    res.redirect('/admin?oauth=error&message=' + encodeURIComponent(
-      error instanceof Error ? error.message : 'OAuth verification failed'
-    ));
+    res.send(`
+      <script>
+        alert('OAuth verification failed: ${error instanceof Error ? error.message : 'Unknown error'}');
+        window.close();
+      </script>
+    `);
   }
 });
 
