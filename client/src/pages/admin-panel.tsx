@@ -304,14 +304,7 @@ export default function AdminPanel() {
   // Mutations for user management
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      try {
-        const result = await apiRequest("PUT", `/api/admin/users/${id}`, data);
-        console.log("Update user success:", result);
-        return result;
-      } catch (error) {
-        console.error("Update user error:", error);
-        throw error;
-      }
+      return await apiRequest("PUT", `/api/admin/users/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -373,15 +366,7 @@ export default function AdminPanel() {
 
   const toggleUserActiveMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
-      console.log("Toggle user status:", { userId, status });
-      try {
-        const result = await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
-        console.log("Toggle user success:", result);
-        return result;
-      } catch (error) {
-        console.error("Toggle user error:", error);
-        throw error;
-      }
+      return await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -657,9 +642,7 @@ export default function AdminPanel() {
       status: status as "Active" | "Inactive",
     };
     
-    // Debug logging
-    console.log("Form submission data:", data);
-    console.log("Switch checked state:", isActive);
+
     
     if (!data.name || !data.email) {
       toast({
