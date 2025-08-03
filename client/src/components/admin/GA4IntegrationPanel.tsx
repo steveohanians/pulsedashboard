@@ -57,6 +57,9 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
   const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
+  
+  // Only show status if connection has been tested (not just when property ID is entered)
+  const showStatus = currentAccess && (isTestingConnection || currentAccess.lastVerified);
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -89,10 +92,12 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
       // Trigger verification for existing or new property access
       if (accessId) {
         await apiRequest("POST", `/api/admin/ga4-property-access/${accessId}/verify`);
+        
+        // Wait a moment for verification to complete
+        setTimeout(() => {
+          refetchPropertyAccess();
+        }, 1500);
       }
-      
-      // Refresh to get updated status
-      refetchPropertyAccess();
     } catch (error) {
       console.error("Connection test failed:", error);
     } finally {
@@ -187,7 +192,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {currentAccess && (
+        {showStatus && (
           <div className="border rounded-lg p-3 bg-slate-50">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Current Status</span>
@@ -196,15 +201,17 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                   {getStatusIcon(currentAccess.syncStatus)}
                   <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={refetchPropertyAccess}
-                  className="h-6 w-6 p-0"
-                  title="Refresh status"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
+                {currentAccess.syncStatus !== 'success' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refetchPropertyAccess()}
+                    className="h-6 w-6 p-0"
+                    title="Refresh status"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </div>
             
