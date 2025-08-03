@@ -20,7 +20,7 @@ interface GlobalPromptTemplate {
 
 export function GlobalPromptTemplateForm() {
   const [formData, setFormData] = useState({
-    name: "",
+    name: "", // Read-only, populated from server
     description: "",
     promptTemplate: ""
   });
@@ -33,7 +33,7 @@ export function GlobalPromptTemplateForm() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; promptTemplate: string }) => {
+    mutationFn: async (data: { description?: string; promptTemplate: string }) => {
       const response = await fetch('/api/admin/global-prompt-template', {
         method: 'PUT',
         headers: {
@@ -72,14 +72,16 @@ export function GlobalPromptTemplateForm() {
     setSaveStatus('saving');
     
     updateMutation.mutate({
-      name: formData.name,
       description: formData.description,
       promptTemplate: formData.promptTemplate
     });
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Only allow editing of description and promptTemplate
+    if (field === 'description' || field === 'promptTemplate') {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   if (isLoading) {
@@ -110,10 +112,10 @@ export function GlobalPromptTemplateForm() {
           <Input
             id="template-name"
             value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="e.g., Pulse Dashboard Global AI Template"
-            required
+            readOnly
+            className="bg-slate-50 text-slate-600 cursor-not-allowed"
           />
+          <p className="text-xs text-slate-500 mt-1">Template name is system-managed and cannot be changed</p>
         </div>
 
         <div>
