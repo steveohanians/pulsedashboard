@@ -554,6 +554,7 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       websiteUrl: formData.get("website") as string,
+      gaPropertyId: formData.get("gaPropertyId") as string,
       industryVertical: formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
     };
@@ -1405,13 +1406,13 @@ export default function AdminPanel() {
                                       clientId={client.id}
                                       currentGA4PropertyId={client.gaPropertyId || ""}
                                       onGA4PropertyUpdate={(propertyId) => {
-                                        // Update form field value for submission
-                                        const input = document.querySelector('#gaPropertyId') as HTMLInputElement;
+                                        // Update hidden form field for submission
+                                        const input = document.querySelector('#hidden-gaPropertyId') as HTMLInputElement;
                                         if (input) input.value = propertyId;
                                       }}
                                     />
                                     {/* Hidden input for form submission */}
-                                    <input type="hidden" id="gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
+                                    <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
                                       <Select name="industry" defaultValue={client.industryVertical}>
