@@ -99,7 +99,11 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", authLimiter, passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Login failed" });
+    }
+    return res.status(200).json(user);
   });
 
   app.post("/api/logout", (req, res, next) => {
