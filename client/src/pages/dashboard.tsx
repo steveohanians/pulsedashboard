@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Plus, Settings, Users, Building2, Filter, Calendar, Clock, Info, TrendingUp, ExternalLink, X, Menu, Download, Sparkles, CheckCircle, CheckCircle2, AlertTriangle, AlertCircle, XCircle, Trash2 } from "lucide-react";
+import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
@@ -24,8 +24,9 @@ import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+// Heavy PDF libraries lazy loaded for performance
+// import html2canvas from 'html2canvas';
+// import { jsPDF } from 'jspdf';
 import { logger } from "@/utils/logger";
 
 export default function Dashboard() {
@@ -685,6 +686,9 @@ export default function Dashboard() {
       // Wait for any layout changes
       await new Promise(resolve => setTimeout(resolve, 300));
       
+      // Lazy load html2canvas library for performance
+      const html2canvas = (await import('html2canvas')).default;
+      
       // Capture the original element with hidden elements
       const canvas = await html2canvas(originalElement, {
         scale: 2,
@@ -709,6 +713,9 @@ export default function Dashboard() {
         const htmlEl = el as HTMLElement;
         htmlEl.style.display = originalDisplayValues[index] || '';
       });
+      
+      // Lazy load jsPDF library for performance
+      const { jsPDF } = await import('jspdf');
       
       // Create PDF with improved pagination
       const pdf = new jsPDF('p', 'mm', 'a4');
