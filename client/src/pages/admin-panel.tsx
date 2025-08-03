@@ -1101,49 +1101,205 @@ export default function AdminPanel() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Card Layout */}
+                <div className="block sm:hidden space-y-3">
+                  {sortedData(users, 'users')?.map((user: any) => (
+                    <Card key={user.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="font-medium text-sm">{user.name}</div>
+                            <div className="text-xs text-gray-500">{user.email}</div>
+                            <div className="text-xs text-gray-500">
+                              {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
+                                {user.role}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">Active</Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-1">
+                            <Dialog open={isDialogOpen && editingItem?.id === user.id} onOpenChange={(open) => {
+                              setIsDialogOpen(open);
+                              if (!open) setEditingItem(null);
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditingItem(user);
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit User</DialogTitle>
+                                  <DialogDescription>
+                                    Update user information and permissions
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleSaveUser} className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="name">Name *</Label>
+                                    <Input 
+                                      id="name" 
+                                      name="name"
+                                      defaultValue={user.name} 
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="email">Email *</Label>
+                                    <Input 
+                                      id="email"
+                                      name="email" 
+                                      type="email"
+                                      defaultValue={user.email}
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="role">Role</Label>
+                                    <Select name="role" defaultValue={user.role}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="User">User</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="clientId">Assigned Client</Label>
+                                    <Select name="clientId" defaultValue={user.clientId || "none"}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select a client" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">No Client (Admin Only)</SelectItem>
+                                        {clients?.map((client: any) => (
+                                          <SelectItem key={client.id} value={client.id}>
+                                            {client.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => handleSendPasswordReset(user.id)}
+                                      disabled={sendPasswordResetMutation.isPending}
+                                    >
+                                      {sendPasswordResetMutation.isPending ? "Sending..." : "Send Password Reset"}
+                                    </Button>
+                                    <div className="flex space-x-2">
+                                      <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateUserMutation.isPending}
+                                      >
+                                        {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{user.name}"? This action cannot be undone and will remove the user's access to the system.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    disabled={deleteUserMutation.isPending}
+                                  >
+                                    {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden sm:block rounded-md border overflow-hidden">
                   <div className="overflow-x-auto">
-                    <Table className="min-w-full">
+                    <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-40"><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden sm:table-cell min-w-48"><SortableHeader label="Email" sortKey="email" /></TableHead>
-                          <TableHead className="hidden sm:table-cell min-w-32">
+                          <TableHead className="w-36"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Email" sortKey="email" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-32">
                             <SortableHeader label="Client" sortKey="clientId" />
                           </TableHead>
-                          <TableHead className="min-w-20"><SortableHeader label="Role" sortKey="role" /></TableHead>
-                          <TableHead className="hidden md:table-cell min-w-20">Status</TableHead>
-                          <TableHead className="hidden lg:table-cell min-w-36">
+                          <TableHead className="w-20"><SortableHeader label="Role" sortKey="role" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-20">Status</TableHead>
+                          <TableHead className="hidden xl:table-cell w-32">
                             <SortableHeader label="Last Login" sortKey="lastLogin" />
                           </TableHead>
-                          <TableHead className="min-w-24">Actions</TableHead>
+                          <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                       {sortedData(users, 'users')?.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium min-w-40">
+                          <TableCell className="font-medium text-sm">
                             <div>
                               <div className="font-medium">{user.name}</div>
-                              <div className="text-xs text-gray-500 sm:hidden">{user.email}</div>
-                              <div className="text-xs text-gray-500 sm:hidden">
+                              <div className="text-xs text-gray-500 lg:hidden">{user.email}</div>
+                              <div className="text-xs text-gray-500 md:hidden">
                                 {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell min-w-48">{user.email}</TableCell>
-                          <TableCell className="hidden sm:table-cell min-w-32">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
-                          <TableCell className="min-w-20">
+                          <TableCell className="hidden lg:table-cell text-sm">{user.email}</TableCell>
+                          <TableCell className="hidden md:table-cell text-sm">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
+                          <TableCell>
                             <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
                               {user.role}
                             </Badge>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
+                          <TableCell className="hidden lg:table-cell">
                             <Badge variant="secondary" className="text-xs">Active</Badge>
                           </TableCell>
-                          <TableCell className="hidden lg:table-cell min-w-36 text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
-                          <TableCell className="min-w-24">
-                            <div className="flex space-x-1 sm:space-x-2">
+                          <TableCell className="hidden xl:table-cell text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
                               <Dialog open={isDialogOpen && editingItem?.id === user.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) setEditingItem(null);
@@ -1158,7 +1314,7 @@ export default function AdminPanel() {
                                       setIsDialogOpen(true);
                                     }}
                                   >
-                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -1394,43 +1550,208 @@ export default function AdminPanel() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Card Layout */}
+                <div className="block sm:hidden space-y-3">
+                  {sortedData(clients, 'clients')?.map((client: any) => (
+                    <Card key={client.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="font-medium text-sm">{client.name}</div>
+                            <div className="text-xs text-gray-500">
+                              <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {client.websiteUrl}
+                              </a>
+                            </div>
+                            <div className="text-xs text-gray-500">Industry: {client.industryVertical}</div>
+                            <div className="text-xs text-gray-500">Size: {client.businessSize}</div>
+                            <div className="text-xs text-gray-500">GA4: {client.ga4PropertyId || "Not set"}</div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
+                                {client.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-1">
+                            <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
+                              setIsDialogOpen(open);
+                              if (!open) setEditingItem(null);
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditingItem(client);
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Client</DialogTitle>
+                                  <DialogDescription>
+                                    Update client information and settings
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleSaveClient} className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="name">Name *</Label>
+                                    <Input 
+                                      id="name" 
+                                      name="name"
+                                      defaultValue={client.name} 
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="website">Website *</Label>
+                                    <Input 
+                                      id="website" 
+                                      name="website"
+                                      type="url"
+                                      defaultValue={client.websiteUrl} 
+                                      required
+                                    />
+                                  </div>
+                                  <GA4IntegrationPanel 
+                                    clientId={client.id}
+                                    currentGA4PropertyId={client.gaPropertyId || ""}
+                                    onGA4PropertyUpdate={(propertyId) => {
+                                      const input = document.querySelector('#hidden-gaPropertyId') as HTMLInputElement;
+                                      if (input) input.value = propertyId;
+                                    }}
+                                  />
+                                  <input type="hidden" id="hidden-gaPropertyId" name="gaPropertyId" defaultValue={client.gaPropertyId || ""} />
+                                  <div>
+                                    <Label htmlFor="industry">Industry Vertical</Label>
+                                    <Select name="industry" defaultValue={client.industryVertical}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="businessSize">Business Size</Label>
+                                    <Select name="businessSize" defaultValue={client.businessSize}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setIsDialogOpen(false);
+                                        setEditingItem(null);
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      type="submit"
+                                      disabled={updateClientMutation.isPending}
+                                    >
+                                      {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+                                    </Button>
+                                  </div>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Client</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{client.name}"? This action cannot be undone and will remove all associated data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete Client
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden sm:block rounded-md border overflow-hidden">
                   <div className="overflow-x-auto">
-                    <Table className="min-w-full">
+                    <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-40"><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden sm:table-cell min-w-48"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                          <TableHead className="hidden lg:table-cell min-w-32"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
-                          <TableHead className="min-w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                          <TableHead className="hidden md:table-cell min-w-36"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="min-w-20">Status</TableHead>
-                          <TableHead className="min-w-24">Actions</TableHead>
+                          <TableHead className="w-32"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="hidden xl:table-cell w-32"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
+                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                    <TableBody>
-                      {sortedData(clients, 'clients')?.map((client: any) => (
-                        <TableRow key={client.id}>
-                          <TableCell className="font-medium min-w-40">
-                            <div>
-                              <div className="font-medium">{client.name}</div>
-                              <div className="text-xs text-slate-500 sm:hidden">{client.websiteUrl}</div>
-                              <div className="text-xs text-slate-500 md:hidden">{client.businessSize}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell min-w-48">
-                            <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              {client.websiteUrl}
-                            </a>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell min-w-32 font-mono text-sm">{client.ga4PropertyId || "Not set"}</TableCell>
-                          <TableCell className="min-w-32">{client.industryVertical}</TableCell>
-                          <TableCell className="hidden md:table-cell min-w-36">{client.businessSize}</TableCell>
-                          <TableCell className="min-w-20">
-                            <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
-                              {client.active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
+                      <TableBody>
+                        {sortedData(clients, 'clients')?.map((client: any) => (
+                          <TableRow key={client.id}>
+                            <TableCell className="font-medium text-sm">
+                              <div>
+                                <div className="font-medium">{client.name}</div>
+                                <div className="text-xs text-gray-500 lg:hidden">
+                                  <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    {client.websiteUrl}
+                                  </a>
+                                </div>
+                                <div className="text-xs text-gray-500 xl:hidden">GA4: {client.ga4PropertyId || "Not set"}</div>
+                                <div className="text-xs text-gray-500 md:hidden">{client.businessSize}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">
+                              <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {client.websiteUrl}
+                              </a>
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell font-mono text-xs">{client.ga4PropertyId || "Not set"}</TableCell>
+                            <TableCell className="text-sm">{client.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">{client.businessSize}</TableCell>
+                            <TableCell>
+                              <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
+                                {client.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
                           <TableCell className="min-w-24">
                             <div className="flex space-x-1 sm:space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
@@ -1714,36 +2035,209 @@ export default function AdminPanel() {
                   </Card>
                 </div>
 
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead><SortableHeader label="Name" sortKey="name" /></TableHead>
-                        <TableHead><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                        <TableHead><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                        <TableHead><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                        <TableHead><SortableHeader label="Verified" sortKey="sourceVerified" /></TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
-                        <TableRow key={company.id}>
-                          <TableCell className="font-medium">{company.name}</TableCell>
-                          <TableCell>{company.websiteUrl}</TableCell>
-                          <TableCell>{company.industryVertical}</TableCell>
-                          <TableCell>{company.businessSize}</TableCell>
-                          <TableCell>
-                            <Badge variant={company.sourceVerified ? "secondary" : "outline"}>
-                              {company.sourceVerified ? "Verified" : "Pending"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={company.active ? "secondary" : "destructive"}>
-                              {company.active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
+                {/* Mobile Card Layout */}
+                <div className="block sm:hidden space-y-3">
+                  {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
+                    <Card key={company.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="font-medium text-sm">{company.name}</div>
+                            <div className="text-xs text-gray-500">{company.websiteUrl}</div>
+                            <div className="text-xs text-gray-500">Industry: {company.industryVertical}</div>
+                            <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
+                                {company.sourceVerified ? "Verified" : "Pending"}
+                              </Badge>
+                              <Badge variant={company.active ? "secondary" : "destructive"} className="text-xs">
+                                {company.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-1">
+                            <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
+                              setIsDialogOpen(open);
+                              if (!open) {
+                                setEditingItem(null);
+                                setEditingBusinessSize("");
+                                setEditingIndustryVertical("");
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditingItem(company);
+                                    setEditingBusinessSize(company.businessSize);
+                                    setEditingIndustryVertical(company.industryVertical);
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Benchmark Company</DialogTitle>
+                                  <DialogDescription>
+                                    Update company information and verification status
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleSaveCompany} className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="name">Company Name *</Label>
+                                    <Input 
+                                      id="name" 
+                                      name="name"
+                                      defaultValue={company.name} 
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="websiteUrl">Website URL *</Label>
+                                    <Input 
+                                      id="websiteUrl" 
+                                      name="websiteUrl"
+                                      type="url"
+                                      defaultValue={company.websiteUrl} 
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="industryVertical">Industry Vertical *</Label>
+                                    <Select name="industryVertical" value={editingIndustryVertical} onValueChange={setEditingIndustryVertical}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="businessSize">Business Size *</Label>
+                                    <Select name="businessSize" value={editingBusinessSize} onValueChange={setEditingBusinessSize}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setIsDialogOpen(false);
+                                        setEditingItem(null);
+                                        setEditingBusinessSize("");
+                                        setEditingIndustryVertical("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      type="submit"
+                                      disabled={updateCompanyMutation.isPending}
+                                    >
+                                      {updateCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                    </Button>
+                                  </div>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Benchmark Company</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{company.name}"? This will remove the company from benchmark calculations.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => handleDeleteCompany(company.id)}
+                                    disabled={deleteCompanyMutation.isPending}
+                                  >
+                                    {deleteCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table Layout */} 
+                <div className="hidden sm:block rounded-md border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-32"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Verified" sortKey="sourceVerified" /></TableHead>
+                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-20">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
+                          <TableRow key={company.id}>
+                            <TableCell className="font-medium text-sm">
+                              <div>
+                                <div className="font-medium">{company.name}</div>
+                                <div className="text-xs text-gray-500 lg:hidden">{company.websiteUrl}</div>
+                                <div className="text-xs text-gray-500 md:hidden">{company.businessSize}</div>
+                                <div className="text-xs text-gray-500 lg:hidden">
+                                  <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
+                                    {company.sourceVerified ? "Verified" : "Pending"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{company.websiteUrl}</TableCell>
+                            <TableCell className="text-sm">{company.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">{company.businessSize}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
+                                {company.sourceVerified ? "Verified" : "Pending"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={company.active ? "secondary" : "destructive"} className="text-xs">
+                                {company.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
@@ -1888,6 +2382,7 @@ export default function AdminPanel() {
                     </TableBody>
                   </Table>
                 </div>
+              </div>
               </TabsContent>
 
               {/* Clear Digital Portfolio Companies */}
@@ -2043,40 +2538,219 @@ export default function AdminPanel() {
                   </Card>
                 </div>
 
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Card Layout */}
+                <div className="block sm:hidden space-y-3">
+                  {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
+                    <Card key={company.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="font-medium text-sm">{company.name}</div>
+                            <div className="text-xs text-gray-500">
+                              <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {company.websiteUrl}
+                              </a>
+                            </div>
+                            <div className="text-xs text-gray-500">Industry: {company.industryVertical}</div>
+                            <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
+                            <div className="text-xs text-gray-500">{company.description || "No description"}</div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
+                                {company.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-1">
+                            <Dialog open={isDialogOpen && editingItem?.type === 'edit-cd-company' && editingItem?.id === company.id} onOpenChange={(open) => {
+                              setIsDialogOpen(open);
+                              if (!open) {
+                                setEditingItem(null);
+                                setEditingCdIndustryVertical("");
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
+                                    setEditingCdIndustryVertical(company.industryVertical);
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Portfolio Company</DialogTitle>
+                                  <DialogDescription>
+                                    Update company information
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleSaveCdPortfolioCompany} className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="name">Company Name *</Label>
+                                    <Input 
+                                      id="name" 
+                                      name="name"
+                                      defaultValue={company.name}
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="website">Website URL *</Label>
+                                    <Input 
+                                      id="website"
+                                      name="website" 
+                                      type="url"
+                                      defaultValue={company.websiteUrl}
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="industry">Industry Vertical *</Label>
+                                    <Select 
+                                      name="industry"
+                                      value={editingCdIndustryVertical} 
+                                      onValueChange={setEditingCdIndustryVertical}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="businessSize">Business Size *</Label>
+                                    <Select name="businessSize" defaultValue={company.businessSize}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                          .sort((a, b) => a.order - b.order)
+                                          .map((option) => (
+                                          <SelectItem key={option.id} value={option.value}>
+                                            {option.value}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea 
+                                      id="description"
+                                      name="description" 
+                                      defaultValue={company.description || ""}
+                                      rows={3}
+                                    />
+                                  </div>
+                                  <div className="flex justify-end space-x-2">
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setIsDialogOpen(false);
+                                        setEditingItem(null);
+                                        setEditingCdIndustryVertical("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      type="submit"
+                                      disabled={updateCdPortfolioCompanyMutation.isPending}
+                                    >
+                                      {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                    </Button>
+                                  </div>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-8 w-8 p-0">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Portfolio Company</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{company.name}"? This will remove the company from your portfolio.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => handleDeleteCdPortfolioCompany(company.id)}
+                                    disabled={deleteCdPortfolioCompanyMutation.isPending}
+                                  >
+                                    {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden sm:block rounded-md border overflow-hidden">
                   <div className="overflow-x-auto">
-                    <Table className="min-w-full">
+                    <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead><SortableHeader label="Company Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden sm:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                          <TableHead><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                          <TableHead className="hidden md:table-cell"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="hidden lg:table-cell">Description</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead className="w-32"><SortableHeader label="Company Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="hidden xl:table-cell w-32">Description</TableHead>
+                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
                           <TableRow key={company.id}>
-                            <TableCell className="font-medium min-w-40">
+                            <TableCell className="font-medium text-sm">
                               <div>
                                 <div className="font-medium">{company.name}</div>
-                                <div className="text-xs text-slate-500 sm:hidden">{company.websiteUrl}</div>
+                                <div className="text-xs text-gray-500 lg:hidden">
+                                  <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    {company.websiteUrl}
+                                  </a>
+                                </div>
+                                <div className="text-xs text-gray-500 md:hidden">{company.businessSize}</div>
+                                <div className="text-xs text-gray-500 xl:hidden">{company.description || "No description"}</div>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell min-w-48">
+                            <TableCell className="hidden lg:table-cell text-sm">
                               <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 {company.websiteUrl}
                               </a>
                             </TableCell>
-                            <TableCell className="min-w-32">{company.industryVertical}</TableCell>
-                            <TableCell className="hidden md:table-cell min-w-36">{company.businessSize}</TableCell>
-                            <TableCell className="hidden lg:table-cell min-w-32 text-xs">
+                            <TableCell className="text-sm">{company.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">{company.businessSize}</TableCell>
+                            <TableCell className="hidden xl:table-cell text-xs">
                               {company.description || "No description"}
                             </TableCell>
-                            <TableCell className="min-w-20">
+                            <TableCell>
                               <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
                                 {company.active ? "Active" : "Inactive"}
                               </Badge>
