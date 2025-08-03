@@ -652,13 +652,21 @@ export default function AdminPanel() {
     const formData = new FormData(form);
     const statusSwitch = form.querySelector('input[name="status"]') as HTMLInputElement;
     
+    // Get status value - Switch component provides checked state
+    const isActive = statusSwitch?.checked;
+    const status = isActive ? "Active" : "Inactive";
+    
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as string,
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
-      status: (statusSwitch?.checked ? "Active" : "Inactive") as "Active" | "Inactive",
+      status: status as "Active" | "Inactive",
     };
+    
+    // Debug logging
+    console.log("Form submission data:", data);
+    console.log("Switch checked state:", isActive);
     
     if (!data.name || !data.email) {
       toast({
