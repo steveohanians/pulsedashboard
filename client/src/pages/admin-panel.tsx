@@ -1282,7 +1282,7 @@ export default function AdminPanel() {
                       <TableBody>
                       {sortedData(users, 'users')?.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium text-sm">
+                          <TableCell className="font-medium text-xs">
                             <div>
                               <div className="font-medium">{user.name}</div>
                               <div className="text-xs text-gray-500 lg:hidden">{user.email}</div>
@@ -1291,8 +1291,8 @@ export default function AdminPanel() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden lg:table-cell text-sm">{user.email}</TableCell>
-                          <TableCell className="hidden md:table-cell text-sm">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs">{user.email}</TableCell>
+                          <TableCell className="hidden md:table-cell text-xs">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
                           <TableCell>
                             <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
                               {user.role}
@@ -1731,7 +1731,7 @@ export default function AdminPanel() {
                       <TableBody>
                         {sortedData(clients, 'clients')?.map((client: any) => (
                           <TableRow key={client.id}>
-                            <TableCell className="font-medium text-sm">
+                            <TableCell className="font-medium text-xs">
                               <div>
                                 <div className="font-medium">{client.name}</div>
                                 <div className="text-xs text-gray-500 lg:hidden">
@@ -1743,14 +1743,14 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 md:hidden">{client.businessSize}</div>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">
+                            <TableCell className="hidden lg:table-cell text-xs">
                               <a href={client.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 {client.websiteUrl}
                               </a>
                             </TableCell>
                             <TableCell className="hidden xl:table-cell font-mono text-xs">{client.ga4PropertyId || "Not set"}</TableCell>
-                            <TableCell className="text-sm">{client.industryVertical}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">{client.businessSize}</TableCell>
+                            <TableCell className="text-xs">{client.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-xs">{client.businessSize}</TableCell>
                             <TableCell>
                               <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
                                 {client.active ? "Active" : "Inactive"}
@@ -2218,7 +2218,7 @@ export default function AdminPanel() {
                       <TableBody>
                         {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
                           <TableRow key={company.id}>
-                            <TableCell className="font-medium text-sm">
+                            <TableCell className="font-medium text-xs">
                               <div>
                                 <div className="font-medium">{company.name}</div>
                                 <div className="text-xs text-gray-500 lg:hidden">{company.websiteUrl}</div>
@@ -2230,9 +2230,9 @@ export default function AdminPanel() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{company.websiteUrl}</TableCell>
-                            <TableCell className="text-sm">{company.industryVertical}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">{company.businessSize}</TableCell>
+                            <TableCell className="hidden lg:table-cell text-xs">{company.websiteUrl}</TableCell>
+                            <TableCell className="text-xs">{company.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
                                 {company.sourceVerified ? "Verified" : "Pending"}
@@ -2734,7 +2734,7 @@ export default function AdminPanel() {
                       <TableBody>
                         {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
                           <TableRow key={company.id}>
-                            <TableCell className="font-medium text-sm">
+                            <TableCell className="font-medium text-xs">
                               <div>
                                 <div className="font-medium">{company.name}</div>
                                 <div className="text-xs text-gray-500 lg:hidden">
@@ -2746,13 +2746,13 @@ export default function AdminPanel() {
 
                               </div>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">
+                            <TableCell className="hidden lg:table-cell text-xs">
                               <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 {company.websiteUrl}
                               </a>
                             </TableCell>
-                            <TableCell className="text-sm">{company.industryVertical}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">{company.businessSize}</TableCell>
+                            <TableCell className="text-xs">{company.industryVertical}</TableCell>
+                            <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
 
                             <TableCell>
                               <Badge variant={company.active ? "secondary" : "outline"} className="text-xs">
