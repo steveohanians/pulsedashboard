@@ -150,18 +150,23 @@ export function registerRoutes(app: Express): Server {
 
       // 🔥 GA4 INTEGRATION: Fetch real GA4 data for Demo Company
       if (clientId === "demo-client-id") {
-        logger.info(`Fetching real GA4 data for Demo Company (${clientId})`);
+        logger.info(`Fetching real GA4 data for Demo Company (${clientId}) for periods: ${periodsToQuery.join(', ')}`);
         
         try {
-          // Fetch GA4 data for each period
+          // Clear any existing sample data first for these periods
           for (const period of periodsToQuery) {
+            // Delete existing non-GA4 data to ensure GA4 data takes precedence
+            await storage.clearMetricsByClientAndPeriod(clientId, period);
+            
             const { startDate, endDate } = ga4DataService.getDateRangeForPeriod(period);
+            logger.info(`GA4 date range for period ${period}: ${startDate} to ${endDate}`);
+            
             const ga4Data = await ga4DataService.fetchGA4Data(clientId, startDate, endDate);
             
             if (ga4Data) {
               // Store the GA4 metrics in database
               await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
-              logger.info(`Successfully stored GA4 data for Demo Company period: ${period}`);
+              logger.info(`Successfully stored GA4 data for Demo Company period: ${period} - Bounce Rate: ${ga4Data.bounceRate}%`);
             } else {
               logger.warn(`No GA4 data available for Demo Company period: ${period}`);
             }

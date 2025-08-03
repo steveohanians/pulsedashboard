@@ -788,6 +788,16 @@ export class DatabaseStorage implements IStorage {
       accessToken: process.env.GA4_ACCESS_TOKEN || 'mock-access-token'
     };
   }
+
+  // Clear metrics for a specific client and time period
+  async clearMetricsByClientAndPeriod(clientId: string, timePeriod: string): Promise<void> {
+    await db.delete(metrics).where(
+      and(
+        eq(metrics.clientId, clientId),
+        eq(metrics.timePeriod, timePeriod)
+      )
+    );
+  }
 }
 
 export const storage = new DatabaseStorage();
