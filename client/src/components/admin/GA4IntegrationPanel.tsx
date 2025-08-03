@@ -31,10 +31,10 @@ interface ServiceAccount {
 interface PropertyAccess {
   id: string;
   propertyId: string;
-  propertyName: string;
-  accessLevel: string;
+  propertyName?: string;
+  accessLevel?: string;
   accessVerified: boolean;
-  lastVerified: string;
+  lastVerified?: string;
   syncStatus: string;
   errorMessage?: string;
 }
@@ -52,6 +52,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   // Fetch current property access for this client
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess[]>({
     queryKey: ["/api/admin/ga4-property-access/client", clientId],
+    enabled: !!clientId,
   });
 
   const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
@@ -71,21 +72,27 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
     
     setIsTestingConnection(true);
     try {
-      const result = await apiRequest("POST", "/api/admin/ga4-property-access", {
-        clientId,
-        propertyId,
-        serviceAccountId: selectedServiceAccount,
-      });
+      // Check if property access already exists
+      const existingAccess = currentAccess;
+      let accessId = existingAccess?.id;
       
-      // If a property access record was created, trigger verification
-      if (result?.id) {
-        await apiRequest("POST", `/api/admin/ga4-property-access/${result.id}/verify`);
+      if (!existingAccess) {
+        // Create new property access
+        const result = await apiRequest("POST", "/api/admin/ga4-property-access", {
+          clientId,
+          propertyId,
+          serviceAccountId: selectedServiceAccount,
+        });
+        accessId = result?.id;
       }
       
-      // Delay refresh to allow verification to complete
-      setTimeout(() => {
-        refetchPropertyAccess();
-      }, 1000);
+      // Trigger verification for existing or new property access
+      if (accessId) {
+        await apiRequest("POST", `/api/admin/ga4-property-access/${accessId}/verify`);
+      }
+      
+      // Refresh to get updated status
+      refetchPropertyAccess();
     } catch (error) {
       console.error("Connection test failed:", error);
     } finally {
@@ -192,8 +199,9 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => refetchPropertyAccess()}
+                  onClick={refetchPropertyAccess}
                   className="h-6 w-6 p-0"
+                  title="Refresh status"
                 >
                   <RefreshCw className="h-3 w-3" />
                 </Button>
