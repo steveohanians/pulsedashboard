@@ -628,12 +628,13 @@ export default function AdminPanel() {
   const handleSaveUser = (event: React.FormEvent) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const statusSwitch = (event.currentTarget as HTMLFormElement).querySelector('input[name="status"]') as HTMLInputElement;
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as string,
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
-      status: formData.get("status") ? "Active" : "Inactive" as "Active" | "Inactive",
+      status: statusSwitch?.checked ? "Active" : "Inactive" as "Active" | "Inactive",
     };
     
     if (!data.name || !data.email) {
@@ -3301,78 +3302,8 @@ export default function AdminPanel() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3 sm:gap-0">
                     <div>
                       <h2 className="text-base sm:text-lg font-semibold text-slate-900">Custom Metric Prompts</h2>
-                      <p className="text-xs text-slate-600">Override the global template for specific metrics</p>
+                      <p className="text-xs text-slate-600">View and manage metric-specific prompt templates</p>
                     </div>
-                    <Dialog open={isDialogOpen && editingItem?.type === 'add-prompt'} onOpenChange={(open) => {
-                    setIsDialogOpen(open);
-                    if (!open) setEditingItem(null);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => {
-                        setEditingItem({ type: 'add-prompt' });
-                        setIsDialogOpen(true);
-                      }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Custom Prompt
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <DialogHeader>
-                        <DialogTitle>Add Custom Metric Prompt</DialogTitle>
-                        <DialogDescription>
-                          Create a custom AI prompt template for a specific metric analysis
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateMetricPrompt} className="space-y-4">
-                        <div>
-                          <Label htmlFor="prompt-metric">Metric Name *</Label>
-                          <Input 
-                            id="prompt-metric"
-                            name="metricName" 
-                            placeholder="e.g., Bounce Rate, Session Duration, Traffic Channels"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="prompt-description">Description</Label>
-                          <Input 
-                            id="prompt-description"
-                            name="description" 
-                            placeholder="Brief description of this prompt's purpose"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="prompt-template">Prompt Template *</Label>
-                          <Textarea 
-                            id="prompt-template"
-                            name="promptTemplate" 
-                            placeholder="Use variables like {{clientName}}, {{industry}}, {{clientValue}}, {{industryAverage}}, {{cdPortfolioAverage}}, {{competitors}}"
-                            rows={12}
-                            className="font-mono text-sm"
-                            required
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                            Available variables: clientName, industry, businessSize, clientValue, industryAverage, cdPortfolioAverage, competitors
-                          </p>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setIsDialogOpen(false);
-                              setEditingItem(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button type="submit">
-                            Create Prompt
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
                   </div>
 
                   {metricPrompts && metricPrompts.length > 0 ? (
