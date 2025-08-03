@@ -6,6 +6,7 @@ export class PerformanceTimer {
   start() {
     this.startTime = performance.now();
     console.log(`🚀 [PERFORMANCE] Page load started at: ${this.startTime}ms`);
+    console.log(`📊 [PERFORMANCE] Browser navigation timestamp: ${Date.now()}`);
   }
 
   markComplete() {

@@ -33,9 +33,15 @@ import { performanceTimer } from "@/utils/performance-timer";
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   
-  // Start performance timing
+  // Start performance timing on fresh component mount
   useEffect(() => {
+    console.log('Dashboard component mounting - starting performance timer');
     performanceTimer.start();
+    
+    // Force a fresh reload to measure from scratch
+    if (window.location.search.includes('measure')) {
+      console.log('Fresh measurement requested');
+    }
   }, []);
   const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
