@@ -271,11 +271,22 @@ export default function AdminPanel() {
     mutationFn: async (id: string) => {
       console.log("Deleting client with ID:", id);
       await apiRequest("DELETE", `/api/admin/clients/${id}`);
+      return id; // Return the deleted ID
     },
-    onSuccess: () => {
-      console.log("Delete client success - invalidating cache");
-      // Force refetch instead of just invalidating
-      queryClient.refetchQueries({ queryKey: ["/api/admin/clients"] });
+    onSuccess: (deletedId) => {
+      console.log("Delete client success - updating cache immediately");
+      
+      // Immediately update cache by removing the deleted client
+      queryClient.setQueryData(["/api/admin/clients"], (oldData: any[] | undefined) => {
+        if (!oldData) return oldData;
+        const filtered = oldData.filter(client => client.id !== deletedId);
+        console.log("Updated cache - removed client:", deletedId, "remaining:", filtered.length);
+        return filtered;
+      });
+      
+      // Also invalidate to ensure fresh data on next fetch
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      
       toast({
         title: "Client deleted",
         description: "Client has been successfully deleted.",
