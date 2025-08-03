@@ -890,21 +890,9 @@ export default function Dashboard() {
         return true;
       };
 
-      // Check every second for up to 15 seconds
-      let attempts = 0;
-      const maxAttempts = 15;
-      
-      const intervalCheck = setInterval(() => {
-        attempts++;
-        const complete = checkVisualCompletion();
-        
-        if (complete || attempts >= maxAttempts) {
-          clearInterval(intervalCheck);
-          if (attempts >= maxAttempts) {
-            console.log(`⏰ Max attempts reached (${maxAttempts}s), measuring final state`);
-            performanceTimer.markComplete();
-          }
-        }
+      // Single check after data loads
+      const timer = setTimeout(() => {
+        checkVisualCompletion();
       }, 1000);
       
       return () => clearTimeout(timer);

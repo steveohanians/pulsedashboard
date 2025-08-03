@@ -4,13 +4,11 @@ export class PerformanceTimer {
   private endTime: number = 0;
 
   start() {
-    // Use navigation timing API for true page load start
-    const navigationStart = performance.timing?.navigationStart || Date.now();
-    this.startTime = navigationStart;
+    // Reset timer for fresh measurement
+    this.startTime = Date.now();
     
-    console.log(`🚀 [PERFORMANCE] TRUE PAGE NAVIGATION started at: ${navigationStart}`);
-    console.log(`📊 [PERFORMANCE] Current performance.now(): ${performance.now()}ms`);
-    console.log(`📊 [PERFORMANCE] Document ready state: ${document.readyState}`);
+    console.log(`🚀 [PERFORMANCE] FRESH TEST - Timer started at: ${this.startTime}`);
+    console.log(`📊 [PERFORMANCE] Current time: ${new Date().toISOString()}`);
   }
 
   markComplete() {
