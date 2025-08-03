@@ -237,18 +237,14 @@ export default function AdminPanel() {
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       console.log("Making API request to update client:", { id, data });
-      const res = await apiRequest("PUT", `/api/admin/clients/${id}`, data);
-      console.log("API response status:", res.status);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("API error:", errorText);
-        throw new Error(`Server error: ${res.status} ${res.statusText}`);
+      try {
+        const result = await apiRequest("PUT", `/api/admin/clients/${id}`, data);
+        console.log("API response data:", result);
+        return result;
+      } catch (error) {
+        console.error("API request error:", error);
+        throw error;
       }
-      
-      const result = await res.json();
-      console.log("API response data:", result);
-      return result;
     },
     onSuccess: (data) => {
       console.log("Update client mutation success:", data);
@@ -264,7 +260,7 @@ export default function AdminPanel() {
       console.error("Update client mutation error:", error);
       toast({
         title: "Failed to update client",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     },
