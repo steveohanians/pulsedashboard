@@ -853,31 +853,59 @@ export default function Dashboard() {
   // Mark performance complete when dashboard is fully loaded and rendered
   useEffect(() => {
     if (!isLoading && dashboardData && client && dashboardData.metrics) {
-      // Wait for DOM to settle and charts to fully render
-      const timer = setTimeout(() => {
-        // Check for various chart selectors since recharts uses different class names
+      // Wait for actual visual completion - what user sees
+      const checkVisualCompletion = () => {
         const chartWrappers = document.querySelectorAll('.recharts-wrapper');
         const svgElements = document.querySelectorAll('svg[class*="recharts"]');
         const metricElements = document.querySelectorAll('[id^="metric-"]');
-        const chartContainers = document.querySelectorAll('[class*="chart"]');
+        const pathElements = document.querySelectorAll('svg path, svg circle, svg rect');
         
-        console.log(`🔍 DOM Check: .recharts-wrapper=${chartWrappers.length}, svg[recharts]=${svgElements.length}, metrics=${metricElements.length}, chart containers=${chartContainers.length}`);
+        console.log(`🔍 Visual Check: charts=${chartWrappers.length}, SVGs=${svgElements.length}, metrics=${metricElements.length}, chart paths=${pathElements.length}`);
         
-        // Consider rendered if we have metrics and either charts or SVG elements
-        const hasCharts = chartWrappers.length > 0 || svgElements.length > 0;
-        const hasMetrics = metricElements.length > 0;
+        // Must have actual chart graphics rendered (paths, circles, etc.)
+        const hasVisualCharts = pathElements.length > 20; // Real chart elements
+        const hasAllMetrics = metricElements.length >= 6;
         
-        if (hasMetrics && (hasCharts || metricElements.length >= 6)) {
-          console.log(`📊 Dashboard fully rendered: Charts=${hasCharts}, Metrics=${hasMetrics}`);
-          performanceTimer.markComplete();
+        if (hasVisualCharts && hasAllMetrics) {
+          console.log(`✅ Visual render complete: Chart graphics=${pathElements.length}, Metrics=${metricElements.length}`);
+          
+          // Use requestIdleCallback to wait for browser to finish painting
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(() => {
+              // Additional delay for paint completion
+              setTimeout(() => {
+                performanceTimer.markComplete();
+              }, 2000);
+            });
+          } else {
+            // Fallback with longer delay
+            setTimeout(() => {
+              performanceTimer.markComplete();
+            }, 3000);
+          }
         } else {
-          console.log('⏳ Content not fully rendered, waiting longer...');
-          setTimeout(() => {
-            console.log('⏰ Timeout reached, measuring anyway...');
-            performanceTimer.markComplete();
-          }, 2000);
+          console.log(`⏳ Still rendering visuals: paths=${pathElements.length}, metrics=${metricElements.length}`);
+          return false;
         }
-      }, 2000); // Wait longer for full render
+        return true;
+      };
+
+      // Check every second for up to 15 seconds
+      let attempts = 0;
+      const maxAttempts = 15;
+      
+      const intervalCheck = setInterval(() => {
+        attempts++;
+        const complete = checkVisualCompletion();
+        
+        if (complete || attempts >= maxAttempts) {
+          clearInterval(intervalCheck);
+          if (attempts >= maxAttempts) {
+            console.log(`⏰ Max attempts reached (${maxAttempts}s), measuring final state`);
+            performanceTimer.markComplete();
+          }
+        }
+      }, 1000);
       
       return () => clearTimeout(timer);
     }

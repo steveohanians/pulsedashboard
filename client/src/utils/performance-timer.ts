@@ -4,19 +4,18 @@ export class PerformanceTimer {
   private endTime: number = 0;
 
   start() {
-    this.startTime = performance.now();
-    console.log(`🚀 [PERFORMANCE] FRESH PAGE LOAD started at: ${this.startTime}ms`);
-    console.log(`📊 [PERFORMANCE] Navigation timestamp: ${Date.now()}`);
+    // Use navigation timing API for true page load start
+    const navigationStart = performance.timing?.navigationStart || Date.now();
+    this.startTime = navigationStart;
     
-    // Force actual reload if this is a test
-    if (window.location.search.includes('force-reload')) {
-      console.log('🔄 Forcing actual browser reload...');
-      setTimeout(() => window.location.reload(), 100);
-    }
+    console.log(`🚀 [PERFORMANCE] TRUE PAGE NAVIGATION started at: ${navigationStart}`);
+    console.log(`📊 [PERFORMANCE] Current performance.now(): ${performance.now()}ms`);
+    console.log(`📊 [PERFORMANCE] Document ready state: ${document.readyState}`);
   }
 
   markComplete() {
-    this.endTime = performance.now();
+    // Use current timestamp for completion 
+    this.endTime = Date.now();
     const totalTime = this.endTime - this.startTime;
     
     // Verify we actually have content rendered
@@ -29,7 +28,13 @@ export class PerformanceTimer {
     console.log(`✅ [PERFORMANCE] Page fully rendered at: ${this.endTime}ms`);
     console.log(`📊 [PERFORMANCE] Content verification: Charts=${hasContent}, Metrics=${hasMetrics}`);
     console.log(`⏱️  [PERFORMANCE] TOTAL RENDER TIME: ${totalTime.toFixed(2)}ms (${(totalTime/1000).toFixed(2)}s)`);
-    console.log(`🎯 [PERFORMANCE] === ACTUAL COMPLETE RENDER TIME: ${(totalTime/1000).toFixed(2)} SECONDS ===`);
+    console.log(`🎯 [PERFORMANCE] === USER-VISIBLE COMPLETION TIME: ${(totalTime/1000).toFixed(2)} SECONDS ===`);
+    console.log(`👁️  [PERFORMANCE] This includes all visual painting and layout completion`);
+    
+    // Show in seconds for easier reading
+    if (totalTime > 5000) {
+      console.log(`🚨 [PERFORMANCE] SLOW LOAD DETECTED: ${(totalTime/1000).toFixed(1)}s - investigating...`);
+    }
     
     // Also log to localStorage for retrieval
     localStorage.setItem('lastRenderTime', totalTime.toString());
