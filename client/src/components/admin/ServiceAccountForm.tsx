@@ -89,8 +89,12 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
           <div className="space-y-2">
             <div className="text-xs font-medium text-slate-600">Account Status</div>
             <Badge 
-              variant={serviceAccount.active ? "default" : "secondary"}
-              className="text-xs"
+              variant="outline"
+              className={`text-xs ${
+                serviceAccount.active 
+                  ? 'bg-green-100 text-green-600 border-green-200' 
+                  : 'bg-gray-100 text-gray-500 border-gray-200'
+              }`}
             >
               {serviceAccount.active ? (
                 <><Power className="h-3 w-3 mr-1" />Active</>
@@ -102,8 +106,12 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
           <div className="space-y-2">
             <div className="text-xs font-medium text-slate-600">OAuth Status</div>
             <Badge 
-              variant={serviceAccount.verified ? "default" : "outline"}
-              className="text-xs"
+              variant="outline"
+              className={`text-xs ${
+                serviceAccount.verified 
+                  ? 'bg-green-100 text-green-600 border-green-200' 
+                  : 'bg-gray-100 text-gray-500 border-gray-200'
+              }`}
             >
               {serviceAccount.verified ? (
                 <><Link className="h-3 w-3 mr-1" />Connected</>
