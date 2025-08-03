@@ -1502,7 +1502,7 @@ export default function AdminPanel() {
                         Add Client
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Add New Client</DialogTitle>
                         <DialogDescription>
