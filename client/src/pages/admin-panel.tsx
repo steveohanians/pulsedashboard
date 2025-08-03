@@ -3042,7 +3042,7 @@ export default function AdminPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Business Sizes</CardTitle>
+                      <CardTitle className="text-sm">Business Sizes</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
@@ -3091,7 +3091,7 @@ export default function AdminPanel() {
                   </Card>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Industry Verticals</CardTitle>
+                      <CardTitle className="text-sm">Industry Verticals</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
