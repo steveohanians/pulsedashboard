@@ -62,7 +62,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   
   // Initialize component state from props and reset form state
   useEffect(() => {
-    console.log("Initializing GA4 panel with property ID:", currentGA4PropertyId);
+
     setPropertyId(currentGA4PropertyId);
     setHasTestedConnection(false);
     // Reset service account selection to force re-population
@@ -76,7 +76,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
       if (accessForCurrentProperty && !selectedServiceAccount) {
         setSelectedServiceAccount(accessForCurrentProperty.serviceAccountId);
         onServiceAccountUpdate?.(accessForCurrentProperty.serviceAccountId);
-        console.log("Auto-populated service account:", accessForCurrentProperty.serviceAccountId, "for property:", propertyId);
+
       }
     }
   }, [propertyAccess, propertyId, onServiceAccountUpdate]);
@@ -86,7 +86,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   const showStatus = isTestingConnection || hasTestedConnection;
 
   const handlePropertyIdChange = (value: string) => {
-    console.log("GA4 Property ID changed to:", value);
+
     setPropertyId(value);
     onGA4PropertyUpdate(value);
     // Reset test status when property ID changes

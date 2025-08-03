@@ -11,38 +11,32 @@ const navigationItems = [
   { 
     id: "Bounce Rate", 
     label: "Bounce Rate", 
-    icon: TrendingUp,
-    description: "Percentage of single-page visits"
+    icon: TrendingUp
   },
   { 
     id: "Session Duration", 
     label: "Session Duration", 
-    icon: Clock,
-    description: "Average time spent on site"
+    icon: Clock
   },
   { 
     id: "Pages per Session", 
     label: "Pages per Session", 
-    icon: BarChart3,
-    description: "Average pages viewed per visit"
+    icon: BarChart3
   },
   { 
     id: "Sessions per User", 
     label: "Sessions per User", 
-    icon: Users2,
-    description: "Average sessions per unique user"
+    icon: Users2
   },
   { 
     id: "Traffic Channels", 
     label: "Traffic Channels", 
-    icon: Globe,
-    description: "How visitors find your site"
+    icon: Globe
   },
   { 
     id: "Device Distribution", 
     label: "Device Distribution", 
-    icon: Smartphone,
-    description: "Breakdown by device type"
+    icon: Smartphone
   }
 ];
 
@@ -85,12 +79,7 @@ export default function SideNavigation({
                 `}>
                   {item.label}
                 </div>
-                <div className={`
-                  text-xs mt-0.5 leading-tight
-                  ${isActive ? 'text-primary-100' : 'text-slate-500 group-hover:text-slate-600'}
-                `}>
-                  {item.description}
-                </div>
+
               </div>
             </div>
           </button>

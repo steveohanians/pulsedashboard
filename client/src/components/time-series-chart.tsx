@@ -27,11 +27,7 @@ interface TimeSeriesChartProps {
   periods?: string[];
 }
 
-// Generate deterministic seeded random number
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+
 
 // Generate time series data from database or fallback to current behavior
 function generateTimeSeriesData(
@@ -267,10 +263,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point[clientKey], point['Industry Avg'], point['Clear Digital Clients Avg']);
+    allValues.push(Number(point[clientKey]) || 0, Number(point['Industry Avg']) || 0, Number(point['Clear Digital Clients Avg']) || 0);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(point[comp.label]);
+        allValues.push(Number(point[comp.label]) || 0);
       }
     });
   });

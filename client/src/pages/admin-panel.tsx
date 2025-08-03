@@ -236,10 +236,10 @@ export default function AdminPanel() {
   // Mutations for client management
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      console.log("Making API request to update client:", { id, data });
+
       try {
         const result = await apiRequest("PUT", `/api/admin/clients/${id}`, data);
-        console.log("API response data:", result);
+
         return result;
       } catch (error) {
         console.error("API request error:", error);
@@ -247,7 +247,7 @@ export default function AdminPanel() {
       }
     },
     onSuccess: (data) => {
-      console.log("Update client mutation success:", data);
+
       queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ga4-property-access"] });
       setIsDialogOpen(false);
@@ -269,12 +269,12 @@ export default function AdminPanel() {
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
-      console.log("Deleting client with ID:", id);
+
       await apiRequest("DELETE", `/api/admin/clients/${id}`);
       return id; // Return the deleted ID
     },
     onSuccess: (deletedId) => {
-      console.log("Delete client success - client permanently deleted from database");
+
       
       // Since the client is now actually deleted from the database,
       // we can safely invalidate the cache to get fresh data
@@ -614,7 +614,7 @@ export default function AdminPanel() {
       businessSize: formData.get("businessSize") as string,
     };
     
-    console.log("Client save data:", data); // Debug logging
+
     
     if (!data.name || !data.websiteUrl) {
       toast({

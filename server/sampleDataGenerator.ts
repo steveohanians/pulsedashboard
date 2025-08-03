@@ -60,15 +60,9 @@ const SOURCE_TYPES = ["Client", "Industry_Avg", "CD_Avg"];
 // Use centralized metric value generation with proper 15-month variations
 import { generateMetricValue, METRIC_CONFIGS as CORE_CONFIGS } from './utils/dataGeneratorCore';
 
-// Legacy generate value function for compatibility
-function generateValue(baseRange: [number, number], seed: number, timeVariance = 0.1): number {
-  const [min, max] = baseRange;
-  // Use seed to generate consistent but bounded values (0.2 to 0.8 of range)
-  const normalizedSeed = (Math.abs(Math.sin(seed * 12.345)) * 0.6) + 0.2;
-  const baseValue = min + (max - min) * normalizedSeed;
-  const variance = (Math.sin(seed * 67.890) * timeVariance * (max - min));
-  return Math.max(min, Math.min(max, baseValue + variance));
-}
+
+
+
 
 // Use centralized channel and device generation
 import { generateTrafficChannels, generateDeviceDistribution } from './utils/channelDataGenerator';
@@ -302,13 +296,7 @@ async function generateCompetitorMetrics(competitor: any, timePeriods: string[])
   }
 }
 
-// Legacy generation function for backward compatibility - now removed to use the new system
-function generateLegacyCompatibilityData() {
-  // This function is now deprecated in favor of the new variation system
-  logger.info("Legacy generation function deprecated - using new variation system");
-}
-        
-// This legacy generation section is no longer needed as we use the new variation system above
+
 
 // Generate metrics for CD Portfolio companies to create realistic CD_Avg benchmarks
 async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
@@ -325,12 +313,12 @@ async function generateCdPortfolioMetrics(cdPortfolioCompanies: any[]) {
       // Generate values for each CD Portfolio company and calculate average
       for (const company of cdPortfolioCompanies) {
         const companySeed = periodSeed + company.name.charCodeAt(0);
-        const companyValue = generateValue(config.cdRange, companySeed + config.name.charCodeAt(0));
+        const companyValue = generateMetricValue(config.cdRange, companySeed + config.name.charCodeAt(0));
         totalValue += companyValue;
         companyCount++;
       }
       
-      const avgValue = companyCount > 0 ? totalValue / companyCount : generateValue(config.cdRange, periodSeed);
+      const avgValue = companyCount > 0 ? totalValue / companyCount : generateMetricValue(config.cdRange, periodSeed);
       const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
         ? Math.round(avgValue * 10) / 10 
         : Math.round(avgValue);
@@ -358,7 +346,7 @@ async function generateIndustryAverageMetrics() {
     const periodSeed = timePeriod.charCodeAt(0) + timePeriod.charCodeAt(1);
     
     for (const config of METRIC_CONFIGS) {
-      const value = generateValue(config.industryRange, periodSeed + config.name.charCodeAt(0));
+      const value = generateMetricValue(config.industryRange, periodSeed + config.name.charCodeAt(0));
       const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
         ? Math.round(value * 10) / 10 
         : Math.round(value);
@@ -385,7 +373,7 @@ async function generateClientMetrics(clientId: string) {
     const periodSeed = timePeriod.charCodeAt(0) + clientId.charCodeAt(0);
     
     for (const config of METRIC_CONFIGS) {
-      const value = generateValue(config.clientRange, periodSeed + config.name.charCodeAt(0));
+      const value = generateMetricValue(config.clientRange, periodSeed + config.name.charCodeAt(0));
       const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
         ? Math.round(value * 10) / 10 
         : Math.round(value);
@@ -511,7 +499,7 @@ export async function generateDataForNewCompetitor(competitorId: string, clientI
         if (!config) continue;
         
         // Generate values in industry range for competitors
-        const value = generateValue(config.industryRange, periodSeed + metricName.charCodeAt(0));
+        const value = generateMetricValue(config.industryRange, periodSeed + metricName.charCodeAt(0));
         const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
           ? Math.round(value * 10) / 10 
           : Math.round(value);
