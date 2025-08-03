@@ -31,6 +31,7 @@ interface ServiceAccount {
 interface PropertyAccess {
   id: string;
   propertyId: string;
+  serviceAccountId: string;
   propertyName?: string;
   accessLevel?: string;
   accessVerified: boolean;
@@ -64,12 +65,16 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
       const firstProperty = propertyAccess[0];
       setPropertyId(firstProperty.propertyId);
       onGA4PropertyUpdate(firstProperty.propertyId);
+      // Also pre-select the service account
+      if (firstProperty.serviceAccountId) {
+        setSelectedServiceAccount(firstProperty.serviceAccountId);
+      }
     }
   }, [propertyAccess, propertyId, onGA4PropertyUpdate]);
   
-  // Only show status if connection has been tested (not just when property ID is entered)
-  // Show if we have a verified connection OR if we're currently testing
-  const showStatus = isTestingConnection || (currentAccess && currentAccess.syncStatus !== 'pending');
+  // Only show status if connection has been tested AND successful
+  // Don't show for just entering property ID - only show after successful verification
+  const showStatus = currentAccess && currentAccess.syncStatus === 'success' && currentAccess.accessVerified;
 
   useEffect(() => {
     setPropertyId(currentGA4PropertyId);
@@ -251,10 +256,10 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {propertyId && !currentAccess && (
+        {propertyId && !showStatus && (
           <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
             <p className="text-sm text-blue-700">
-              <strong>Setup Required:</strong> Add your property ID and test the connection to enable automated data collection.
+              <strong>Setup Required:</strong> Select a service account and test the connection to enable automated data collection.
             </p>
           </div>
         )}
