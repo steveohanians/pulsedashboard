@@ -71,12 +71,21 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
     
     setIsTestingConnection(true);
     try {
-      await apiRequest("POST", "/api/admin/ga4-property-access", {
+      const result = await apiRequest("POST", "/api/admin/ga4-property-access", {
         clientId,
         propertyId,
         serviceAccountId: selectedServiceAccount,
       });
-      refetchPropertyAccess();
+      
+      // If a property access record was created, trigger verification
+      if (result?.id) {
+        await apiRequest("POST", `/api/admin/ga4-property-access/${result.id}/verify`);
+      }
+      
+      // Delay refresh to allow verification to complete
+      setTimeout(() => {
+        refetchPropertyAccess();
+      }, 1000);
     } catch (error) {
       console.error("Connection test failed:", error);
     } finally {
@@ -175,10 +184,20 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           <div className="border rounded-lg p-3 bg-slate-50">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Current Status</span>
-              <Badge className={getStatusColor(currentAccess.syncStatus)}>
-                {getStatusIcon(currentAccess.syncStatus)}
-                <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className={getStatusColor(currentAccess.syncStatus)}>
+                  {getStatusIcon(currentAccess.syncStatus)}
+                  <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refetchPropertyAccess()}
+                  className="h-6 w-6 p-0"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             
             {currentAccess.propertyName && (
