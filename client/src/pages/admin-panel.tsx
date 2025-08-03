@@ -1525,7 +1525,7 @@ export default function AdminPanel() {
                               size="sm"
                               className="h-8 w-8 p-0"
                               onClick={() => {
-                                setEditingItem(client);
+                                setEditingItem({ ...client, type: 'client' });
                                 setIsDialogOpen(true);
                               }}
                             >
@@ -1613,121 +1613,18 @@ export default function AdminPanel() {
                             </TableCell>
                           <TableCell className="min-w-24">
                             <div className="flex space-x-1">
-                              <Dialog open={isDialogOpen && editingItem?.id === client.id} onOpenChange={(open) => {
-                                setIsDialogOpen(open);
-                                if (!open) setEditingItem(null);
-                              }}>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => {
-                                      setEditingItem(client);
-                                      setIsDialogOpen(true);
-                                    }}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" key={`client-dialog-${client.id}-${client.ga4PropertyId || 'none'}`}>
-                                  <DialogHeader>
-                                    <DialogTitle>Edit Client</DialogTitle>
-                                    <DialogDescription>
-                                      Update client information and settings
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <form onSubmit={handleSaveClient} className="space-y-4">
-                                    <div>
-                                      <Label htmlFor="name">Name *</Label>
-                                      <Input 
-                                        id="name" 
-                                        name="name"
-                                        defaultValue={client.name} 
-                                        required
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="website">Website *</Label>
-                                      <Input 
-                                        id="website" 
-                                        name="website"
-                                        type="url"
-                                        defaultValue={client.websiteUrl} 
-                                        required
-                                      />
-                                    </div>
-                                    <GA4IntegrationPanel 
-                                      clientId={client.id}
-                                      currentGA4PropertyId={client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : ""}
-                                      onGA4PropertyUpdate={(propertyId) => {
-                                        // Update hidden form field for submission
-                                        const input = document.querySelector(`#hidden-gaPropertyId-${client.id}`) as HTMLInputElement;
-                                        if (input) {
-                                          input.value = propertyId;
-                                          console.log("Updated hidden input with:", propertyId);
-                                        } else {
-                                          console.error("Hidden input not found");
-                                        }
-                                      }}
-                                    />
-                                    {/* Hidden input for form submission */}
-                                    <input type="hidden" id={`hidden-gaPropertyId-${client.id}`} name="gaPropertyId" defaultValue={client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : ""} />
-                                    <div>
-                                      <Label htmlFor="industry">Industry Vertical</Label>
-                                      <Select name="industry" defaultValue={client.industryVertical}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
-                                            .sort((a, b) => a.order - b.order)
-                                            .map((option) => (
-                                            <SelectItem key={option.id} value={option.value}>
-                                              {option.value}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="businessSize">Business Size</Label>
-                                      <Select name="businessSize" defaultValue={client.businessSize}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
-                                            .sort((a, b) => a.order - b.order)
-                                            .map((option) => (
-                                            <SelectItem key={option.id} value={option.value}>
-                                              {option.value}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="flex justify-end space-x-2">
-                                      <Button 
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setIsDialogOpen(false);
-                                          setEditingItem(null);
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      <Button 
-                                        type="submit"
-                                        disabled={updateClientMutation.isPending}
-                                      >
-                                        {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
-                                      </Button>
-                                    </div>
-                                  </form>
-                                </DialogContent>
-                              </Dialog>
+
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setEditingItem({ ...client, type: 'client' });
+                                  setIsDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
