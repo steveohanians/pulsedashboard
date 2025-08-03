@@ -1266,14 +1266,14 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-36"><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Email" sortKey="email" /></TableHead>
-                          <TableHead className="hidden md:table-cell w-32">
+                          <TableHead className="w-28"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-44"><SortableHeader label="Email" sortKey="email" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-36">
                             <SortableHeader label="Client" sortKey="clientId" />
                           </TableHead>
-                          <TableHead className="w-20"><SortableHeader label="Role" sortKey="role" /></TableHead>
-                          <TableHead className="hidden lg:table-cell w-20">Status</TableHead>
-                          <TableHead className="hidden xl:table-cell w-32">
+                          <TableHead className="w-16"><SortableHeader label="Role" sortKey="role" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-16">Status</TableHead>
+                          <TableHead className="hidden xl:table-cell w-36">
                             <SortableHeader label="Last Login" sortKey="lastLogin" />
                           </TableHead>
                           <TableHead className="w-20">Actions</TableHead>
@@ -1719,12 +1719,12 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-32"><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                          <TableHead className="hidden xl:table-cell w-32"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
-                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-28"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="hidden xl:table-cell w-36"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
+                          <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="w-16">Status</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2206,12 +2206,12 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-32"><SortableHeader label="Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="w-28"><SortableHeader label="Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
                           <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Verified" sortKey="sourceVerified" /></TableHead>
-                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-16">Status</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2722,12 +2722,12 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-32"><SortableHeader label="Company Name" sortKey="name" /></TableHead>
-                          <TableHead className="hidden lg:table-cell"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
-                          <TableHead className="w-24"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
-                          <TableHead className="hidden md:table-cell w-28"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
+                          <TableHead className="w-28"><SortableHeader label="Company Name" sortKey="name" /></TableHead>
+                          <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
+                          <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
+                          <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
 
-                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-16">Status</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
