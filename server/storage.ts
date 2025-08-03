@@ -40,6 +40,7 @@ export interface IStorage {
   getClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
+  deleteClient(id: string): Promise<void>;
   
   // Competitors
   getCompetitorsByClient(clientId: string): Promise<Competitor[]>;
@@ -179,6 +180,28 @@ export class DatabaseStorage implements IStorage {
 
   async updateClient(id: string, updateClient: Partial<InsertClient>): Promise<Client | undefined> {
     return await this.clientRepo.update(id, updateClient);
+  }
+
+  async deleteClient(id: string): Promise<void> {
+    // First delete all related data to maintain referential integrity
+    
+    // Delete metrics associated with this client
+    await db.delete(metrics).where(eq(metrics.clientId, id));
+    
+    // Delete AI insights associated with this client  
+    await db.delete(aiInsights).where(eq(aiInsights.clientId, id));
+    
+    // Delete insight contexts associated with this client
+    await db.delete(insightContexts).where(eq(insightContexts.clientId, id));
+    
+    // Delete competitors associated with this client
+    const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, id));
+    for (const competitor of clientCompetitors) {
+      await this.deleteCompetitor(competitor.id);
+    }
+    
+    // Finally delete the client
+    await this.clientRepo.delete(id);
   }
 
 

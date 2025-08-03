@@ -274,22 +274,15 @@ export default function AdminPanel() {
       return id; // Return the deleted ID
     },
     onSuccess: (deletedId) => {
-      console.log("Delete client success - updating cache immediately");
+      console.log("Delete client success - client permanently deleted from database");
       
-      // Immediately update cache by removing the deleted client
-      queryClient.setQueryData(["/api/admin/clients"], (oldData: any[] | undefined) => {
-        if (!oldData) return oldData;
-        const filtered = oldData.filter(client => client.id !== deletedId);
-        console.log("Updated cache - removed client:", deletedId, "remaining:", filtered.length);
-        return filtered;
-      });
-      
-      // Don't invalidate immediately to avoid overriding our optimistic update
-      // The cache will be refreshed naturally on next page load
+      // Since the client is now actually deleted from the database,
+      // we can safely invalidate the cache to get fresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
       
       toast({
         title: "Client deleted",
-        description: "Client has been successfully deleted.",
+        description: "Client has been permanently deleted from the database.",
       });
     },
     onError: (error: Error) => {

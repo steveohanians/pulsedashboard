@@ -1301,6 +1301,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/admin/clients/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if client exists
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Delete the client
+      await storage.deleteClient(id);
+      logger.info("Client deleted successfully", { clientId: id, clientName: client.name });
+      
+      res.json({ message: "Client deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting client", { error: (error as Error).message, clientId: req.params.id });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // CD Portfolio Company Management (separate from clients)
   app.get('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
