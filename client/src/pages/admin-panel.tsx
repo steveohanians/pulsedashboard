@@ -249,6 +249,7 @@ export default function AdminPanel() {
     onSuccess: (data) => {
       console.log("Update client mutation success:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ga4-property-access"] });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -1833,7 +1834,7 @@ export default function AdminPanel() {
                                       Update client information and settings
                                     </DialogDescription>
                                   </DialogHeader>
-                                  <form onSubmit={handleSaveClient} className="space-y-4">
+                                  <form key={`client-form-${client.id}-${client.ga4PropertyId || 'none'}`} onSubmit={handleSaveClient} className="space-y-4">
                                     <div>
                                       <Label htmlFor="name">Name *</Label>
                                       <Input 
