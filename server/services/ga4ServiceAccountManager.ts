@@ -226,9 +226,8 @@ class GA4ServiceAccountManager {
         throw new Error(`Service account not found for access record ${accessId}`);
       }
 
-      // For now, we'll simulate the verification process
-      // In production, this would use the Google Analytics API
-      const result = await this.simulatePropertyAccessCheck(
+      // Use real Google Analytics API to verify property access
+      const result = await this.checkPropertyAccess(
         serviceAccount,
         propertyAccess.propertyId
       );
@@ -274,31 +273,107 @@ class GA4ServiceAccountManager {
   }
 
   /**
-   * Simulate GA4 property access check
-   * In production, this would use the Google Analytics Data API
+   * Check real GA4 property access using Google Analytics Admin API
    */
-  private async simulatePropertyAccessCheck(
+  private async checkPropertyAccess(
     serviceAccount: GA4ServiceAccount, 
     propertyId: string
   ): Promise<PropertyAccessResult> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // TODO: Replace with real Google Analytics API call
-    // For now, use the actual property ID in the property name to show it's working
-    // In production, this would call the GA4 Reporting API to get real property details
-    
     try {
-      // Simulate successful connection with property ID visible in name
+      if (!serviceAccount.accessToken) {
+        return {
+          success: false,
+          error: 'Service account not properly authenticated. Please complete OAuth flow.'
+        };
+      }
+
+      // Check if token is expired and refresh if needed
+      if (serviceAccount.tokenExpiry && new Date() > serviceAccount.tokenExpiry) {
+        logger.warn('Access token expired, attempting to refresh', { serviceAccountId: serviceAccount.id });
+        // TODO: Implement token refresh logic
+        return {
+          success: false,
+          error: 'Access token expired. Please re-authenticate the service account.'
+        };
+      }
+
+      // Make request to Google Analytics Admin API to get property details
+      const response = await fetch(`https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`, {
+        headers: {
+          'Authorization': `Bearer ${serviceAccount.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 403) {
+        return {
+          success: false,
+          error: 'Insufficient permissions. Service account not added to this GA4 property.'
+        };
+      }
+
+      if (response.status === 404) {
+        return {
+          success: false,
+          error: 'Property not found. Please verify the property ID is correct.'
+        };
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('GA4 API error', { status: response.status, error: errorText });
+        return {
+          success: false,
+          error: `GA4 API error: ${response.status} ${errorText}`
+        };
+      }
+
+      const propertyData = await response.json();
+      
+      // Extract property name and determine access level
+      const propertyName = propertyData.displayName || `Property ${propertyId}`;
+      
+      // Check access level by attempting to list accounts (higher permission)
+      let accessLevel = 'Viewer';
+      try {
+        const accountResponse = await fetch(`https://analyticsadmin.googleapis.com/v1beta/accounts`, {
+          headers: {
+            'Authorization': `Bearer ${serviceAccount.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (accountResponse.ok) {
+          accessLevel = 'Administrator';
+        }
+      } catch {
+        // If account listing fails, user likely has limited permissions
+        accessLevel = 'Viewer';
+      }
+
+      logger.info('Successfully verified GA4 property access', {
+        propertyId,
+        propertyName,
+        accessLevel,
+        serviceAccountEmail: serviceAccount.serviceAccountEmail
+      });
+
       return {
         success: true,
-        propertyName: `GA4 Property ${propertyId}`,
-        accessLevel: 'Viewer' // This would come from actual GA4 API response
+        propertyName,
+        accessLevel
       };
+
     } catch (error) {
+      logger.error('Error checking GA4 property access', { 
+        propertyId, 
+        serviceAccountId: serviceAccount.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       return {
         success: false,
-        error: 'Unable to verify property access'
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
