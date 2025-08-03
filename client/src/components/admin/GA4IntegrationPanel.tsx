@@ -1,190 +1,215 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle, Play, BarChart3, Settings, ChevronDown, ChevronRight } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-
+import { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface GA4IntegrationPanelProps {
   clientId: string;
-  currentGA4PropertyId?: string;
-  onGA4PropertyUpdate?: (propertyId: string) => void;
+  currentGA4PropertyId: string;
+  onGA4PropertyUpdate: (propertyId: string) => void;
 }
 
-export function GA4IntegrationPanel({ 
-  clientId, 
-  currentGA4PropertyId = '', 
-  onGA4PropertyUpdate 
-}: GA4IntegrationPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [ga4PropertyId, setGA4PropertyId] = useState(currentGA4PropertyId);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+interface ServiceAccount {
+  id: string;
+  name: string;
+  serviceAccountEmail: string;
+  verified: boolean;
+  active: boolean;
+}
 
-  // Test GA4 data processing mutation
-  const testGA4Processing = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('POST', `/api/ga4/test/${clientId}`, {});
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "GA4 Test Completed",
-        description: `Successfully processed ${data.metricsProcessed || 0} metrics and ${data.trafficChannelsProcessed || 0} traffic channels.`,
-      });
-      // Invalidate dashboard data to show updated metrics
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard', clientId] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "GA4 Test Failed",
-        description: error.message || "Failed to process GA4 data. Check server logs for details.",
-        variant: "destructive",
-      });
-    },
+interface PropertyAccess {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  accessLevel: string;
+  accessVerified: boolean;
+  lastVerified: string;
+  syncStatus: string;
+  errorMessage?: string;
+}
+
+export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4PropertyUpdate }: GA4IntegrationPanelProps) {
+  const [propertyId, setPropertyId] = useState(currentGA4PropertyId);
+  const [selectedServiceAccount, setSelectedServiceAccount] = useState<string>("");
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  // Fetch available service accounts
+  const { data: serviceAccounts } = useQuery<ServiceAccount[]>({
+    queryKey: ["/api/admin/ga4-service-accounts"],
   });
 
-  const handleGA4PropertyChange = (value: string) => {
-    setGA4PropertyId(value);
-    if (onGA4PropertyUpdate) {
-      onGA4PropertyUpdate(value);
+  // Fetch current property access for this client
+  const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess[]>({
+    queryKey: ["/api/admin/ga4-property-access", clientId],
+  });
+
+  const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
+  const activeServiceAccounts = serviceAccounts?.filter(sa => sa.active && sa.verified) || [];
+
+  useEffect(() => {
+    setPropertyId(currentGA4PropertyId);
+  }, [currentGA4PropertyId]);
+
+  const handlePropertyIdChange = (value: string) => {
+    setPropertyId(value);
+    onGA4PropertyUpdate(value);
+  };
+
+  const handleTestConnection = async () => {
+    if (!propertyId || !selectedServiceAccount) return;
+    
+    setIsTestingConnection(true);
+    try {
+      await apiRequest("POST", "/api/admin/ga4-test-connection", {
+        clientId,
+        propertyId,
+        serviceAccountId: selectedServiceAccount,
+      });
+      refetchPropertyAccess();
+    } catch (error) {
+      console.error("Connection test failed:", error);
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
-  const isGA4Connected = Boolean(ga4PropertyId);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "success": return "bg-green-100 text-green-600 border-green-200";
+      case "failed": case "blocked": return "bg-red-100 text-red-600 border-red-200";
+      case "pending": return "bg-yellow-100 text-yellow-600 border-yellow-200";
+      default: return "bg-gray-100 text-gray-600 border-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "success": return <CheckCircle className="h-4 w-4" />;
+      case "failed": case "blocked": return <AlertCircle className="h-4 w-4" />;
+      default: return <RefreshCw className="h-4 w-4" />;
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      {/* GA4 Property ID Field */}
-      <div>
-        <Label htmlFor="gaPropertyId">GA4 Property ID</Label>
-        <Input 
-          id="gaPropertyId" 
-          name="gaPropertyId"
-          value={ga4PropertyId}
-          onChange={(e) => handleGA4PropertyChange(e.target.value)}
-          placeholder="ex: 412345678901"
-          className="font-mono"
-        />
-        <p className="text-xs text-slate-500 mt-1">
-          Google Analytics 4 property ID for data collection
-        </p>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <ExternalLink className="h-5 w-5" />
+          Google Analytics 4 Integration
+        </CardTitle>
+        <CardDescription>
+          Configure GA4 property access for automated data collection
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="ga4PropertyId">GA4 Property ID</Label>
+          <Input
+            id="ga4PropertyId"
+            value={propertyId}
+            onChange={(e) => handlePropertyIdChange(e.target.value)}
+            placeholder="e.g., 123456789"
+            className="mt-1"
+          />
+          <p className="text-xs text-slate-600 mt-1">
+            Found in Google Analytics → Admin → Property Settings
+          </p>
+        </div>
 
-      {/* Expandable Integration Panel */}
-      <div>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-between p-0 h-auto"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex items-center space-x-2">
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <span className="text-sm font-medium">GA4 Integration Details</span>
-            <Badge variant={isGA4Connected ? "secondary" : "outline"} className="text-xs">
-              {isGA4Connected ? "Connected" : "Not Connected"}
-            </Badge>
-          </div>
-        </Button>
-        
-        {isExpanded && (
-          <div className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4" />
-                <span>GA4 Integration Status</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Integration Status */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {isGA4Connected ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                  )}
-                  <span className="text-sm">
-                    {isGA4Connected ? 'GA4 Property Connected' : 'GA4 Property Not Set'}
-                  </span>
-                </div>
-                <Badge variant={isGA4Connected ? "secondary" : "outline"}>
-                  {isGA4Connected ? 'Ready' : 'Pending'}
-                </Badge>
-              </div>
+        <div>
+          <Label htmlFor="serviceAccount">Service Account</Label>
+          <Select value={selectedServiceAccount} onValueChange={setSelectedServiceAccount}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a service account" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeServiceAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name} ({account.serviceAccountEmail})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeServiceAccounts.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              No verified service accounts available. Add one in the GA4 Accounts tab.
+            </p>
+          )}
+        </div>
 
-              {isGA4Connected && (
+        {propertyId && selectedServiceAccount && (
+          <div className="pt-2">
+            <Button 
+              onClick={handleTestConnection}
+              disabled={isTestingConnection}
+              variant="outline"
+              size="sm"
+            >
+              {isTestingConnection ? (
                 <>
-                  <Separator />
-                  
-                  {/* GA4 Property Details */}
-                  <div className="space-y-2">
-                    <div className="text-xs text-slate-600 uppercase tracking-wide">Property Details</div>
-                    <div className="bg-slate-50 p-3 rounded-md">
-                      <div className="text-sm">
-                        <strong>Property ID:</strong> <code className="font-mono text-xs">{ga4PropertyId}</code>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        Real GA4 data will replace sample metrics for this client
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Test Integration */}
-                  <div className="space-y-3">
-                    <div className="text-xs text-slate-600 uppercase tracking-wide">Test Integration</div>
-                    <div className="flex items-center space-x-3">
-                      <Button
-                        size="sm"
-                        onClick={() => testGA4Processing.mutate()}
-                        disabled={testGA4Processing.isPending}
-                        className="flex items-center space-x-2"
-                      >
-                        <Play className="h-3 w-3" />
-                        <span>
-                          {testGA4Processing.isPending ? 'Processing...' : 'Test GA4 Data Processing'}
-                        </span>
-                      </Button>
-                      {testGA4Processing.isPending && (
-                        <div className="text-xs text-slate-500">
-                          Simulating GA4 data import...
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Test the data processing pipeline with simulated GA4 data
-                    </div>
-                  </div>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Testing Connection...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Test Connection
                 </>
               )}
-
-              {!isGA4Connected && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <div className="text-xs text-slate-600 uppercase tracking-wide">Setup Instructions</div>
-                    <div className="text-sm space-y-2">
-                      <div>1. Find your GA4 Property ID in Google Analytics Admin</div>
-                      <div>2. Add Clear Digital as a guest user to your GA4 property</div>
-                      <div>3. Enter your Property ID above and save</div>
-                      <div>4. Real GA4 data will replace sample metrics automatically</div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            </Button>
           </div>
         )}
-      </div>
-    </div>
+
+        {currentAccess && (
+          <div className="border rounded-lg p-3 bg-slate-50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Current Status</span>
+              <Badge className={getStatusColor(currentAccess.syncStatus)}>
+                {getStatusIcon(currentAccess.syncStatus)}
+                <span className="ml-1 capitalize">{currentAccess.syncStatus}</span>
+              </Badge>
+            </div>
+            
+            {currentAccess.propertyName && (
+              <p className="text-sm text-slate-600 mb-1">
+                <strong>Property:</strong> {currentAccess.propertyName}
+              </p>
+            )}
+            
+            {currentAccess.accessLevel && (
+              <p className="text-sm text-slate-600 mb-1">
+                <strong>Access Level:</strong> {currentAccess.accessLevel}
+              </p>
+            )}
+            
+            {currentAccess.lastVerified && (
+              <p className="text-sm text-slate-600 mb-1">
+                <strong>Last Verified:</strong> {new Date(currentAccess.lastVerified).toLocaleDateString()}
+              </p>
+            )}
+            
+            {currentAccess.errorMessage && (
+              <p className="text-sm text-red-600 mt-2">
+                <strong>Error:</strong> {currentAccess.errorMessage}
+              </p>
+            )}
+          </div>
+        )}
+
+        {propertyId && !currentAccess && (
+          <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+            <p className="text-sm text-blue-700">
+              <strong>Setup Required:</strong> Add your property ID and test the connection to enable automated data collection.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
