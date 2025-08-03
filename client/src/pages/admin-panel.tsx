@@ -267,11 +267,30 @@ export default function AdminPanel() {
     },
   });
 
+  const deleteClientMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      toast({
+        title: "Client deleted",
+        description: "Client has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete client",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutations for benchmark company management
   const updateCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest("PUT", `/api/admin/benchmark-companies/${id}`, data);
-      return res.json();
+      return await apiRequest("PUT", `/api/admin/benchmark-companies/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
@@ -1541,8 +1560,12 @@ export default function AdminPanel() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Delete Client
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deleteClientMutation.mutate(client.id)}
+                                    disabled={deleteClientMutation.isPending}
+                                  >
+                                    {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -1635,8 +1658,12 @@ export default function AdminPanel() {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                      Delete Client
+                                    <AlertDialogAction 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => deleteClientMutation.mutate(client.id)}
+                                      disabled={deleteClientMutation.isPending}
+                                    >
+                                      {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
