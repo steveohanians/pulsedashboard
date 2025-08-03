@@ -2722,7 +2722,7 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-28"><SortableHeader label="Company Name" sortKey="name" /></TableHead>
+                          <TableHead className="w-28"><SortableHeader label="Name" sortKey="name" /></TableHead>
                           <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
                           <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
@@ -3051,7 +3051,7 @@ export default function AdminPanel() {
                             .filter(option => option.category === 'businessSizes')
                             .map((option) => (
                               <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                                <span>{option.value}</span>
+                                <span className="text-xs">{option.value}</span>
                                 <div className="flex space-x-1">
                                   <BusinessSizeEditDialog option={option} />
                                   <Button 
@@ -3100,7 +3100,7 @@ export default function AdminPanel() {
                             .filter(option => option.category === 'industryVerticals')
                             .map((option) => (
                               <div key={option.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                                <span>{option.value}</span>
+                                <span className="text-xs">{option.value}</span>
                                 <div className="flex space-x-1">
                                   <IndustryVerticalEditDialog option={option} />
                                   <Button 
@@ -3232,14 +3232,14 @@ export default function AdminPanel() {
                       <TableBody>
                         {metricPrompts.map((prompt: any) => (
                           <TableRow key={prompt.metricName}>
-                            <TableCell className="font-medium">{prompt.metricName}</TableCell>
-                            <TableCell className="max-w-xs truncate">{prompt.description || 'No description'}</TableCell>
+                            <TableCell className="font-medium text-xs">{prompt.metricName}</TableCell>
+                            <TableCell className="max-w-xs truncate text-xs">{prompt.description || 'No description'}</TableCell>
                             <TableCell>
                               <Badge variant={prompt.isActive ? "default" : "secondary"}>
                                 {prompt.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell>{new Date(prompt.updatedAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-xs">{new Date(prompt.updatedAt).toLocaleDateString()}</TableCell>
                             <TableCell>
                               <div className="flex space-x-1">
                                 <Dialog open={isDialogOpen && editingItem?.type === 'edit-prompt' && editingItem?.metricName === prompt.metricName} onOpenChange={(open) => {
