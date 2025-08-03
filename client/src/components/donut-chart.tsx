@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
 interface DonutData {
   sourceType: string;

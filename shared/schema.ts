@@ -7,7 +7,7 @@
 // - competitors: Client-specific competitor companies (generates Competitor sourceType data)
 //
 import { sql } from "drizzle-orm";
-import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -27,7 +27,12 @@ export const clients = pgTable("clients", {
   ga4PropertyId: text("ga4_property_id"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for client filtering
+  industryVerticalIdx: index("idx_clients_industry_vertical").on(table.industryVertical),
+  businessSizeIdx: index("idx_clients_business_size").on(table.businessSize),
+  activeIdx: index("idx_clients_active").on(table.active),
+}));
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -123,7 +128,17 @@ export const metrics = pgTable("metrics", {
   timePeriod: text("time_period").notNull(), // YYYY-MM format
   channel: varchar("channel", { length: 50 }), // For traffic channels breakdown
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Performance indexes for frequently queried fields
+  clientIdIdx: index("idx_metrics_client_id").on(table.clientId),
+  metricNameIdx: index("idx_metrics_metric_name").on(table.metricName),
+  timePeriodIdx: index("idx_metrics_time_period").on(table.timePeriod),
+  sourceTypeIdx: index("idx_metrics_source_type").on(table.sourceType),
+  // Composite indexes for common query patterns
+  clientMetricIdx: index("idx_metrics_client_metric").on(table.clientId, table.metricName),
+  clientTimePeriodIdx: index("idx_metrics_client_time_period").on(table.clientId, table.timePeriod),
+  metricTimePeriodIdx: index("idx_metrics_metric_time_period").on(table.metricName, table.timePeriod),
+}));
 
 export const benchmarks = pgTable("benchmarks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -134,7 +149,15 @@ export const benchmarks = pgTable("benchmarks", {
   value: decimal("value", { precision: 10, scale: 4 }).notNull(),
   timePeriod: text("time_period").notNull(), // YYYY-MM format
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Indexes for benchmark lookups
+  industryVerticalIdx: index("idx_benchmarks_industry_vertical").on(table.industryVertical),
+  businessSizeIdx: index("idx_benchmarks_business_size").on(table.businessSize),
+  metricNameIdx: index("idx_benchmarks_metric_name").on(table.metricName),
+  timePeriodIdx: index("idx_benchmarks_time_period").on(table.timePeriod),
+  // Composite index for filtering benchmarks
+  industryMetricIdx: index("idx_benchmarks_industry_metric").on(table.industryVertical, table.businessSize, table.metricName),
+}));
 
 export const aiInsights = pgTable("ai_insights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -146,7 +169,13 @@ export const aiInsights = pgTable("ai_insights", {
   recommendationText: text("recommendation_text"),
   status: text("status"), // success, needs_improvement, warning
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Indexes for AI insights lookups
+  clientIdIdx: index("idx_ai_insights_client_id").on(table.clientId),
+  metricNameIdx: index("idx_ai_insights_metric_name").on(table.metricName),
+  timePeriodIdx: index("idx_ai_insights_time_period").on(table.timePeriod),
+  clientMetricIdx: index("idx_ai_insights_client_metric").on(table.clientId, table.metricName),
+}));
 
 export const globalPromptTemplate = pgTable("global_prompt_template", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
+import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
 interface BarChartProps {
   metricName: string;

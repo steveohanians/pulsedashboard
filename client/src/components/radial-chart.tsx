@@ -1,5 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useState, useMemo } from 'react';
+import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
 interface RadialChartProps {
   metricName: string;

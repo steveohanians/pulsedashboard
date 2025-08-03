@@ -2,6 +2,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useState, useMemo, useEffect } from 'react';
 import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, aggregateChannelData } from '../utils/chartUtilities';
 import { logger } from '@/utils/logger';
+import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
 // Use shared DiamondDot component
 import { DiamondDot } from './shared/DiamondDot';

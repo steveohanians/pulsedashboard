@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
 interface GaugeChartProps {
   metricName: string;
