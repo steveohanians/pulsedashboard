@@ -27,6 +27,7 @@ import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } fr
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 import { markDashboardComplete } from "@/utils/server-start-timer";
+import { ChartOptimizer, MemoryOptimizer, AsyncLoader } from "@/utils/frontend-optimizer";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();

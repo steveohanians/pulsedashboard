@@ -10,6 +10,8 @@ import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimit
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized } from "./utils/queryOptimizer";
+import { performanceCache } from "./cache/performance-cache";
+import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
@@ -53,7 +55,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Dashboard endpoint
+  // Dashboard endpoint with performance caching
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
@@ -62,6 +64,22 @@ export function registerRoutes(app: Express): Server {
         businessSize = "All", 
         industryVertical = "All" 
       } = req.query;
+      
+      // 🧮 OPTIMIZATION 1: Check cache first for dashboard data
+      const cacheKey = performanceCache.generateDashboardKey(
+        clientId, 
+        timePeriod as string, 
+        businessSize as string, 
+        industryVertical as string
+      );
+      
+      const cachedResult = performanceCache.get(cacheKey);
+      if (cachedResult) {
+        logger.info(`Cache HIT for dashboard: ${cacheKey}`);
+        return res.json(cachedResult);
+      }
+      
+      logger.info(`Cache MISS for dashboard: ${cacheKey}`);
       
       // Generate dynamic period mapping based on current date
       const { generateDynamicPeriodMapping } = await import("./utils/dateUtils");
@@ -114,12 +132,7 @@ export function registerRoutes(app: Express): Server {
         industryVertical: industryVertical as string
       };
 
-      // Fetch data for all relevant periods
-      const allMetricsPromises = periodsToQuery.map(p => storage.getMetricsByClient(clientId, p));
-      const allCompetitorMetricsPromises = periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p));
-      const allFilteredIndustryMetricsPromises = periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters));
-      const allFilteredCdAvgMetricsPromises = periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters));
-      
+      // 🌐 OPTIMIZATION 3: Parallelize all database operations for maximum performance
       const [
         allMetricsArrays,
         competitors,
@@ -128,13 +141,26 @@ export function registerRoutes(app: Express): Server {
         allFilteredCdAvgMetricsArrays,
         insights
       ] = await Promise.all([
-        Promise.all(allMetricsPromises),
+        // Fetch metrics for all periods in parallel
+        Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(clientId, p))),
+        // Fetch competitors (single call)
         storage.getCompetitorsByClient(clientId),
-        Promise.all(allCompetitorMetricsPromises),
-        Promise.all(allFilteredIndustryMetricsPromises),
-        Promise.all(allFilteredCdAvgMetricsPromises),
-        storage.getAIInsights(clientId, periodsToQuery[0]) // Use first period for insights
+        // Fetch competitor metrics for all periods in parallel
+        Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p))),
+        // Fetch filtered industry metrics for all periods in parallel
+        Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
+        // Fetch filtered CD avg metrics for all periods in parallel
+        Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
+        // 🚀 OPTIMIZATION 4: Move AI insights to background - don't block main response
+        Promise.resolve([]) // Return empty initially, load insights asynchronously
       ]);
+
+      // 🚀 OPTIMIZATION 4B: Queue AI insights generation in background (non-blocking)
+      backgroundProcessor.enqueue('AI_INSIGHT', {
+        clientId,
+        timePeriod: periodsToQuery[0],
+        metrics: allMetricsArrays.flat()
+      }, 2); // Medium priority
 
       // For single period queries, return raw metrics to preserve channel information
       if (periodsToQuery.length === 1) {
@@ -185,14 +211,20 @@ export function registerRoutes(app: Express): Server {
         // logger.debug(`Single-period traffic channels being sent: ${trafficChannelMetrics.length} records`);
         // logger.debug(`Sample single-period traffic channels:`, trafficChannelMetrics.slice(0, 3).map(m => ({ channel: m.channel, sourceType: m.sourceType, value: m.value })));
         
-        res.json({
+        const result = {
           client,
           metrics: processedMetrics,
           competitors,
-          insights,
+          insights: [], // Initially empty - will be loaded via separate endpoint
           isTimeSeries: false,
           trafficChannelMetrics // Include traffic channel data for single-period too
-        });
+        };
+        
+        // 🧮 OPTIMIZATION 2: Cache the result for future requests
+        performanceCache.set(cacheKey, result);
+        logger.info(`Dashboard data cached: ${cacheKey}`);
+        
+        res.json(result);
       } else {
         // For multi-period queries, return time-series data
         const allFilteredIndustryMetricsFlat = allFilteredIndustryMetricsArrays.flat();
@@ -296,16 +328,22 @@ export function registerRoutes(app: Express): Server {
         // logger.debug(`Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
         // logger.debug(`Sample preserved traffic channels:`, trafficChannelMetrics.slice(0, 3).map(t => ({ channel: t.channel, value: t.value, sourceType: t.sourceType })));
         
-        res.json({
+        const result = {
           client,
           timeSeriesData,
           competitors,
-          insights,
+          insights: [], // Initially empty - will be loaded via separate endpoint
           isTimeSeries: true,
           periods: periodsToQuery,
           metrics: averagedMetrics, // Add averaged metrics for "Your Performance" display
           trafficChannelMetrics // Add preserved traffic channel data
-        });
+        };
+        
+        // 🧮 OPTIMIZATION 2: Cache the result for future requests
+        performanceCache.set(cacheKey, result);
+        logger.info(`Dashboard data cached: ${cacheKey}`);
+        
+        res.json(result);
       }
 
 
@@ -315,10 +353,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Filters endpoint with dynamic interdependent options
+  // 🚀 Async AI Insights endpoint - loads insights in background after main dashboard
+  app.get("/api/insights/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { timePeriod = "Last Month" } = req.query;
+      
+      // Check cache first
+      const cacheKey = `insights:${clientId}:${timePeriod}`;
+      const cached = performanceCache.get(cacheKey);
+      if (cached) {
+        return res.json({ insights: cached });
+      }
+      
+      // Load insights from database
+      const insights = await storage.getAIInsights(clientId, timePeriod as string);
+      
+      // Cache for future requests
+      performanceCache.set(cacheKey, insights, 10 * 60 * 1000); // 10 minutes
+      
+      res.json({ insights });
+    } catch (error) {
+      logger.error("Insights loading error", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to load insights" });
+    }
+  });
+
+  // Filters endpoint with caching and dynamic interdependent options  
   app.get("/api/filters", requireAuth, async (req, res) => {
     try {
       const { currentBusinessSize, currentIndustryVertical } = req.query;
+      
+      // 🧮 OPTIMIZATION 5: Cache filters data
+      const filtersCacheKey = `filters:${currentBusinessSize}:${currentIndustryVertical}`;
+      const cachedFilters = performanceCache.get(filtersCacheKey);
+      if (cachedFilters) {
+        logger.info(`Cache HIT for filters: ${filtersCacheKey}`);
+        return res.json(cachedFilters);
+      }
       
       // Get benchmark companies data ONLY (not CD Portfolio companies)
       const benchmarkCompanies = await storage.getBenchmarkCompanies();
@@ -359,7 +431,7 @@ export function registerRoutes(app: Express): Server {
       // Sort industry verticals alphabetically
       const industryVerticals = ["All", ...availableIndustryVerticals.sort()];
       
-      res.json({
+      const filtersResult = {
         businessSizes,
         industryVerticals,
         timePeriods: [
@@ -368,7 +440,13 @@ export function registerRoutes(app: Express): Server {
           "Last Year",
           "Custom Date Range"
         ]
-      });
+      };
+      
+      // 🧮 OPTIMIZATION 5B: Cache filters result
+      performanceCache.set(filtersCacheKey, filtersResult, 15 * 60 * 1000); // 15 minutes
+      logger.info(`Filters data cached: ${filtersCacheKey}`);
+      
+      res.json(filtersResult);
     } catch (error) {
       logger.error("Filters error", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Internal server error" });
