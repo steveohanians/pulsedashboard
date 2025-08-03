@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import AIInsights from "@/components/ai-insights";
+import { logger } from "@/utils/logger";
 
 // Persistent insights storage using localStorage with month-based expiration
 const INSIGHTS_STORAGE_KEY = 'pulse_dashboard_insights';
@@ -223,7 +224,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         timePeriod={timePeriod}
         metricData={metricData}
         onRegenerate={async () => {
-          console.debug('🎭 Regenerate clicked - checking for existing context');
+          logger.component('MetricInsightBox', 'Regenerate clicked - checking for existing context');
           // Clear current insight and storage to force fresh generation with typewriter effect
           setInsight(null);
           insightsStorage.remove(clientId, metricName);
@@ -237,7 +238,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
               const existingContext = contextData.userContext?.trim();
               
               if (existingContext) {
-                console.debug('🎭 Found existing context, regenerating with context');
+                logger.component('MetricInsightBox', 'Found existing context, regenerating with context');
                 generateInsightWithContextMutation.mutate(existingContext);
                 return;
               }

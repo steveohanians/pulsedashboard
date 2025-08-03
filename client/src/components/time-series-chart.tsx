@@ -1,6 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, aggregateChannelData } from '../utils/chartUtilities';
+import { logger } from '@/utils/logger';
 
 // Use shared DiamondDot component
 import { DiamondDot } from './shared/DiamondDot';
@@ -46,7 +47,7 @@ function generateTimeSeriesData(
 ): any[] {
   // If we have actual time-series data and multiple periods, use it
   if (timeSeriesData && periods && periods.length > 0) {
-    console.log(`🎯 Using time-series data for ${metricName}, periods:`, periods);
+    logger.component('TimeSeriesChart', `Using time-series data for ${metricName}, periods:`, periods);
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
@@ -72,7 +73,7 @@ function generateRealTimeSeriesData(
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
     const relevantData = periodData.filter(m => m.metricName === metricName);
-    console.log(`🎯 Period ${period} filtered data for ${metricName}:`, relevantData);
+    logger.component('TimeSeriesChart', `Period ${period} filtered data for ${metricName}:`, relevantData);
     
     const dataPoint: any = {
       date: generatePeriodLabel(period)
@@ -95,7 +96,7 @@ function generateRealTimeSeriesData(
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
     
-    console.log(`🎯 Averaged values for ${period}: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
+    logger.component('TimeSeriesChart', `Averaged values for ${period}: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
     
     // Add competitor data (also average multiple values)
     competitors.forEach(competitor => {
