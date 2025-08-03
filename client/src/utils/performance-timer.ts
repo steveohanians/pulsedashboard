@@ -13,6 +13,7 @@ export class PerformanceTimer {
     const totalTime = this.endTime - this.startTime;
     console.log(`✅ [PERFORMANCE] Page fully rendered at: ${this.endTime}ms`);
     console.log(`⏱️  [PERFORMANCE] TOTAL RENDER TIME: ${totalTime.toFixed(2)}ms (${(totalTime/1000).toFixed(2)}s)`);
+    console.log(`🎯 [PERFORMANCE] === FINAL MEASUREMENT: ${(totalTime/1000).toFixed(2)} SECONDS ===`);
     
     // Also log to localStorage for retrieval
     localStorage.setItem('lastRenderTime', totalTime.toString());
