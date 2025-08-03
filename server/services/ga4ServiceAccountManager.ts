@@ -424,35 +424,59 @@ class GA4ServiceAccountManager {
         logger.warn('Could not fetch property metadata, using fallback name', { propertyId, error });
       }
       
-      // Try to determine access level by attempting a management operation
+      // Now get real property name and access level using Admin API
       try {
-        // If we can access account summaries, we likely have higher permissions
-        const accountsResponse = await fetch(`https://analyticsdata.googleapis.com/v1beta/accountSummaries`, {
+        // Use Google Analytics Admin API to get real property name and user permissions
+        const adminResponse = await fetch(`https://analyticsadmin.googleapis.com/v1alpha/accountSummaries`, {
           headers: {
             'Authorization': `Bearer ${serviceAccount.accessToken}`,
             'Content-Type': 'application/json'
           }
         });
         
-        if (accountsResponse.ok) {
-          const accounts = await accountsResponse.json();
-          // Find the property in account summaries to get real name and access level
-          for (const account of accounts.accountSummaries || []) {
-            for (const propertySummary of account.propertySummaries || []) {
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json();
+          logger.info('Admin API account summaries response', { 
+            propertyId, 
+            hasAccountSummaries: !!adminData.accountSummaries,
+            summariesCount: adminData.accountSummaries?.length || 0 
+          });
+          
+          // Find the property in account summaries to get real display name
+          for (const accountSummary of adminData.accountSummaries || []) {
+            for (const propertySummary of accountSummary.propertySummaries || []) {
               if (propertySummary.property === `properties/${propertyId}`) {
-                // Found the property! Get the display name
+                // Found the property! Get the real display name
                 if (propertySummary.displayName) {
                   propertyName = propertySummary.displayName;
+                  logger.info('Found real property name', { propertyId, displayName: propertyName });
                 }
-                // If we can see it in account summaries, we likely have elevated access
+                // If we can see it in account summaries, we have at least Editor access
                 accessLevel = 'Editor';
                 break;
               }
             }
           }
+        } else {
+          const adminError = await adminResponse.text();
+          logger.warn('Admin API request failed', { 
+            propertyId, 
+            status: adminResponse.status, 
+            statusText: adminResponse.statusText,
+            error: adminError
+          });
+          
+          // Check if Admin API needs to be enabled
+          if (adminError.includes('has not been used in project') || adminError.includes('is disabled')) {
+            logger.info('Admin API not enabled, will use fallback property name', { propertyId });
+            // Note: We could enhance the error message here if needed
+          }
         }
       } catch (error) {
-        logger.debug('Could not determine elevated access level, keeping as Viewer', { propertyId });
+        logger.warn('Could not access Admin API for property metadata', { 
+          propertyId, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
 
       logger.info('Successfully verified GA4 property access', {
