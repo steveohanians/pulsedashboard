@@ -32,7 +32,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Migrations**: Drizzle Kit
 
 ### Key Components and Design Patterns
-- **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/Client) for protected routes. Clients are always "Client" role users who view their own analytics data, while Clear Digital staff have "Admin" role for platform management.
+- **Authentication & Authorization**: Utilizes JWT-based session authentication with role-based access control (Admin/User) for protected routes.
 - **Data Models**: Structured around distinct entities: Clients, CD Portfolio Companies, Benchmark Companies, Competitors, Users, Metrics, Benchmarks, and AIInsights.
 - **API Architecture**: Segregated into Public, Admin, Data Ingestion (webhooks), and AI Integration endpoints.
 - **Frontend Components**: Core UI elements include Dashboard, Admin Panel, Authentication forms, Charts, and Modals.
