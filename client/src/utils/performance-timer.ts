@@ -5,8 +5,14 @@ export class PerformanceTimer {
 
   start() {
     this.startTime = performance.now();
-    console.log(`🚀 [PERFORMANCE] Page load started at: ${this.startTime}ms`);
-    console.log(`📊 [PERFORMANCE] Browser navigation timestamp: ${Date.now()}`);
+    console.log(`🚀 [PERFORMANCE] FRESH PAGE LOAD started at: ${this.startTime}ms`);
+    console.log(`📊 [PERFORMANCE] Navigation timestamp: ${Date.now()}`);
+    
+    // Force actual reload if this is a test
+    if (window.location.search.includes('force-reload')) {
+      console.log('🔄 Forcing actual browser reload...');
+      setTimeout(() => window.location.reload(), 100);
+    }
   }
 
   markComplete() {
