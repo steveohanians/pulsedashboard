@@ -1689,39 +1689,25 @@ export default function AdminPanel() {
                           required
                         />
                       </div>
-                      {editingItem?.id ? (
-                        <>
-                          <GA4IntegrationPanel 
-                            clientId={editingItem.id}
-                            currentGA4PropertyId={editingItem.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
-                            onGA4PropertyUpdate={(propertyId) => {
-                              // Update hidden form field for submission
-                              const input = document.querySelector(`#hidden-gaPropertyId-${editingItem.id}`) as HTMLInputElement;
-                              if (input) {
-                                input.value = propertyId;
-                                console.log("Updated hidden input with:", propertyId);
-                              } else {
-                                console.error("Hidden input not found");
-                              }
-                            }}
-                          />
-                          {/* Hidden input for form submission */}
-                          <input type="hidden" id={`hidden-gaPropertyId-${editingItem.id}`} name="gaPropertyId" defaultValue={editingItem.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} />
-                        </>
-                      ) : (
-                        <div>
-                          <Label htmlFor="gaPropertyId">GA4 Property ID</Label>
-                          <Input 
-                            id="gaPropertyId"
-                            name="gaPropertyId" 
-                            placeholder="123456789"
-                            className="font-mono"
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                            Google Analytics 4 property ID for data collection (full integration available after creation)
-                          </p>
-                        </div>
-                      )}
+                      <GA4IntegrationPanel 
+                        clientId={editingItem?.id || null}
+                        currentGA4PropertyId={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
+                        onGA4PropertyUpdate={(propertyId) => {
+                          // Update hidden form field for submission
+                          const hiddenInputId = editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new';
+                          const input = document.querySelector(`#${hiddenInputId}`) as HTMLInputElement;
+                          if (input) {
+                            input.value = propertyId;
+                          }
+                        }}
+                      />
+                      {/* Hidden input for form submission */}
+                      <input 
+                        type="hidden" 
+                        id={editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new'} 
+                        name="gaPropertyId" 
+                        defaultValue={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} 
+                      />
                       <div>
                         <Label htmlFor="industry">Industry Vertical *</Label>
                         <Select name="industry" defaultValue={editingItem?.industryVertical || ""} required>

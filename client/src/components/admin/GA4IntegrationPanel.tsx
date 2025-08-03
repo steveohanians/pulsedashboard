@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface GA4IntegrationPanelProps {
-  clientId: string;
+  clientId: string | null;
   currentGA4PropertyId: string;
   onGA4PropertyUpdate: (propertyId: string) => void;
 }
