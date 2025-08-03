@@ -68,7 +68,7 @@ router.post('/ga4-service-accounts', async (req, res) => {
     
     logger.info('Service account created by admin', {
       serviceAccountId: serviceAccount.id,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.status(201).json(serviceAccount);
@@ -101,7 +101,7 @@ router.put('/ga4-service-accounts/:id', async (req, res) => {
     
     logger.info('Service account updated by admin', {
       serviceAccountId: id,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.json(serviceAccount);
@@ -135,7 +135,7 @@ router.delete('/ga4-service-accounts/:id', async (req, res) => {
     
     logger.info('Service account deactivated by admin', {
       serviceAccountId: id,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.json({ message: 'Service account deactivated successfully' });
@@ -211,7 +211,7 @@ router.post('/ga4-property-access', async (req, res) => {
       clientId: data.clientId,
       propertyId: data.propertyId,
       serviceAccountId: data.serviceAccountId,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.status(201).json(propertyAccess);
@@ -244,7 +244,7 @@ router.post('/ga4-property-access/:id/verify', async (req, res) => {
     logger.info('Property access verification triggered by admin', {
       accessId: id,
       success: result.success,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.json(result);
@@ -279,37 +279,31 @@ router.get('/ga4-property-access/client/:clientId', async (req, res) => {
 
 /**
  * POST /api/admin/ga4-service-accounts/:id/test-connection
- * Test service account credentials and connection
+ * Test Google account access and connection
  */
 router.post('/ga4-service-accounts/:id/test-connection', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const credentials = await ga4ServiceAccountManager.getServiceAccountCredentials(id);
-    if (!credentials) {
-      return res.status(400).json({ 
-        message: 'No credentials found for service account' 
-      });
-    }
+    const success = await ga4ServiceAccountManager.testAccountAccess(id);
     
-    // Simulate testing connection (in production, this would test GA4 API access)
     const testResult = {
-      success: true,
-      message: 'Service account credentials are valid',
+      success,
+      message: success ? 'Google account access verified' : 'Failed to verify Google account access',
       testedAt: new Date().toISOString()
     };
     
-    logger.info('Service account connection test completed', {
+    logger.info('Google account connection test completed', {
       serviceAccountId: id,
       success: testResult.success,
-      adminId: req.session.userId
+      adminId: req.user?.id
     });
     
     res.json(testResult);
   } catch (error) {
-    logger.error('Failed to test service account connection:', error);
+    logger.error('Failed to test Google account connection:', error);
     res.status(500).json({ 
-      message: 'Failed to test service account connection',
+      message: 'Failed to test Google account connection',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

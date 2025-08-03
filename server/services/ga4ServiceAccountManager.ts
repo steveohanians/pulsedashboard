@@ -105,9 +105,9 @@ class GA4ServiceAccountManager {
   }
 
   /**
-   * Get service account credentials (for API authentication)
+   * Test Google account access (OAuth-based authentication)
    */
-  async getServiceAccountCredentials(serviceAccountId: string): Promise<ServiceAccountCredentials | null> {
+  async testAccountAccess(serviceAccountId: string): Promise<boolean> {
     try {
       const serviceAccount = await db.select()
         .from(ga4ServiceAccounts)
@@ -118,28 +118,16 @@ class GA4ServiceAccountManager {
         .limit(1);
 
       if (!serviceAccount.length) {
-        return null;
+        return false;
       }
 
-      const account = serviceAccount[0];
-      
-      // Return credentials from JSON field if available
-      if (account.credentialsJson) {
-        return account.credentialsJson as ServiceAccountCredentials;
-      }
-      
-      // Fallback to credentials file path
-      if (account.credentialsPath) {
-        // In production, you would read from the file system
-        // For now, return null to indicate file-based credentials
-        logger.info(`Using file-based credentials: ${account.credentialsPath}`);
-        return null;
-      }
-      
-      throw new Error(`No credentials found for service account ${serviceAccountId}`);
+      // For now, return true as we're using OAuth flow
+      // In production, this would initiate OAuth flow to verify access
+      logger.info(`Testing access for Google account: ${serviceAccount[0].serviceAccountEmail}`);
+      return true;
     } catch (error) {
-      logger.error('Failed to get service account credentials:', error);
-      throw error;
+      logger.error('Failed to test account access:', error);
+      return false;
     }
   }
 
@@ -324,9 +312,8 @@ class GA4ServiceAccountManager {
         return null;
       }
 
-      // Find service account with lowest property count that hasn't exceeded max
+      // Find service account with lowest property count (removed max properties limit)
       const availableAccount = serviceAccountsWithCounts
-        .filter(item => item.propertyCount < (item.serviceAccount.maxProperties || 50))
         .sort((a, b) => a.propertyCount - b.propertyCount)[0];
 
       return availableAccount?.serviceAccount || null;

@@ -16,8 +16,6 @@ interface ServiceAccount {
     id: string;
     name: string;
     serviceAccountEmail: string;
-    description?: string;
-    maxProperties: number;
     active: boolean;
     createdAt: string;
     lastUsed?: string;
@@ -126,11 +124,10 @@ export function ServiceAccountsTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs">Account</TableHead>
-                <TableHead className="text-xs">Email</TableHead>
+                <TableHead className="text-xs">Account Name</TableHead>
+                <TableHead className="text-xs">Google Account Email</TableHead>
                 <TableHead className="text-xs">Properties</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Last Used</TableHead>
                 <TableHead className="text-xs">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,19 +135,14 @@ export function ServiceAccountsTable() {
               {serviceAccounts.map((account) => (
                 <TableRow key={account.serviceAccount.id}>
                   <TableCell>
-                    <div>
-                      <div className="font-medium text-xs">{account.serviceAccount.name}</div>
-                      {account.serviceAccount.description && (
-                        <div className="text-xs text-slate-500">{account.serviceAccount.description}</div>
-                      )}
-                    </div>
+                    <div className="font-medium text-xs">{account.serviceAccount.name}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-xs font-mono">{account.serviceAccount.serviceAccountEmail}</div>
+                    <div className="text-xs">{account.serviceAccount.serviceAccountEmail}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-xs">
-                      <div>{account.totalProperties} / {account.serviceAccount.maxProperties}</div>
+                      <div>{account.totalProperties} properties</div>
                       <div className="text-slate-500">
                         {account.verifiedProperties} verified
                       </div>
@@ -163,14 +155,6 @@ export function ServiceAccountsTable() {
                     >
                       {account.serviceAccount.active ? "Active" : "Inactive"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs text-slate-500">
-                      {account.serviceAccount.lastUsed 
-                        ? new Date(account.serviceAccount.lastUsed).toLocaleDateString()
-                        : "Never"
-                      }
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-1">

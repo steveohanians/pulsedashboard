@@ -20,9 +20,6 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
   const [formData, setFormData] = useState({
     name: serviceAccount?.name || "",
     serviceAccountEmail: serviceAccount?.serviceAccountEmail || "",
-    description: serviceAccount?.description || "",
-    credentialsJson: serviceAccount?.credentialsJson ? JSON.stringify(serviceAccount.credentialsJson, null, 2) : "",
-    maxProperties: serviceAccount?.maxProperties || 50,
     active: serviceAccount?.active ?? true
   });
   
@@ -32,31 +29,9 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      let parsedCredentials = null;
-      
-      // Validate and parse JSON credentials if provided
-      if (data.credentialsJson?.trim()) {
-        try {
-          parsedCredentials = JSON.parse(data.credentialsJson);
-          
-          // Validate required fields
-          const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
-          for (const field of requiredFields) {
-            if (!parsedCredentials[field]) {
-              throw new Error(`Missing required field: ${field}`);
-            }
-          }
-        } catch (error) {
-          throw new Error(`Invalid credentials JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
-
       const payload = {
         name: data.name,
         serviceAccountEmail: data.serviceAccountEmail,
-        description: data.description,
-        credentialsJson: parsedCredentials,
-        maxProperties: parseInt(data.maxProperties.toString()),
         active: data.active
       };
 
@@ -94,7 +69,7 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
     }
     
     if (!formData.serviceAccountEmail.trim()) {
-      setValidationError("Service account email is required");
+      setValidationError("Google account email is required");
       return;
     }
 
@@ -115,80 +90,39 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="name">Service Account Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="e.g., Clear Digital GA4 Account 1"
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="email">Service Account Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.serviceAccountEmail}
-            onChange={(e) => handleInputChange('serviceAccountEmail', e.target.value)}
-            placeholder="service-account@project.iam.gserviceaccount.com"
-            required
-          />
-        </div>
-      </div>
-
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="name">Account Name</Label>
         <Input
-          id="description"
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          placeholder="Brief description of this service account's purpose"
+          id="name"
+          value={formData.name}
+          onChange={(e) => handleInputChange('name', e.target.value)}
+          placeholder="e.g., Clear Digital GA4 Account 1"
+          required
         />
       </div>
 
       <div>
-        <Label htmlFor="credentials">Service Account Credentials (JSON)</Label>
-        <Textarea
-          id="credentials"
-          value={formData.credentialsJson}
-          onChange={(e) => handleInputChange('credentialsJson', e.target.value)}
-          placeholder="Paste the complete service account JSON file contents here..."
-          rows={8}
-          className="font-mono text-xs"
+        <Label htmlFor="email">Google Account Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.serviceAccountEmail}
+          onChange={(e) => handleInputChange('serviceAccountEmail', e.target.value)}
+          placeholder="user@cleardigital.com"
+          required
         />
         <p className="text-xs text-slate-500 mt-1">
-          Paste the JSON file downloaded from Google Cloud Console for this service account
+          This Google account will be granted access to client GA4 properties
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="maxProperties">Max Properties</Label>
-          <Input
-            id="maxProperties"
-            type="number"
-            min="1"
-            max="100"
-            value={formData.maxProperties}
-            onChange={(e) => handleInputChange('maxProperties', e.target.value)}
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Maximum number of GA4 properties this account can access
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-2 pt-6">
-          <Switch
-            id="active"
-            checked={formData.active}
-            onCheckedChange={(checked) => handleInputChange('active', checked)}
-          />
-          <Label htmlFor="active">Active</Label>
-        </div>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="active"
+          checked={formData.active}
+          onCheckedChange={(checked) => handleInputChange('active', checked)}
+        />
+        <Label htmlFor="active">Active</Label>
       </div>
 
       <div className="flex items-center justify-end space-x-2 pt-4 border-t">

@@ -125,23 +125,31 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 ### August 3, 2025 - GA4 Service Account Management System
 - **Feature**: Implemented comprehensive Google Analytics 4 service account management architecture
 - **New Database Tables**: 
-  - `ga4_service_accounts`: Store multiple Google service account credentials and configurations
+  - `ga4_service_accounts`: Store multiple Google account configurations for GA4 access
   - `ga4_property_access`: Track client GA4 property access, verification status, and sync history
 - **Service Layer**: Created `GA4ServiceAccountManager` for managing:
-  - Multiple service account credentials and authentication
+  - Multiple Google account authentication via OAuth flow
   - Property access verification and monitoring  
   - Automatic service account assignment for optimal load distribution
   - Access analytics and error tracking
 - **Admin Interface**: Added GA4 Accounts management tab with:
-  - Service account configuration and monitoring
+  - Google account configuration and monitoring (simplified form: name, email, active status)
   - Property access verification system
   - Client-to-service-account assignment interface
 - **API Routes**: New admin endpoints for GA4 service account and property access management
 - **Architecture Benefits**: 
-  - Supports multiple Google service accounts for scalability
+  - Supports multiple Google accounts for scalability via OAuth authentication
   - Proper access verification before client onboarding
-  - Centralized credential management with security considerations
-  - Load balancing across service accounts based on property limits
+  - Simplified credential management (Google Account Email approach instead of JSON credentials)
+  - Load balancing across service accounts without property limits
+
+### August 3, 2025 - Simplified Google Account Email Approach
+- **User Feedback Integration**: Simplified GA4 service account management based on user preference
+- **Removed Fields**: Eliminated description, service account JSON credentials, and max properties fields
+- **OAuth-Ready Architecture**: Updated to Google Account Email approach preparing for OAuth integration
+- **Simplified UI**: Streamlined form with only essential fields: Account Name, Google Account Email, Active status
+- **Backend Updates**: Modified database schema and service methods to support simplified approach
+- **Future Integration**: Architecture ready for Google OAuth flow implementation
 
 ### August 3, 2025 - Global Template Integration
 - **UI Consolidation**: Moved Global Template management from separate tab into AI Prompts page

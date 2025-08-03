@@ -75,10 +75,6 @@ export const ga4ServiceAccounts = pgTable("ga4_service_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g., "Clear Digital Main", "Client Batch A"
   serviceAccountEmail: text("service_account_email").notNull().unique(),
-  credentialsPath: text("credentials_path").notNull(), // Path to JSON key file
-  credentialsJson: jsonb("credentials_json"), // Encrypted JSON credentials (alternative to file)
-  description: text("description"), // Usage notes
-  maxProperties: integer("max_properties").default(50), // Limit for this account
   active: boolean("active").default(true).notNull(),
   lastUsed: timestamp("last_used"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
