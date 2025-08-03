@@ -398,14 +398,62 @@ class GA4ServiceAccountManager {
 
       const reportData = await response.json();
       
-      // If we get a successful response, we have access to the property
-      // Extract property name from metadata if available, otherwise use property ID
-      const propertyName = reportData.propertyQuota?.propertyId ? 
-        `GA4 Property ${propertyId}` : 
-        `GA4 Property ${propertyId}`;
+      // Now that we know we have access, try to get the actual property metadata
+      let propertyName = `GA4 Property ${propertyId}`; // fallback
+      let accessLevel = 'Viewer';
       
-      // For GA4 Reporting API, if we can run reports, we have at least Viewer access
-      const accessLevel = 'Viewer';
+      try {
+        // Try to get property metadata using the metadata endpoint
+        const metadataResponse = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}/metadata`, {
+          headers: {
+            'Authorization': `Bearer ${serviceAccount.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (metadataResponse.ok) {
+          const metadata = await metadataResponse.json();
+          // Extract property name from metadata if available
+          if (metadata.name) {
+            // The name field typically contains something like "properties/276066025"
+            // Try to get a more descriptive name from dimensions or other metadata
+            propertyName = metadata.name.replace('properties/', 'Property ');
+          }
+        }
+      } catch (error) {
+        logger.warn('Could not fetch property metadata, using fallback name', { propertyId, error });
+      }
+      
+      // Try to determine access level by attempting a management operation
+      try {
+        // If we can access account summaries, we likely have higher permissions
+        const accountsResponse = await fetch(`https://analyticsdata.googleapis.com/v1beta/accountSummaries`, {
+          headers: {
+            'Authorization': `Bearer ${serviceAccount.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (accountsResponse.ok) {
+          const accounts = await accountsResponse.json();
+          // Find the property in account summaries to get real name and access level
+          for (const account of accounts.accountSummaries || []) {
+            for (const propertySummary of account.propertySummaries || []) {
+              if (propertySummary.property === `properties/${propertyId}`) {
+                // Found the property! Get the display name
+                if (propertySummary.displayName) {
+                  propertyName = propertySummary.displayName;
+                }
+                // If we can see it in account summaries, we likely have elevated access
+                accessLevel = 'Editor';
+                break;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.debug('Could not determine elevated access level, keeping as Viewer', { propertyId });
+      }
 
       logger.info('Successfully verified GA4 property access', {
         propertyId,
