@@ -62,9 +62,11 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   
   // Initialize component state from props and reset form state
   useEffect(() => {
-
     setPropertyId(currentGA4PropertyId);
-    setHasTestedConnection(false);
+    // Only reset test state if property ID actually changed
+    if (currentGA4PropertyId !== propertyId) {
+      setHasTestedConnection(false);
+    }
     // Reset service account selection to force re-population
     setSelectedServiceAccount("");
   }, [currentGA4PropertyId]);
@@ -83,7 +85,8 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   
   // Only show status while testing or if we just completed a test (not for existing saved data)
   const [hasTestedConnection, setHasTestedConnection] = useState(false);
-  const showStatus = isTestingConnection || hasTestedConnection;
+  // Show status if testing, just tested, or if there's existing access data to display
+  const showStatus = isTestingConnection || hasTestedConnection || (currentAccess && propertyId === currentAccess.propertyId);
 
   const handlePropertyIdChange = (value: string) => {
 
@@ -122,7 +125,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         setTimeout(() => {
           refetchPropertyAccess();
           setHasTestedConnection(true);
-        }, 1500);
+        }, 1000);
       }
     } catch (error) {
       console.error("Connection test failed:", error);
