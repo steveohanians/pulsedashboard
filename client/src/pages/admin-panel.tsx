@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
+import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
+import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
 import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
@@ -3165,17 +3167,36 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="text-center py-12 text-slate-500">
-                    <Key className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                    <h3 className="text-lg font-medium mb-2">GA4 Service Account Management</h3>
-                    <p className="text-sm mb-4">Service account management interface will be implemented here.</p>
-                    <p className="text-xs text-slate-400 mb-4">
-                      This section will include:
-                      <br />• Service account configuration and credentials management
-                      <br />• Property access verification and monitoring
-                      <br />• Client-to-service-account assignment
-                      <br />• Access analytics and error tracking
-                    </p>
+                  {/* Service Accounts Table */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <h3 className="text-sm font-medium text-slate-800">Service Accounts</h3>
+                      <Dialog open={isDialogOpen && editingItem?.type === 'add-service-account'} onOpenChange={(open) => {
+                        setIsDialogOpen(open);
+                        if (!open) setEditingItem(null);
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" onClick={() => {
+                            setEditingItem({ type: 'add-service-account' });
+                            setIsDialogOpen(true);
+                          }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Service Account
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Add Google Service Account</DialogTitle>
+                            <DialogDescription>
+                              Configure a new Google service account for GA4 API access
+                            </DialogDescription>
+                          </DialogHeader>
+                          <ServiceAccountForm onClose={() => setIsDialogOpen(false)} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    <ServiceAccountsTable />
                   </div>
                 </div>
               </TabsContent>
