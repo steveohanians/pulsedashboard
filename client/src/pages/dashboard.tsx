@@ -28,15 +28,14 @@ import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } fr
 // import html2canvas from 'html2canvas';
 // import { jsPDF } from 'jspdf';
 import { logger } from "@/utils/logger";
-import { performanceTimer } from "@/utils/performance-timer";
+import { realPerformanceTimer } from "@/utils/real-performance-timer";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   
-  // Start performance timing on fresh component mount
+  // Start real performance timing
   useEffect(() => {
-    console.log('🏁 Dashboard component mounting - starting performance timer');
-    performanceTimer.start();
+    realPerformanceTimer.startDashboardTiming();
   }, []);
   const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
@@ -867,35 +866,45 @@ export default function Dashboard() {
         const hasAllMetrics = metricElements.length >= 6;
         
         if (hasVisualCharts && hasAllMetrics) {
-          console.log(`✅ Visual render complete: Chart graphics=${pathElements.length}, Metrics=${metricElements.length}`);
+          console.log(`✅ Visual content detected: ${pathElements.length} chart graphics, ${metricElements.length} metrics`);
           
-          // Use requestIdleCallback to wait for browser to finish painting
+          // Wait for browser idle time + additional rendering buffer
           if (window.requestIdleCallback) {
             window.requestIdleCallback(() => {
-              // Additional delay for paint completion
               setTimeout(() => {
-                performanceTimer.markComplete();
-              }, 2000);
-            });
+                realPerformanceTimer.markDashboardComplete();
+              }, 3000); // Extended delay for true visual completion
+            }, { timeout: 5000 });
           } else {
-            // Fallback with longer delay
             setTimeout(() => {
-              performanceTimer.markComplete();
-            }, 3000);
+              realPerformanceTimer.markDashboardComplete();
+            }, 5000);
           }
+          return true;
         } else {
-          console.log(`⏳ Still rendering visuals: paths=${pathElements.length}, metrics=${metricElements.length}`);
+          console.log(`⏳ Visual content loading: ${pathElements.length} graphics, ${metricElements.length} metrics`);
           return false;
         }
-        return true;
       };
 
-      // Single check after data loads
-      const timer = setTimeout(() => {
-        checkVisualCompletion();
+      // Check for visual completion with proper intervals
+      let attempts = 0;
+      const maxAttempts = 25; // Up to 25 seconds
+      
+      const checkInterval = setInterval(() => {
+        attempts++;
+        const isComplete = checkVisualCompletion();
+        
+        if (isComplete || attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          if (attempts >= maxAttempts && !isComplete) {
+            console.log(`⏰ Timeout after ${maxAttempts}s - measuring current state`);
+            realPerformanceTimer.markDashboardComplete();
+          }
+        }
       }, 1000);
       
-      return () => clearTimeout(timer);
+      return () => clearInterval(checkInterval);
     }
   }, [isLoading, dashboardData, client]);
 
