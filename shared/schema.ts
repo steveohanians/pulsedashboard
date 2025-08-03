@@ -88,8 +88,8 @@ export const ga4ServiceAccounts = pgTable("ga4_service_accounts", {
 // GA4 Property Access Tracking
 export const ga4PropertyAccess = pgTable("ga4_property_access", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").references(() => clients.id).notNull(),
-  serviceAccountId: varchar("service_account_id").references(() => ga4ServiceAccounts.id).notNull(),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  serviceAccountId: varchar("service_account_id").references(() => ga4ServiceAccounts.id, { onDelete: "cascade" }).notNull(),
   propertyId: text("property_id").notNull(),
   propertyName: text("property_name"), // Fetched from GA4 API
   accessLevel: text("access_level"), // Viewer, Analyst, Editor, etc.
