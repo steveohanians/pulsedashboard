@@ -133,7 +133,7 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
         </DialogClose>
         <Button type="submit" disabled={createMutation.isPending}>
           {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {serviceAccount ? 'Update Account' : 'Create Account'}
+          {serviceAccount ? 'Update Account' : 'Add Account'}
         </Button>
       </div>
     </form>
