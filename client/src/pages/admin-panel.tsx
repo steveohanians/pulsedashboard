@@ -698,7 +698,8 @@ export default function AdminPanel() {
       websiteUrl: formData.get("website") as string,
       industryVertical: formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
-      ga4PropertyId: formData.get("ga4PropertyId") as string || null,
+      ga4PropertyId: formData.get("gaPropertyId") as string || null,
+      serviceAccountId: formData.get("serviceAccountId") as string || null,
     };
     
     if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
@@ -1730,13 +1731,27 @@ export default function AdminPanel() {
                             input.value = propertyId;
                           }
                         }}
+                        onServiceAccountUpdate={(serviceAccountId) => {
+                          // Update hidden form field for service account submission
+                          const hiddenInputId = editingItem?.id ? `hidden-serviceAccount-${editingItem.id}` : 'hidden-serviceAccount-new';
+                          const input = document.querySelector(`#${hiddenInputId}`) as HTMLInputElement;
+                          if (input) {
+                            input.value = serviceAccountId;
+                          }
+                        }}
                       />
-                      {/* Hidden input for form submission */}
+                      {/* Hidden inputs for form submission */}
                       <input 
                         type="hidden" 
                         id={editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new'} 
                         name="gaPropertyId" 
                         defaultValue={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} 
+                      />
+                      <input 
+                        type="hidden" 
+                        id={editingItem?.id ? `hidden-serviceAccount-${editingItem.id}` : 'hidden-serviceAccount-new'} 
+                        name="serviceAccountId" 
+                        defaultValue="" 
                       />
                       <div>
                         <Label htmlFor="industry">Industry Vertical *</Label>

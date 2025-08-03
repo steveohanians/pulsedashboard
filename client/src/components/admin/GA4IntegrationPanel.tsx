@@ -13,6 +13,7 @@ interface GA4IntegrationPanelProps {
   clientId: string | null;
   currentGA4PropertyId: string;
   onGA4PropertyUpdate: (propertyId: string) => void;
+  onServiceAccountUpdate?: (serviceAccountId: string) => void;
 }
 
 interface ServiceAccount {
@@ -40,7 +41,7 @@ interface PropertyAccess {
   errorMessage?: string;
 }
 
-export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4PropertyUpdate }: GA4IntegrationPanelProps) {
+export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4PropertyUpdate, onServiceAccountUpdate }: GA4IntegrationPanelProps) {
   const [propertyId, setPropertyId] = useState(currentGA4PropertyId);
   const [selectedServiceAccount, setSelectedServiceAccount] = useState<string>("");
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -74,10 +75,11 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
       const accessForCurrentProperty = propertyAccess.find(access => access.propertyId === propertyId);
       if (accessForCurrentProperty && !selectedServiceAccount) {
         setSelectedServiceAccount(accessForCurrentProperty.serviceAccountId);
+        onServiceAccountUpdate?.(accessForCurrentProperty.serviceAccountId);
         console.log("Auto-populated service account:", accessForCurrentProperty.serviceAccountId, "for property:", propertyId);
       }
     }
-  }, [propertyAccess, propertyId]);
+  }, [propertyAccess, propertyId, onServiceAccountUpdate]);
   
   // Only show status while testing or if we just completed a test (not for existing saved data)
   const [hasTestedConnection, setHasTestedConnection] = useState(false);
@@ -175,7 +177,10 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
         <div>
           <Label htmlFor="serviceAccount">Service Account</Label>
-          <Select value={selectedServiceAccount} onValueChange={setSelectedServiceAccount}>
+          <Select value={selectedServiceAccount} onValueChange={(value) => {
+            setSelectedServiceAccount(value);
+            onServiceAccountUpdate?.(value);
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="Select a service account" />
             </SelectTrigger>

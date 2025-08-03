@@ -1244,7 +1244,9 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/admin/clients", requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertClientSchema.parse(req.body);
+      // Extract service account ID for GA4 setup (if provided)
+      const { serviceAccountId, ...clientData } = req.body;
+      const validatedData = insertClientSchema.parse(clientData);
       
       // Validate against filter_options table for data integrity
       const { FilterValidator } = await import("./utils/filterValidation");
@@ -1259,8 +1261,32 @@ export function registerRoutes(app: Express): Server {
       }
       
       const client = await storage.createClient(validatedData);
+      
+      // If both GA4 property ID and service account ID are provided, create property access
+      if (validatedData.ga4PropertyId && serviceAccountId) {
+        try {
+          await storage.createGA4PropertyAccess({
+            clientId: client.id,
+            propertyId: validatedData.ga4PropertyId,
+            serviceAccountId: serviceAccountId,
+          });
+          logger.info("Created GA4 property access for new client", { 
+            clientId: client.id, 
+            propertyId: validatedData.ga4PropertyId,
+            serviceAccountId: serviceAccountId
+          });
+        } catch (ga4Error) {
+          logger.warn("Failed to create GA4 property access for new client", { 
+            clientId: client.id, 
+            error: (ga4Error as Error).message 
+          });
+          // Don't fail the client creation if GA4 setup fails
+        }
+      }
+      
       res.status(201).json(client);
     } catch (error) {
+      logger.error("Client creation error", { error: (error as Error).message });
       res.status(400).json({ message: "Invalid data" });
     }
   });
