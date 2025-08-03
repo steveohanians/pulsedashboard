@@ -26,7 +26,7 @@ import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.p
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
-import { markDashboardComplete } from "@/utils/server-start-timer";
+// Performance tracking removed per user request
 import { ChartOptimizer, MemoryOptimizer, AsyncLoader } from "@/utils/frontend-optimizer";
 
 export default function Dashboard() {
@@ -845,64 +845,7 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isLoading, metricNames, activeSection, manualClick]);
 
-  // Mark performance complete when dashboard is fully loaded and rendered
-  useEffect(() => {
-    if (!isLoading && dashboardData && client && dashboardData.metrics) {
-      // Wait for actual visual completion - what user sees
-      const checkVisualCompletion = () => {
-        const chartWrappers = document.querySelectorAll('.recharts-wrapper');
-        const svgElements = document.querySelectorAll('svg[class*="recharts"]');
-        const metricElements = document.querySelectorAll('[id^="metric-"]');
-        const pathElements = document.querySelectorAll('svg path, svg circle, svg rect');
-        
-        console.log(`🔍 Visual Check: charts=${chartWrappers.length}, SVGs=${svgElements.length}, metrics=${metricElements.length}, chart paths=${pathElements.length}`);
-        
-        // Must have actual chart graphics rendered (paths, circles, etc.)
-        const hasVisualCharts = pathElements.length > 20; // Real chart elements
-        const hasAllMetrics = metricElements.length >= 6;
-        
-        if (hasVisualCharts && hasAllMetrics) {
-          console.log(`✅ Visual content detected: ${pathElements.length} chart graphics, ${metricElements.length} metrics`);
-          
-          // Wait for browser idle time + additional rendering buffer
-          if (window.requestIdleCallback) {
-            window.requestIdleCallback(() => {
-              setTimeout(() => {
-                markDashboardComplete();
-              }, 3000); // Extended delay for true visual completion
-            }, { timeout: 5000 });
-          } else {
-            setTimeout(() => {
-              markDashboardComplete();
-            }, 5000);
-          }
-          return true;
-        } else {
-          console.log(`⏳ Visual content loading: ${pathElements.length} graphics, ${metricElements.length} metrics`);
-          return false;
-        }
-      };
-
-      // Check for visual completion with proper intervals
-      let attempts = 0;
-      const maxAttempts = 25; // Up to 25 seconds
-      
-      const checkInterval = setInterval(() => {
-        attempts++;
-        const isComplete = checkVisualCompletion();
-        
-        if (isComplete || attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          if (attempts >= maxAttempts && !isComplete) {
-            console.log(`⏰ Timeout after ${maxAttempts}s - measuring current state`);
-            markDashboardComplete();
-          }
-        }
-      }, 1000);
-      
-      return () => clearInterval(checkInterval);
-    }
-  }, [isLoading, dashboardData, client]);
+  // Performance tracking removed per user request
 
 
   if (isLoading) {

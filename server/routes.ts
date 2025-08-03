@@ -35,10 +35,7 @@ function requireAdmin(req: any, res: any, next: any) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Expose server boot time for performance measurement
-  app.get("/api/server-boot-time", (req, res) => {
-    res.json({ bootTime: (global as any).SERVER_BOOT_TIME || Date.now() });
-  });
+  // Disabled per user request
 
   // Cache statistics endpoint for performance monitoring
   app.get("/api/cache-stats", requireAuth, (req, res) => {
@@ -149,219 +146,26 @@ export function registerRoutes(app: Express): Server {
         industryVertical: industryVertical as string
       };
 
-      // 🌐 OPTIMIZATION 3: Parallelize all database operations for maximum performance
-      const [
-        allMetricsArrays,
-        competitors,
-        allCompetitorMetricsArrays,
-        allFilteredIndustryMetricsArrays,
-        allFilteredCdAvgMetricsArrays,
-        insights
-      ] = await Promise.all([
-        // Fetch metrics for all periods in parallel
-        Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(clientId, p))),
-        // Fetch competitors (single call)
-        storage.getCompetitorsByClient(clientId),
-        // Fetch competitor metrics for all periods in parallel
-        Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(clientId, p))),
-        // Fetch filtered industry metrics for all periods in parallel
-        Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
-        // Fetch filtered CD avg metrics for all periods in parallel
-        Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
-        // 🚀 OPTIMIZATION 4: Move AI insights to background - don't block main response
-        Promise.resolve([]) // Return empty initially, load insights asynchronously
-      ]);
+      // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
+      const result = await getDashboardDataOptimized(
+        client,
+        periodsToQuery,
+        businessSize as string,
+        industryVertical as string
+      );
 
-      // 🚀 OPTIMIZATION 4B: Queue AI insights generation in background (non-blocking)
+      // 🚀 OPTIMIZATION 4: Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {
         clientId,
         timePeriod: periodsToQuery[0],
-        metrics: allMetricsArrays.flat()
+        metrics: result.metrics
       }, 2); // Medium priority
 
-      // For single period queries, return raw metrics to preserve channel information
-      if (periodsToQuery.length === 1) {
-        const allMetrics = allMetricsArrays.flat();
-        const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
-        const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
-        const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
-        
-        // Debug logging disabled for performance
-        // logger.debug(`Single-period traffic channel debug: Client=${allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, Industry=${allFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}, CD=${allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).length}`);
-        // logger.debug(`Sample single-period traffic channels:`, allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel).slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
-        
-        const processedMetrics = [
-          ...allMetrics.map(m => ({
-            metricName: m.metricName,
-            value: m.value,
-            sourceType: m.sourceType,
-            timePeriod: m.timePeriod,
-            channel: m.channel // Preserve channel information for Traffic Channels
-          })),
-          ...allCompetitorMetrics.map(m => ({
-            metricName: m.metricName,
-            value: m.value,
-            sourceType: 'Competitor',
-            competitorId: m.competitorId,
-            timePeriod: m.timePeriod,
-            channel: m.channel // Preserve channel information for Traffic Channels
-          })),
-          ...allFilteredIndustryMetrics.map(m => ({
-            metricName: m.metricName,
-            value: m.value,
-            sourceType: 'Industry_Avg',
-            timePeriod: m.timePeriod,
-            channel: m.channel // Preserve channel information for Traffic Channels
-          })),
-          ...allFilteredCdAvgMetrics.map(m => ({
-            metricName: m.metricName,
-            value: m.value,
-            sourceType: 'CD_Avg',
-            timePeriod: m.timePeriod,
-            channel: m.channel // Preserve channel information for Traffic Channels
-          }))
-        ];
-        
-        // Extract traffic channel data for single-period response
-        const trafficChannelMetrics = processedMetrics.filter(m => m.metricName === 'Traffic Channels' && m.channel);
-        // Debug logging disabled for performance
-        // logger.debug(`Single-period traffic channels being sent: ${trafficChannelMetrics.length} records`);
-        // logger.debug(`Sample single-period traffic channels:`, trafficChannelMetrics.slice(0, 3).map(m => ({ channel: m.channel, sourceType: m.sourceType, value: m.value })));
-        
-        const result = {
-          client,
-          metrics: processedMetrics,
-          competitors,
-          insights: [], // Initially empty - will be loaded via separate endpoint
-          isTimeSeries: false,
-          trafficChannelMetrics // Include traffic channel data for single-period too
-        };
-        
-        // 🧮 OPTIMIZATION 2: Cache the result for future requests
-        performanceCache.set(cacheKey, result);
-        logger.info(`Dashboard data cached: ${cacheKey}`);
-        
-        res.json(result);
-      } else {
-        // For multi-period queries, return time-series data
-        const allFilteredIndustryMetricsFlat = allFilteredIndustryMetricsArrays.flat();
-        
-        const timeSeriesData: Record<string, Array<{
-          metricName: string;
-          value: string;
-          sourceType: string;
-          competitorId?: string;
-          channel?: string; // Include channel for traffic channels
-        }>> = {};
-        
-        // Process each time period separately with FILTERED metrics
-        periodsToQuery.forEach((timePeriod, index) => {
-          const periodMetrics = allMetricsArrays[index] || [];
-          const periodCompetitorMetrics = allCompetitorMetricsArrays[index] || [];
-          const periodFilteredIndustryMetrics = allFilteredIndustryMetricsArrays[index] || [];
-          const periodFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays[index] || [];
-
-          // Debug logging disabled for performance
-          // logger.debug(`Multi-period processing ${timePeriod}: ${periodFilteredIndustryMetrics.length} Industry_Avg + ${periodFilteredCdAvgMetrics.length} CD_Avg filtered metrics`);
-          // logger.debug(`Traffic Channel debug for ${timePeriod}: Client=${periodMetrics.filter(m => m.metricName === 'Traffic Channels').length}, Industry=${periodFilteredIndustryMetrics.filter(m => m.metricName === 'Traffic Channels').length}, CD=${periodFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length}`);
-          
-          // Debug sample traffic channel data - disabled for performance
-          // const sampleTrafficChannels = periodMetrics.filter(m => m.metricName === 'Traffic Channels').slice(0, 3);
-          // logger.debug(`Sample traffic channels for ${timePeriod}:`, sampleTrafficChannels.map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
-          
-          const metrics = [
-            ...periodMetrics.map(m => ({
-              metricName: m.metricName,
-              value: m.value,
-              sourceType: m.sourceType,
-              channel: m.channel, // Preserve channel information
-              timePeriod
-            })),
-            ...periodCompetitorMetrics.map(m => ({
-              metricName: m.metricName,
-              value: m.value,
-              sourceType: 'Competitor',
-              competitorId: m.competitorId,
-              channel: m.channel, // Preserve channel information
-              timePeriod
-            })),
-            ...periodFilteredIndustryMetrics.map(m => ({
-              metricName: m.metricName,
-              value: m.value,
-              sourceType: 'Industry_Avg',
-              channel: m.channel, // Preserve channel information
-              timePeriod
-            })),
-            ...periodFilteredCdAvgMetrics.map(m => ({
-              metricName: m.metricName,
-              value: m.value,
-              sourceType: 'CD_Avg',
-              channel: m.channel, // Preserve channel information
-              timePeriod
-            }))
-          ];
-          
-          if (!timeSeriesData[timePeriod]) {
-            timeSeriesData[timePeriod] = [];
-          }
-          
-          timeSeriesData[timePeriod] = metrics as any;
-        });
-        
-        // Calculate averaged performance values for "Your Performance" display
-        // Traffic Channels should NOT be averaged - they need individual channel data preserved
-        const groupedMetrics: Record<string, Record<string, number[]>> = {};
-        const trafficChannelMetrics: any[] = [];
-        
-        // Separate traffic channel data from other metrics
-        Object.values(timeSeriesData).forEach((periodMetrics: any[]) => {
-          periodMetrics.forEach((metric: any) => {
-            if (metric.metricName === 'Traffic Channels') {
-              // Preserve traffic channel data with channel information
-              trafficChannelMetrics.push(metric);
-            } else {
-              // Group non-traffic channel metrics for averaging
-              if (!groupedMetrics[metric.metricName]) {
-                groupedMetrics[metric.metricName] = {};
-              }
-              if (!groupedMetrics[metric.metricName][metric.sourceType]) {
-                groupedMetrics[metric.metricName][metric.sourceType] = [];
-              }
-              groupedMetrics[metric.metricName][metric.sourceType].push(parseFloat(metric.value as string));
-            }
-          });
-        });
-        
-        // Calculate averages for non-traffic channel metrics
-        const averagedMetrics: Record<string, Record<string, number>> = {};
-        Object.entries(groupedMetrics).forEach(([metricName, sources]) => {
-          averagedMetrics[metricName] = {};
-          Object.entries(sources).forEach(([sourceType, values]) => {
-            averagedMetrics[metricName][sourceType] = values.reduce((sum, val) => sum + val, 0) / values.length;
-          });
-        });
-        
-        // Debug logging disabled for performance
-        // logger.debug(`Traffic channels preserved in multi-period: ${trafficChannelMetrics.length} records`);
-        // logger.debug(`Sample preserved traffic channels:`, trafficChannelMetrics.slice(0, 3).map(t => ({ channel: t.channel, value: t.value, sourceType: t.sourceType })));
-        
-        const result = {
-          client,
-          timeSeriesData,
-          competitors,
-          insights: [], // Initially empty - will be loaded via separate endpoint
-          isTimeSeries: true,
-          periods: periodsToQuery,
-          metrics: averagedMetrics, // Add averaged metrics for "Your Performance" display
-          trafficChannelMetrics // Add preserved traffic channel data
-        };
-        
-        // 🧮 OPTIMIZATION 2: Cache the result for future requests
-        performanceCache.set(cacheKey, result);
-        logger.info(`Dashboard data cached: ${cacheKey}`);
-        
-        res.json(result);
-      }
+      // Cache the result and return immediately
+      performanceCache.set(cacheKey, result);
+      logger.info(`Dashboard data cached: ${cacheKey}`);
+      
+      return res.json(result);
 
 
     } catch (error) {

@@ -59,20 +59,108 @@ export async function getFiltersOptimized() {
 }
 
 // Optimized dashboard query with parallel fetching and minimal data
-export async function getDashboardDataOptimized(clientId: string, filters: any) {
-  const cacheKey = `dashboard-${clientId}-${JSON.stringify(filters)}`;
+export async function getDashboardDataOptimized(
+  client: any,
+  periodsToQuery: string[],
+  businessSize: string,
+  industryVertical: string
+) {
+  const cacheKey = `dashboard-${client.id}-${periodsToQuery.join(',')}-${businessSize}-${industryVertical}`;
   const cached = getCachedData(cacheKey);
   if (cached) return cached;
   
-  // Get only essential data first, then lazy load the rest
-  const [client, insights] = await Promise.all([
-    storage.getClient(clientId),
-    storage.getAIInsights(clientId, filters.periodsToQuery?.[0] || 'current')
+  // Prepare filters for industry data
+  const filters = { businessSize, industryVertical };
+  
+  // Run all database queries in parallel with timeout protection
+  const dataPromise = Promise.all([
+    // Fetch metrics for all periods in parallel
+    Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
+    // Fetch competitors (single call)
+    storage.getCompetitorsByClient(client.id),
+    // Fetch competitor metrics for all periods in parallel
+    Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(client.id, p))),
+    // Fetch filtered industry metrics for all periods in parallel
+    Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
+    // Fetch filtered CD avg metrics for all periods in parallel
+    Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
   ]);
   
-  const essentialData = { client, insights };
-  setCachedData(cacheKey, essentialData, 1 * 60 * 1000); // 1 minute for essential data
-  return essentialData;
+  // Add timeout to prevent hanging
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Database query timeout')), 5000)
+  );
+  
+  const [
+    allMetricsArrays,
+    competitors,
+    allCompetitorMetricsArrays,
+    allFilteredIndustryMetricsArrays,
+    allFilteredCdAvgMetricsArrays
+  ] = await Promise.race([dataPromise, timeoutPromise]) as any;
+  
+  // Process and structure the data
+  const result = {
+    client,
+    competitors,
+    metrics: processMetricsData(
+      allMetricsArrays,
+      allCompetitorMetricsArrays,
+      allFilteredIndustryMetricsArrays,
+      allFilteredCdAvgMetricsArrays,
+      periodsToQuery
+    ),
+    insights: [] // Load insights asynchronously
+  };
+  
+  setCachedData(cacheKey, result, 5 * 60 * 1000); // 5 minutes cache
+  return result;
+}
+
+function processMetricsData(
+  allMetricsArrays: any[],
+  allCompetitorMetricsArrays: any[],
+  allFilteredIndustryMetricsArrays: any[],
+  allFilteredCdAvgMetricsArrays: any[],
+  periodsToQuery: string[]
+) {
+  // Flatten and combine all metrics data efficiently
+  const allMetrics = allMetricsArrays.flat();
+  const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
+  const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
+  const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
+  
+  return [
+    ...allMetrics.map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      sourceType: m.sourceType,
+      timePeriod: m.timePeriod,
+      channel: m.channel
+    })),
+    ...allCompetitorMetrics.map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      sourceType: 'Competitor',
+      competitorId: m.competitorId,
+      timePeriod: m.timePeriod,
+      channel: m.channel
+    })),
+    ...allFilteredIndustryMetrics.map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      sourceType: 'Industry_Avg',
+      timePeriod: m.timePeriod,
+      channel: m.channel
+    })),
+    ...allFilteredCdAvgMetrics.map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      sourceType: 'CD_Avg',
+      timePeriod: m.timePeriod,
+      channel: m.channel
+    }))
+  ];
 }
 
 // Separate function for heavy data (charts, metrics) - lazy loaded
