@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -12,7 +12,8 @@ import {
   type GlobalPromptTemplate, type InsertGlobalPromptTemplate, type UpdateGlobalPromptTemplate,
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
   type InsightContext, type InsertInsightContext, type UpdateInsightContext,
-  type FilterOption, type InsertFilterOption, type UpdateFilterOption
+  type FilterOption, type InsertFilterOption, type UpdateFilterOption,
+  type GA4PropertyAccess, type InsertGA4PropertyAccess
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
@@ -103,6 +104,9 @@ export interface IStorage {
   createFilterOption(option: InsertFilterOption): Promise<FilterOption>;
   updateFilterOption(id: string, option: UpdateFilterOption): Promise<FilterOption | undefined>;
   deleteFilterOption(id: string): Promise<void>;
+  
+  // GA4 Property Access
+  createGA4PropertyAccess(access: InsertGA4PropertyAccess): Promise<GA4PropertyAccess>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -750,6 +754,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFilterOption(id: string): Promise<void> {
     await this.filterOptionRepo.delete(id);
+  }
+
+  // GA4 Property Access
+  async createGA4PropertyAccess(access: InsertGA4PropertyAccess): Promise<GA4PropertyAccess> {
+    const [result] = await db.insert(ga4PropertyAccess).values(access).returning();
+    return result;
   }
 }
 
