@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -169,6 +169,7 @@ export default function AdminPanel() {
   const { user } = useAuth();
   const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("users");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCSVImportOpen, setIsCSVImportOpen] = useState(false);
@@ -876,9 +877,17 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <nav className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
+      <nav className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-30">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden flex-shrink-0"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
             <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
               <Settings className="text-white text-sm sm:text-base lg:text-lg" />
             </div>
@@ -897,42 +906,107 @@ export default function AdminPanel() {
         </div>
       </nav>
 
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="w-full mb-4 sm:mb-6">
-            <div className="flex overflow-x-auto pb-2 sm:pb-0">
-              <TabsList className="grid grid-cols-7 min-w-max w-full text-xs sm:text-sm">
-                <TabsTrigger value="users" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">User Management</span>
-                  <span className="sm:hidden">Users</span>
-                </TabsTrigger>
-                <TabsTrigger value="clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Client Management</span>
-                  <span className="sm:hidden">Clients</span>
-                </TabsTrigger>
-                <TabsTrigger value="cd-clients" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">CD Portfolio</span>
-                  <span className="sm:hidden">Portfolio</span>
-                </TabsTrigger>
-                <TabsTrigger value="benchmark" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Benchmark Companies</span>
-                  <span className="sm:hidden">Benchmark</span>
-                </TabsTrigger>
-                <TabsTrigger value="filters" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Filter Management</span>
-                  <span className="sm:hidden">Filters</span>
-                </TabsTrigger>
-                <TabsTrigger value="global-template" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">Global Template</span>
-                  <span className="sm:hidden">Global</span>
-                </TabsTrigger>
-                <TabsTrigger value="prompts" className="px-2 sm:px-4 py-2 whitespace-nowrap">
-                  <span className="hidden sm:inline">AI Prompts</span>
-                  <span className="sm:hidden">Prompts</span>
-                </TabsTrigger>
-              </TabsList>
+      <div className="flex">
+        {/* Content Area */}
+        <div className="flex-1 lg:ml-64 p-4 sm:p-6 max-w-7xl mx-auto w-full">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+          <nav className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900">Admin Menu</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="hover:bg-slate-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Admin Sections</h3>
+              <ul className="space-y-2">
+                {[
+                  { value: 'users', label: 'User Management', icon: Users },
+                  { value: 'clients', label: 'Client Management', icon: Building2 },
+                  { value: 'cd-clients', label: 'CD Portfolio', icon: Building2 },
+                  { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
+                  { value: 'filters', label: 'Filter Management', icon: Filter },
+                  { value: 'global-template', label: 'Global Template', icon: Settings },
+                  { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
+                ].map((tab) => {
+                  const IconComponent = tab.icon;
+                  return (
+                    <li key={tab.value}>
+                      <button
+                        onClick={() => {
+                          setActiveTab(tab.value);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 ${
+                          activeTab === tab.value
+                            ? 'bg-primary/10 text-primary font-semibold border-l-4 border-primary shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="flex items-center justify-between">
+                          <span className="flex items-center">
+                            <IconComponent className="w-4 h-4 mr-3" />
+                            {tab.label}
+                          </span>
+                          <ChevronRight className={`w-4 h-4 transition-all duration-200 ${
+                            activeTab === tab.value ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-50'
+                          }`} />
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {/* Desktop Sidebar Navigation */}
+      <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+        <div className="p-4">
+          <h2 className="text-base font-bold text-slate-800 mb-4">Admin Sections</h2>
+          <ul className="space-y-2">
+            {[
+              { value: 'users', label: 'User Management', icon: Users },
+              { value: 'clients', label: 'Client Management', icon: Building2 },
+              { value: 'cd-clients', label: 'CD Portfolio', icon: Building2 },
+              { value: 'benchmark', label: 'Benchmark Companies', icon: TrendingUp },
+              { value: 'filters', label: 'Filter Management', icon: Filter },
+              { value: 'global-template', label: 'Global Template', icon: Settings },
+              { value: 'prompts', label: 'AI Prompts', icon: Sparkles }
+            ].map((tab) => {
+              const IconComponent = tab.icon;
+              return (
+                <li key={tab.value}>
+                  <button
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs flex items-center ${
+                      activeTab === tab.value
+                        ? 'bg-slate-100 text-primary font-medium'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
+                    }`}
+                  >
+                    <IconComponent className="w-4 h-4 mr-2" />
+                    {tab.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </nav>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* User Management */}
               <TabsContent value="users">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
@@ -2615,6 +2689,7 @@ export default function AdminPanel() {
             queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
           }}
         />
+        </div>
       </div>
       <Footer />
     </div>
