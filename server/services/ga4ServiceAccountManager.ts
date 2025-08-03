@@ -469,7 +469,16 @@ class GA4ServiceAccountManager {
           // Check if Admin API needs to be enabled
           if (adminError.includes('has not been used in project') || adminError.includes('is disabled')) {
             logger.info('Admin API not enabled, will use fallback property name', { propertyId });
-            // Note: We could enhance the error message here if needed
+            
+            // Extract activation URL from error response
+            const activationMatch = adminError.match(/https:\/\/console\.developers\.google\.com\/apis\/api\/analyticsadmin\.googleapis\.com\/overview\?project=\d+/);
+            if (activationMatch) {
+              logger.warn('Google Analytics Admin API needs to be enabled', {
+                propertyId,
+                activationUrl: activationMatch[0],
+                message: 'To get real property names and access levels, enable the Admin API in Google Cloud Console'
+              });
+            }
           }
         }
       } catch (error) {
@@ -486,10 +495,16 @@ class GA4ServiceAccountManager {
         serviceAccountEmail: serviceAccount.serviceAccountEmail
       });
 
+      // Add warning if using fallback data
+      const usingFallbackData = propertyName.includes('Property 276066025') || propertyName.includes('/metadata');
+      
       return {
         success: true,
         propertyName,
-        accessLevel
+        accessLevel,
+        ...(usingFallbackData && {
+          warning: 'Using placeholder data. Enable Google Analytics Admin API for real property names and access levels.'
+        })
       };
 
     } catch (error) {
