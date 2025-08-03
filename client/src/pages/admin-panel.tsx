@@ -1782,7 +1782,7 @@ export default function AdminPanel() {
                                     {client.websiteUrl}
                                   </a>
                                 </div>
-                                <div className="text-xs text-gray-500 xl:hidden">GA4: {client.ga4PropertyId || "Not set"}</div>
+                                <div className="text-xs text-gray-500 xl:hidden">GA4: {client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : "Not Set"}</div>
                                 <div className="text-xs text-gray-500 md:hidden">{client.businessSize}</div>
                               </div>
                             </TableCell>
@@ -1791,7 +1791,7 @@ export default function AdminPanel() {
                                 {client.websiteUrl}
                               </a>
                             </TableCell>
-                            <TableCell className="hidden xl:table-cell font-mono text-xs">{client.ga4PropertyId || "Not set"}</TableCell>
+                            <TableCell className="hidden xl:table-cell font-mono text-xs">{client.ga4PropertyId && /^\d+$/.test(client.ga4PropertyId) ? client.ga4PropertyId : "Not Set"}</TableCell>
                             <TableCell className="text-xs">{client.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-xs">{client.businessSize}</TableCell>
                             <TableCell>
