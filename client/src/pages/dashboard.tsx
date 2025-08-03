@@ -138,16 +138,7 @@ export default function Dashboard() {
         localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
         logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
         
-        // Also clear any other potential insight-related keys
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.includes('insight') || key.includes('ai'))) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        logger.info(`Cleared ${keysToRemove.length} additional insight-related keys`);
+        // localStorage clearing disabled for performance optimization
       } catch (error) {
         logger.warn("Failed to clear localStorage:", error);
       }

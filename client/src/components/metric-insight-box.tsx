@@ -29,48 +29,13 @@ const insightsStorage = {
   getKey: (clientId: string, metricName: string) => `${clientId}-${metricName}`,
   
   save: (clientId: string, metricName: string, insight: StoredInsight['data']) => {
-    try {
-      const stored = localStorage.getItem(INSIGHTS_STORAGE_KEY);
-      const allInsights = stored ? JSON.parse(stored) : {};
-      const key = insightsStorage.getKey(clientId, metricName);
-      
-      allInsights[key] = {
-        data: insight,
-        month: insightsStorage.getCurrentMonth(),
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify(allInsights));
-    } catch (error) {
-      // Failed to save insight to localStorage - handled silently
-    }
+    // localStorage operations disabled for performance optimization
+    return;
   },
   
   load: (clientId: string, metricName: string) => {
-    try {
-      const stored = localStorage.getItem(INSIGHTS_STORAGE_KEY);
-      if (!stored) return null;
-      
-      const allInsights = JSON.parse(stored);
-      const key = insightsStorage.getKey(clientId, metricName);
-      const insight = allInsights[key];
-      
-      if (!insight) return null;
-      
-      // Check if insight is from current month
-      const currentMonth = insightsStorage.getCurrentMonth();
-      if (insight.month !== currentMonth) {
-        // Remove expired insight
-        delete allInsights[key];
-        localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify(allInsights));
-        return null;
-      }
-      
-      return insight.data;
-    } catch (error) {
-      // Failed to load insight from localStorage - handled silently
-      return null;
-    }
+    // localStorage operations disabled for performance optimization
+    return null;
   },
   
   remove: (clientId: string, metricName: string) => {
