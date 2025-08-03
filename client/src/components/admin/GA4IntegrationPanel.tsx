@@ -280,13 +280,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {propertyId && selectedServiceAccount && !showStatus && clientId && (
-          <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
-            <p className="text-sm text-blue-700">
-              <strong>Ready to Test:</strong> Click "Test Connection" to verify access to this GA4 property.
-            </p>
-          </div>
-        )}
+
       </CardContent>
     </Card>
   );
