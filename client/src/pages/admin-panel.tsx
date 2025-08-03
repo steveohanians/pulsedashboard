@@ -1301,7 +1301,14 @@ export default function AdminPanel() {
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
-                            <Badge variant="outline" className="text-xs bg-green-100 text-green-600 border-green-200">Active</Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs bg-green-100 text-green-600 border-green-200 hover:bg-green-200 cursor-default"
+                              disabled
+                            >
+                              Active
+                            </Button>
                           </TableCell>
                           <TableCell className="hidden xl:table-cell text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
                           <TableCell>
@@ -1754,16 +1761,18 @@ export default function AdminPanel() {
                             <TableCell className="text-xs">{client.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-xs">{client.businessSize}</TableCell>
                             <TableCell>
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-6 px-2 text-xs cursor-default ${
                                   client.active 
-                                    ? 'bg-green-100 text-green-600 border-green-200' 
-                                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                                    ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
                                 }`}
+                                disabled
                               >
                                 {client.active ? "Active" : "Inactive"}
-                              </Badge>
+                              </Button>
                             </TableCell>
                           <TableCell className="min-w-24">
                             <div className="flex space-x-1">
@@ -2248,16 +2257,18 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-6 px-2 text-xs cursor-default ${
                                   company.active 
-                                    ? 'bg-green-100 text-green-600 border-green-200' 
-                                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                                    ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
                                 }`}
+                                disabled
                               >
                                 {company.active ? "Active" : "Inactive"}
-                              </Badge>
+                              </Button>
                             </TableCell>
                           <TableCell>
                             <div className="flex space-x-1">

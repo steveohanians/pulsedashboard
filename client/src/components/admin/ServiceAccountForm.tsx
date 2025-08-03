@@ -88,29 +88,33 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
         <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
           <div className="space-y-2">
             <div className="text-xs font-medium text-slate-600">Account Status</div>
-            <Badge 
+            <Button
+              size="sm"
               variant="outline"
-              className={`text-xs ${
+              className={`h-6 px-2 text-xs cursor-default ${
                 serviceAccount.active 
-                  ? 'bg-green-100 text-green-600 border-green-200' 
-                  : 'bg-gray-100 text-gray-500 border-gray-200'
+                  ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
               }`}
+              disabled
             >
               {serviceAccount.active ? "Active" : "Inactive"}
-            </Badge>
+            </Button>
           </div>
           <div className="space-y-2">
             <div className="text-xs font-medium text-slate-600">OAuth Status</div>
-            <Badge 
+            <Button
+              size="sm"
               variant="outline"
-              className={`text-xs ${
+              className={`h-6 px-2 text-xs cursor-default ${
                 serviceAccount.verified 
-                  ? 'bg-green-100 text-green-600 border-green-200' 
-                  : 'bg-gray-100 text-gray-500 border-gray-200'
+                  ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
               }`}
+              disabled
             >
               {serviceAccount.verified ? "Connected" : "Not Connected"}
-            </Badge>
+            </Button>
           </div>
           {serviceAccount.lastUsed && (
             <div className="space-y-2 col-span-2">
