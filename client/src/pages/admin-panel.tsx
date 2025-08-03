@@ -1827,14 +1827,14 @@ export default function AdminPanel() {
                                     <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                                <DialogContent className="max-h-[90vh] overflow-y-auto" key={`client-dialog-${client.id}-${client.ga4PropertyId || 'none'}-${Date.now()}`}>
                                   <DialogHeader>
                                     <DialogTitle>Edit Client</DialogTitle>
                                     <DialogDescription>
                                       Update client information and settings
                                     </DialogDescription>
                                   </DialogHeader>
-                                  <form key={`client-form-${client.id}-${client.ga4PropertyId || 'none'}`} onSubmit={handleSaveClient} className="space-y-4">
+                                  <form onSubmit={handleSaveClient} className="space-y-4">
                                     <div>
                                       <Label htmlFor="name">Name *</Label>
                                       <Input 
