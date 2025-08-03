@@ -627,14 +627,16 @@ export default function AdminPanel() {
 
   const handleSaveUser = (event: React.FormEvent) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget as HTMLFormElement);
-    const statusSwitch = (event.currentTarget as HTMLFormElement).querySelector('input[name="status"]') as HTMLInputElement;
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const statusSwitch = form.querySelector('input[name="status"]') as HTMLInputElement;
+    
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as string,
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
-      status: statusSwitch?.checked ? "Active" : "Inactive" as "Active" | "Inactive",
+      status: (statusSwitch?.checked ? "Active" : "Inactive") as "Active" | "Inactive",
     };
     
     if (!data.name || !data.email) {
@@ -673,26 +675,6 @@ export default function AdminPanel() {
   }
 
   // Metric prompts handlers
-  const handleCreateMetricPrompt = (event: React.FormEvent) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget as HTMLFormElement);
-    const data = {
-      metricName: formData.get("metricName") as string,
-      description: formData.get("description") as string,
-      promptTemplate: formData.get("promptTemplate") as string,
-    };
-    
-    if (!data.metricName || !data.promptTemplate) {
-      toast({
-        title: "Validation error",
-        description: "Metric name and prompt template are required.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    createMetricPromptMutation.mutate(data);
-  };
 
   const handleUpdateMetricPrompt = (event: React.FormEvent) => {
     event.preventDefault();
