@@ -173,16 +173,21 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
   - Per-account OAuth verification and testing
   - Ready for production GA4 API integration
 
-### August 3, 2025 - Google OAuth 2.0 Production Implementation
+### August 3, 2025 - Google OAuth 2.0 Production Implementation & Browser Security Fix
 - **Complete OAuth Integration**: Successfully implemented production-ready Google OAuth 2.0 flow for GA4 service account management
 - **Google Cloud Console Setup**: Configured OAuth consent screen with required analytics scopes (`analytics.readonly`, `analytics.manage.users.readonly`)
 - **Credentials Management**: Added GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to production environment
-- **Production Readiness**: Updated production checklist with critical redirect URI update requirements for deployment
+- **Browser Security Resolution**: Fixed "accounts.google.com refused to connect" errors by implementing popup-based OAuth flow instead of same-window redirects
 - **OAuth Flow Architecture**: 
   - Development redirect URI: `https://e74fcffb-82e3-4375-a72b-e621ccc03f8e-00-30he2hiv708v4.janeway.replit.dev/api/oauth/google/callback`
   - Production deployment requires adding production domain redirect URI to Google Cloud Console
   - Multiple redirect URIs supported in single OAuth client for seamless dev/prod workflow
-- **Ready for GA4 Integration**: OAuth service layer fully configured to authorize Google accounts for Analytics API access
+- **User Experience Optimization**: 
+  - OAuth authorization opens in new tab with proper dimensions (600x700)
+  - Automatic popup closure after success/failure with postMessage communication
+  - Real-time UI updates and success notifications via toast messages
+  - Service account list auto-refresh after successful authorization
+- **Production Ready**: OAuth tokens successfully stored with verified=true status, ready for GA4 API integration
 
 ### August 3, 2025 - Global Template Integration
 - **UI Consolidation**: Moved Global Template management from separate tab into AI Prompts page
