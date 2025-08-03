@@ -153,10 +153,10 @@ export function registerRoutes(app: Express): Server {
         logger.info(`Fetching real GA4 data for Demo Company (${clientId}) for periods: ${periodsToQuery.join(', ')}`);
         
         try {
-          // Clear any existing sample data first for these periods
+          // Clear any existing CLIENT data first for these periods (preserve benchmarks)
           for (const period of periodsToQuery) {
-            // Delete existing non-GA4 data to ensure GA4 data takes precedence
-            await storage.clearMetricsByClientAndPeriod(clientId, period);
+            // Delete only existing CLIENT data to ensure GA4 data takes precedence
+            await storage.clearClientMetricsByPeriod(clientId, period);
             
             const { startDate, endDate } = ga4DataService.getDateRangeForPeriod(period);
             logger.info(`GA4 date range for period ${period}: ${startDate} to ${endDate}`);
@@ -175,6 +175,10 @@ export function registerRoutes(app: Express): Server {
           logger.error(`GA4 data fetch failed for Demo Company: ${(ga4Error as Error).message}`);
           // Continue with sample data if GA4 fails
         }
+
+        // 🔄 CACHE INVALIDATION: Clear cache after GA4 data update to ensure immediate frontend update
+        performanceCache.invalidateClientCache(clientId);
+        logger.info(`Cache invalidated for Demo Company after GA4 data update`);
       }
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection

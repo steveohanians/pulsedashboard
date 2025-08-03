@@ -84,6 +84,17 @@ class PerformanceCache {
     }
   }
 
+  // Invalidate all cache entries for a specific client
+  invalidateClientCache(clientId: string): void {
+    const keysToDelete: string[] = [];
+    for (const [key] of this.cache.entries()) {
+      if (key.includes(`dashboard:${clientId}:`)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => this.cache.delete(key));
+  }
+
   // Get cache stats
   getStats() {
     return {

@@ -789,12 +789,13 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Clear metrics for a specific client and time period
-  async clearMetricsByClientAndPeriod(clientId: string, timePeriod: string): Promise<void> {
+  // Clear ONLY CLIENT metrics for a specific client and time period (preserve benchmarks)
+  async clearClientMetricsByPeriod(clientId: string, timePeriod: string): Promise<void> {
     await db.delete(metrics).where(
       and(
         eq(metrics.clientId, clientId),
-        eq(metrics.timePeriod, timePeriod)
+        eq(metrics.timePeriod, timePeriod),
+        eq(metrics.sourceType, 'Client')
       )
     );
   }
