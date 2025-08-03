@@ -196,24 +196,32 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
         {propertyId && selectedServiceAccount && (
           <div className="pt-2">
-            <Button 
-              onClick={handleTestConnection}
-              disabled={isTestingConnection}
-              variant="outline"
-              size="sm"
-            >
-              {isTestingConnection ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Testing Connection...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Test Connection
-                </>
-              )}
-            </Button>
+            {clientId ? (
+              <Button 
+                onClick={handleTestConnection}
+                disabled={isTestingConnection}
+                variant="outline"
+                size="sm"
+              >
+                {isTestingConnection ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Testing Connection...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Test Connection
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="border border-amber-200 rounded-lg p-3 bg-amber-50">
+                <p className="text-sm text-amber-700">
+                  <strong>Test Connection:</strong> Connection testing will be available after the client is created. Save the client first to enable GA4 verification.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -267,7 +275,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
           </div>
         )}
 
-        {propertyId && selectedServiceAccount && !showStatus && (
+        {propertyId && selectedServiceAccount && !showStatus && clientId && (
           <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
             <p className="text-sm text-blue-700">
               <strong>Ready to Test:</strong> Click "Test Connection" to verify access to this GA4 property.
