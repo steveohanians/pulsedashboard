@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DialogClose } from "@/components/ui/dialog";
-import { Loader2, AlertCircle, CheckCircle, Wifi, WifiOff, Calendar, Power, PowerOff, Key } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, Link, Link2Off, Calendar, Power, PowerOff, Key } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -106,9 +106,9 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
               className="text-xs"
             >
               {serviceAccount.verified ? (
-                <><Wifi className="h-3 w-3 mr-1" />Connected</>
+                <><Link className="h-3 w-3 mr-1" />Connected</>
               ) : (
-                <><WifiOff className="h-3 w-3 mr-1" />Not Connected</>
+                <><Link2Off className="h-3 w-3 mr-1" />Not Connected</>
               )}
             </Badge>
           </div>

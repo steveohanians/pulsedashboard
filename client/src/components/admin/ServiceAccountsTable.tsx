@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pencil, Trash2, Key, CheckCircle, XCircle, Loader2, RefreshCw, Power, PowerOff, Wifi, WifiOff } from "lucide-react";
+import { Pencil, Trash2, Key, CheckCircle, XCircle, Loader2, RefreshCw, Power, PowerOff, Link, Link2Off } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ServiceAccountForm } from "./ServiceAccountForm";
@@ -37,23 +37,23 @@ export function ServiceAccountsTable() {
     retry: false
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: async (accountId: string) => {
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ accountId, active }: { accountId: string; active: boolean }) => {
       return await apiRequest('PUT', `/api/admin/ga4-service-accounts/${accountId}`, {
-        active: false
+        active: active
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { active }) => {
       toast({
-        title: "Service account deactivated",
-        description: "Service account has been successfully deactivated.",
+        title: `Service account ${active ? 'activated' : 'deactivated'}`,
+        description: `Service account has been successfully ${active ? 'activated' : 'deactivated'}.`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/ga4-service-accounts'] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to deactivate service account.",
+        description: error.message || "Failed to update service account status.",
         variant: "destructive",
       });
     }
@@ -180,28 +180,35 @@ export function ServiceAccountsTable() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={account.serviceAccount.active ? "default" : "secondary"}
-                      className="text-xs"
+                    <Button
+                      size="sm"
+                      variant={account.serviceAccount.active ? "default" : "outline"}
+                      className="h-6 px-2 text-xs"
+                      onClick={() => toggleActiveMutation.mutate({ 
+                        accountId: account.serviceAccount.id, 
+                        active: !account.serviceAccount.active 
+                      })}
+                      disabled={toggleActiveMutation.isPending}
                     >
                       {account.serviceAccount.active ? (
                         <><Power className="h-3 w-3 mr-1" />Active</>
                       ) : (
                         <><PowerOff className="h-3 w-3 mr-1" />Inactive</>
                       )}
-                    </Badge>
+                    </Button>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={account.serviceAccount.verified ? "default" : "outline"}
-                      className="text-xs"
-                    >
+                    <div className={`flex items-center justify-center w-8 h-6 rounded ${
+                      account.serviceAccount.verified 
+                        ? 'bg-green-100 text-green-600' 
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
                       {account.serviceAccount.verified ? (
-                        <><Wifi className="h-3 w-3 mr-1" />Connected</>
+                        <Link className="h-3 w-3" />
                       ) : (
-                        <><WifiOff className="h-3 w-3 mr-1" />Not Connected</>
+                        <Link2Off className="h-3 w-3" />
                       )}
-                    </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-1">
@@ -265,47 +272,12 @@ export function ServiceAccountsTable() {
                         </DialogContent>
                       </Dialog>
 
-                      {account.serviceAccount.active ? (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                              title="Deactivate Account"
-                            >
-                              <PowerOff className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Deactivate Service Account</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will deactivate "{account.serviceAccount.name}" and prevent it from accessing GA4 properties. 
-                                This action can be reversed later by editing the account.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deactivateMutation.mutate(account.serviceAccount.id)}
-                                disabled={deactivateMutation.isPending}
-                                className="bg-orange-600 hover:bg-orange-700"
-                              >
-                                {deactivateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                Deactivate
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : null}
-
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            className="h-8 w-8 p-0 text-black hover:text-red-600"
                             title="Delete Account Permanently"
                           >
                             <Trash2 className="h-3 w-3" />
