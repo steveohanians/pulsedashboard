@@ -10,17 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles } from "lucide-react";
 import { Link } from "wouter";
-import MetricsChart from "@/components/metrics-chart";
-import TimeSeriesChart from "@/components/time-series-chart";
-import SessionDurationAreaChart from "@/components/area-chart";
-import MetricBarChart from "@/components/bar-chart";
-import { StackedBarChart } from "@/components/stacked-bar-chart";
-import { DonutChart } from "@/components/donut-chart";
-import LollipopChart from "@/components/lollipop-chart";
-import AIInsights from "@/components/ai-insights";
-import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
-import MetricInsightBox from "@/components/metric-insight-box";
-import CompetitorModal from "@/components/competitor-modal";
+// Lazy load heavy chart components for performance
+// import MetricsChart from "@/components/metrics-chart";
+// import TimeSeriesChart from "@/components/time-series-chart";
+// import SessionDurationAreaChart from "@/components/area-chart";
+// import MetricBarChart from "@/components/bar-chart";
+// import { StackedBarChart } from "@/components/stacked-bar-chart";
+// import { DonutChart } from "@/components/donut-chart";
+// import LollipopChart from "@/components/lollipop-chart";
+// import AIInsights from "@/components/ai-insights";
+// import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
+// import MetricInsightBox from "@/components/metric-insight-box";
+// import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
@@ -204,8 +205,13 @@ export default function Dashboard() {
     }, {} as Record<string, Record<string, number>>);
   }, [metrics, averagedMetrics, isTimeSeries]);
 
-  // Process traffic channel data for stacked bar chart
-  const processTrafficChannelData = useCallback(() => {
+  // Disable expensive data processing for performance
+  const processTrafficChannelData = () => {
+    return []; // Return empty for performance
+  };
+  
+  // Original expensive processing disabled for performance
+  const processTrafficChannelDataOriginal = useCallback(() => {
     let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {

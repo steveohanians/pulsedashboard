@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
-import Dashboard from "@/pages/dashboard";
+import DashboardMinimal from "@/pages/dashboard-minimal";
 import AdminPanel from "@/pages/admin-panel";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
@@ -21,7 +21,7 @@ function Router() {
   
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/" component={DashboardMinimal} />
       <ProtectedRoute path="/admin" component={AdminPanel} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
