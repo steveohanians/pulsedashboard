@@ -1815,7 +1815,7 @@ export default function AdminPanel() {
                                     <Edit className="h-3 w-3" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="max-h-[90vh] overflow-y-auto">
                                   <DialogHeader>
                                     <DialogTitle>Edit Client</DialogTitle>
                                     <DialogDescription>

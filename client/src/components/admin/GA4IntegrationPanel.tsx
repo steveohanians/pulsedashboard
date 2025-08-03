@@ -235,11 +235,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                   </p>
                 )}
                 
-                {currentAccess.accessLevel && (
-                  <p className="text-sm text-slate-600 mb-1">
-                    <strong>Access Level:</strong> {currentAccess.accessLevel}
-                  </p>
-                )}
+
                 
                 {currentAccess.lastVerified && (
                   <p className="text-sm text-slate-600 mb-1">
