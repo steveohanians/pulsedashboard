@@ -28,14 +28,14 @@ import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } fr
 // import html2canvas from 'html2canvas';
 // import { jsPDF } from 'jspdf';
 import { logger } from "@/utils/logger";
-import { realPerformanceTimer } from "@/utils/real-performance-timer";
+import { startFreshTimer, markComplete } from "@/utils/fresh-timer";
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   
-  // Start real performance timing
+  // Start fresh timer
   useEffect(() => {
-    realPerformanceTimer.startDashboardTiming();
+    startFreshTimer();
   }, []);
   const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
@@ -872,12 +872,12 @@ export default function Dashboard() {
           if (window.requestIdleCallback) {
             window.requestIdleCallback(() => {
               setTimeout(() => {
-                realPerformanceTimer.markDashboardComplete();
+                markComplete();
               }, 3000); // Extended delay for true visual completion
             }, { timeout: 5000 });
           } else {
             setTimeout(() => {
-              realPerformanceTimer.markDashboardComplete();
+              markComplete();
             }, 5000);
           }
           return true;
@@ -899,7 +899,7 @@ export default function Dashboard() {
           clearInterval(checkInterval);
           if (attempts >= maxAttempts && !isComplete) {
             console.log(`⏰ Timeout after ${maxAttempts}s - measuring current state`);
-            realPerformanceTimer.markDashboardComplete();
+            markComplete();
           }
         }
       }, 1000);

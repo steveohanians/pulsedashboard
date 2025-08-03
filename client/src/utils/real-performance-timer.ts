@@ -57,18 +57,18 @@ export class RealPerformanceTimer {
     // Verify actual visual content exists
     const visualElements = this.countVisualElements();
     
-    console.log(`\n=== REAL PERFORMANCE MEASUREMENT ===`);
+    console.log(`\n=== PERFORMANCE TEST #2 RESULTS ===`);
     console.log(`🚀 Navigation Start: 0ms`);
     if (this.firstContentfulPaint > 0) {
-      console.log(`🎨 First Contentful Paint: ${this.firstContentfulPaint.toFixed(0)}ms`);
+      console.log(`🎨 First Contentful Paint: ${this.firstContentfulPaint.toFixed(0)}ms (${(this.firstContentfulPaint/1000).toFixed(1)}s)`);
     }
     if (this.largestContentfulPaint > 0) {
-      console.log(`🖼️ Largest Contentful Paint: ${this.largestContentfulPaint.toFixed(0)}ms`);
+      console.log(`🖼️ Largest Contentful Paint: ${this.largestContentfulPaint.toFixed(0)}ms (${(this.largestContentfulPaint/1000).toFixed(1)}s)`);
     }
-    console.log(`📊 Dashboard Visual Complete: ${totalTime}ms`);
-    console.log(`🎯 TOTAL USER EXPERIENCE TIME: ${(totalTime/1000).toFixed(2)} SECONDS`);
-    console.log(`📈 Visual Elements Rendered: ${visualElements.charts} charts, ${visualElements.metrics} metrics, ${visualElements.paths} paths`);
-    console.log(`=====================================\n`);
+    console.log(`📊 Dashboard Visual Complete: ${totalTime}ms (${(totalTime/1000).toFixed(2)}s)`);
+    console.log(`🎯 TOTAL LOAD TIME: ${(totalTime/1000).toFixed(2)} SECONDS`);
+    console.log(`📈 Elements: ${visualElements.charts} charts, ${visualElements.metrics} metrics, ${visualElements.paths} graphics`);
+    console.log(`=======================================\n`);
 
     return totalTime;
   }
