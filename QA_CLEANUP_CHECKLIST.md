@@ -24,9 +24,13 @@
 - [x] Fixed component interfaces (competitor-modal, lollipop-chart, insight-generation-button) ✅
 - [x] Fixed server middleware (rateLimiter.ts, requestLogger.ts) ✅
 - [x] Fixed chart components type safety (donut-chart, bar-chart, area-chart) ✅
-- **Progress: Reduced from 736 → 275 any/unknown usages (63% improvement)**
-- [x] Fixed AI insights component interface ✅
-- **Current status: LSP diagnostics clean for client-side, addressing server-side utilities**
+- **Progress: Reduced from 736 → 260 any/unknown usages (65% improvement)**
+- [x] Fixed AI insights component interface ✅  
+- [x] Fixed time-series chart and metric insight box interfaces ✅
+- [x] Fixed production logger and insight data aggregator types ✅
+- [x] Fixed chart data processing, shared utilities, and server service types ✅
+- [x] Fixed OpenAI service competitor mapping and date utilities ✅
+- **Current status: 260 remaining type issues - approaching 70% improvement target**
 - [ ] Replace loose types with proper TypeScript interfaces
 - [ ] Ensure all API responses are properly typed
 

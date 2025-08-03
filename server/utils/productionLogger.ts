@@ -72,7 +72,7 @@ export class ProductionLogger {
     return LOG_LEVELS[level] <= this.currentLevel;
   }
 
-  private formatMessage(level: keyof LogLevel, message: string, ...args: any[]): string {
+  private formatMessage(level: keyof LogLevel, message: string, ...args: unknown[]): string {
     const timestamp = this.config.timestamp ? new Date().toISOString() : '';
     
     if (this.config.structured) {
@@ -94,13 +94,13 @@ export class ProductionLogger {
     }
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     if (this.shouldLog('ERROR')) {
       console.error(this.formatMessage('ERROR', message, ...args));
     }
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog('WARN')) {
       console.warn(this.formatMessage('WARN', message, ...args));
     }

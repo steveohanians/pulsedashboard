@@ -10,7 +10,12 @@ import { logger } from "@/utils/logger";
 const INSIGHTS_STORAGE_KEY = 'pulse_dashboard_insights';
 
 interface StoredInsight {
-  data: any;
+  data: {
+    insights?: string[];
+    recommendations?: string[];
+    sentiment?: string;
+    title?: string;
+  };
   month: string; // Format: "2025-07"
   timestamp: number;
 }
@@ -23,7 +28,7 @@ const insightsStorage = {
   
   getKey: (clientId: string, metricName: string) => `${clientId}-${metricName}`,
   
-  save: (clientId: string, metricName: string, insight: any) => {
+  save: (clientId: string, metricName: string, insight: StoredInsight['data']) => {
     try {
       const stored = localStorage.getItem(INSIGHTS_STORAGE_KEY);
       const allInsights = stored ? JSON.parse(stored) : {};
@@ -88,12 +93,23 @@ interface MetricInsightBoxProps {
   metricName: string;
   clientId: string;
   timePeriod: string;
-  metricData: any;
+  metricData: {
+    metricName: string;
+    clientValue: number | null;
+    industryAverage: number | null;
+    cdAverage: number | null;
+    competitorValues: number[];
+    competitorNames: string[];
+  };
   onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
 }
 
 export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange }: MetricInsightBoxProps) {
-  const [insight, setInsight] = useState<any>(null);
+  const [insight, setInsight] = useState<StoredInsight['data'] & { 
+    isTyping?: boolean; 
+    isFromStorage?: boolean; 
+    status?: 'success' | 'needs_improvement' | 'warning';
+  } | null>(null);
   const queryClient = useQueryClient();
   
   // Load insight from persistent storage on mount

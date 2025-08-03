@@ -24,7 +24,7 @@ export const CHART_COLORS = {
 /**
  * Helper function to safely parse JSON values
  */
-export function safeParseJSON(value: string): any[] {
+export function safeParseJSON(value: string): unknown[] {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed : [];

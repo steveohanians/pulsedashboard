@@ -105,7 +105,7 @@ async function generateInsightsWithCustomPrompt(
         const industryChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'Industry_Avg');
         const cdChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'CD_Avg');
         
-        const formatChannelData = (channels: any[]) => {
+        const formatChannelData = (channels: Array<{ name: string; value: number; percentage: number }>) => {
           if (!channels.length) return 'No data available';
           return channels.map(c => `${c.channel}: ${c.value}%`).join(', ');
         };
@@ -358,7 +358,7 @@ DASHBOARD OVERVIEW:
 - Industry Benchmarks Available: ${context.hasIndustryData ? 'Yes' : 'No'}
 
 KEY METRICS SUMMARY:
-${context.metrics.map((m: any) => `
+${context.metrics.map((m: { metricName: string; clientValue: number | null; industryAverage: number | null; cdAverage: number | null }) => `
 - ${m.metricName}: ${m.clientValue || 'N/A'} (${m.trendDirection} ${m.percentageChange ? Math.abs(m.percentageChange).toFixed(1) + '%' : ''} vs. last period)
   vs. CD Avg: ${m.cdAverage || 'N/A'} | Industry: ${m.industryAverage || 'N/A'}
   Competitors: ${m.competitorValues.length > 0 ? m.competitorValues.join(', ') : 'None'}
@@ -526,8 +526,8 @@ export async function generateMetricSpecificInsightsWithContext(
       });
       
       // Use the existing custom prompt system with user context appended
-      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
-      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: any) => c.name) || [];
+      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: { value: number }) => c.value) || [];
+      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: { name: string }) => c.name) || [];
       
       return await generateInsightsWithCustomPromptAndContext(
         customPrompt,
@@ -988,8 +988,8 @@ export async function generateMetricSpecificInsights(metricName: string, enriche
       });
       
       // Use the existing custom prompt system with the enhanced data
-      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: any) => c.value) || [];
-      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: any) => c.name) || [];
+      const competitorValues = enrichedData.benchmarks?.competitors?.map((c: { value: number }) => c.value) || [];
+      const competitorNames = enrichedData.benchmarks?.competitors?.map((c: { name: string }) => c.name) || [];
       
       return await generateInsightsWithCustomPrompt(
         customPrompt,

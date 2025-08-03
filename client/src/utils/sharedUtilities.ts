@@ -48,7 +48,7 @@ export const storageUtils = {
   /**
    * Set item in localStorage with error handling
    */
-  setItem: (key: string, value: any): boolean => {
+  setItem: (key: string, value: unknown): boolean => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
       return true;
@@ -232,7 +232,7 @@ export const urlUtils = {
 /**
  * Debounce utility
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {

@@ -127,7 +127,7 @@ export function shouldGenerateDataForCurrentPeriod(): { needed: boolean; period:
 /**
  * Get the most recent available data period from the database
  */
-export async function getMostRecentDataPeriod(storage: any, clientId: string): Promise<string | null> {
+export async function getMostRecentDataPeriod(storage: { getMetricsByClient: (clientId: string) => Promise<Array<{ timePeriod: string }>> }, clientId: string): Promise<string | null> {
   try {
     // This would need to be implemented in storage to get the latest period with data
     // For now, we'll return null and let the system use the dynamic periods

@@ -190,8 +190,8 @@ export class InsightDataAggregator {
   /**
    * Group metrics by name and source type
    */
-  private groupMetricsByName(metrics: Metric[]): Record<string, Record<string, any>> {
-    return metrics.reduce((acc: Record<string, Record<string, any>>, metric) => {
+  private groupMetricsByName(metrics: Metric[]): Record<string, Record<string, number | string>> {
+    return metrics.reduce((acc: Record<string, Record<string, number | string>>, metric) => {
       if (!acc[metric.metricName]) {
         acc[metric.metricName] = {};
       }

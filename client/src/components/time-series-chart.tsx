@@ -39,12 +39,17 @@ function generateTimeSeriesData(
   clientData: number, 
   industryAvg: number, 
   cdAvg: number, 
-  competitors: any[], 
+  competitors: Array<{ id: string; label: string; value: number }>, 
   clientUrl?: string,
-  timeSeriesData?: Record<string, any[]>,
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string;
+    sourceType: string;
+    competitorId?: string;
+  }>>,
   periods?: string[],
   metricName?: string
-): any[] {
+): Array<Record<string, unknown>> {
   // If we have actual time-series data and multiple periods, use it
   if (timeSeriesData && periods && periods.length > 0) {
     logger.component('TimeSeriesChart', `Using time-series data for ${metricName}, periods:`, periods);

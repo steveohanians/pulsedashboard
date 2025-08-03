@@ -55,7 +55,7 @@ export function asyncHandler(
  * Validation error helper
  * Standardizes validation error responses
  */
-export function createValidationError(message: string, details?: any): ErrorResponse {
+export function createValidationError(message: string, details?: Record<string, unknown>): ErrorResponse {
   return {
     message,
     status: 400,
@@ -103,7 +103,7 @@ export async function withDbErrorHandling<T>(
 ): Promise<T> {
   try {
     return await operation();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`${context} failed`, { 
       message: error.message,
       stack: error.stack
