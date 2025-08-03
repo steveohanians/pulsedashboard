@@ -1301,7 +1301,7 @@ export default function AdminPanel() {
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
-                            <Badge variant="secondary" className="text-xs">Active</Badge>
+                            <Badge variant="outline" className="text-xs bg-green-100 text-green-600 border-green-200">Active</Badge>
                           </TableCell>
                           <TableCell className="hidden xl:table-cell text-xs">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}</TableCell>
                           <TableCell>
@@ -1754,7 +1754,14 @@ export default function AdminPanel() {
                             <TableCell className="text-xs">{client.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-xs">{client.businessSize}</TableCell>
                             <TableCell>
-                              <Badge variant={client.active ? "secondary" : "destructive"} className="text-xs">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  client.active 
+                                    ? 'bg-green-100 text-green-600 border-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                                }`}
+                              >
                                 {client.active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
@@ -2241,7 +2248,14 @@ export default function AdminPanel() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={company.active ? "secondary" : "destructive"} className="text-xs">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  company.active 
+                                    ? 'bg-green-100 text-green-600 border-green-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                                }`}
+                              >
                                 {company.active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>

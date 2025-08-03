@@ -96,11 +96,7 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
                   : 'bg-gray-100 text-gray-500 border-gray-200'
               }`}
             >
-              {serviceAccount.active ? (
-                <><Power className="h-3 w-3 mr-1" />Active</>
-              ) : (
-                <><PowerOff className="h-3 w-3 mr-1" />Inactive</>
-              )}
+              {serviceAccount.active ? "Active" : "Inactive"}
             </Badge>
           </div>
           <div className="space-y-2">
@@ -113,11 +109,7 @@ export function ServiceAccountForm({ onClose, serviceAccount }: ServiceAccountFo
                   : 'bg-gray-100 text-gray-500 border-gray-200'
               }`}
             >
-              {serviceAccount.verified ? (
-                <><Link className="h-3 w-3 mr-1" />Connected</>
-              ) : (
-                <><Link2Off className="h-3 w-3 mr-1" />Not Connected</>
-              )}
+              {serviceAccount.verified ? "Connected" : "Not Connected"}
             </Badge>
           </div>
           {serviceAccount.lastUsed && (

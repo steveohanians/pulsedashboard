@@ -219,11 +219,7 @@ export function ServiceAccountsTable() {
                       })}
                       disabled={toggleActiveMutation.isPending}
                     >
-                      {account.serviceAccount.active ? (
-                        <><Power className="h-3 w-3 mr-1" />Active</>
-                      ) : (
-                        <><PowerOff className="h-3 w-3 mr-1" />Inactive</>
-                      )}
+                      {account.serviceAccount.active ? "Active" : "Inactive"}
                     </Button>
                   </TableCell>
                   <TableCell>
