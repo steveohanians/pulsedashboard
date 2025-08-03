@@ -81,8 +81,8 @@ export function ServiceAccountsTable() {
 
   const authorizeOAuthMutation = useMutation({
     mutationFn: async (accountId: string) => {
-      // Redirect to OAuth authorization
-      window.location.href = `/api/oauth/google/authorize/${accountId}`;
+      // Open OAuth authorization in new tab to avoid browser security restrictions
+      window.open(`/api/oauth/google/authorize/${accountId}`, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
       return Promise.resolve();
     }
   });
