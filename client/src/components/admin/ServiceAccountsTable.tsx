@@ -16,6 +16,7 @@ interface ServiceAccount {
     id: string;
     name: string;
     serviceAccountEmail: string;
+    verified: boolean;
     active: boolean;
     createdAt: string;
     lastUsed?: string;
@@ -56,21 +57,28 @@ export function ServiceAccountsTable() {
     }
   });
 
+  const authorizeOAuthMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      // Redirect to OAuth authorization
+      window.location.href = `/api/oauth/google/authorize/${accountId}`;
+      return Promise.resolve();
+    }
+  });
+
   const testConnectionMutation = useMutation({
     mutationFn: async (accountId: string) => {
-      // This would test the service account credentials
-      return await apiRequest('POST', `/api/admin/ga4-service-accounts/${accountId}/test-connection`);
+      return await apiRequest('POST', `/api/oauth/google/test/${accountId}`);
     },
     onSuccess: () => {
       toast({
-        title: "Connection successful",
-        description: "Service account credentials are valid.",
+        title: "OAuth access verified",
+        description: "Google account access is working properly.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Connection failed",
-        description: error.message || "Service account credentials are invalid.",
+        title: "OAuth verification failed",
+        description: error.message || "Please re-authorize this Google account.",
         variant: "destructive",
       });
     }
@@ -149,28 +157,54 @@ export function ServiceAccountsTable() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={account.serviceAccount.active ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {account.serviceAccount.active ? "Active" : "Inactive"}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge 
+                        variant={account.serviceAccount.active ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {account.serviceAccount.active ? "Active" : "Inactive"}
+                      </Badge>
+                      <Badge 
+                        variant={account.serviceAccount.verified ? "default" : "outline"}
+                        className="text-xs"
+                      >
+                        {account.serviceAccount.verified ? (
+                          <><CheckCircle className="h-3 w-3 mr-1" />OAuth Verified</>
+                        ) : (
+                          <><XCircle className="h-3 w-3 mr-1" />Not Authorized</>
+                        )}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => testConnectionMutation.mutate(account.serviceAccount.id)}
-                        disabled={testConnectionMutation.isPending}
-                      >
-                        {testConnectionMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3 w-3" />
-                        )}
-                      </Button>
+                      {account.serviceAccount.verified ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => testConnectionMutation.mutate(account.serviceAccount.id)}
+                          disabled={testConnectionMutation.isPending}
+                          title="Test OAuth Access"
+                        >
+                          {testConnectionMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => authorizeOAuthMutation.mutate(account.serviceAccount.id)}
+                          title="Authorize Google Access"
+                        >
+                          <Key className="h-3 w-3 mr-1" />
+                          Authorize
+                        </Button>
+                      )}
                       
                       <Dialog open={isEditDialogOpen && editingAccount?.id === account.serviceAccount.id} 
                              onOpenChange={(open) => {

@@ -75,6 +75,11 @@ export const ga4ServiceAccounts = pgTable("ga4_service_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g., "Clear Digital Main", "Client Batch A"
   serviceAccountEmail: text("service_account_email").notNull().unique(),
+  accessToken: text("access_token"), // OAuth access token
+  refreshToken: text("refresh_token"), // OAuth refresh token
+  tokenExpiry: timestamp("token_expiry"), // When access token expires
+  scopes: text("scopes").array(), // Granted OAuth scopes
+  verified: boolean("verified").default(false).notNull(), // OAuth verification status
   active: boolean("active").default(true).notNull(),
   lastUsed: timestamp("last_used"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

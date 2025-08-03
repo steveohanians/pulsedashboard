@@ -11,6 +11,7 @@ import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import ga4Routes from "./routes/ga4Routes";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
+import googleOAuthRoutes from "./routes/googleOAuthRoutes";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -2153,6 +2154,9 @@ export function registerRoutes(app: Express): Server {
   
   // GA4 Service Account Management routes
   app.use("/api/admin", ga4ServiceAccountRoutes);
+  
+  // Google OAuth routes for GA4 integration
+  app.use("/api/oauth/google", googleOAuthRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
