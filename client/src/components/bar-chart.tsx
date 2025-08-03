@@ -24,10 +24,7 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '../utils/chartUtilities';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(
@@ -45,15 +42,7 @@ function processTimeSeriesForBar(
   const data: any[] = [];
   
   // Generate dynamic period labels based on actual periods
-  const generatePeriodLabel = (period: string): string => {
-    const [year, month] = period.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const shortYear = year.slice(-2);
-    const label = `${monthNames[parseInt(month) - 1]} ${shortYear}`;
-    // Debug: Converting period ${period} to label ${label}
-    return label;
-  };
+  // generatePeriodLabel now imported from chartUtilities
   
   const clientKey = clientUrl || 'Client';
   

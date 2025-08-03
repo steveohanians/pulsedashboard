@@ -1,4 +1,14 @@
 import { logger } from './logger';
+import { 
+  PROMPT_INJECTION_PATTERNS, 
+  HTML_SCRIPT_PATTERNS, 
+  PROFANITY_PATTERNS, 
+  OFF_TOPIC_PATTERNS,
+  QUALITY_PATTERNS,
+  VALIDATION_LIMITS,
+  validateInputContent,
+  type ValidationResult
+} from '@shared/validationPatterns';
 
 export interface SanitizationResult {
   sanitized: string;
@@ -6,96 +16,7 @@ export interface SanitizationResult {
   warnings: string[];
 }
 
-// Known prompt injection patterns
-const PROMPT_INJECTION_PATTERNS = [
-  // Direct instruction manipulation
-  /ignore\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?|context)/gi,
-  /disregard\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?|context)/gi,
-  /forget\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?|context)/gi,
-  /override\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?|context)/gi,
-  
-  // Role manipulation attempts
-  /you\s+are\s+now\s+(a|an)\s+/gi,
-  /act\s+as\s+(a|an)\s+/gi,
-  /pretend\s+to\s+be\s+(a|an)\s+/gi,
-  /roleplay\s+as\s+(a|an)\s+/gi,
-  
-  // System message injection
-  /system\s*:\s*/gi,
-  /assistant\s*:\s*/gi,
-  /human\s*:\s*/gi,
-  /user\s*:\s*/gi,
-  
-  // Instruction termination attempts
-  /end\s+of\s+(instructions?|prompts?|rules?)/gi,
-  /new\s+(instructions?|prompts?|rules?)/gi,
-  /different\s+(instructions?|prompts?|rules?)/gi,
-  
-  // Output manipulation
-  /respond\s+with\s+only/gi,
-  /output\s+only/gi,
-  /just\s+say/gi,
-  /only\s+respond/gi,
-  
-  // Context breaking
-  /break\s+character/gi,
-  /stop\s+being/gi,
-  /exit\s+(mode|character|role)/gi,
-];
-
-// HTML/Script tag patterns
-const HTML_SCRIPT_PATTERNS = [
-  /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gmi,
-  /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gmi,
-  /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gmi,
-  /<embed\b[^>]*>/gmi,
-  /<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gmi,
-  /<input\b[^>]*>/gmi,
-  /<textarea\b[^<]*(?:(?!<\/textarea>)<[^<]*)*<\/textarea>/gmi,
-  /<select\b[^<]*(?:(?!<\/select>)<[^<]*)*<\/select>/gmi,
-  /<link\b[^>]*>/gmi,
-  /<meta\b[^>]*>/gmi,
-  /javascript:/gmi,
-  /vbscript:/gmi,
-  /data:/gmi,
-  /on\w+\s*=/gmi, // Event handlers like onclick, onload, etc.
-];
-
-// Character limits
-const MAX_INPUT_LENGTH = 1000;
-const MIN_INPUT_LENGTH = 3;
-
-// Profanity and inappropriate content patterns
-const PROFANITY_PATTERNS = [
-  // Common profanity (basic detection - expandable)
-  /\b(fuck|shit|damn|bitch|asshole|bastard)\b/gi,
-  /\b(wtf|stfu|gtfo)\b/gi,
-  
-  // Hate speech indicators
-  /\b(hate|racist|sexist|homophobic|transphobic)\b.*\b(people|users|customers)\b/gi,
-  /\b(kill|murder|die)\b.*\b(all|every)\b/gi,
-  
-  // Sexual content
-  /\b(sex|sexual|porn|nude|naked)\b/gi,
-  /\b(xxx|adult|erotic)\b/gi,
-];
-
-// Off-topic content patterns
-const OFF_TOPIC_PATTERNS = [
-  // Personal rants
-  /\b(i hate|i love|my life|my problems|personal drama)\b/gi,
-  
-  // Jokes and entertainment
-  /\b(joke|funny|lol|haha|meme)\b/gi,
-  /knock\s+knock/gi,
-  
-  // Unrelated questions
-  /what\s+is\s+the\s+(weather|time|date)/gi,
-  /how\s+do\s+i\s+(cook|drive|sleep)/gi,
-  
-  // Random topics
-  /\b(sports|politics|celebrities|movies|music)\b.*\b(opinion|thoughts|feelings)\b/gi,
-];
+// Note: PROFANITY_PATTERNS and OFF_TOPIC_PATTERNS now imported from shared/validationPatterns.ts
 
 // Business/analytics relevance keywords
 const BUSINESS_RELEVANCE_KEYWORDS = [
@@ -120,10 +41,10 @@ export function sanitizeUserInput(input: string): SanitizationResult {
   // Step 1: Basic cleanup
   sanitized = sanitized.trim();
   
-  // Step 2: Length validation
-  if (sanitized.length > MAX_INPUT_LENGTH) {
-    sanitized = sanitized.substring(0, MAX_INPUT_LENGTH);
-    warnings.push(`Input truncated to ${MAX_INPUT_LENGTH} characters`);
+  // Step 2: Length validation using consolidated limits
+  if (sanitized.length > VALIDATION_LIMITS.MAX_INPUT_LENGTH) {
+    sanitized = sanitized.substring(0, VALIDATION_LIMITS.MAX_INPUT_LENGTH);
+    warnings.push(`Input truncated to ${VALIDATION_LIMITS.MAX_INPUT_LENGTH} characters`);
     logger.warn('Input truncated for length', { 
       originalLength: input.length, 
       truncatedLength: sanitized.length 

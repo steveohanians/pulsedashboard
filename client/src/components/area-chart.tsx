@@ -19,10 +19,7 @@ interface AreaChartProps {
 }
 
 // Generate deterministic seeded random number
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+import { seededRandom, generatePacificTimePeriods } from '../utils/chartUtilities';
 
 // Generate stable time series data for area chart
 interface AreaDataPoint {

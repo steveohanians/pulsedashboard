@@ -19,6 +19,7 @@ import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { DatabaseRepository } from "./utils/databaseUtils";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -104,6 +105,17 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  
+  // Consolidated CRUD repositories - eliminates duplicate patterns
+  private clientRepo = new DatabaseRepository<Client, InsertClient>(clients, 'client');
+  private userRepo = new DatabaseRepository<User, InsertUser>(users, 'user');
+  private competitorRepo = new DatabaseRepository<Competitor, InsertCompetitor>(competitors, 'competitor');
+  private benchmarkCompanyRepo = new DatabaseRepository<BenchmarkCompany, InsertBenchmarkCompany>(benchmarkCompanies, 'benchmark company');
+  private cdPortfolioCompanyRepo = new DatabaseRepository<CdPortfolioCompany, InsertCdPortfolioCompany>(cdPortfolioCompanies, 'CD portfolio company');
+  private metricRepo = new DatabaseRepository<Metric, InsertMetric>(metrics, 'metric');
+  private benchmarkRepo = new DatabaseRepository<Benchmark, InsertBenchmark>(benchmarks, 'benchmark');
+  private aiInsightRepo = new DatabaseRepository<AIInsight, InsertAIInsight>(aiInsights, 'AI insight');
+  private filterOptionRepo = new DatabaseRepository<FilterOption, InsertFilterOption>(filterOptions, 'filter option');
 
   constructor() {
     try {
@@ -125,10 +137,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Users
+  // Users - consolidated using DatabaseRepository
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return await this.userRepo.findById(id);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -137,55 +148,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    return await this.userRepo.create(insertUser);
   }
 
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await this.userRepo.findAll();
   }
 
   async updateUser(id: string, updateUser: Partial<InsertUser & { lastLogin?: Date }>): Promise<User | undefined> {
-    const [user] = await db
-      .update(users)
-      .set(updateUser)
-      .where(eq(users.id, id))
-      .returning();
-    return user || undefined;
+    return await this.userRepo.update(id, updateUser);
   }
 
   async deleteUser(id: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+    await this.userRepo.delete(id);
   }
 
-  // Clients
+  // Clients - consolidated using DatabaseRepository
   async getClient(id: string): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.id, id));
-    return client || undefined;
+    return await this.clientRepo.findById(id);
   }
 
   async getClients(): Promise<Client[]> {
-    return await db.select().from(clients).where(eq(clients.active, true));
+    return await this.clientRepo.findAll({ active: true });
   }
 
   async createClient(insertClient: InsertClient): Promise<Client> {
-    const [client] = await db
-      .insert(clients)
-      .values(insertClient)
-      .returning();
-    return client;
+    return await this.clientRepo.create(insertClient);
   }
 
   async updateClient(id: string, updateClient: Partial<InsertClient>): Promise<Client | undefined> {
-    const [client] = await db
-      .update(clients)
-      .set(updateClient)
-      .where(eq(clients.id, id))
-      .returning();
-    return client || undefined;
+    return await this.clientRepo.update(id, updateClient);
   }
 
 
@@ -195,21 +187,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(competitors).where(eq(competitors.clientId, clientId));
   }
 
-  // Competitors (Client-specific competitors for Competitor sourceType data)
+  // Competitors - consolidated using DatabaseRepository
   async createCompetitor(insertCompetitor: InsertCompetitor): Promise<Competitor> {
-    const [competitor] = await db
-      .insert(competitors)
-      .values(insertCompetitor)
-      .returning();
-    return competitor;
+    return await this.competitorRepo.create(insertCompetitor);
   }
 
   async deleteCompetitor(id: string): Promise<void> {
     // First delete all metrics associated with this competitor
     await db.delete(metrics).where(eq(metrics.competitorId, id));
     
-    // Then delete the competitor
-    await db.delete(competitors).where(eq(competitors.id, id));
+    // Then delete the competitor using consolidated method
+    await this.competitorRepo.delete(id);
   }
 
 
@@ -219,26 +207,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
   }
 
-  // Benchmark Companies (Industry Reference for Industry_Avg benchmarks)
+  // Benchmark Companies - consolidated using DatabaseRepository
   async createBenchmarkCompany(insertCompany: InsertBenchmarkCompany): Promise<BenchmarkCompany> {
-    const [company] = await db
-      .insert(benchmarkCompanies)
-      .values(insertCompany)
-      .returning();
-    return company;
+    return await this.benchmarkCompanyRepo.create(insertCompany);
   }
 
   async updateBenchmarkCompany(id: string, updateCompany: Partial<InsertBenchmarkCompany>): Promise<BenchmarkCompany | undefined> {
-    const [company] = await db
-      .update(benchmarkCompanies)
-      .set(updateCompany)
-      .where(eq(benchmarkCompanies.id, id))
-      .returning();
-    return company || undefined;
+    return await this.benchmarkCompanyRepo.update(id, updateCompany);
   }
 
   async deleteBenchmarkCompany(id: string): Promise<void> {
-    await db.delete(benchmarkCompanies).where(eq(benchmarkCompanies.id, id));
+    await this.benchmarkCompanyRepo.delete(id);
   }
 
   // CD Portfolio Companies
@@ -246,26 +225,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.active, true));
   }
 
-  // CD Portfolio Companies (Clear Digital's portfolio for CD_Avg benchmarks)
+  // CD Portfolio Companies - consolidated using DatabaseRepository
   async createCdPortfolioCompany(insertCompany: InsertCdPortfolioCompany): Promise<CdPortfolioCompany> {
-    const [company] = await db
-      .insert(cdPortfolioCompanies)
-      .values(insertCompany)
-      .returning();
-    return company;
+    return await this.cdPortfolioCompanyRepo.create(insertCompany);
   }
 
   async updateCdPortfolioCompany(id: string, updateCompany: Partial<InsertCdPortfolioCompany>): Promise<CdPortfolioCompany | undefined> {
-    const [company] = await db
-      .update(cdPortfolioCompanies)
-      .set(updateCompany)
-      .where(eq(cdPortfolioCompanies.id, id))
-      .returning();
-    return company || undefined;
+    return await this.cdPortfolioCompanyRepo.update(id, updateCompany);
   }
 
   async deleteCdPortfolioCompany(id: string): Promise<void> {
-    await db.delete(cdPortfolioCompanies).where(eq(cdPortfolioCompanies.id, id));
+    await this.cdPortfolioCompanyRepo.delete(id);
   }
 
   // Get filtered CD Portfolio companies
@@ -468,11 +438,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMetric(insertMetric: InsertMetric): Promise<Metric> {
-    const [metric] = await db
-      .insert(metrics)
-      .values(insertMetric)
-      .returning();
-    return metric;
+    return await this.metricRepo.create(insertMetric);
   }
 
   async clearMetricsByName(metricName: string): Promise<void> {
@@ -509,11 +475,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBenchmark(insertBenchmark: InsertBenchmark): Promise<Benchmark> {
-    const [benchmark] = await db
-      .insert(benchmarks)
-      .values(insertBenchmark)
-      .returning();
-    return benchmark;
+    return await this.benchmarkRepo.create(insertBenchmark);
   }
 
   // AI Insights
@@ -527,11 +489,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAIInsight(insertInsight: InsertAIInsight): Promise<AIInsight> {
-    const [insight] = await db
-      .insert(aiInsights)
-      .values(insertInsight)
-      .returning();
-    return insight;
+    return await this.aiInsightRepo.create(insertInsight);
   }
 
   async getAIInsightsByClient(clientId: string, timePeriod?: string): Promise<AIInsight[]> {
@@ -693,20 +651,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFilterOption(insertOption: InsertFilterOption): Promise<FilterOption> {
-    const [option] = await db
-      .insert(filterOptions)
-      .values(insertOption)
-      .returning();
-    return option;
+    return await this.filterOptionRepo.create(insertOption);
   }
 
   async updateFilterOption(id: string, updateOption: UpdateFilterOption): Promise<FilterOption | undefined> {
-    const [option] = await db
-      .update(filterOptions)
-      .set({ ...updateOption, updatedAt: new Date() })
-      .where(eq(filterOptions.id, id))
-      .returning();
-    return option || undefined;
+    return await this.filterOptionRepo.update(id, updateOption);
   }
 
   async getFilterOptionById(id: string): Promise<FilterOption | undefined> {
@@ -776,7 +725,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFilterOption(id: string): Promise<void> {
-    await db.delete(filterOptions).where(eq(filterOptions.id, id));
+    await this.filterOptionRepo.delete(id);
   }
 }
 

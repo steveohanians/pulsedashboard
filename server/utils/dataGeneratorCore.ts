@@ -1,4 +1,5 @@
 import logger from "./logger";
+import { seededRandom, generateCompositeSeed, createPeriodSeed, applyBusinessSizeVariation } from "@shared/seededRandom";
 
 // Core utility functions for data generation
 export interface MetricConfig {
@@ -27,7 +28,7 @@ export function generateMetricValue(
   competitorId?: string
 ): number {
   const currentPeriodIndex = timePeriods.indexOf(timePeriod);
-  const periodSeed = timePeriod.charCodeAt(0) + timePeriod.length + currentPeriodIndex * 100;
+  const periodSeed = createPeriodSeed(timePeriod, currentPeriodIndex);
   
   const range = config.ranges[sourceType as keyof typeof config.ranges];
   if (!range) {
@@ -35,41 +36,20 @@ export function generateMetricValue(
     return 0;
   }
   
-  // Enhanced variation with period-specific seeds + business/industry variations
-  let sourceSeed = sourceType.charCodeAt(0) + periodSeed * 5 + currentPeriodIndex * 100;
+  // Enhanced variation using consolidated seeded random generation
+  let sourceSeed = generateCompositeSeed(
+    periodSeed * 5 + currentPeriodIndex * 100,
+    sourceType,
+    industryVertical,
+    competitorId
+  );
   
-  // Add business size variation with MAJOR differences for visual impact
-  if (businessSize) {
-    const businessSizeVariation = businessSize.charCodeAt(0) * 7;
-    sourceSeed += businessSizeVariation;
-    
-    // Add MAJOR business size multipliers specifically for Industry_Avg to create obvious visual differences
-    if (sourceType === 'Industry_Avg') {
-      if (businessSize.includes('Small Business')) {
-        sourceSeed += 5000; // Much lower performance for clear visual difference
-      } else if (businessSize.includes('Mid-Market')) {
-        sourceSeed += 10000; // Medium performance  
-      } else if (businessSize.includes('Enterprise') && !businessSize.includes('Global')) {
-        sourceSeed += 15000; // Higher performance
-      } else if (businessSize.includes('Global Enterprise')) {
-        sourceSeed += 20000; // Highest performance for clear visual difference
-      }
-    }
+  // Apply business size variation using consolidated logic - adds MAJOR multipliers for visual impact
+  if (businessSize && sourceType === 'Industry_Avg') {
+    sourceSeed = applyBusinessSizeVariation(sourceSeed, businessSize);
   }
   
-  // Add industry vertical variation  
-  if (industryVertical) {
-    const industryVariation = industryVertical.charCodeAt(0) * 11;
-    sourceSeed += industryVariation;
-  }
-  
-  // Add competitor-specific variation
-  if (competitorId) {
-    const competitorVariation = competitorId.charCodeAt(0) * 13;
-    sourceSeed += competitorVariation;
-  }
-  
-  const randomFactor = (Math.sin(sourceSeed * 2.789) + 1) / 2; // 0-1 range
+  const randomFactor = seededRandom(sourceSeed);
   
   // Strong seasonal effects based on metric type
   const seasonalVariance = config.name === "Session Duration" ? 45 : 

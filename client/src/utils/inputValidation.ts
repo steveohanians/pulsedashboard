@@ -1,46 +1,22 @@
 /**
- * Client-side input validation for user context
+ * Client-side input validation for user context - consolidated patterns
+ * Uses shared validation patterns to ensure consistency with server-side validation
  * This provides immediate feedback to users before sending to the server
  */
+
+import { 
+  PROMPT_INJECTION_PATTERNS, 
+  HTML_SCRIPT_PATTERNS, 
+  PROFANITY_PATTERNS, 
+  OFF_TOPIC_PATTERNS,
+  VALIDATION_LIMITS
+} from '@shared/validationPatterns';
 
 export interface ValidationResult {
   isValid: boolean;
   warnings: string[];
   error?: string;
 }
-
-// Basic prompt injection patterns for client-side detection
-const BASIC_INJECTION_PATTERNS = [
-  /ignore\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?)/gi,
-  /disregard\s+(previous|all|above|prior)\s+(instructions?|prompts?|rules?)/gi,
-  /you\s+are\s+now\s+(a|an)\s+/gi,
-  /act\s+as\s+(a|an)\s+/gi,
-  /system\s*:\s*/gi,
-  /assistant\s*:\s*/gi,
-];
-
-// Basic HTML/Script patterns
-const BASIC_HTML_PATTERNS = [
-  /<script/gi,
-  /<iframe/gi,
-  /javascript:/gi,
-  /on\w+\s*=/gi,
-];
-
-// Profanity patterns (basic client-side detection)
-const BASIC_PROFANITY_PATTERNS = [
-  /\b(fuck|shit|damn|bitch|asshole|bastard)\b/gi,
-  /\b(wtf|stfu|gtfo)\b/gi,
-];
-
-// Off-topic patterns
-const BASIC_OFF_TOPIC_PATTERNS = [
-  /\b(joke|funny|lol|haha|meme)\b/gi,
-  /what\s+is\s+the\s+(weather|time|date)/gi,
-  /\b(i hate|i love|my life|my problems)\b/gi,
-];
-
-const MAX_LENGTH = 1000;
 
 /**
  * Validates user input on the client side
@@ -50,13 +26,13 @@ export function validateUserInput(input: string): ValidationResult {
   const warnings: string[] = [];
   let isValid = true;
 
-  // Length check
-  if (input.length > MAX_LENGTH) {
-    warnings.push(`Input exceeds ${MAX_LENGTH} characters (${input.length} characters)`);
+  // Length check using consolidated limits
+  if (input.length > VALIDATION_LIMITS.MAX_INPUT_LENGTH) {
+    warnings.push(`Input exceeds ${VALIDATION_LIMITS.MAX_INPUT_LENGTH} characters (${input.length} characters)`);
   }
 
   // Empty or too short check
-  if (!input.trim() || input.trim().length < 3) {
+  if (!input.trim() || input.trim().length < VALIDATION_LIMITS.MIN_INPUT_LENGTH) {
     return {
       isValid: false,
       warnings: [],
@@ -64,8 +40,8 @@ export function validateUserInput(input: string): ValidationResult {
     };
   }
 
-  // Basic prompt injection detection
-  for (const pattern of BASIC_INJECTION_PATTERNS) {
+  // Prompt injection detection using consolidated patterns
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(input)) {
       return {
         isValid: false,
@@ -75,16 +51,16 @@ export function validateUserInput(input: string): ValidationResult {
     }
   }
 
-  // Basic HTML/Script detection
-  for (const pattern of BASIC_HTML_PATTERNS) {
+  // HTML/Script detection using consolidated patterns
+  for (const pattern of HTML_SCRIPT_PATTERNS) {
     if (pattern.test(input)) {
       warnings.push("HTML or script content detected and will be removed");
       break;
     }
   }
 
-  // Basic profanity detection
-  for (const pattern of BASIC_PROFANITY_PATTERNS) {
+  // Profanity detection using consolidated patterns
+  for (const pattern of PROFANITY_PATTERNS) {
     if (pattern.test(input)) {
       return {
         isValid: false,
@@ -94,8 +70,8 @@ export function validateUserInput(input: string): ValidationResult {
     }
   }
 
-  // Basic off-topic detection
-  for (const pattern of BASIC_OFF_TOPIC_PATTERNS) {
+  // Off-topic detection using consolidated patterns
+  for (const pattern of OFF_TOPIC_PATTERNS) {
     if (pattern.test(input)) {
       return {
         isValid: false,
@@ -126,7 +102,7 @@ export function validateUserInput(input: string): ValidationResult {
 export function previewSanitizedInput(input: string): string {
   return input
     .trim()
-    .substring(0, MAX_LENGTH)
+    .substring(0, VALIDATION_LIMITS.MAX_INPUT_LENGTH)
     .replace(/\s+/g, ' ')
     .replace(/{/g, '\\{')
     .replace(/}/g, '\\}');

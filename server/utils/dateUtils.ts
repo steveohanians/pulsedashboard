@@ -2,28 +2,15 @@
 // This ensures the dashboard automatically updates for new months/periods
 
 import logger from "./logger";
+import { parsePacificTimeDate } from "./timePeriodsGenerator";
 
 /**
  * Generate dynamic time period mappings based on current date
  * This ensures the dashboard shows correct periods as time progresses
  */
 export function generateDynamicPeriodMapping(): Record<string, string[]> {
-  // Use centralized Pacific Time parsing
-  import('./timePeriodsGenerator').then(({ parsePacificTimeDate }) => {
-    const { year: ptYear, month: ptMonth } = parsePacificTimeDate();
-  });
-  
-  // Fallback to inline implementation for now
-  const now = new Date();
-  const ptFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit'
-  });
-  
-  const ptParts = ptFormatter.formatToParts(now);
-  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1;
+  // Use centralized Pacific Time parsing - consolidated utility
+  const { year: ptYear, month: ptMonth } = parsePacificTimeDate();
   
   // Create PT date and go back 1 month for target period
   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT date

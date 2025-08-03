@@ -1,5 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
+import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, aggregateChannelData } from '../utils/chartUtilities';
 
 // Use shared DiamondDot component
 import { DiamondDot } from './shared/DiamondDot';
@@ -64,14 +65,7 @@ function generateRealTimeSeriesData(
   
   const data: any[] = [];
   
-  // Generate dynamic period labels based on actual periods
-  const generatePeriodLabel = (period: string): string => {
-    const [year, month] = period.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const shortYear = year.slice(-2);
-    return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
-  };
+  // Generate dynamic period labels based on actual periods (now imported from chartUtilities)
   
   const clientKey = clientUrl || 'Client';
   
