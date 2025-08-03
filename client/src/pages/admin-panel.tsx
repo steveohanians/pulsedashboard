@@ -305,7 +305,16 @@ export default function AdminPanel() {
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const res = await apiRequest("PUT", `/api/admin/users/${id}`, data);
-      return res.json();
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(errorData || `HTTP ${res.status}`);
+      }
+      // Try to parse JSON, but don't fail if it's not JSON
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return res.json();
+      }
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -367,7 +376,17 @@ export default function AdminPanel() {
 
   const toggleUserActiveMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
-      await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
+      const res = await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(errorData || `HTTP ${res.status}`);
+      }
+      // Try to parse JSON, but don't fail if it's not JSON
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return res.json();
+      }
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
