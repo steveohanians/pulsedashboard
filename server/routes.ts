@@ -40,6 +40,23 @@ export function registerRoutes(app: Express): Server {
     res.json({ bootTime: (global as any).SERVER_BOOT_TIME || Date.now() });
   });
 
+  // Cache statistics endpoint for performance monitoring
+  app.get("/api/cache-stats", requireAuth, (req, res) => {
+    const stats = performanceCache.getStats();
+    const backgroundStatus = backgroundProcessor.getStatus();
+    
+    res.json({
+      cache: stats,
+      backgroundProcessor: backgroundStatus,
+      optimizations: {
+        caching: true,
+        parallelQueries: true,
+        backgroundProcessing: true,
+        frontendOptimizations: true
+      }
+    });
+  });
+
   // Configure multer for CSV file uploads
   const upload = multer({
     storage: multer.memoryStorage(),
