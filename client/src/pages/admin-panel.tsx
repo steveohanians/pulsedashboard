@@ -304,24 +304,14 @@ export default function AdminPanel() {
   // Mutations for user management
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest("PUT", `/api/admin/users/${id}`, data);
-      console.log("Update user response:", res.status, res.statusText);
-      
-      if (!res.ok) {
-        let errorMessage;
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.message || `HTTP ${res.status}`;
-        } catch {
-          errorMessage = `HTTP ${res.status}`;
-        }
-        console.error("Update user error:", errorMessage);
-        throw new Error(errorMessage);
+      try {
+        const result = await apiRequest("PUT", `/api/admin/users/${id}`, data);
+        console.log("Update user success:", result);
+        return result;
+      } catch (error) {
+        console.error("Update user error:", error);
+        throw error;
       }
-      
-      const result = await res.json();
-      console.log("Update user success:", result);
-      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -384,24 +374,14 @@ export default function AdminPanel() {
   const toggleUserActiveMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
       console.log("Toggle user status:", { userId, status });
-      const res = await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
-      console.log("Toggle response:", res.status, res.statusText);
-      
-      if (!res.ok) {
-        let errorMessage;
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.message || `HTTP ${res.status}`;
-        } catch {
-          errorMessage = `HTTP ${res.status}`;
-        }
-        console.error("Toggle user error:", errorMessage);
-        throw new Error(errorMessage);
+      try {
+        const result = await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
+        console.log("Toggle user success:", result);
+        return result;
+      } catch (error) {
+        console.error("Toggle user error:", error);
+        throw error;
       }
-      
-      const result = await res.json();
-      console.log("Toggle user success:", result);
-      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
