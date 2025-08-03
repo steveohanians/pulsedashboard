@@ -79,9 +79,9 @@ function processTimeSeriesForBar(
 }
 
 // Generate stable time series data for bar chart
-function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string): any[] {
+function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string): Array<Record<string, unknown>> {
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
-  const data: any[] = [];
+  const data: Array<Record<string, unknown>> = [];
   
   // Determine the date range based on time period
   let dates: string[] = [];
@@ -176,7 +176,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   // Use actual averaged values for all data points (no artificial variance for tooltips)
   dates.forEach((period, index) => {
     const clientKey = clientUrl || 'Client';
-    const point: any = {
+    const point: Record<string, unknown> = {
       period,
       [clientKey]: Math.round(clientData * 10) / 10,
       'Industry Avg': Math.round(industryAvg * 10) / 10,

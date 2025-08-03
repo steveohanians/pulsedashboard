@@ -23,7 +23,7 @@ import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-fo
 import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
-function BusinessSizeEditDialog({ option }: { option: any }) {
+function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
@@ -94,7 +94,7 @@ function BusinessSizeEditDialog({ option }: { option: any }) {
 }
 
 // Dialog component for editing industry vertical with controlled state
-function IndustryVerticalEditDialog({ option }: { option: any }) {
+function IndustryVerticalEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();

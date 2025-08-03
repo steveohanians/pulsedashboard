@@ -65,7 +65,7 @@ export class PerformanceMonitor {
     name: string, 
     category: PerformanceMetric['category'],
     fn: () => Promise<T> | T,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     this.start(name, category, metadata);
     
@@ -157,7 +157,7 @@ export class DebounceManager {
   /**
    * Debounce a function call
    */
-  static debounce<T extends (...args: any[]) => any>(
+  static debounce<T extends (...args: unknown[]) => unknown>(
     key: string,
     fn: T,
     delay: number
@@ -209,7 +209,7 @@ export class ThrottleManager {
   /**
    * Throttle a function call
    */
-  static throttle<T extends (...args: any[]) => any>(
+  static throttle<T extends (...args: unknown[]) => unknown>(
     key: string,
     fn: T,
     limit: number

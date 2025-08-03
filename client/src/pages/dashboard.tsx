@@ -85,7 +85,7 @@ export default function Dashboard() {
     }>;
     isTimeSeries?: boolean;
     periods?: string[];
-    trafficChannelMetrics?: any[];
+    trafficChannelMetrics?: Array<{ metricName: string; value: number; sourceType: string; channel: string }>;
   }
 
   interface FiltersData {
@@ -238,7 +238,7 @@ export default function Dashboard() {
       trafficChannelMetricsCount: dashboardData?.trafficChannelMetrics?.length || 0,
       trafficMetricsCount: trafficMetrics.length,
       trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
-      sampleTrafficChannelData: trafficMetrics.filter((m: any) => m.channel).slice(0, 3) // Only channel data
+      sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
     });
     
     if (dashboardData?.trafficChannelMetrics) {

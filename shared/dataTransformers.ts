@@ -329,9 +329,9 @@ export class ObjectTransformer {
     if (obj instanceof Array) return obj.map(this.clone) as T;
     
     const cloned = {} as T;
-    for (const key in obj as any) {
-      if ((obj as any).hasOwnProperty(key)) {
-        (cloned as any)[key] = this.clone((obj as any)[key]);
+    for (const key in obj as Record<string, unknown>) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        (cloned as Record<string, unknown>)[key] = this.clone((obj as Record<string, unknown>)[key]);
       }
     }
     return cloned;

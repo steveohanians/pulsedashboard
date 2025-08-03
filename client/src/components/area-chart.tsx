@@ -266,7 +266,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
                 <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
                   {label}
                 </div>
-                {payload.map((entry: any, index: number) => (
+                {payload.map((entry: { color: string; name: string; value: number }, index: number) => (
                   <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
                     <div 
                       style={{ 
@@ -312,7 +312,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
             stroke={colors['Industry Avg']}
             strokeWidth={2}
             fill="url(#industryGradient)"
-            dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+            dot={(props: Record<string, unknown>) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
             strokeDasharray="5 5"
             animationDuration={isInitialRender ? 800 : 0}
           />
@@ -326,7 +326,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
             stroke={colors['Clear Digital Clients Avg']}
             strokeWidth={2}
             fill="url(#cdGradient)"
-            dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
+            dot={(props: Record<string, unknown>) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
           />
