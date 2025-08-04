@@ -12,6 +12,7 @@ import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { performanceCache } from "./cache/performance-cache";
+import { SampleDataGenerator } from './services/sampleData/SampleDataGenerator';
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4DataRoute from "./routes/ga4DataRoute";
@@ -35,6 +36,106 @@ function requireAdmin(req: any, res: any, next: any) {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
+}
+
+// Helper function to generate historical data for a single competitor
+async function generateCompetitorHistoricalData(clientId: string, competitor: any): Promise<void> {
+  const generator = new SampleDataGenerator(clientId);
+  
+  // Get 15 months of periods (same as sample data generation)
+  const periodList = generateCompetitorPeriodList();
+  
+  for (const period of periodList) {
+    try {
+      // Get client baseline - try current period, then use latest available data
+      let clientMetrics = await storage.getMetricsByClient(clientId, period.period);
+      if (!clientMetrics || clientMetrics.length === 0) {
+        // Fallback to latest client data or generate realistic baseline
+        const allClientMetrics = await storage.getMetricsByClient(clientId, '2025-07');
+        clientMetrics = allClientMetrics.length > 0 ? allClientMetrics : [];
+      }
+      
+      let clientBaseline = extractClientBaseline(clientMetrics);
+      
+      // If no client baseline available, use realistic industry baseline
+      if (!clientBaseline) {
+        clientBaseline = {
+          bounceRate: 35 + (Math.random() * 10), // 35-45%
+          sessionDuration: 200 + (Math.random() * 100), // 200-300 seconds
+          pagesPerSession: 2.5 + (Math.random() * 1), // 2.5-3.5 pages
+          sessionsPerUser: 1.4 + (Math.random() * 0.4) // 1.4-1.8 sessions
+        };
+      }
+      
+      const competitorMetrics = generator.generateCompetitorMetrics(
+        clientBaseline, 
+        0, // competitorIndex
+        periodList.indexOf(period) // periodIndex
+      );
+      
+      await storeCompetitorMetrics(clientId, competitor.id, period.period, competitorMetrics);
+      
+    } catch (error) {
+      logger.error(`Failed to generate competitor data for period ${period.period}:`, error);
+    }
+  }
+}
+
+// Helper function to extract client baseline from metrics
+function extractClientBaseline(clientMetrics: any[]): any {
+  if (!clientMetrics || clientMetrics.length === 0) return null;
+  
+  const bounceRateMetric = clientMetrics.find(m => m.metricName === 'bounceRate');
+  const sessionDurationMetric = clientMetrics.find(m => m.metricName === 'sessionDuration');
+  const pagesPerSessionMetric = clientMetrics.find(m => m.metricName === 'pagesPerSession');
+  const sessionsPerUserMetric = clientMetrics.find(m => m.metricName === 'sessionsPerUser');
+  
+  if (!bounceRateMetric || !sessionDurationMetric) return null;
+  
+  return {
+    bounceRate: typeof bounceRateMetric.value === 'object' ? bounceRateMetric.value.value : bounceRateMetric.value,
+    sessionDuration: typeof sessionDurationMetric.value === 'object' ? sessionDurationMetric.value.value : sessionDurationMetric.value,
+    pagesPerSession: pagesPerSessionMetric ? (typeof pagesPerSessionMetric.value === 'object' ? pagesPerSessionMetric.value.value : pagesPerSessionMetric.value) : 2.8,
+    sessionsPerUser: sessionsPerUserMetric ? (typeof sessionsPerUserMetric.value === 'object' ? sessionsPerUserMetric.value.value : sessionsPerUserMetric.value) : 1.6
+  };
+}
+
+// Helper function to store competitor metrics
+async function storeCompetitorMetrics(clientId: string, competitorId: string, period: string, competitorMetrics: any): Promise<void> {
+  const metrics = [
+    { metricName: 'bounceRate', value: { value: competitorMetrics.bounceRate }, sourceType: 'Competitor' as const },
+    { metricName: 'sessionDuration', value: { value: competitorMetrics.sessionDuration }, sourceType: 'Competitor' as const },
+    { metricName: 'pagesPerSession', value: { value: competitorMetrics.pagesPerSession }, sourceType: 'Competitor' as const },
+    { metricName: 'sessionsPerUser', value: { value: competitorMetrics.sessionsPerUser }, sourceType: 'Competitor' as const }
+  ];
+  
+  for (const metric of metrics) {
+    await storage.createMetric({
+      clientId,
+      competitorId,
+      metricName: metric.metricName,
+      value: metric.value,
+      sourceType: metric.sourceType,
+      timePeriod: period
+    });
+  }
+}
+
+// Helper function to generate period list for competitor data
+function generateCompetitorPeriodList(): Array<{ period: string; type: 'daily' | 'monthly' }> {
+  const periods = [];
+  const now = new Date();
+  
+  // Generate 15 months of data going backwards from current month
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Use monthly data for all periods (consistent with sample data)
+    periods.push({ period, type: 'monthly' as const });
+  }
+  
+  return periods.reverse(); // Return chronological order (oldest first)
 }
 
 export function registerRoutes(app: Express): Server {
@@ -1027,6 +1128,21 @@ export function registerRoutes(app: Express): Server {
         domain: competitor.domain,
         clientId: validatedData.clientId 
       });
+
+      // Generate historical sample data for the new competitor
+      try {
+        await generateCompetitorHistoricalData(validatedData.clientId, competitor);
+        logger.info("Generated historical data for new competitor", { 
+          competitorId: competitor.id, 
+          domain: competitor.domain 
+        });
+      } catch (dataError) {
+        logger.error("Failed to generate historical data for competitor", { 
+          competitorId: competitor.id, 
+          error: (dataError as Error).message 
+        });
+        // Don't fail the entire request if data generation fails
+      }
       
       // Clear both cache systems to ensure new competitor appears immediately - force clear everything
       clearCache(); // Clear ALL query optimizer cache
