@@ -25,7 +25,7 @@ export const GA4_DIMENSIONS = {
 
 export const DATA_MANAGEMENT = {
   DEFAULT_PERIODS: 15,
-  DAILY_DATA_THRESHOLD_MONTHS: 2, // Fetch daily data for Last Month AND current month
+  DAILY_DATA_THRESHOLD_MONTHS: 1, // Only Last Month gets daily data (not current month)
   MAX_BATCH_SIZE: 5,
   CACHE_TTL_MINUTES: 15
 } as const;
