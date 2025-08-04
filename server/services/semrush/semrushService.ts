@@ -37,7 +37,7 @@ export interface SemrushApiResponse {
 
 export class SemrushService {
   private apiKey: string;
-  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3';
+  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3'; // Analytics API v3 for traffic data
 
   constructor() {
     this.apiKey = process.env.SEMRUSH_API_KEY!;
@@ -75,18 +75,15 @@ export class SemrushService {
     try {
       const url = `${this.baseUrl}/summary`;
       
-      // Convert period (YYYY-MM) to SEMrush date format (YYYYMM01-YYYYMM31)
+      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
       const [year, month] = period.split('-');
-      const startDate = `${year}${month}01`;
-      const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-      const endDate = `${year}${month}${daysInMonth.toString().padStart(2, '0')}`;
+      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
       
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate'
-        // Note: SEMrush v3 API doesn't support historical date filtering
-        // We'll generate realistic monthly variations from the current data
+        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate',
+        display_date: displayDate
       });
 
       logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
@@ -140,20 +137,18 @@ export class SemrushService {
    */
   private async fetchTrafficChannels(domain: string, period: string): Promise<SemrushMetricData['trafficChannels']> {
     try {
-      const url = `${this.baseUrl}/summary`;
+      const url = `${this.baseUrl}/sources`;
       
-      // Convert period (YYYY-MM) to SEMrush date format (YYYYMM01-YYYYMM31)
+      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
       const [year, month] = period.split('-');
-      const startDate = `${year}${month}01`;
-      const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-      const endDate = `${year}${month}${daysInMonth.toString().padStart(2, '0')}`;
+      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
       
       const params = new URLSearchParams({
         key: this.apiKey,
-        targets: domain,
-        export_columns: 'target,direct,search_organic,search_paid,social_organic,referral'
-        // Note: SEMrush v3 API doesn't support historical date filtering
-        // We'll generate realistic monthly variations from the current data
+        target: domain, // Sources API uses 'target' (singular)
+        export_columns: 'target,from_target,traffic_share,traffic,channel',
+        display_date: displayDate,
+        display_limit: '50'
       });
 
       logger.info('Fetching SEMrush traffic channels', { domain, period });
@@ -168,7 +163,7 @@ export class SemrushService {
       logger.debug('SEMrush traffic channels response', { domain, period, response: text });
 
       if (text.includes('ERROR')) {
-        logger.warn('SEMrush traffic channels returned error', { domain, period, error: text });
+        logger.info('SEMrush traffic channels not available in current subscription', { domain, period, error: text.trim() });
         return [];
       }
 
@@ -236,18 +231,16 @@ export class SemrushService {
     try {
       const url = `${this.baseUrl}/summary`;
       
-      // Convert period (YYYY-MM) to SEMrush date format (YYYYMM01-YYYYMM31)
+      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
       const [year, month] = period.split('-');
-      const startDate = `${year}${month}01`;
-      const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-      const endDate = `${year}${month}${daysInMonth.toString().padStart(2, '0')}`;
+      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
       
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        export_columns: 'target,desktop_visits,mobile_visits,desktop_share,mobile_share'
-        // Note: SEMrush v3 API doesn't support historical date filtering
-        // We'll generate realistic monthly variations from the current data
+        export_columns: 'target,desktop_visits,mobile_visits,desktop_share,mobile_share',
+        display_date: displayDate,
+        device_type: 'desktop,mobile'
       });
 
       logger.info('Fetching SEMrush device distribution', { domain, period });
@@ -262,7 +255,7 @@ export class SemrushService {
       logger.debug('SEMrush device distribution response', { domain, period, response: text });
 
       if (text.includes('ERROR')) {
-        logger.warn('SEMrush device distribution returned error', { domain, period, error: text });
+        logger.info('SEMrush device distribution not available in current subscription', { domain, period, error: text.trim() });
         return [];
       }
 
@@ -333,114 +326,80 @@ export class SemrushService {
     return deviceMap[normalized] || device;
   }
 
-  /**
-   * Generate realistic monthly variations based on authentic SEMrush data
-   */
-  private generateHistoricalVariations(baselineData: SemrushMetricData, periods: string[]): Map<string, SemrushMetricData> {
-    const results = new Map<string, SemrushMetricData>();
-    
-    logger.info('Generating realistic historical variations from authentic SEMrush baseline', {
-      periods: periods.length,
-      baseline: {
-        bounceRate: baselineData.bounceRate,
-        sessionDuration: baselineData.sessionDuration,
-        pagesPerSession: baselineData.pagesPerSession,
-        sessionsPerUser: baselineData.sessionsPerUser
-      }
-    });
 
-    periods.forEach((period, index) => {
-      // Generate realistic variations: ±15% for most metrics, ±10% for bounce rate
-      const monthlyVariation = Math.sin((index * Math.PI) / 6) * 0.1 + (Math.random() - 0.5) * 0.1;
-      const bounceVariation = Math.sin((index * Math.PI) / 4) * 0.08 + (Math.random() - 0.5) * 0.06;
-      
-      const periodData: SemrushMetricData = {
-        bounceRate: Math.max(0.1, Math.min(0.9, baselineData.bounceRate * (1 + bounceVariation))),
-        sessionDuration: Math.max(30, baselineData.sessionDuration * (1 + monthlyVariation)),
-        pagesPerSession: Math.max(1, baselineData.pagesPerSession * (1 + monthlyVariation * 0.8)),
-        sessionsPerUser: Math.max(1, baselineData.sessionsPerUser * (1 + monthlyVariation * 0.6)),
-        trafficChannels: baselineData.trafficChannels.map(channel => ({
-          ...channel,
-          percentage: Math.max(1, channel.percentage * (1 + (Math.random() - 0.5) * 0.15)),
-          sessions: Math.max(100, channel.sessions * (1 + monthlyVariation))
-        })),
-        deviceDistribution: baselineData.deviceDistribution.map(device => ({
-          ...device,
-          percentage: Math.max(10, device.percentage * (1 + (Math.random() - 0.5) * 0.1)),
-          sessions: Math.max(100, device.sessions * (1 + monthlyVariation))
-        }))
-      };
-
-      results.set(period, periodData);
-      
-      logger.debug('Generated variation for period', {
-        period,
-        bounceRate: periodData.bounceRate.toFixed(4),
-        sessionDuration: Math.round(periodData.sessionDuration),
-        pagesPerSession: periodData.pagesPerSession.toFixed(2)
-      });
-    });
-
-    return results;
-  }
 
   /**
    * Fetch comprehensive 15-month historical data for a domain
    */
   public async fetchHistoricalData(domain: string): Promise<Map<string, SemrushMetricData>> {
-    logger.info('Starting SEMrush historical data fetch with authentic baseline', { domain });
+    logger.info('Starting SEMrush historical data fetch with authentic monthly data', { domain });
     
     const periods = this.generateHistoricalPeriods();
+    const results = new Map<string, SemrushMetricData>();
+
     logger.info('Generated historical periods', { domain, periods, count: periods.length });
 
-    try {
-      // Fetch current authentic data from SEMrush as baseline
-      logger.info('Fetching authentic SEMrush baseline data', { domain });
-      
-      const [mainMetrics, trafficChannels, deviceDistribution] = await Promise.all([
-        this.fetchMainMetrics(domain, periods[0]), // Use first period (period parameter ignored by API)
-        this.fetchTrafficChannels(domain, periods[0]),
-        this.fetchDeviceDistribution(domain, periods[0])
-      ]);
+    // Fetch data for each period using correct SEMrush historical date format
+    for (const period of periods) {
+      try {
+        logger.info('Fetching SEMrush data for period', { domain, period });
 
-      const baselineData: SemrushMetricData = {
-        bounceRate: mainMetrics.bounceRate || 0,
-        sessionDuration: mainMetrics.sessionDuration || 0,
-        pagesPerSession: mainMetrics.pagesPerSession || 0,
-        sessionsPerUser: mainMetrics.sessionsPerUser || 0,
-        trafficChannels: trafficChannels || [],
-        deviceDistribution: deviceDistribution || []
-      };
+        // Fetch all metrics in parallel for this period
+        const [mainMetrics, trafficChannels, deviceDistribution] = await Promise.all([
+          this.fetchMainMetrics(domain, period),
+          this.fetchTrafficChannels(domain, period),
+          this.fetchDeviceDistribution(domain, period)
+        ]);
 
-      logger.info('Successfully fetched authentic SEMrush baseline', { 
-        domain,
-        bounceRate: baselineData.bounceRate,
-        sessionDuration: baselineData.sessionDuration,
-        pagesPerSession: baselineData.pagesPerSession,
-        sessionsPerUser: baselineData.sessionsPerUser,
-        trafficChannelsCount: baselineData.trafficChannels.length,
-        deviceDistributionCount: baselineData.deviceDistribution.length
-      });
+        const periodData: SemrushMetricData = {
+          bounceRate: mainMetrics.bounceRate || 0,
+          sessionDuration: mainMetrics.sessionDuration || 0,
+          pagesPerSession: mainMetrics.pagesPerSession || 0,
+          sessionsPerUser: mainMetrics.sessionsPerUser || 0,
+          trafficChannels: trafficChannels || [],
+          deviceDistribution: deviceDistribution || []
+        };
 
-      // Generate realistic historical variations from authentic baseline
-      const results = this.generateHistoricalVariations(baselineData, periods);
-      
-      logger.info('Successfully generated historical data from authentic SEMrush baseline', { 
-        domain,
-        totalPeriods: results.size,
-        baselineSource: 'authentic_semrush_api'
-      });
+        results.set(period, periodData);
+        
+        logger.info('Successfully fetched SEMrush data for period', { 
+          domain, 
+          period,
+          bounceRate: periodData.bounceRate,
+          sessionDuration: periodData.sessionDuration,
+          trafficChannelsCount: periodData.trafficChannels.length,
+          devicesCount: periodData.deviceDistribution.length
+        });
 
-      return results;
-
-    } catch (baselineError) {
-      logger.error('Failed to fetch authentic SEMrush baseline data', {
-        domain,
-        error: (baselineError as Error).message
-      });
-      
-      throw baselineError;
+        // Add delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        logger.error('Failed to fetch SEMrush data for period', {
+          domain,
+          period,
+          error: (error as Error).message
+        });
+        
+        // Continue with empty data for this period
+        results.set(period, {
+          bounceRate: 0,
+          sessionDuration: 0,
+          pagesPerSession: 0,
+          sessionsPerUser: 0,
+          trafficChannels: [],
+          deviceDistribution: []
+        });
+      }
     }
+
+    logger.info('Completed SEMrush historical data fetch', { 
+      domain, 
+      totalPeriods: results.size,
+      successfulPeriods: Array.from(results.values()).filter(data => data.bounceRate > 0).length
+    });
+
+    return results;
   }
 
   /**
@@ -448,11 +407,12 @@ export class SemrushService {
    */
   public async testConnection(): Promise<boolean> {
     try {
-      const url = `${this.baseUrl}/main`;
+      const url = `${this.baseUrl}/summary`;
       const params = new URLSearchParams({
         key: this.apiKey,
-        domain: 'example.com',
-        display_date: '2024-01'
+        targets: 'example.com',
+        export_columns: 'target,visits,users',
+        display_date: '2024-01-01'
       });
 
       const response = await fetch(`${url}?${params}`);
