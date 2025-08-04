@@ -37,7 +37,7 @@ export interface SemrushApiResponse {
 
 export class SemrushService {
   private apiKey: string;
-  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v2';
+  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3';
 
   constructor() {
     this.apiKey = process.env.SEMRUSH_API_KEY!;
@@ -69,16 +69,16 @@ export class SemrushService {
   }
 
   /**
-   * Fetch main website metrics from SEMrush
+   * Fetch main website metrics from SEMrush using v3 API
    */
   private async fetchMainMetrics(domain: string, period: string): Promise<Partial<SemrushMetricData>> {
     try {
-      const url = `${this.baseUrl}/main`;
+      const url = `${this.baseUrl}/summary`;
       const params = new URLSearchParams({
         key: this.apiKey,
-        domain: domain,
+        targets: domain,
         display_date: period,
-        export_columns: 'Vi,Vt,Pb,Pd'
+        export_columns: 'target,visits,users,pages_per_visit,visit_duration,bounce_rate'
       });
 
       logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
@@ -92,20 +92,21 @@ export class SemrushService {
       const text = await response.text();
       logger.debug('SEMrush main metrics response', { domain, period, response: text });
 
-      // Parse CSV-like response from SEMrush
+      // Parse CSV-like response from SEMrush v3 API
       const lines = text.trim().split('\n');
       if (lines.length < 2) {
         logger.warn('No data returned from SEMrush', { domain, period });
         return {};
       }
 
+      // Skip header line, get data line
       const data = lines[1].split(';');
       
       return {
-        bounceRate: parseFloat(data[2]) || 0, // Pb - Pages per visit (bounce rate approximation)
-        sessionDuration: parseFloat(data[3]) || 0, // Pd - Page duration
-        pagesPerSession: parseFloat(data[2]) || 0, // Pb - Pages per visit
-        sessionsPerUser: parseFloat(data[0]) / parseFloat(data[1]) || 0 // Vi/Vt ratio
+        bounceRate: parseFloat(data[5]) || 0, // bounce_rate column
+        sessionDuration: parseFloat(data[4]) || 0, // visit_duration column  
+        pagesPerSession: parseFloat(data[3]) || 0, // pages_per_visit column
+        sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0 // visits/users ratio
       };
 
     } catch (error) {
@@ -119,16 +120,16 @@ export class SemrushService {
   }
 
   /**
-   * Fetch traffic channels from SEMrush
+   * Fetch traffic channels from SEMrush v3 API
    */
   private async fetchTrafficChannels(domain: string, period: string): Promise<SemrushMetricData['trafficChannels']> {
     try {
       const url = `${this.baseUrl}/sources`;
       const params = new URLSearchParams({
         key: this.apiKey,
-        domain: domain,
+        targets: domain,
         display_date: period,
-        export_columns: 'So,Vt,Tr'
+        export_columns: 'target,source_type,visits,traffic_share'
       });
 
       const response = await fetch(`${url}?${params}`);
@@ -149,11 +150,11 @@ export class SemrushService {
       // Skip header, process data lines
       for (let i = 1; i < lines.length; i++) {
         const data = lines[i].split(';');
-        if (data.length >= 3) {
+        if (data.length >= 4) {
           channels.push({
-            channel: this.normalizeChannelName(data[0]),
-            sessions: parseInt(data[1]) || 0,
-            percentage: parseFloat(data[2]) || 0
+            channel: this.normalizeChannelName(data[1]), // source_type column
+            sessions: parseInt(data[2]) || 0, // visits column
+            percentage: parseFloat(data[3]) || 0 // traffic_share column
           });
         }
       }
@@ -171,16 +172,16 @@ export class SemrushService {
   }
 
   /**
-   * Fetch device distribution from SEMrush
+   * Fetch device distribution from SEMrush v3 API
    */
   private async fetchDeviceDistribution(domain: string, period: string): Promise<SemrushMetricData['deviceDistribution']> {
     try {
       const url = `${this.baseUrl}/devices`;
       const params = new URLSearchParams({
         key: this.apiKey,
-        domain: domain,
+        targets: domain,
         display_date: period,
-        export_columns: 'De,Vt,Tr'
+        export_columns: 'target,device_type,visits,traffic_share'
       });
 
       const response = await fetch(`${url}?${params}`);
@@ -201,11 +202,11 @@ export class SemrushService {
       // Skip header, process data lines
       for (let i = 1; i < lines.length; i++) {
         const data = lines[i].split(';');
-        if (data.length >= 3) {
+        if (data.length >= 4) {
           devices.push({
-            device: this.normalizeDeviceName(data[0]),
-            sessions: parseInt(data[1]) || 0,
-            percentage: parseFloat(data[2]) || 0
+            device: this.normalizeDeviceName(data[1]), // device_type column
+            sessions: parseInt(data[2]) || 0, // visits column
+            percentage: parseFloat(data[3]) || 0 // traffic_share column
           });
         }
       }
