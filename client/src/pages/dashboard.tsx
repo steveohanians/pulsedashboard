@@ -275,18 +275,21 @@ export default function Dashboard() {
             channelMap.set(channelName, value);
           }
         } else {
-          // Legacy JSON format - parse and aggregate
+          // GA4 JSON format - parse and aggregate
           try {
             const channelData = JSON.parse(metric.value);
             if (Array.isArray(channelData)) {
               channelData.forEach((channel: any) => {
-                const channelName = channel.name;
-                const value = parseFloat(channel.value);
+                // Handle GA4 format: { channel: "Direct", sessions: 4439, percentage: 64.87... }
+                const channelName = channel.channel || channel.name;
+                const value = parseFloat(channel.percentage || channel.value || channel.sessions);
                 
-                if (channelMap.has(channelName)) {
-                  channelMap.set(channelName, channelMap.get(channelName) + value);
-                } else {
-                  channelMap.set(channelName, value);
+                if (channelName && !isNaN(value)) {
+                  if (channelMap.has(channelName)) {
+                    channelMap.set(channelName, channelMap.get(channelName) + value);
+                  } else {
+                    channelMap.set(channelName, value);
+                  }
                 }
               });
             }
@@ -297,20 +300,47 @@ export default function Dashboard() {
         }
       });
       
-      // Define consistent channel order
-      const channelOrder = ['Organic Search', 'Direct', 'Social Media', 'Paid Search', 'Email', 'Other'];
+      // Define consistent channel order - match GA4 channel names
+      const channelOrder = ['Direct', 'Organic Search', 'Paid Search', 'Referral', 'Email', 'Organic Social', 'Paid Social', 'Other'];
+      
+      // Map GA4 channel names to display names
+      const channelNameMap: Record<string, string> = {
+        'Direct': 'Direct',
+        'Organic Search': 'Organic Search', 
+        'Paid Search': 'Paid Search',
+        'Referral': 'Referral',
+        'Email': 'Email',
+        'Organic Social': 'Social Media',
+        'Paid Social': 'Social Media',
+        'Unassigned': 'Other',
+        'Cross-network': 'Other'
+      };
+      
+      // Group similar channels and convert to array with consistent ordering
+      const groupedChannelMap = new Map();
+      
+      // Group channels by display name
+      channelMap.forEach((value, channelName) => {
+        const displayName = channelNameMap[channelName] || 'Other';
+        if (groupedChannelMap.has(displayName)) {
+          groupedChannelMap.set(displayName, groupedChannelMap.get(displayName) + value);
+        } else {
+          groupedChannelMap.set(displayName, value);
+        }
+      });
       
       // Convert to array with consistent ordering
-      const channels = channelOrder
-        .map(channelName => {
-          if (channelMap.has(channelName)) {
-            const totalValue = channelMap.get(channelName);
+      const displayOrder = ['Direct', 'Organic Search', 'Paid Search', 'Referral', 'Email', 'Social Media', 'Other'];
+      const channels = displayOrder
+        .map(displayName => {
+          if (groupedChannelMap.has(displayName)) {
+            const totalValue = groupedChannelMap.get(displayName);
             const averageValue = totalValue / (periods?.length || 1);
             return {
-              name: channelName,
+              name: displayName,
               value: Math.round(averageValue),
               percentage: Math.round(averageValue),
-              color: CHART_COLORS.TRAFFIC_CHANNELS[channelName as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+              color: CHART_COLORS.TRAFFIC_CHANNELS[displayName as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
             };
           }
           return null;
