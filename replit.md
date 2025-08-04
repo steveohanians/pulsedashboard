@@ -8,6 +8,7 @@ Preferred communication style: Simple, everyday language.
 Filter ordering: Business sizes ordered small to large, industry verticals alphabetical.
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 Performance priority: Demands enterprise-grade performance with immediate loading capabilities to replace 22+ second load times.
+Data management principles: Dashboard shows "Last Month" data only (not current partial month). Follow established 15-month historical data logic: check existing data before re-fetching, summarize daily to monthly for storage optimization, only fetch new/active months not yet pulled.
 
 ## System Architecture
 

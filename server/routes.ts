@@ -2497,17 +2497,31 @@ export function registerRoutes(app: Express): Server {
       const clientId = "demo-client-id";
       logger.info(`Manual GA4 data refresh triggered for ${clientId}`);
       
-      // Get current period
+      // Use Last Month (July 2025) instead of current month (August)
       const currentDate = new Date();
-      const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+      const period = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
       const dateRange = ga4DataService.getDateRangeForPeriod(period);
       
       logger.info(`Refreshing GA4 data for period: ${period} (${dateRange.startDate} to ${dateRange.endDate})`);
       
-      // Clear existing client data for this period
-      await storage.clearClientMetricsByPeriod(clientId, period);
+      // Check for existing CLIENT data before re-fetching (following 15-month historical logic)
+      const existingClientMetrics = await storage.getMetricsByClient(clientId, period);
+      const clientOnlyMetrics = existingClientMetrics.filter(m => m.sourceType === 'Client');
+      if (clientOnlyMetrics && clientOnlyMetrics.length > 0) {
+        logger.info(`Existing GA4 client data found for ${period}, skipping re-fetch to avoid duplication`);
+        return res.json({
+          success: true,
+          message: `GA4 data already exists for ${clientId} in ${period}`,
+          data: {
+            period,
+            existingClientMetrics: clientOnlyMetrics.length,
+            note: "Skipped re-fetch to preserve existing client data"
+          }
+        });
+      }
       
-      // Fetch and store fresh GA4 data
+      // Fetch and store fresh GA4 data only if no existing data
       const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
       
       if (!ga4Data) {
