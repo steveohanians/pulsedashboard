@@ -40,22 +40,51 @@ function requireAdmin(req: any, res: any, next: any) {
 
 // Helper function to generate historical data for a single competitor
 async function generateCompetitorHistoricalData(clientId: string, competitor: any): Promise<void> {
+  logger.info("DETAILED: Starting competitor historical data generation", {
+    clientId,
+    competitorId: competitor.id,
+    competitorDomain: competitor.domain
+  });
+  
   const generator = new SampleDataGenerator(clientId);
   
-  // Get 15 months of periods (same as sample data generation)
+  // Get periods - log them for debugging
   const periodList = generateCompetitorPeriodList();
+  logger.info("DETAILED: Generated period list", {
+    periodsCount: periodList.length,
+    periods: periodList.map(p => p.period)
+  });
+  
+  let successCount = 0;
+  let errorCount = 0;
   
   for (const period of periodList) {
     try {
+      logger.info(`DETAILED: Processing period ${period.period}`, {
+        competitorId: competitor.id,
+        period: period.period
+      });
+      
       // Get client baseline - try current period, then use latest available data
       let clientMetrics = await storage.getMetricsByClient(clientId, period.period);
+      logger.info(`DETAILED: Client metrics for ${period.period}`, {
+        metricsCount: clientMetrics?.length || 0
+      });
+      
       if (!clientMetrics || clientMetrics.length === 0) {
         // Fallback to latest client data or generate realistic baseline
         const allClientMetrics = await storage.getMetricsByClient(clientId, '2025-07');
         clientMetrics = allClientMetrics.length > 0 ? allClientMetrics : [];
+        logger.info(`DETAILED: Using fallback metrics from 2025-07`, {
+          fallbackMetricsCount: clientMetrics.length
+        });
       }
       
       let clientBaseline = extractClientBaseline(clientMetrics);
+      logger.info(`DETAILED: Extracted baseline for ${period.period}`, {
+        hasBaseline: !!clientBaseline,
+        baseline: clientBaseline
+      });
       
       // If no client baseline available, use realistic industry baseline
       if (!clientBaseline) {
@@ -65,6 +94,9 @@ async function generateCompetitorHistoricalData(clientId: string, competitor: an
           pagesPerSession: 2.5 + (Math.random() * 1), // 2.5-3.5 pages
           sessionsPerUser: 1.4 + (Math.random() * 0.4) // 1.4-1.8 sessions
         };
+        logger.info(`DETAILED: Using industry baseline for ${period.period}`, {
+          industryBaseline: clientBaseline
+        });
       }
       
       const competitorMetrics = generator.generateCompetitorMetrics(
@@ -73,12 +105,38 @@ async function generateCompetitorHistoricalData(clientId: string, competitor: an
         periodList.indexOf(period) // periodIndex
       );
       
+      logger.info(`DETAILED: Generated competitor metrics for ${period.period}`, {
+        competitorMetrics
+      });
+      
       await storeCompetitorMetrics(clientId, competitor.id, period.period, competitorMetrics);
       
+      logger.info(`DETAILED: Successfully stored metrics for ${period.period}`, {
+        competitorId: competitor.id,
+        period: period.period
+      });
+      
+      successCount++;
+      
     } catch (error) {
-      logger.error(`Failed to generate competitor data for period ${period.period}:`, error);
+      errorCount++;
+      logger.error(`DETAILED: Failed to generate competitor data for period ${period.period}`, {
+        competitorId: competitor.id,
+        period: period.period,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
     }
   }
+  
+  logger.info("DETAILED: Completed competitor historical data generation", {
+    clientId,
+    competitorId: competitor.id,
+    competitorDomain: competitor.domain,
+    successCount,
+    errorCount,
+    totalPeriods: periodList.length
+  });
 }
 
 // Helper function to extract client baseline from metrics
@@ -103,8 +161,19 @@ function extractClientBaseline(clientMetrics: any[]): any {
 
 // Helper function to store competitor metrics
 async function storeCompetitorMetrics(clientId: string, competitorId: string, period: string, competitorMetrics: any): Promise<void> {
+  logger.info("DETAILED: Starting to store competitor metrics", {
+    clientId,
+    competitorId,
+    period,
+    competitorMetrics
+  });
+  
   // Import metric names constants to ensure proper naming
   const { METRIC_NAMES } = await import('../services/sampleData/constants');
+  
+  logger.info("DETAILED: Imported metric names", {
+    metricNames: METRIC_NAMES
+  });
   
   const metrics = [
     { metricName: METRIC_NAMES.BOUNCE_RATE, value: competitorMetrics.bounceRate.toFixed(2), sourceType: 'Competitor' as const },
@@ -113,16 +182,48 @@ async function storeCompetitorMetrics(clientId: string, competitorId: string, pe
     { metricName: METRIC_NAMES.SESSIONS_PER_USER, value: competitorMetrics.sessionsPerUser.toFixed(2), sourceType: 'Competitor' as const }
   ];
   
+  logger.info("DETAILED: Prepared metrics for storage", {
+    metricsCount: metrics.length,
+    metrics
+  });
+  
   for (const metric of metrics) {
-    await storage.createMetric({
-      clientId,
-      competitorId,
-      metricName: metric.metricName,
-      value: metric.value,
-      sourceType: metric.sourceType,
-      timePeriod: period
-    });
+    try {
+      const result = await storage.createMetric({
+        clientId,
+        competitorId,
+        metricName: metric.metricName,
+        value: metric.value,
+        sourceType: metric.sourceType,
+        timePeriod: period
+      });
+      
+      logger.info("DETAILED: Successfully stored metric", {
+        metricName: metric.metricName,
+        value: metric.value,
+        period,
+        competitorId,
+        resultId: result?.id
+      });
+    } catch (error) {
+      logger.error("DETAILED: Failed to store metric", {
+        metricName: metric.metricName,
+        value: metric.value,
+        period,
+        competitorId,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      throw error; // Re-throw to be caught by parent function
+    }
   }
+  
+  logger.info("DETAILED: Completed storing all metrics for period", {
+    clientId,
+    competitorId,
+    period,
+    metricsStored: metrics.length
+  });
 }
 
 // Helper function to generate period list for competitor data
