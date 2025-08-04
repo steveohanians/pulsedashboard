@@ -1549,6 +1549,10 @@ export default function Dashboard() {
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
                           console.log('🔥 TRAFFIC CHANNELS CONDITION MET!', metricName);
+                          console.log('🔥 Dashboard Data:', dashboardData);
+                          console.log('🔥 Metrics Available:', metrics?.length || 0);
+                          console.log('🔥 Time Series Data Keys:', timeSeriesData ? Object.keys(timeSeriesData) : 'none');
+                          
                           const trafficData = processTrafficChannelData();
                           console.log('🔥 TRAFFIC DATA RECEIVED:', trafficData);
 
