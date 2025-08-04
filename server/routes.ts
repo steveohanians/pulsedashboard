@@ -178,6 +178,13 @@ export function registerRoutes(app: Express): Server {
 
         // 🔄 CACHE INVALIDATION: Clear cache after GA4 data update to ensure immediate frontend update
         performanceCache.clear(); // Clear all cache to ensure fresh data
+        
+        // Force immediate cache invalidation for all periods  
+        setTimeout(() => {
+          performanceCache.clear();
+          logger.info(`Secondary cache clear completed - ensuring frontend gets fresh data`);
+        }, 100);
+        
         logger.info(`Full cache cleared after GA4 data update for immediate frontend refresh`);
       }
 
