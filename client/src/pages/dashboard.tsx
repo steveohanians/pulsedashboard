@@ -1638,7 +1638,7 @@ export default function Dashboard() {
                   {/* Enhanced AI-Generated Insights */}
                   <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm mt-6 sm:mt-8 lg:mt-12">
                     <div className="flex items-center mb-4 sm:mb-6">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
+                      <div className="mr-3 sm:mr-4 flex-shrink-0">
                         <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
