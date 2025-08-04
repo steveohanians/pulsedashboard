@@ -269,7 +269,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         <Button 
           onClick={() => generateInsightMutation.mutate()}
           disabled={generateInsightMutation.isPending}
-          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg shadow-primary/25 font-medium px-6 py-2.5"
+          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
           size="sm"
         >
           {generateInsightMutation.isPending ? (
