@@ -15,7 +15,6 @@ import TimeSeriesChart from "@/components/time-series-chart";
 import SessionDurationAreaChart from "@/components/area-chart";
 import MetricBarChart from "@/components/bar-chart";
 import { StackedBarChart } from "@/components/stacked-bar-chart";
-import { DonutChart } from "@/components/donut-chart";
 import LollipopChart from "@/components/lollipop-chart";
 import AIInsights from "@/components/ai-insights";
 import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
