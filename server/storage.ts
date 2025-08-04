@@ -768,6 +768,10 @@ export class DatabaseStorage implements IStorage {
 
   // GA4 Property Access
   async createGA4PropertyAccess(access: InsertGA4PropertyAccess): Promise<GA4PropertyAccess> {
+    // First delete any existing property access for this client to enforce one-to-one relationship
+    await db.delete(ga4PropertyAccess).where(eq(ga4PropertyAccess.clientId, access.clientId));
+    
+    // Then insert the new property access
     const [result] = await db.insert(ga4PropertyAccess).values(access).returning();
     return result;
   }
