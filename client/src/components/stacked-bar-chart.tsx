@@ -117,7 +117,11 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
-                      backgroundColor: CHANNEL_COLORS[channel.name as keyof typeof CHANNEL_COLORS] || channel.color
+                      backgroundColor: CHANNEL_COLORS[channel.name as keyof typeof CHANNEL_COLORS] || channel.color,
+                      borderTopLeftRadius: isFirst ? '6px' : '0',
+                      borderBottomLeftRadius: isFirst ? '6px' : '0',
+                      borderTopRightRadius: isLast ? '6px' : '0',
+                      borderBottomRightRadius: isLast ? '6px' : '0'
                     }}
                     onMouseEnter={() => {
                       setHoveredSegment({
