@@ -290,6 +290,7 @@ export default function Dashboard() {
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
+    console.log('🚀 TRAFFIC CHANNEL FUNCTION CALLED!');
     let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {
