@@ -1,5 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
+import { parseMetricValue } from '../utils/metricParser';
 
 // Custom diamond dot component
 import { DiamondDot } from './shared/DiamondDot';
@@ -188,10 +189,10 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
   // Calculate fixed Y-axis domain based on all data
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(Number(point[clientKey]), Number(point['Industry Avg']), Number(point['Clear Digital Clients Avg']));
+    allValues.push(parseMetricValue(point[clientKey]) || 0, parseMetricValue(point['Industry Avg']) || 0, parseMetricValue(point['Clear Digital Clients Avg']) || 0);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(Number(point[comp.label]));
+        allValues.push(parseMetricValue(point[comp.label]) || 0);
       }
     });
   });

@@ -1,6 +1,7 @@
 import logger from '../utils/logger.js';
 import type { IStorage } from '../storage.js';
 import type { Metric, Competitor } from '@shared/schema';
+import { parseMetricValue } from '../utils/metricParser.js';
 
 export interface AggregatedMetricData {
   metricName: string;
@@ -157,14 +158,14 @@ export class InsightDataAggregator {
         if (sourceType.startsWith('Competitor_')) {
           const competitorId = sourceType.replace('Competitor_', '');
           const competitorName = competitorMap.get(competitorId) || `Competitor ${competitorId}`;
-          competitorValues.push(typeof value === 'number' ? value : parseFloat(String(value)));
+          competitorValues.push(parseMetricValue(value) || 0);
           competitorNames.push(competitorName);
         }
       });
 
       // Calculate trend
-      const currentClientValue = currentData.Client ? (typeof currentData.Client === 'number' ? currentData.Client : parseFloat(String(currentData.Client))) : null;
-      const previousClientValue = previousData.Client ? (typeof previousData.Client === 'number' ? previousData.Client : parseFloat(String(previousData.Client))) : null;
+      const currentClientValue = currentData.Client ? parseMetricValue(currentData.Client) : null;
+      const previousClientValue = previousData.Client ? parseMetricValue(previousData.Client) : null;
       
       const { trendDirection, percentageChange } = this.calculateTrend(
         currentClientValue,
@@ -174,8 +175,8 @@ export class InsightDataAggregator {
       result.push({
         metricName,
         clientValue: currentClientValue,
-        cdAverage: currentData.CD_Avg ? (typeof currentData.CD_Avg === 'number' ? currentData.CD_Avg : parseFloat(String(currentData.CD_Avg))) : null,
-        industryAverage: currentData.Industry_Avg ? (typeof currentData.Industry_Avg === 'number' ? currentData.Industry_Avg : parseFloat(String(currentData.Industry_Avg))) : null,
+        cdAverage: currentData.CD_Avg ? parseMetricValue(currentData.CD_Avg) : null,
+        industryAverage: currentData.Industry_Avg ? parseMetricValue(currentData.Industry_Avg) : null,
         competitorValues,
         competitorNames,
         previousPeriodValue: previousClientValue,

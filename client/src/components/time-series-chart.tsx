@@ -165,10 +165,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(Number(point[clientKey]) || 0, Number(point['Industry Avg']) || 0, Number(point['Clear Digital Clients Avg']) || 0);
+    allValues.push(parseMetricValue(point[clientKey]) || 0, parseMetricValue(point['Industry Avg']) || 0, parseMetricValue(point['Clear Digital Clients Avg']) || 0);
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(Number(point[comp.label]) || 0);
+        allValues.push(parseMetricValue(point[comp.label]) || 0);
       }
     });
   });
