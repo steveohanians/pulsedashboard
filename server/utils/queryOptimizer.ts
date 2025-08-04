@@ -413,6 +413,13 @@ function processMetricsData(
     return result;
   };
   
+  console.log('🔥 PRE-PROCESS: Total allMetrics:', allMetrics.length);
+  const clientTrafficChannels = allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client');
+  console.log('🔥 PRE-PROCESS: Client Traffic Channel metrics found:', clientTrafficChannels.length);
+  if (clientTrafficChannels.length > 0) {
+    console.log('🔥 PRE-PROCESS: First client Traffic Channel metric:', JSON.stringify(clientTrafficChannels[0], null, 2));
+  }
+  
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
