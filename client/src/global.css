@@ -26,6 +26,42 @@
     --input: 20 5.9% 90%;
     --ring: 318 97% 50%;
     --radius: 0.5rem;
+
+    /* Chart Colors */
+    --chart-1: 318 97% 50%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 271 91% 65%;
+
+    /* Component-Specific Colors */
+    --color-client: 318 97% 50%;
+    --color-industry-avg: 241 5% 64%;
+    --color-cd-avg: 210 9% 31%;
+    --color-competitor-1: 266 85% 58%;
+    --color-competitor-2: 197 94% 43%;
+    --color-competitor-3: 0 84% 60%;
+    --color-default: 220 9% 46%;
+
+    /* Device Colors */
+    --color-device-desktop: 217 91% 60%;
+    --color-device-mobile: 162 73% 46%;
+    --color-device-tablet: 266 85% 58%;
+    --color-device-other: 220 9% 46%;
+
+    /* Traffic Channel Colors */
+    --color-channel-organic: 160 84% 39%;
+    --color-channel-direct: 217 91% 60%;
+    --color-channel-social: 266 85% 58%;
+    --color-channel-paid: 43 96% 56%;
+    --color-channel-email: 318 97% 50%;
+    --color-channel-referral: 197 94% 43%;
+    --color-channel-other: 220 9% 46%;
+
+    /* Performance Colors */
+    --color-excellent: 160 84% 39%;
+    --color-good: 43 96% 56%;
+    --color-poor: 0 84% 60%;
   }
 
   .dark {
@@ -48,6 +84,42 @@
     --border: 12 6.5% 15.1%;
     --input: 12 6.5% 15.1%;
     --ring: 318 97% 50%;
+
+    /* Chart Colors (same in dark mode) */
+    --chart-1: 318 97% 50%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 271 91% 65%;
+
+    /* Component-Specific Colors (same in dark mode) */
+    --color-client: 318 97% 50%;
+    --color-industry-avg: 241 5% 64%;
+    --color-cd-avg: 210 9% 31%;
+    --color-competitor-1: 266 85% 58%;
+    --color-competitor-2: 197 94% 43%;
+    --color-competitor-3: 0 84% 60%;
+    --color-default: 220 9% 46%;
+
+    /* Device Colors (same in dark mode) */
+    --color-device-desktop: 217 91% 60%;
+    --color-device-mobile: 162 73% 46%;
+    --color-device-tablet: 266 85% 58%;
+    --color-device-other: 220 9% 46%;
+
+    /* Traffic Channel Colors (same in dark mode) */
+    --color-channel-organic: 160 84% 39%;
+    --color-channel-direct: 217 91% 60%;
+    --color-channel-social: 266 85% 58%;
+    --color-channel-paid: 43 96% 56%;
+    --color-channel-email: 318 97% 50%;
+    --color-channel-referral: 197 94% 43%;
+    --color-channel-other: 220 9% 46%;
+
+    /* Performance Colors (same in dark mode) */
+    --color-excellent: 160 84% 39%;
+    --color-good: 43 96% 56%;
+    --color-poor: 0 84% 60%;
   }
 
   * {
