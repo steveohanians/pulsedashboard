@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -783,11 +783,12 @@ export class DatabaseStorage implements IStorage {
 
   // GA4 Service Accounts
   async getGA4ServiceAccount(serviceAccountId: string): Promise<any> {
-    // For now, return a mock service account - this will be implemented when we add the ga4ServiceAccounts table
-    return {
-      id: serviceAccountId,
-      accessToken: process.env.GA4_ACCESS_TOKEN || 'mock-access-token'
-    };
+    const [result] = await db
+      .select()
+      .from(ga4ServiceAccounts)
+      .where(eq(ga4ServiceAccounts.id, serviceAccountId))
+      .limit(1);
+    return result || undefined;
   }
 
   // Clear ONLY CLIENT metrics for a specific client and time period (preserve benchmarks)

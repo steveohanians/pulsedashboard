@@ -68,4 +68,42 @@ router.post('/fetch/:clientId', adminRequired, async (req, res) => {
   }
 });
 
+/**
+ * Get GA4 data for a client and period (GET endpoint for dashboard)
+ * GET /api/ga4-data/:clientId/:period
+ */
+router.get('/:clientId/:period', async (req, res) => {
+  try {
+    const { clientId, period } = req.params;
+    
+    logger.info(`GA4 data requested for client: ${clientId}, period: ${period}`);
+    
+    // Convert period (YYYY-MM) to date range
+    const dateRange = ga4DataService.getDateRangeForPeriod(period);
+    
+    // Fetch fresh GA4 data
+    const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+    
+    if (!ga4Data) {
+      return res.status(404).json({
+        success: false,
+        message: 'No GA4 data available for this client'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: ga4Data
+    });
+
+  } catch (error) {
+    logger.error('GA4 data fetch failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch GA4 data',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 export default router;

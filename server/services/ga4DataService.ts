@@ -22,7 +22,7 @@ interface GA4PropertyAccess {
 export class GA4DataService {
   
   /**
-   * Get GA4 property access info for a client
+   * Get GA4 property access info for a client with token refresh
    */
   private async getPropertyAccess(clientId: string): Promise<GA4PropertyAccess | null> {
     try {
@@ -33,10 +33,36 @@ export class GA4DataService {
       }
 
       // Get service account with access token
-      const serviceAccount = await storage.getGA4ServiceAccount(propertyAccess.serviceAccountId);
+      let serviceAccount = await storage.getGA4ServiceAccount(propertyAccess.serviceAccountId);
       if (!serviceAccount || !serviceAccount.accessToken) {
         logger.warn(`No access token for service account: ${propertyAccess.serviceAccountId}`);
         return null;
+      }
+
+      // Check if token is expired and refresh if needed
+      if (serviceAccount.tokenExpiry && new Date() > serviceAccount.tokenExpiry) {
+        logger.info(`Access token expired for service account ${serviceAccount.id}, refreshing...`);
+        
+        if (!serviceAccount.refreshToken) {
+          logger.error(`No refresh token available for service account: ${serviceAccount.id}`);
+          return null;
+        }
+
+        try {
+          const refreshedTokens = await this.refreshAccessToken(serviceAccount.refreshToken);
+          
+          // Update service account with new tokens
+          await this.updateServiceAccountTokens(serviceAccount.id, refreshedTokens.access_token, new Date(refreshedTokens.expiry_date));
+
+          // Update the serviceAccount object for this request
+          serviceAccount.accessToken = refreshedTokens.access_token;
+          serviceAccount.tokenExpiry = new Date(refreshedTokens.expiry_date);
+          
+          logger.info(`Successfully refreshed access token for service account: ${serviceAccount.id}`);
+        } catch (error) {
+          logger.error(`Failed to refresh access token for service account ${serviceAccount.id}:`, error);
+          return null;
+        }
       }
 
       return {
@@ -60,11 +86,6 @@ export class GA4DataService {
         return null;
       }
 
-      // Use existing authentication setup
-      const { makeGA4Request } = await import('../services/ga4ServiceAccountManager');
-      
-      // For now, we'll use the existing makeGA4Request method structure
-
       logger.info('Making GA4 Reporting API request', {
         propertyId: propertyAccess.propertyId,
         hasAccessToken: !!propertyAccess.accessToken,
@@ -73,43 +94,12 @@ export class GA4DataService {
         endDate
       });
 
-      // For now, return sample data structure until we implement the full GA4 API calls
-      // This matches the structure we'll get from actual GA4 API
-      const mainMetricsResponse = {
-        data: {
-          rows: [{
-            metricValues: [
-              { value: '0.35' }, // bounceRate (as decimal)
-              { value: '187' },  // averageSessionDuration (seconds)
-              { value: '2.4' },  // screenPageViewsPerSession
-              { value: '1.2' },  // sessionsPerUser
-              { value: '1250' }, // sessions
-              { value: '1040' }  // totalUsers
-            ]
-          }]
-        }
-      };
-
-      const channelsResponse = {
-        data: {
-          rows: [
-            { dimensionValues: [{ value: 'Organic Search' }], metricValues: [{ value: '650' }] },
-            { dimensionValues: [{ value: 'Direct' }], metricValues: [{ value: '350' }] },
-            { dimensionValues: [{ value: 'Social' }], metricValues: [{ value: '150' }] },
-            { dimensionValues: [{ value: 'Referral' }], metricValues: [{ value: '100' }] }
-          ]
-        }
-      };
-
-      const deviceResponse = {
-        data: {
-          rows: [
-            { dimensionValues: [{ value: 'desktop' }], metricValues: [{ value: '750' }] },
-            { dimensionValues: [{ value: 'mobile' }], metricValues: [{ value: '400' }] },
-            { dimensionValues: [{ value: 'tablet' }], metricValues: [{ value: '100' }] }
-          ]
-        }
-      };
+      // Make actual GA4 API calls to fetch real data
+      const [mainMetricsResponse, channelsResponse, deviceResponse] = await Promise.all([
+        this.fetchMainMetrics(propertyAccess.propertyId, propertyAccess.accessToken, startDate, endDate),
+        this.fetchTrafficChannels(propertyAccess.propertyId, propertyAccess.accessToken, startDate, endDate),
+        this.fetchDeviceData(propertyAccess.propertyId, propertyAccess.accessToken, startDate, endDate)
+      ]);
 
       logger.info('GA4 Reporting API response', {
         status: 200,
@@ -117,7 +107,7 @@ export class GA4DataService {
       });
 
       // Process main metrics
-      const mainRow = mainMetricsResponse.data.rows?.[0];
+      const mainRow = mainMetricsResponse.rows?.[0];
       if (!mainRow?.metricValues) {
         throw new Error('No metric data returned from GA4');
       }
@@ -130,7 +120,7 @@ export class GA4DataService {
       const totalUsers = parseInt(mainRow.metricValues[5]?.value || '0');
 
       // Process traffic channels
-      const trafficChannels = channelsResponse.data.rows?.map((row: any) => {
+      const trafficChannels = channelsResponse.rows?.map((row: any) => {
         const channel = row.dimensionValues?.[0]?.value || 'Unknown';
         const sessions = parseInt(row.metricValues?.[0]?.value || '0');
         const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
@@ -138,7 +128,7 @@ export class GA4DataService {
       }) || [];
 
       // Process device distribution
-      const deviceDistribution = deviceResponse.data.rows?.map((row: any) => {
+      const deviceDistribution = deviceResponse.rows?.map((row: any) => {
         const device = row.dimensionValues?.[0]?.value || 'Unknown';
         const sessions = parseInt(row.metricValues?.[0]?.value || '0');
         const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
@@ -259,6 +249,145 @@ export class GA4DataService {
       logger.error('Error storing GA4 metrics:', error);
       throw error;
     }
+  }
+
+  /**
+   * Fetch main metrics from GA4 API
+   */
+  private async fetchMainMetrics(propertyId: string, accessToken: string, startDate: string, endDate: string) {
+    const reportRequest = {
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate, endDate }],
+      metrics: [
+        { name: 'bounceRate' },
+        { name: 'averageSessionDuration' },
+        { name: 'screenPageViewsPerSession' },
+        { name: 'sessionsPerUser' },
+        { name: 'sessions' },
+        { name: 'totalUsers' }
+      ]
+    };
+
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reportRequest)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('GA4 main metrics API error:', { status: response.status, error: errorText });
+      throw new Error(`GA4 API error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Fetch traffic channels from GA4 API
+   */
+  private async fetchTrafficChannels(propertyId: string, accessToken: string, startDate: string, endDate: string) {
+    const reportRequest = {
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'sessionDefaultChannelGrouping' }],
+      metrics: [{ name: 'sessions' }]
+    };
+
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reportRequest)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('GA4 traffic channels API error:', { status: response.status, error: errorText });
+      throw new Error(`GA4 API error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Fetch device data from GA4 API
+   */
+  private async fetchDeviceData(propertyId: string, accessToken: string, startDate: string, endDate: string) {
+    const reportRequest = {
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'deviceCategory' }],
+      metrics: [{ name: 'sessions' }]
+    };
+
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reportRequest)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('GA4 device data API error:', { status: response.status, error: errorText });
+      throw new Error(`GA4 API error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Refresh an expired access token using the refresh token
+   */
+  private async refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expiry_date: number }> {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to refresh access token: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      access_token: data.access_token,
+      expiry_date: Date.now() + (data.expires_in * 1000) // Convert to timestamp
+    };
+  }
+
+  /**
+   * Update service account tokens in database
+   */
+  private async updateServiceAccountTokens(serviceAccountId: string, accessToken: string, tokenExpiry: Date): Promise<void> {
+    const { db } = await import('../db');
+    const { ga4ServiceAccounts } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+
+    await db.update(ga4ServiceAccounts)
+      .set({
+        accessToken,
+        tokenExpiry
+      })
+      .where(eq(ga4ServiceAccounts.id, serviceAccountId));
   }
 }
 
