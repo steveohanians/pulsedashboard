@@ -246,10 +246,25 @@ function processMetricsData(
           });
         }
       } else {
-        // Regular metric - keep as-is
+        // Regular metric - handle JSON-wrapped values from competitor data
+        let finalValue = m.value;
+        
+        // Parse JSON-formatted competitor values like {"value": 35.76567...}
+        if (typeof m.value === 'string' && m.value.startsWith('{') && m.sourceType === 'Competitor') {
+          try {
+            const parsed = JSON.parse(m.value);
+            if (parsed && typeof parsed.value !== 'undefined') {
+              finalValue = parsed.value;
+            }
+          } catch (e) {
+            // Keep original value if parsing fails
+            console.warn('Failed to parse competitor JSON value:', m.value);
+          }
+        }
+        
         result.push({
           metricName: m.metricName,
-          value: m.value,
+          value: finalValue,
           sourceType: m.sourceType,
           timePeriod: m.timePeriod,
           channel: m.channel,
