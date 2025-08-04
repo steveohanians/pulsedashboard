@@ -569,13 +569,17 @@ export default function Dashboard() {
         }
       });
 
-      // Convert to array format expected by chart
-      const devices = Array.from(deviceMap.entries()).map(([name, value]) => ({
-        name,
-        value: Math.round(value),
-        percentage: Math.round(value),
-        color: DEVICE_COLORS[name as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
-      }));
+      // Convert to array format expected by chart with normalized device names
+      const devices = Array.from(deviceMap.entries()).map(([name, value]) => {
+        // Normalize device names to match chart expectations (capitalize first letter)
+        const normalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        return {
+          name: normalizedName,
+          value: Math.round(value),
+          percentage: Math.round(value),
+          color: DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+        };
+      });
 
       // Ensure percentages add up to 100%
       const total = devices.reduce((sum, device) => sum + device.value, 0);
