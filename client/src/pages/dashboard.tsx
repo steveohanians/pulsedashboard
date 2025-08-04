@@ -1263,7 +1263,7 @@ export default function Dashboard() {
                 return displayText ? (
                   <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
                     <p className="text-xs font-medium text-slate-600">Selected Period:</p>
-                    <p className="text-sm font-semibold text-slate-800">{displayText}</p>
+                    <p className="text-xs font-semibold text-slate-800 leading-tight">{displayText}</p>
                   </div>
                 ) : null;
               })()}
