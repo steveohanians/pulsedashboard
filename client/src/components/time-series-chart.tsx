@@ -67,11 +67,14 @@ function generateTimeSeriesData(
     // Use the current period which should be July 2025 (2025-07)
     const currentMonth = generatePeriodLabel('2025-07'); // This will show "Jul 25"
     
+    // Convert CD_Avg from decimal to percentage for Bounce Rate
+    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    
     return [{
       date: currentMonth,
       [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       'Industry Avg': 0, // No synthetic data
-      'Clear Digital Clients Avg': 0, // No synthetic data
+      'Clear Digital Clients Avg': Number(processedCdAvg).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       ...competitors.reduce((acc, comp) => ({ ...acc, [comp.label]: 0 }), {})
     }];
   }
@@ -136,6 +139,11 @@ function generateRealTimeSeriesData(
 // No fake/sample data will ever be generated - only authentic GA4 data or empty state
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
+  
+  // DEBUG: Check what TimeSeriesChart receives for Bounce Rate
+  if (metricName === 'Bounce Rate') {
+    console.log(`🔍 TIME SERIES CHART received for Bounce Rate:`, { clientData, cdAvg, industryAvg });
+  }
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
   const data = useMemo(() => 
     generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),

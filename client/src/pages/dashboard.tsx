@@ -257,6 +257,15 @@ export default function Dashboard() {
       return averagedMetrics as Record<string, Record<string, number>>;
     }
     
+    // DEBUG: Check raw metrics for Bounce Rate specifically
+    const bounceRateMetrics = dashboardData.metrics?.filter(m => m.metricName === 'Bounce Rate') || [];
+    console.log('🔍 RAW Bounce Rate metrics from API:', bounceRateMetrics.map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      sourceType: m.sourceType,
+      period: m.period
+    })));
+    
     // Calculate averages when multiple time periods are involved
     const result: Record<string, Record<string, number>> = {};
     const counts: Record<string, Record<string, number>> = {};
@@ -1442,6 +1451,16 @@ export default function Dashboard() {
 
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
+            
+            // DEBUG: Compare Bounce Rate vs Session Duration data flow
+            if (metricName === 'Bounce Rate') {
+              console.log(`🔍 BOUNCE RATE Data:`, {
+                metricData,
+                clientData: metricData.Client || 0,
+                cdAvg: metricData.CD_Avg || 0,
+                rawGroupedMetrics: groupedMetrics['Bounce Rate']
+              });
+            }
             
 
             
