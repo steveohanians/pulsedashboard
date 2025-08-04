@@ -1,5 +1,6 @@
 // Database query optimization utilities
 import { storage } from "../storage";
+import { parseMetricValue } from "./metricParser";
 
 // Cache for frequently accessed data
 const queryCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -241,7 +242,7 @@ export async function getDashboardDataOptimized(
               if (!allMetricsInGroup[metricKey]) {
                 allMetricsInGroup[metricKey] = [];
               }
-              allMetricsInGroup[metricKey].push(parseFloat(metric.value) || 0);
+              allMetricsInGroup[metricKey].push(parseMetricValue(metric.value));
             });
           });
           
@@ -334,7 +335,7 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         result.push({
           metricName: m.metricName,
-          value: parseFloat(m.value) || 0,
+          value: parseMetricValue(m.value),
           sourceType: m.sourceType,
           timePeriod: m.timePeriod,
           channel: m.channel,
