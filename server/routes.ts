@@ -11,6 +11,7 @@ import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimit
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
+import { parseMetricValue } from "./utils/metricParser";
 import { performanceCache } from "./cache/performance-cache";
 
 import { backgroundProcessor } from "./utils/background-processor";
@@ -384,7 +385,7 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'Client' // Client data is stored with sourceType 'Client'
       );
       
-      let clientValue = clientMetricForPeriod ? parseFloat(clientMetricForPeriod.value as string) : (metricData.Client || metricData);
+      let clientValue = clientMetricForPeriod ? parseMetricValue(clientMetricForPeriod.value) : (metricData.Client || metricData);
       
       // Special handling for Traffic Channels - use channel count instead of full object
       if (metricName === 'Traffic Channels' && typeof clientValue === 'object') {
@@ -414,8 +415,8 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'CD_Avg'
       );
       
-      const industryAverage = industryMetricForPeriod ? parseFloat(industryMetricForPeriod.value as string) : metricData.Industry_Avg;
-      const cdPortfolioAverage = cdMetricForPeriod ? parseFloat(cdMetricForPeriod.value as string) : metricData.CD_Avg;
+      const industryAverage = industryMetricForPeriod ? parseMetricValue(industryMetricForPeriod.value) : metricData.Industry_Avg;
+      const cdPortfolioAverage = cdMetricForPeriod ? parseMetricValue(cdMetricForPeriod.value) : metricData.CD_Avg;
       
       logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
         metricName, 
@@ -2180,16 +2181,16 @@ export function registerRoutes(app: Express): Server {
         
         switch (metric.sourceType) {
           case "Client":
-            metricGroups[metric.metricName].client = parseFloat(metric.value as string);
+            metricGroups[metric.metricName].client = parseMetricValue(metric.value);
             break;
           case "CD_Avg":
-            metricGroups[metric.metricName].cdAvg = parseFloat(metric.value as string);
+            metricGroups[metric.metricName].cdAvg = parseMetricValue(metric.value);
             break;
           case "Industry":
-            metricGroups[metric.metricName].industry = parseFloat(metric.value as string);
+            metricGroups[metric.metricName].industry = parseMetricValue(metric.value);
             break;
           case "Competitor":
-            metricGroups[metric.metricName].competitors.push(parseFloat(metric.value as string));
+            metricGroups[metric.metricName].competitors.push(parseMetricValue(metric.value) || 0);
             break;
         }
       });
