@@ -33,7 +33,7 @@ export default function Dashboard() {
   
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();
-  const [timePeriod, setTimePeriod] = useState("Last Year");
+  const [timePeriod, setTimePeriod] = useState("Last Month");
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
