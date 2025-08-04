@@ -239,24 +239,11 @@ export default function Dashboard() {
     //   sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
     // });
     
-    // Debug GA4 traffic channel data processing
-    if (trafficMetrics.length > 0) {
-      console.log('Traffic metrics found:', trafficMetrics.length);
-      console.log('All traffic metrics by source:', trafficMetrics.reduce((acc, m) => {
-        acc[m.sourceType] = (acc[m.sourceType] || 0) + 1;
-        return acc;
-      }, {}));
-      
-      const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-      console.log('Client traffic metrics:', clientMetrics.length, clientMetrics);
-      
-      const ga4Metric = trafficMetrics.find(m => m.sourceType === 'Client' && typeof m.value === 'string' && m.value.startsWith('['));
-      if (ga4Metric) {
-        console.log('GA4 JSON metric found:', ga4Metric.value.substring(0, 100) + '...');
-      } else {
-        console.log('No GA4 JSON metric found - checking Client metrics:', 
-          clientMetrics.map(m => ({ value: typeof m.value, preview: String(m.value).substring(0, 50) })));
-      }
+    // Quick validation that GA4 data is found
+    const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+    const ga4ArrayMetric = clientMetrics.find(m => Array.isArray(m.value));
+    if (ga4ArrayMetric) {
+      console.log('✅ GA4 traffic channels found:', ga4ArrayMetric.value.length, 'channels');
     }
     
     if (trafficMetrics.length === 0) {
@@ -276,26 +263,37 @@ export default function Dashboard() {
       const channelMap = new Map();
       
       sourceMetrics.forEach(metric => {
-        // Handle both individual channel records and legacy JSON format
+        // Handle both individual channel records and GA4 array format
         if (metric.channel) {
-          // Individual channel record (new format)
+          // Individual channel record (competitors/averages format)
           const channelName = metric.channel;
           const value = parseFloat(metric.value);
-          
-
           
           if (channelMap.has(channelName)) {
             channelMap.set(channelName, channelMap.get(channelName) + value);
           } else {
             channelMap.set(channelName, value);
           }
+        } else if (Array.isArray(metric.value)) {
+          // GA4 array format - already parsed by backend
+          metric.value.forEach((channel: any) => {
+            const channelName = channel.channel || channel.name;
+            const value = parseFloat(channel.percentage || channel.value || channel.sessions);
+            
+            if (channelName && !isNaN(value)) {
+              if (channelMap.has(channelName)) {
+                channelMap.set(channelName, channelMap.get(channelName) + value);
+              } else {
+                channelMap.set(channelName, value);
+              }
+            }
+          });
         } else if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
-          // GA4 JSON format - parse and aggregate
+          // GA4 JSON string format - parse and aggregate
           try {
             const channelData = JSON.parse(metric.value);
             if (Array.isArray(channelData)) {
               channelData.forEach((channel: any) => {
-                // Handle GA4 format: { channel: "Direct", sessions: 4439, percentage: 64.87... }
                 const channelName = channel.channel || channel.name;
                 const value = parseFloat(channel.percentage || channel.value || channel.sessions);
                 
@@ -309,11 +307,10 @@ export default function Dashboard() {
               });
             }
           } catch (e) {
-            // Fallback for invalid JSON
             console.warn(`Invalid traffic channel JSON data: ${metric.value}`);
           }
         } else {
-          // Handle simple value format (for competitors/averages)
+          // Handle simple value format
           const channelName = metric.channel || 'Unknown';
           const value = parseFloat(metric.value);
           
@@ -406,12 +403,12 @@ export default function Dashboard() {
     };
 
     // Client data
-    const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    if (clientMetrics.length > 0) {
+    const clientTrafficMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+    if (clientTrafficMetrics.length > 0) {
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        channels: aggregateChannelData(clientMetrics)
+        channels: aggregateChannelData(clientTrafficMetrics)
       });
     }
 
