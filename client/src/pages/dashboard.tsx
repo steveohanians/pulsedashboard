@@ -164,6 +164,23 @@ export default function Dashboard() {
     }
   });
 
+  // Delete competitor mutation  
+  const deleteCompetitorMutation = useMutation({
+    mutationFn: (competitorId: string) => apiRequest(`/api/competitors/${competitorId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      // Invalidate cache first, then refetch - ensures UI updates properly
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      // Force refetch the dashboard data immediately
+      dashboardQuery.refetch();
+      setDeletingCompetitorId(null);
+    },
+    onError: () => {
+      setDeletingCompetitorId(null);
+    }
+  });
+
   // Reset filters if current selection is no longer available
   useEffect(() => {
     if (filtersData) {
@@ -1469,24 +1486,9 @@ export default function Dashboard() {
                           variant="ghost"
                           size="sm"
                           disabled={isDeleting}
-                          onClick={async () => {
+                          onClick={() => {
                             setDeletingCompetitorId(competitor.id);
-                            try {
-                              const response = await fetch(`/api/competitors/${competitor.id}`, {
-                                method: 'DELETE',
-                                credentials: 'include'
-                              });
-                              if (response.ok) {
-                                // Wait for refetch to complete before clearing loading state
-                                await dashboardQuery.refetch();
-                                setDeletingCompetitorId(null);
-                              } else {
-                                setDeletingCompetitorId(null);
-                              }
-                            } catch (error) {
-                              // Error deleting competitor: ${error}
-                              setDeletingCompetitorId(null);
-                            }
+                            deleteCompetitorMutation.mutate(competitor.id);
                           }}
                           className={`h-6 w-6 p-0 transition-all duration-200 ${
                             isDeleting 
