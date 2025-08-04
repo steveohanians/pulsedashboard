@@ -123,16 +123,16 @@ function generateRealTimeSeriesData(
 // No fake/sample data will ever be generated - only authentic GA4 data or empty state
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
-  // Memoize data generation FIRST to prevent hooks ordering issues
+  // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
   const data = useMemo(() => 
     generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),
     [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]
   );
 
-  // Check if we have any valid data AFTER hooks
+  // Check if we have any valid data AFTER all hooks are called
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
   
-  // Show no data state if no valid data
+  // Show no data state if no valid data (BUT AFTER ALL HOOKS)
   if (!hasData) {
     return (
       <div className="w-full h-full flex items-center justify-center">
