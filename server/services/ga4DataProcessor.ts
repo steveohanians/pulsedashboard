@@ -118,17 +118,10 @@ export class GA4DataProcessor {
    * This is a placeholder until we get actual device data from GA4
    */
   private generateDeviceDistribution(totalSessions: number) {
-    // Typical device distribution percentages
-    const distributions = [
-      { device: 'Desktop', percentage: 45 },
-      { device: 'Mobile', percentage: 40 },
-      { device: 'Tablet', percentage: 15 },
-    ];
-
-    return distributions.map(dist => ({
-      device: dist.device,
-      sessions: Math.round(totalSessions * (dist.percentage / 100)),
-    }));
+    // DEPRECATED: Device distribution generation removed for data authenticity
+    // All Device Distribution data must come from authentic GA4 sources only
+    console.warn('generateDeviceDistribution called - should use authentic GA4 data only');
+    return [];
   }
 
   /**

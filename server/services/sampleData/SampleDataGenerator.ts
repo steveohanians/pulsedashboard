@@ -96,57 +96,21 @@ export class SampleDataGenerator {
   }
 
   /**
-   * Generate traffic channel distribution
+   * DEPRECATED: Traffic channels generation removed for data authenticity
+   * All Traffic Channels data must come from authentic GA4 sources only
    */
   generateTrafficChannels(periodIndex: number): TrafficChannelDistribution {
-    const seed = this.seedBase + periodIndex + 10000;
-    const rng = this.createSeededRNG(seed);
-    
-    const channels = { ...TRAFFIC_CHANNEL_BASELINES };
-    
-    // Add variation to each channel
-    Object.keys(channels).forEach(channel => {
-      const variation = (rng() - 0.5) * 0.1; // ±5% variation
-      channels[channel as keyof TrafficChannelDistribution] = Math.max(1, 
-        channels[channel as keyof TrafficChannelDistribution] * (1 + variation)
-      );
-    });
-    
-    // Normalize to 100%
-    const total = Object.values(channels).reduce((sum, val) => sum + val, 0);
-    Object.keys(channels).forEach(channel => {
-      channels[channel as keyof TrafficChannelDistribution] = 
-        Math.round((channels[channel as keyof TrafficChannelDistribution] / total) * 100 * 10) / 10;
-    });
-    
-    return channels;
+    // Return empty object - no synthetic data generation allowed
+    return {} as TrafficChannelDistribution;
   }
 
   /**
-   * Generate device distribution
+   * DEPRECATED: Device distribution generation removed for data authenticity
+   * All Device Distribution data must come from authentic GA4 sources only
    */
   generateDeviceDistribution(periodIndex: number): DeviceDistribution {
-    const seed = this.seedBase + periodIndex + 20000;
-    const rng = this.createSeededRNG(seed);
-    
-    const devices = { ...DEVICE_DISTRIBUTION_BASELINE };
-    
-    // Add variation
-    Object.keys(devices).forEach(device => {
-      const variation = (rng() - 0.5) * 0.05; // ±2.5% variation
-      devices[device as keyof DeviceDistribution] = Math.max(5, 
-        devices[device as keyof DeviceDistribution] * (1 + variation)
-      );
-    });
-    
-    // Normalize to 100%
-    const total = Object.values(devices).reduce((sum, val) => sum + val, 0);
-    Object.keys(devices).forEach(device => {
-      devices[device as keyof DeviceDistribution] = 
-        Math.round((devices[device as keyof DeviceDistribution] / total) * 100 * 10) / 10;
-    });
-    
-    return devices;
+    // Return empty object - no synthetic data generation allowed
+    return {} as DeviceDistribution;
   }
 
   /**

@@ -18,51 +18,19 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
   const isTrafficOrDevice = metricName.includes('Traffic') || metricName.includes('Device');
   
   // Apply chart optimization with memoization
-  const optimizedRender = MemoryOptimizer.memoize(() => {
+  const optimizedRender = MemoryOptimizer.memoize(`${metricName}-${JSON.stringify(data)}`, () => {
     if (isTrafficOrDevice) {
-      // Mock data for pie charts - optimized for performance
-      const pieData = metricName.includes('Traffic') 
-        ? [
-            { name: 'Organic Search', value: 35, fill: 'hsl(var(--color-client))' },
-            { name: 'Direct', value: 28, fill: 'hsl(var(--color-competitor-1))' },
-            { name: 'Social Media', value: 15, fill: 'hsl(var(--chart-3))' },
-            { name: 'Referral', value: 12, fill: 'hsl(var(--chart-4))' },
-            { name: 'Email', value: 6, fill: 'hsl(var(--chart-5))' },
-            { name: 'Paid Search', value: 4, fill: 'hsl(var(--color-competitor-2))' }
-          ]
-        : [
-            { name: 'Mobile', value: 58, fill: 'hsl(var(--color-device-mobile))' },
-            { name: 'Desktop', value: 35, fill: 'hsl(var(--color-device-desktop))' },
-            { name: 'Tablet', value: 7, fill: 'hsl(var(--color-device-tablet))' }
-          ];
-
+      // NO FALLBACK DATA - show authentic data only
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={pieData}
-              cx="50%"
-              cy="50%"
-              outerRadius="70%"
-              dataKey="value"
-              label={({ name, value }) => `${name}: ${value}%`}
-              animationDuration={0}
-            >
-              {pieData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                fontSize: '12px'
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center text-slate-500">
+            <div className="mb-2">📊</div>
+            <div className="text-sm">Authentic data only</div>
+            <div className="text-xs text-slate-400 mt-1">
+              {metricName.includes('Traffic') ? 'Traffic channel data' : 'Device distribution data'} sourced from GA4
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -107,5 +75,5 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }, [metricName, data]);
   
-  return optimizedRender();
+  return optimizedRender;
 }

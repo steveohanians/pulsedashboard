@@ -722,41 +722,9 @@ export default function Dashboard() {
       });
     }
 
-    // Dynamic competitor data - generate realistic device data for each competitor
-    competitors.forEach((competitor, index) => {
-      const competitorLabel = cleanDomainName(competitor.domain);
-      
-      // Generate varied but realistic device distribution data
-      // Use competitor ID as seed for consistent but different values
-      const seed = competitor.id.length + index;
-      const desktopBase = 50;
-      const mobileBase = 40;
-      const tabletBase = 10;
-      
-      // Apply variance based on seed
-      const desktopVariance = (seed % 20) - 10; // -10 to +10
-      const mobileVariance = (seed % 16) - 8;   // -8 to +8
-      
-      let desktop = Math.max(30, Math.min(70, desktopBase + desktopVariance));
-      let mobile = Math.max(25, Math.min(60, mobileBase + mobileVariance));
-      let tablet = Math.max(5, 100 - desktop - mobile);
-      
-      // Normalize to ensure they add up to 100%
-      const total = desktop + mobile + tablet;
-      desktop = Math.round((desktop / total) * 100);
-      mobile = Math.round((mobile / total) * 100);
-      tablet = 100 - desktop - mobile;
-
-      result.push({
-        sourceType: `Competitor_${competitor.id}`,
-        label: competitorLabel,
-        devices: [
-          { name: 'Desktop', value: desktop, percentage: desktop, color: DEVICE_COLORS['Desktop'] },
-          { name: 'Mobile', value: mobile, percentage: mobile, color: DEVICE_COLORS['Mobile'] },
-          { name: 'Tablet', value: tablet, percentage: tablet, color: DEVICE_COLORS['Tablet'] }
-        ]
-      });
-    });
+    // NO SYNTHETIC DATA FOR COMPETITORS - only use authentic database data
+    // Future competitor device data will come from actual data sources
+    // competitors.forEach(() => { /* Competitor device data generation removed to ensure data authenticity */ });
 
     return result;
   };
