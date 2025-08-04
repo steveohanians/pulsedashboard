@@ -1028,12 +1028,14 @@ export function registerRoutes(app: Express): Server {
         clientId: validatedData.clientId 
       });
       
-      // Clear caches to ensure new competitor appears immediately
-      clearCache(`dashboard-${validatedData.clientId}`);
+      // Clear both cache systems to ensure new competitor appears immediately
+      clearCache(`dashboard-${validatedData.clientId}`); // Query optimizer cache (dashes)
+      performanceCache.invalidateClientCache(validatedData.clientId); // Performance cache (colons)
       logger.info("Cache cleared after competitor creation", { 
         competitorId: competitor.id, 
         clientId: validatedData.clientId,
-        cacheKeys: debugCacheKeys()
+        queryOptimizerKeys: debugCacheKeys(),
+        performanceCacheStats: performanceCache.getStats()
       });
       
       res.status(201).json(competitor);
@@ -1075,12 +1077,14 @@ export function registerRoutes(app: Express): Server {
         clientId 
       });
       
-      // Clear relevant caches after competitor deletion
-      clearCache(`dashboard-${clientId}`);
+      // Clear both cache systems after competitor deletion
+      clearCache(`dashboard-${clientId}`); // Query optimizer cache (dashes)
+      performanceCache.invalidateClientCache(clientId); // Performance cache (colons)
       logger.info("Cache cleared after competitor deletion", { 
         competitorId: id, 
         clientId,
-        cacheKeys: debugCacheKeys()
+        queryOptimizerKeys: debugCacheKeys(),
+        performanceCacheStats: performanceCache.getStats()
       });
       
       res.sendStatus(204);
