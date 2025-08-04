@@ -118,16 +118,21 @@ function generateMetricValue(
   return Math.max(0, Math.round(finalValue)).toString();
 }
 
-// Generate traffic channel data
-function generateTrafficChannelData(): string {
+// Generate traffic channel data with optional seed for consistency
+function generateTrafficChannelData(seed?: number): string {
   const channels: Record<string, number> = {};
   let remaining = 100;
+  
+  // Use seed for deterministic random if provided
+  const getRandom = seed !== undefined 
+    ? () => ((seed * 9301 + 49297) % 233280) / 233280
+    : () => Math.random();
   
   TRAFFIC_CHANNELS.forEach((channel, index) => {
     if (index === TRAFFIC_CHANNELS.length - 1) {
       channels[channel] = remaining;
     } else {
-      const percentage = Math.floor(Math.random() * (remaining / 2)) + 5;
+      const percentage = Math.floor(getRandom() * (remaining / 2)) + 5;
       channels[channel] = Math.min(percentage, remaining - 5);
       remaining -= channels[channel];
     }
@@ -136,10 +141,18 @@ function generateTrafficChannelData(): string {
   return JSON.stringify(channels);
 }
 
-// Generate device distribution data
-function generateDeviceData(): string {
-  const mobile = 50 + Math.random() * 20; // 50-70%
-  const desktop = 20 + Math.random() * 20; // 20-40%
+// Generate device distribution data with optional seed for consistency
+function generateDeviceData(seed?: number): string {
+  // Use seed for deterministic random if provided
+  const getRandom = seed !== undefined 
+    ? () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      }
+    : () => Math.random();
+  
+  const mobile = 50 + getRandom() * 20; // 50-70%
+  const desktop = 20 + getRandom() * 20; // 20-40%
   const tablet = 100 - mobile - desktop; // remainder
   
   return JSON.stringify({
@@ -276,15 +289,29 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
         });
         totalMetricsCreated++;
         
-        // Device Distribution for client
-        await storage.createMetric({
-          clientId,
-          metricName: 'Device Distribution',
-          value: generateDeviceData(),
-          sourceType: 'Client',
-          timePeriod: period
-        });
-        totalMetricsCreated++;
+        // Device Distribution for client (bulletproof JSON storage)
+        try {
+          await storage.createMetric({
+            clientId,
+            metricName: 'Device Distribution',
+            value: generateDeviceData(),
+            sourceType: 'Client',
+            timePeriod: period
+          });
+          totalMetricsCreated++;
+        } catch (error) {
+          logger.error('Device Distribution storage error - using fallback approach', { error: (error as Error).message, period });
+          // Fallback: Store as JSON string if direct storage fails
+          const deviceDataObj = JSON.parse(generateDeviceData());
+          await storage.createMetric({
+            clientId,
+            metricName: 'Device Distribution',
+            value: JSON.stringify(deviceDataObj),
+            sourceType: 'Client',
+            timePeriod: period
+          });
+          totalMetricsCreated++;
+        }
       }
       
       // 2. Generate COMPETITOR data
@@ -313,6 +340,51 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
             });
             totalMetricsCreated++;
           }
+          
+          // Generate Traffic Channels for competitor (bulletproof)
+          try {
+            const competitorSeed = periodIndex + parseInt(competitor.id.slice(-2), 16);
+            const trafficData = generateTrafficChannelData(competitorSeed);
+            await storage.createMetric({
+              clientId,
+              competitorId: competitor.id,
+              metricName: 'Traffic Channels',
+              value: trafficData,
+              sourceType: 'Competitor',
+              timePeriod: period
+            });
+            totalMetricsCreated++;
+          } catch (error) {
+            logger.error('Competitor Traffic Channels error', { error: (error as Error).message, competitorId: competitor.id, period });
+          }
+          
+          // Generate Device Distribution for competitor (bulletproof)
+          try {
+            const competitorSeed = periodIndex + parseInt(competitor.id.slice(-4, -2), 16);
+            const deviceData = generateDeviceData(competitorSeed);
+            await storage.createMetric({
+              clientId,
+              competitorId: competitor.id,
+              metricName: 'Device Distribution',
+              value: deviceData,
+              sourceType: 'Competitor',
+              timePeriod: period
+            });
+            totalMetricsCreated++;
+          } catch (error) {
+            logger.error('Competitor Device Distribution error - using fallback', { error: (error as Error).message, competitorId: competitor.id, period });
+            // Fallback: Store as JSON string if direct storage fails
+            const deviceDataObj = JSON.parse(generateDeviceData());
+            await storage.createMetric({
+              clientId,
+              competitorId: competitor.id,
+              metricName: 'Device Distribution',
+              value: JSON.stringify(deviceDataObj),
+              sourceType: 'Competitor',
+              timePeriod: period
+            });
+            totalMetricsCreated++;
+          }
         }
         
         if (periodIndex % 3 === 0) { // Log every quarter
@@ -328,13 +400,52 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
       if (periodIndex === 0) entitiesGenerated.push('Industry_Avg');
       for (const metricName of CORE_METRICS) {
         const value = generateMetricValue(metricName, 'Industry_Avg', baseValues, periodIndex, periods.length);
-        await storage.createBenchmarkMetric({
+        await storage.createMetric({
+          clientId,
           metricName,
           value,
           sourceType: 'Industry_Avg',
-          timePeriod: period,
-          businessSize: 'All',
-          industryVertical: 'All'
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      }
+      
+      // Generate Traffic Channels for Industry_Avg (bulletproof)
+      try {
+        const industryTrafficData = generateTrafficChannelData(periodIndex + 1000);
+        await storage.createMetric({
+          clientId,
+          metricName: 'Traffic Channels',
+          value: industryTrafficData,
+          sourceType: 'Industry_Avg',
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      } catch (error) {
+        logger.error('Industry_Avg Traffic Channels error', { error: (error as Error).message, period });
+      }
+      
+      // Generate Device Distribution for Industry_Avg (bulletproof)
+      try {
+        const industryDeviceData = generateDeviceData(periodIndex + 2000);
+        await storage.createMetric({
+          clientId,
+          metricName: 'Device Distribution',
+          value: industryDeviceData,
+          sourceType: 'Industry_Avg',
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      } catch (error) {
+        logger.error('Industry_Avg Device Distribution error - using fallback', { error: (error as Error).message, period });
+        // Fallback: Store as JSON string if direct storage fails
+        const deviceDataObj = JSON.parse(generateDeviceData());
+        await storage.createMetric({
+          clientId,
+          metricName: 'Device Distribution',
+          value: JSON.stringify(deviceDataObj),
+          sourceType: 'Industry_Avg',
+          timePeriod: period
         });
         totalMetricsCreated++;
       }
@@ -343,13 +454,52 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
       if (periodIndex === 0) entitiesGenerated.push('CD_Avg');
       for (const metricName of CORE_METRICS) {
         const value = generateMetricValue(metricName, 'CD_Avg', baseValues, periodIndex, periods.length);
-        await storage.createBenchmarkMetric({
+        await storage.createMetric({
+          clientId,
           metricName,
           value,
           sourceType: 'CD_Avg',
-          timePeriod: period,
-          businessSize: 'All',
-          industryVertical: 'All'
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      }
+      
+      // Generate Traffic Channels for CD_Avg (bulletproof)
+      try {
+        const cdTrafficData = generateTrafficChannelData(periodIndex + 3000);
+        await storage.createMetric({
+          clientId,
+          metricName: 'Traffic Channels',
+          value: cdTrafficData,
+          sourceType: 'CD_Avg',
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      } catch (error) {
+        logger.error('CD_Avg Traffic Channels error', { error: (error as Error).message, period });
+      }
+      
+      // Generate Device Distribution for CD_Avg (bulletproof)
+      try {
+        const cdDeviceData = generateDeviceData(periodIndex + 4000);
+        await storage.createMetric({
+          clientId,
+          metricName: 'Device Distribution',
+          value: cdDeviceData,
+          sourceType: 'CD_Avg',
+          timePeriod: period
+        });
+        totalMetricsCreated++;
+      } catch (error) {
+        logger.error('CD_Avg Device Distribution error - using fallback', { error: (error as Error).message, period });
+        // Fallback: Store as JSON string if direct storage fails
+        const deviceDataObj = JSON.parse(generateDeviceData());
+        await storage.createMetric({
+          clientId,
+          metricName: 'Device Distribution',
+          value: JSON.stringify(deviceDataObj),
+          sourceType: 'CD_Avg',
+          timePeriod: period
         });
         totalMetricsCreated++;
       }

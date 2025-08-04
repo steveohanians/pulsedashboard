@@ -54,6 +54,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
   - **Variation Logic**: All competitors show realistic up/down patterns with 5-10% monthly changes for clear visual differentiation
   - **Verification Status**: Dynamic competitor count based on client configuration, proper seasonal variations across all 6 metrics
   - **API Endpoint**: `/api/generate-sample-data/:clientId` with flexible competitor management
+  - **Device Distribution Error Fix**: Added bulletproof error handling for device_type column issues. System now properly stores device distribution data as JSON in the single metrics table using the value field, with comprehensive fallback logic and deterministic seed-based variation generation for consistent competitive differentiation across all source types.
 
 ## External Dependencies
 
