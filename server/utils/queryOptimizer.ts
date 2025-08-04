@@ -50,8 +50,8 @@ export function debugCacheKeys(): string[] {
 // Optimized filters query with caching
 export async function getFiltersOptimized() {
   const cacheKey = 'filters';
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
+  // TEMPORARILY DISABLED: if (cached) return cached;
   
   // Get benchmark companies data for filters
   const benchmarkCompanies = await storage.getBenchmarkCompanies();
@@ -90,8 +90,8 @@ export async function getDashboardDataOptimized(
   timePeriod?: string
 ) {
   const cacheKey = `dashboard-${client.id}-${periodsToQuery.join(',')}-${businessSize}-${industryVertical}`;
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
+  // TEMPORARILY DISABLED: if (cached) return cached;
   
   // Prepare filters for industry data
   const filters = { businessSize, industryVertical };
@@ -465,8 +465,8 @@ function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
 // Separate function for heavy data (charts, metrics) - lazy loaded
 export async function getDashboardMetricsOptimized(clientId: string, filters: any) {
   const cacheKey = `metrics-${clientId}-${JSON.stringify(filters)}`;
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
+  // TEMPORARILY DISABLED: if (cached) return cached;
   
   // This function needs to be implemented - placeholder for now
   const metrics: any[] = [];
