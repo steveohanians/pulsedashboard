@@ -17,63 +17,55 @@ const COLORS = {
 export default function MetricsChart({ metricName, data }: MetricsChartProps) {
   const isTrafficOrDevice = metricName.includes('Traffic') || metricName.includes('Device');
   
-  // Apply chart optimization with memoization
-  const optimizedRender = MemoryOptimizer.memoize(`${metricName}-${JSON.stringify(data)}`, () => {
-    if (isTrafficOrDevice) {
-      // NO FALLBACK DATA - show authentic data only
-      return (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="text-center text-slate-500">
-            <div className="mb-2">📊</div>
-            <div className="text-sm">Authentic data only</div>
-            <div className="text-xs text-slate-400 mt-1">
-              {metricName.includes('Traffic') ? 'Traffic channel data' : 'Device distribution data'} sourced from GA4
-            </div>
+  if (isTrafficOrDevice) {
+    // NO FALLBACK DATA - show authentic data only
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📊</div>
+          <div className="text-sm">Authentic data only</div>
+          <div className="text-xs text-slate-400 mt-1">
+            {metricName.includes('Traffic') ? 'Traffic channel data' : 'Device distribution data'} sourced from GA4
           </div>
         </div>
-      );
-    }
-
-    // Optimize bar chart data points
-    const chartDataPoints = Object.entries(data).map(([key, value]) => ({
-      name: key,
-      value: Math.round(value * 10) / 10,
-      fill: COLORS[key as keyof typeof COLORS] || 'hsl(var(--color-default))'
-    }));
-    
-    const optimizedData = ChartOptimizer.optimizeDataPoints(chartDataPoints);
-
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={optimizedData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis 
-            dataKey="name" 
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={11}
-            tickMargin={10}
-          />
-          <YAxis 
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={11}
-            tickMargin={10}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              fontSize: '12px'
-            }}
-            labelStyle={{ fontWeight: 'bold' }}
-            animationDuration={0}
-          />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={0} />
-        </BarChart>
-      </ResponsiveContainer>
+      </div>
     );
-  }, [metricName, data]);
+  }
+
+  // Optimize bar chart data points
+  const chartDataPoints = Object.entries(data).map(([key, value]) => ({
+    name: key,
+    value: Math.round(value * 10) / 10,
+    fill: COLORS[key as keyof typeof COLORS] || 'hsl(var(--color-default))'
+  }));
   
-  return optimizedRender;
+  const optimizedData = ChartOptimizer.optimizeDataPoints(chartDataPoints);
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={optimizedData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis 
+          dataKey="name" 
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={11}
+          tickMargin={10}
+        />
+        <YAxis 
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={11}
+          tickMargin={10}
+        />
+        <Tooltip 
+          contentStyle={{
+            backgroundColor: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '6px',
+            fontSize: '12px'
+          }}
+        />
+        <Bar dataKey="value" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
 }

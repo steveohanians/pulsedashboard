@@ -84,6 +84,7 @@ export default function Dashboard() {
       channel?: string;
       competitorId?: string;
     }> | Record<string, Record<string, number>>;
+    averagedMetrics?: Record<string, Record<string, number>>;
     timeSeriesData?: Record<string, Array<{
       metricName: string;
       value: string;
@@ -94,6 +95,7 @@ export default function Dashboard() {
       id: string;
       domain: string;
       label: string;
+      status?: string;
     }>;
     insights: Array<{
       metricName: string;
@@ -400,7 +402,7 @@ export default function Dashboard() {
     competitors.forEach((competitor) => {
       const competitorLabel = cleanDomainName(competitor.domain);
       const competitorMetrics = trafficMetrics.filter(m => 
-        m.sourceType === 'Competitor' && m.competitorId === competitor.id
+        m.sourceType === 'Competitor' && 'competitorId' in m && m.competitorId === competitor.id
       );
       
       if (competitorMetrics.length > 0) {
@@ -1670,7 +1672,14 @@ export default function Dashboard() {
                       metricName={metricName}
                       clientId={client?.id || ''}
                       timePeriod={timePeriod}
-                      metricData={metricData}
+                      metricData={{
+                        metricName,
+                        clientValue: metricData?.Client || null,
+                        industryAverage: metricData?.Industry_Avg || null,
+                        cdAverage: metricData?.CD_Avg || null,
+                        competitorValues: [],
+                        competitorNames: []
+                      }}
                       onStatusChange={(status) => {
                         logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
@@ -1695,7 +1704,7 @@ export default function Dashboard() {
         <CompetitorModal
           isOpen={showCompetitorModal}
           onClose={() => setShowCompetitorModal(false)}
-          competitors={competitors}
+          competitors={competitors.map(c => ({ ...c, status: c.status || 'active' }))}
           clientId={user?.clientId || ""}
         />
       </div>

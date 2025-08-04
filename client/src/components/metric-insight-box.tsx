@@ -77,16 +77,12 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   } | null>(null);
   const queryClient = useQueryClient();
   
-  // Load insight from persistent storage on mount
+  // Load insight from persistent storage on mount - disabled for performance
   useEffect(() => {
-    const storedInsight = insightsStorage.load(clientId, metricName);
-    if (storedInsight && !insight) { // Only load from storage if no current insight
-      // Disable typing effect for stored insights to prevent restart
-      setInsight({ ...storedInsight, isTyping: false, isFromStorage: true });
-      // Status loaded from storage
-      onStatusChange?.(storedInsight.status);
-    }
-  }, [clientId, metricName, onStatusChange]); // Removed insight from deps to prevent interference
+    // localStorage operations disabled for performance optimization
+    // const storedInsight = insightsStorage.load(clientId, metricName);
+    // Storage functionality disabled
+  }, [clientId, metricName, onStatusChange]);
   
   // Store insight in persistent storage when it changes (without typing state)
   useEffect(() => {
@@ -194,12 +190,12 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   if (insight) {
     return (
       <AIInsights
-        context={insight.contextText}
-        insight={insight.insightText}
-        recommendation={insight.recommendationText}
+        context={''}
+        insight={insight.insights?.[0] || ''}
+        recommendation={insight.recommendations?.[0] || ''}
         status={insight.status}
         isTyping={insight.isTyping}
-        hasCustomContext={insight.hasCustomContext}
+        hasCustomContext={false}
         clientId={clientId}
         metricName={metricName}
         timePeriod={timePeriod}
