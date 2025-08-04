@@ -12,7 +12,7 @@ import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { performanceCache } from "./cache/performance-cache";
-import { SampleDataGenerator } from './services/sampleData/SampleDataGenerator';
+
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4DataRoute from "./routes/ga4DataRoute";
@@ -20,7 +20,7 @@ import smartGA4Route from "./routes/smartGA4Route";
 import cleanupAndFetchRoute from "./routes/cleanupAndFetchRoute";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
-import sampleDataRoute from "./routes/sampleDataRoute";
+
 import adminGA4Route from "./routes/adminGA4Route";
 import ga4AdminRoutes from "./routes/ga4-admin";
 
@@ -40,217 +40,10 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
-// Helper function to generate historical data for a single competitor
-async function generateCompetitorHistoricalData(clientId: string, competitor: any, competitorIndex: number = 0): Promise<void> {
-  logger.info("DETAILED: Starting competitor historical data generation", {
-    clientId,
-    competitorId: competitor.id,
-    competitorDomain: competitor.domain
-  });
-  
-  const generator = new SampleDataGenerator(clientId);
-  
-  // Get periods - log them for debugging
-  const periodList = generateCompetitorPeriodList();
-  logger.info("DETAILED: Generated period list", {
-    periodsCount: periodList.length,
-    periods: periodList.map(p => p.period)
-  });
-  
-  let successCount = 0;
-  let errorCount = 0;
-  
-  for (const period of periodList) {
-    try {
-      logger.info(`DETAILED: Processing period ${period.period}`, {
-        competitorId: competitor.id,
-        period: period.period
-      });
-      
-      // Get client baseline - try current period, then use latest available data
-      let clientMetrics = await storage.getMetricsByClient(clientId, period.period);
-      logger.info(`DETAILED: Client metrics for ${period.period}`, {
-        metricsCount: clientMetrics?.length || 0
-      });
-      
-      if (!clientMetrics || clientMetrics.length === 0) {
-        // Fallback to latest client data or generate realistic baseline
-        const allClientMetrics = await storage.getMetricsByClient(clientId, '2025-07');
-        clientMetrics = allClientMetrics.length > 0 ? allClientMetrics : [];
-        logger.info(`DETAILED: Using fallback metrics from 2025-07`, {
-          fallbackMetricsCount: clientMetrics.length
-        });
-      }
-      
-      let clientBaseline = extractClientBaseline(clientMetrics);
-      logger.info(`DETAILED: Extracted baseline for ${period.period}`, {
-        hasBaseline: !!clientBaseline,
-        baseline: clientBaseline
-      });
-      
-      // If no client baseline available, use realistic industry baseline
-      if (!clientBaseline) {
-        clientBaseline = {
-          bounceRate: 35 + (Math.random() * 10), // 35-45%
-          sessionDuration: 200 + (Math.random() * 100), // 200-300 seconds
-          pagesPerSession: 2.5 + (Math.random() * 1), // 2.5-3.5 pages
-          sessionsPerUser: 1.4 + (Math.random() * 0.4) // 1.4-1.8 sessions
-        };
-        logger.info(`DETAILED: Using industry baseline for ${period.period}`, {
-          industryBaseline: clientBaseline
-        });
-      }
-      
-      const competitorMetrics = generator.generateCompetitorMetrics(
-        clientBaseline, 
-        competitorIndex, // Use unique competitor index for variation
-        periodList.indexOf(period) // periodIndex
-      );
-      
-      logger.info(`DETAILED: Generated competitor metrics for ${period.period}`, {
-        competitorMetrics
-      });
-      
-      await storeCompetitorMetrics(clientId, competitor.id, period.period, competitorMetrics);
-      
-      logger.info(`DETAILED: Successfully stored metrics for ${period.period}`, {
-        competitorId: competitor.id,
-        period: period.period
-      });
-      
-      successCount++;
-      
-    } catch (error) {
-      errorCount++;
-      logger.error(`DETAILED: Failed to generate competitor data for period ${period.period}`, {
-        competitorId: competitor.id,
-        period: period.period,
-        error: (error as Error).message,
-        stack: (error as Error).stack
-      });
-    }
-  }
-  
-  logger.info("DETAILED: Completed competitor historical data generation", {
-    clientId,
-    competitorId: competitor.id,
-    competitorDomain: competitor.domain,
-    successCount,
-    errorCount,
-    totalPeriods: periodList.length
-  });
-}
 
-// Helper function to extract client baseline from metrics
-function extractClientBaseline(clientMetrics: any[]): any {
-  if (!clientMetrics || clientMetrics.length === 0) return null;
-  
-  // Use proper metric names that match database storage
-  const bounceRateMetric = clientMetrics.find(m => m.metricName === 'Bounce Rate');
-  const sessionDurationMetric = clientMetrics.find(m => m.metricName === 'Session Duration');
-  const pagesPerSessionMetric = clientMetrics.find(m => m.metricName === 'Pages per Session');
-  const sessionsPerUserMetric = clientMetrics.find(m => m.metricName === 'Sessions per User');
-  
-  if (!bounceRateMetric || !sessionDurationMetric) return null;
-  
-  return {
-    bounceRate: typeof bounceRateMetric.value === 'object' ? bounceRateMetric.value.value : parseFloat(bounceRateMetric.value),
-    sessionDuration: typeof sessionDurationMetric.value === 'object' ? sessionDurationMetric.value.value : parseFloat(sessionDurationMetric.value),
-    pagesPerSession: pagesPerSessionMetric ? (typeof pagesPerSessionMetric.value === 'object' ? pagesPerSessionMetric.value.value : parseFloat(pagesPerSessionMetric.value)) : 2.8,
-    sessionsPerUser: sessionsPerUserMetric ? (typeof sessionsPerUserMetric.value === 'object' ? sessionsPerUserMetric.value.value : parseFloat(sessionsPerUserMetric.value)) : 1.6
-  };
-}
 
-// Helper function to store competitor metrics
-async function storeCompetitorMetrics(clientId: string, competitorId: string, period: string, competitorMetrics: any): Promise<void> {
-  logger.info("DETAILED: Starting to store competitor metrics", {
-    clientId,
-    competitorId,
-    period,
-    competitorMetrics
-  });
-  
-  // Import metric names constants to ensure proper naming
-  const { METRIC_NAMES } = await import('./services/sampleData/constants');
-  
-  logger.info("DETAILED: Imported metric names", {
-    metricNames: METRIC_NAMES
-  });
-  
-  const metrics = [
-    { metricName: METRIC_NAMES.BOUNCE_RATE, value: competitorMetrics.bounceRate.toFixed(2), sourceType: 'Competitor' as const },
-    { metricName: METRIC_NAMES.SESSION_DURATION, value: competitorMetrics.sessionDuration.toFixed(2), sourceType: 'Competitor' as const },
-    { metricName: METRIC_NAMES.PAGES_PER_SESSION, value: competitorMetrics.pagesPerSession.toFixed(2), sourceType: 'Competitor' as const },
-    { metricName: METRIC_NAMES.SESSIONS_PER_USER, value: competitorMetrics.sessionsPerUser.toFixed(2), sourceType: 'Competitor' as const }
-  ];
-  
-  logger.info("DETAILED: Prepared metrics for storage", {
-    metricsCount: metrics.length,
-    metrics
-  });
-  
-  for (const metric of metrics) {
-    try {
-      const result = await storage.createMetric({
-        clientId,
-        competitorId,
-        metricName: metric.metricName,
-        value: metric.value,
-        sourceType: metric.sourceType,
-        timePeriod: period
-      });
-      
-      logger.info("DETAILED: Successfully stored metric", {
-        metricName: metric.metricName,
-        value: metric.value,
-        period,
-        competitorId,
-        resultId: result?.id
-      });
-    } catch (error) {
-      logger.error("DETAILED: Failed to store metric", {
-        metricName: metric.metricName,
-        value: metric.value,
-        period,
-        competitorId,
-        error: (error as Error).message,
-        stack: (error as Error).stack
-      });
-      throw error; // Re-throw to be caught by parent function
-    }
-  }
-  
-  logger.info("DETAILED: Completed storing all metrics for period", {
-    clientId,
-    competitorId,
-    period,
-    metricsStored: metrics.length
-  });
-}
 
-// Helper function to generate period list for competitor data
-function generateCompetitorPeriodList(): Array<{ period: string; type: 'daily' | 'monthly' }> {
-  const periods = [];
-  
-  // Generate exactly the same periods as sample data (2024-06 to 2025-07)
-  // This ensures consistency with existing client data
-  const startYear = 2024;
-  const startMonth = 6; // June
-  const endYear = 2025;
-  const endMonth = 7; // July
-  
-  for (let year = startYear; year <= endYear; year++) {
-    const monthStart = year === startYear ? startMonth : 1;
-    const monthEnd = year === endYear ? endMonth : 12;
-    
-    for (let month = monthStart; month <= monthEnd; month++) {
-      const period = `${year}-${String(month).padStart(2, '0')}`;
-      periods.push({ period, type: 'monthly' as const });
-    }
-  }
-  
-  return periods; // Already in chronological order
-}
+
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -526,43 +319,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 🚀 Generate comprehensive sample data endpoint
-  app.post("/api/generate-sample-data/:clientId", requireAuth, async (req, res) => {
-    try {
-      const { clientId } = req.params;
-      const { months = 15, forceReplace = true } = req.body;
 
-      // Verify admin access
-      if (!req.user || req.user.role !== "Admin") {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      logger.info('Starting comprehensive sample data generation', { clientId, months, forceReplace });
-
-      // Import here to avoid circular dependencies
-      const { SampleDataManager } = await import('./services/sampleData');
-      const sampleDataManager = new SampleDataManager();
-      
-      const result = await sampleDataManager.generateSampleData({
-        clientId,
-        periods: months,
-        forceGeneration: forceReplace,
-        skipGA4Check: clientId === 'demo-client-id'
-      });
-
-      res.json(result);
-    } catch (error) {
-      logger.error("Sample data generation error", { 
-        error: (error as Error).message, 
-        stack: (error as Error).stack,
-        clientId: req.params.clientId 
-      });
-      res.status(500).json({ 
-        success: false,
-        message: `Failed to generate sample data: ${(error as Error).message}`
-      });
-    }
-  });
 
   // Generate metric-specific insights
   app.post("/api/generate-metric-insight/:clientId", requireAuth, async (req, res) => {
@@ -1250,47 +1007,16 @@ export function registerRoutes(app: Express): Server {
         clientId: validatedData.clientId 
       });
 
-      // Generate historical sample data for the new competitor BEFORE sending response
-      try {
-        logger.info("Starting historical data generation for new competitor", { 
-          competitorId: competitor.id, 
-          domain: competitor.domain 
-        });
-        // Get existing competitors count to assign unique index (exclude the just-created one)
-        const existingCompetitors = await storage.getCompetitorsByClient(validatedData.clientId);
-        const competitorIndex = existingCompetitors.length - 1; // Subtract 1 since we just added this competitor
-        
-        await generateCompetitorHistoricalData(validatedData.clientId, competitor, competitorIndex);
-        logger.info("Successfully generated historical data for new competitor", { 
-          competitorId: competitor.id, 
-          domain: competitor.domain,
-          competitorIndex 
-        });
-        
-        // Clear both cache systems to ensure new competitor appears immediately - force clear everything
-        clearCache(); // Clear ALL query optimizer cache
-        performanceCache.clear(); // Clear ALL performance cache
-        
-        logger.info("FORCE CLEARED ALL CACHES after competitor creation and data generation", { 
-          competitorId: competitor.id, 
-          clientId: validatedData.clientId,
-          competitorIndex,
-          message: "Completely cleared both cache systems to ensure UI updates"
-        });
-        
-        // Send success response AFTER data generation completes
-        res.status(201).json({ ...competitor, dataGenerated: true });
-        
-      } catch (dataError) {
-        logger.error("CRITICAL: Failed to generate historical data for competitor", { 
-          competitorId: competitor.id, 
-          domain: competitor.domain,
-          error: (dataError as Error).message,
-          stack: (dataError as Error).stack 
-        });
-        // Send success response even if data generation fails, but indicate the issue
-        res.status(201).json({ ...competitor, dataGenerated: false, dataError: (dataError as Error).message });
-      }
+      // Clear both cache systems to ensure new competitor appears immediately
+      clearCache(); // Clear ALL query optimizer cache
+      performanceCache.clear(); // Clear ALL performance cache
+      
+      logger.info("Cleared caches after competitor creation", { 
+        competitorId: competitor.id, 
+        clientId: validatedData.clientId
+      });
+      
+      res.status(201).json(competitor);
     } catch (error) {
       logger.error("Error creating competitor", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Invalid data" });
@@ -1476,59 +1202,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Generate sample data for existing competitors
-  app.post("/api/generate-competitor-data/:clientId", requireAuth, async (req, res) => {
-    try {
-      const { clientId } = req.params;
-      
-      // Verify user has access to this client
-      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
-        return res.status(403).json({ message: "Access denied" });
-      }
 
-      const competitors = await storage.getCompetitorsByClient(clientId);
-      
-      // Check which competitors need data
-      let dataGenerated = 0;
-      
-      for (const competitor of competitors) {
-        // Check with current period
-        const now = new Date();
-        const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const existingMetrics = await storage.getMetricsByCompetitors(clientId, currentPeriod);
-        const competitorHasData = existingMetrics.some(m => m.competitorId === competitor.id);
-        
-        // Always regenerate data for competitors using new sample data manager
-        {
-          const { SampleDataManager } = await import("./services/sampleData");
-          const sampleDataManager = new SampleDataManager();
-          const result = await sampleDataManager.generateSampleData({
-            clientId,
-            periods: 15,
-            forceGeneration: true
-          });
-          
-          if (result.success) {
-            dataGenerated++;
-            logger.info("Successfully regenerated data for existing competitor", { 
-              competitorId: competitor.id, 
-              clientId: clientId 
-            });
-          } else {
-            logger.warn("Competitor data regeneration was disabled", { 
-              competitorId: competitor.id, 
-              message: result.message || 'No message provided'
-            });
-          }
-        }
-      }
-      
-      res.json({ message: `Generated sample data for ${dataGenerated} competitors` });
-    } catch (error) {
-      logger.error("Error generating competitor data", { error: (error as Error).message, stack: (error as Error).stack });
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 
   // Admin routes
   app.get("/api/admin/clients", requireAdmin, async (req, res) => {
@@ -2499,7 +2173,7 @@ export function registerRoutes(app: Express): Server {
   app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/admin/ga4", adminGA4Route);
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
-  app.use("/api/sample-data", sampleDataRoute);
+
   app.use("/api", cleanupAndFetchRoute);
   
   // Simple GA4 refresh endpoint for demo client (no auth required)
