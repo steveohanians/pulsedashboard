@@ -18,6 +18,7 @@ Before making any changes that affect data or architecture:
 - State exactly what entities/data will be modified
 - Confirm the scope matches the user's request
 - Wait for confirmation before proceeding with any destructive operations
+- Always ask "Should I proceed with this approach?" before executing changes
 
 ### 2. Pattern Research Mandatory
 When encountering any task:
