@@ -1028,14 +1028,14 @@ export function registerRoutes(app: Express): Server {
         clientId: validatedData.clientId 
       });
       
-      // Clear both cache systems to ensure new competitor appears immediately
-      clearCache(`dashboard-${validatedData.clientId}`); // Query optimizer cache (dashes)
-      performanceCache.invalidateClientCache(validatedData.clientId); // Performance cache (colons)
-      logger.info("Cache cleared after competitor creation", { 
+      // Clear both cache systems to ensure new competitor appears immediately - force clear everything
+      clearCache(); // Clear ALL query optimizer cache
+      performanceCache.clear(); // Clear ALL performance cache
+      
+      logger.info("FORCE CLEARED ALL CACHES after competitor creation", { 
         competitorId: competitor.id, 
         clientId: validatedData.clientId,
-        queryOptimizerKeys: debugCacheKeys(),
-        performanceCacheStats: performanceCache.getStats()
+        message: "Completely cleared both cache systems to ensure UI updates"
       });
       
       res.status(201).json(competitor);
@@ -1077,14 +1077,15 @@ export function registerRoutes(app: Express): Server {
         clientId 
       });
       
-      // Clear both cache systems after competitor deletion
-      clearCache(`dashboard-${clientId}`); // Query optimizer cache (dashes)
-      performanceCache.invalidateClientCache(clientId); // Performance cache (colons)
-      logger.info("Cache cleared after competitor deletion", { 
+      // Clear both cache systems after competitor deletion - force clear everything
+      clearCache(); // Clear ALL query optimizer cache
+      performanceCache.clear(); // Clear ALL performance cache
+      
+      logger.info("FORCE CLEARED ALL CACHES after competitor deletion", { 
         competitorId: id, 
         clientId,
-        queryOptimizerKeys: debugCacheKeys(),
-        performanceCacheStats: performanceCache.getStats()
+        message: "Completely cleared both cache systems to ensure UI updates",
+        beforeClear: "All caches emptied"
       });
       
       res.sendStatus(204);
