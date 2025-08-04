@@ -87,7 +87,7 @@ export default function MetricRadialChart({ metricName, timePeriod, clientData, 
                   }}>
                     <div style={{ 
                       fontWeight: data.name === clientKey ? 'bold' : 'normal',
-                      color: data.name === clientKey ? 'hsl(318, 97%, 50%)' : '#374151'
+                      color: data.name === clientKey ? 'hsl(329, 86%, 54%)' : '#374151'
                     }}>
                       {data.name}: {Math.round(data.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Duration') ? ' min' : ''}
                     </div>
@@ -112,7 +112,7 @@ export default function MetricRadialChart({ metricName, timePeriod, clientData, 
             />
             <div className="min-w-0">
               <div 
-                className={`truncate ${entry.name === clientKey ? 'font-bold text-pink-600' : 'text-slate-700'}`}
+                className={`truncate ${entry.name === clientKey ? 'font-bold text-primary' : 'text-slate-700'}`}
                 title={entry.name}
               >
                 {entry.name}

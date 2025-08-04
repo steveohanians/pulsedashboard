@@ -396,7 +396,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleAreas[clientKey] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+              visibleAreas[clientKey] ? 'bg-primary border-primary' : 'border-gray-300'
             }`}
             style={{ backgroundColor: visibleAreas[clientKey] ? colors[clientKey] : 'transparent' }}
           >

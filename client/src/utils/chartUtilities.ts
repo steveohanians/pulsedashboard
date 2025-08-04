@@ -280,7 +280,7 @@ export function updateChartVisibilityForCompetitors(
  */
 export function generateChartColors(clientKey: string, competitors: any[]) {
   const colors: Record<string, string> = {
-    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
+    [clientKey]: 'hsl(329, 86%, 54%)', // Primary brand color
     'Industry Avg': '#9ca3af', // Light grey
     'Clear Digital Clients Avg': '#4b5563', // Dark grey
   };

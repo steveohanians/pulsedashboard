@@ -494,7 +494,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleBars[clientKey] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+              visibleBars[clientKey] ? 'bg-primary border-primary' : 'border-gray-300'
             }`}
             style={{ backgroundColor: visibleBars[clientKey] ? colors[clientKey] : 'transparent' }}
           >

@@ -381,7 +381,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleLines[clientKey] ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+              visibleLines[clientKey] ? 'bg-primary border-primary' : 'border-gray-300'
             }`}
             style={{ backgroundColor: visibleLines[clientKey] ? colors[clientKey] : 'transparent' }}
           >

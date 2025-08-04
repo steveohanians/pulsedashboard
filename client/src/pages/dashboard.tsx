@@ -35,7 +35,7 @@ const TRAFFIC_CHANNEL_COLORS = {
   'Direct': '#3b82f6', // blue-500
   'Social Media': '#8b5cf6', // violet-500
   'Paid Search': '#f59e0b', // amber-500
-  'Email': '#ec4899', // pink-500
+  'Email': '#fa198c', // primary brand color
   'Referral': '#06b6d4', // cyan-500
   'Other': '#6b7280', // gray-500
 };
