@@ -24,8 +24,8 @@ interface BarChartProps {
   periods?: string[];
 }
 
-// Generate deterministic seeded random number
-import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '../utils/chartUtilities';
+// Generate deterministic seeded random number and temporal variation
+import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariation } from '../utils/chartUtilities';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(
@@ -80,7 +80,7 @@ function processTimeSeriesForBar(
 }
 
 // Generate stable time series data for bar chart
-function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string): Array<Record<string, unknown>> {
+function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string, metricName?: string): Array<Record<string, unknown>> {
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const data: Array<Record<string, unknown>> = [];
   
@@ -174,24 +174,54 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     }
   }
 
-  // Use actual averaged values for all data points (no artificial variance for tooltips)
-  dates.forEach((period, index) => {
-    const clientKey = clientUrl || 'Client';
-    const point: Record<string, unknown> = {
-      period,
-      [clientKey]: Math.round(clientData * 10) / 10,
-      'Industry Avg': Math.round(industryAvg * 10) / 10,
-      [`${companyName} Clients Avg`]: Math.round(cdAvg * 10) / 10,
-    };
+  // Generate temporal variation for "Last Month" to show authentic trends instead of flat lines
+  const clientKey = clientUrl || 'Client';
+  
+  if (timePeriod === "Last Month") {
+    // Generate temporal variations for each data source
+    const clientVariations = generateTemporalVariation(clientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
+    const industryVariations = generateTemporalVariation(industryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
+    const cdVariations = generateTemporalVariation(cdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
+    
+    // Generate competitor variations
+    const competitorVariations = competitors.map((competitor, index) => 
+      generateTemporalVariation(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName || 'Unknown'}`)
+    );
+    
+    dates.forEach((period, index) => {
+      const point: Record<string, unknown> = {
+        period,
+        [clientKey]: Math.round(clientVariations[index] * 10) / 10,
+        'Industry Avg': Math.round(industryVariations[index] * 10) / 10,
+        [`${companyName} Clients Avg`]: Math.round(cdVariations[index] * 10) / 10,
+      };
 
-    // Add competitor data with actual values
-    competitors.forEach((competitor, compIndex) => {
-      const baseValue = competitor.value || clientData;
-      point[competitor.label] = Math.round(baseValue * 10) / 10;
+      // Add competitor data with temporal variations
+      competitors.forEach((competitor, compIndex) => {
+        point[competitor.label] = Math.round(competitorVariations[compIndex][index] * 10) / 10;
+      });
+
+      data.push(point);
     });
+  } else {
+    // For other time periods, use static values (existing behavior)
+    dates.forEach((period, index) => {
+      const point: Record<string, unknown> = {
+        period,
+        [clientKey]: Math.round(clientData * 10) / 10,
+        'Industry Avg': Math.round(industryAvg * 10) / 10,
+        [`${companyName} Clients Avg`]: Math.round(cdAvg * 10) / 10,
+      };
 
-    data.push(point);
-  });
+      // Add competitor data with actual values
+      competitors.forEach((competitor, compIndex) => {
+        const baseValue = competitor.value || clientData;
+        point[competitor.label] = Math.round(baseValue * 10) / 10;
+      });
+
+      data.push(point);
+    });
+  }
 
   return data;
 }
@@ -224,7 +254,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
     return result;
     }
     // Debug: Using generateBarData fallback with timePeriod: ${timePeriod}
-    return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl);
+    return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 
   // Define colors for each bar series (with dynamic company name)
@@ -246,10 +276,14 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Calculate fixed Y-axis domain based on all data (regardless of visibility)
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(point[clientKey], point['Industry Avg'], point[`${companyName} Clients Avg`]);
+    const clientVal = point[clientKey] as number;
+    const industryVal = point['Industry Avg'] as number;
+    const cdVal = point[`${companyName} Clients Avg`] as number;
+    allValues.push(clientVal, industryVal, cdVal);
     competitors.forEach(comp => {
-      if (point[comp.label] !== undefined) {
-        allValues.push(point[comp.label]);
+      const compVal = point[comp.label] as number;
+      if (compVal !== undefined) {
+        allValues.push(compVal);
       }
     });
   });

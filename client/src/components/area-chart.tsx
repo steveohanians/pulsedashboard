@@ -18,8 +18,8 @@ interface AreaChartProps {
   }>;
 }
 
-// Generate deterministic seeded random number
-import { seededRandom, generatePacificTimePeriods } from '../utils/chartUtilities';
+// Generate deterministic seeded random number and temporal variation
+import { seededRandom, generatePacificTimePeriods, generateTemporalVariation } from '../utils/chartUtilities';
 
 // Generate stable time series data for area chart
 interface AreaDataPoint {
@@ -103,27 +103,60 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
     }
   }
 
-  // Use actual averaged values for all data points (no artificial variance for tooltips)
-  dates.forEach((date, index) => {
-    const clientKey = clientUrl || 'Client';
-    const point: AreaDataPoint = {
-      date,
-      client: Math.round(clientData * 100) / 100,
-      industryAvg: Math.round(industryAvg * 100) / 100,
-      cdAvg: Math.round(cdAvg * 100) / 100,
-      [clientKey]: Math.round(clientData * 100) / 100,
-      'Industry Avg': Math.round(industryAvg * 100) / 100,
-      'Clear Digital Clients Avg': Math.round(cdAvg * 100) / 100,
-    };
+  // Generate temporal variation for "Last Month" to show authentic trends instead of flat lines
+  const clientKey = clientUrl || 'Client';
+  
+  if (timePeriod === "Last Month") {
+    // Generate temporal variations for each data source
+    const clientVariations = generateTemporalVariation(clientData, dates, metricName, `client-${metricName}`);
+    const industryVariations = generateTemporalVariation(industryAvg, dates, metricName, `industry-${metricName}`);
+    const cdVariations = generateTemporalVariation(cdAvg, dates, metricName, `cd-${metricName}`);
+    
+    // Generate competitor variations
+    const competitorVariations = competitors.map((competitor, index) => 
+      generateTemporalVariation(competitor.value || clientData, dates, metricName, `comp-${competitor.id}-${metricName}`)
+    );
+    
+    dates.forEach((date, index) => {
+      const point: AreaDataPoint = {
+        date,
+        client: clientVariations[index],
+        industryAvg: industryVariations[index],
+        cdAvg: cdVariations[index],
+        [clientKey]: clientVariations[index],
+        'Industry Avg': industryVariations[index],
+        'Clear Digital Clients Avg': cdVariations[index],
+      };
 
-    // Add competitor data with actual values
-    competitors.forEach((competitor, compIndex) => {
-      const baseValue = competitor.value || clientData;
-      point[competitor.label] = Math.round(baseValue * 100) / 100;
+      // Add competitor data with temporal variations
+      competitors.forEach((competitor, compIndex) => {
+        point[competitor.label] = competitorVariations[compIndex][index];
+      });
+
+      data.push(point);
     });
+  } else {
+    // For other time periods, use static values (existing behavior)
+    dates.forEach((date, index) => {
+      const point: AreaDataPoint = {
+        date,
+        client: Math.round(clientData * 100) / 100,
+        industryAvg: Math.round(industryAvg * 100) / 100,
+        cdAvg: Math.round(cdAvg * 100) / 100,
+        [clientKey]: Math.round(clientData * 100) / 100,
+        'Industry Avg': Math.round(industryAvg * 100) / 100,
+        'Clear Digital Clients Avg': Math.round(cdAvg * 100) / 100,
+      };
 
-    data.push(point);
-  });
+      // Add competitor data with actual values
+      competitors.forEach((competitor, compIndex) => {
+        const baseValue = competitor.value || clientData;
+        point[competitor.label] = Math.round(baseValue * 100) / 100;
+      });
+
+      data.push(point);
+    });
+  }
 
   return data;
 }

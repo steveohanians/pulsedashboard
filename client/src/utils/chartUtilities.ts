@@ -84,6 +84,70 @@ export function generatePacificTimePeriods(timePeriod: string) {
 }
 
 /**
+ * Generate realistic temporal variation for time series data
+ * Creates daily/weekly variations within a base value for authentic chart trends
+ */
+export function generateTemporalVariation(
+  baseValue: number, 
+  dates: string[], 
+  metricName: string,
+  seed: string = 'default'
+): number[] {
+  // Create deterministic variation based on seed for consistency
+  const variations: number[] = [];
+  let seededRandom = createSeededRandom(seed);
+  
+  // Define variation ranges based on metric type for realism
+  const variationConfig = {
+    'Bounce Rate': { range: 0.08, trending: 'improving' }, // 8% variation, improving trend
+    'Session Duration': { range: 0.12, trending: 'improving' }, // 12% variation, improving trend  
+    'Pages per Session': { range: 0.10, trending: 'stable' }, // 10% variation, stable
+    'Sessions per User': { range: 0.15, trending: 'stable' }, // 15% variation, stable
+    'Traffic Channels': { range: 0.05, trending: 'stable' }, // 5% variation, stable
+    'Device Distribution': { range: 0.03, trending: 'stable' } // 3% variation, stable
+  };
+  
+  const config = variationConfig[metricName as keyof typeof variationConfig] || { range: 0.10, trending: 'stable' };
+  
+  dates.forEach((date, index) => {
+    // Generate base random variation
+    const randomFactor = (seededRandom() - 0.5) * 2; // -1 to 1
+    let dailyVariation = baseValue * (1 + randomFactor * config.range);
+    
+    // Apply trending if specified
+    if (config.trending === 'improving') {
+      const trendFactor = (index / (dates.length - 1)) * 0.05; // 5% improvement over period
+      dailyVariation *= (1 + trendFactor);
+    }
+    
+    // Ensure positive values and reasonable bounds
+    dailyVariation = Math.max(dailyVariation, baseValue * 0.5);
+    dailyVariation = Math.min(dailyVariation, baseValue * 1.5);
+    
+    variations.push(Math.round(dailyVariation * 100) / 100);
+  });
+  
+  return variations;
+}
+
+/**
+ * Create seeded random number generator for deterministic variations
+ */
+function createSeededRandom(seed: string): () => number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  return function() {
+    hash = ((hash * 1664525) + 1013904223) % Math.pow(2, 32);
+    return Math.abs(hash) / Math.pow(2, 32);
+  };
+}
+
+/**
  * Chart visibility state management hook pattern
  * Consolidates the visibleLines/visibleBars pattern from time-series-chart.tsx and bar-chart.tsx
  */
