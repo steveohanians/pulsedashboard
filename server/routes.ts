@@ -331,11 +331,11 @@ export function registerRoutes(app: Express): Server {
         industryVertical as string
       );
       
-      const cachedResult = performanceCache.get(cacheKey);
-      if (cachedResult) {
-        logger.info(`Cache HIT for dashboard: ${cacheKey}`);
-        return res.json(cachedResult);
-      }
+      // TEMPORARILY DISABLED: const cachedResult = performanceCache.get(cacheKey);
+      // TEMPORARILY DISABLED: if (cachedResult) {
+      // TEMPORARILY DISABLED:   logger.info(`Cache HIT for dashboard: ${cacheKey}`);
+      // TEMPORARILY DISABLED:   return res.json(cachedResult);
+      // TEMPORARILY DISABLED: }
       
       logger.info(`Cache MISS for dashboard: ${cacheKey}`);
       
