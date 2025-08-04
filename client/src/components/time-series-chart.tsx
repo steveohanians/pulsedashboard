@@ -50,7 +50,7 @@ function generateTimeSeriesData(
 ): Array<Record<string, unknown>> {
   // Only use authentic time-series data - no fallback generation
   if (timeSeriesData && periods && periods.length > 0) {
-    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
+    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
   }
   
   // For Last Month view, use daily data if available, otherwise show single authentic point
@@ -59,7 +59,7 @@ function generateTimeSeriesData(
     // Check if we have time series data for the last month - this would be daily data
     if (timeSeriesData && periods && periods.length === 1 && periods[0] === '2025-07') {
       // Use the existing time series generation but for daily data
-      return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
+      return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
     }
     
     // Fallback to single data point for Last Month using the correct period label
@@ -69,6 +69,8 @@ function generateTimeSeriesData(
     
     // Convert CD_Avg from decimal to percentage for Bounce Rate
     const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    
+
     
     return [{
       date: currentMonth,
@@ -89,7 +91,8 @@ function generateRealTimeSeriesData(
   periods: string[],
   competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
-  metricName?: string
+  metricName?: string,
+  cdAvg?: number
 ): Array<Record<string, unknown>> {
   
   const data: Array<Record<string, unknown>> = [];
@@ -102,6 +105,8 @@ function generateRealTimeSeriesData(
     const periodData = timeSeriesData[period] || [];
     const relevantData = periodData.filter(m => m.metricName === metricName);
     
+
+    
     const dataPoint: Record<string, unknown> = {
       date: generatePeriodLabel(period)
     };
@@ -109,19 +114,22 @@ function generateRealTimeSeriesData(
     // Find and AVERAGE multiple values for each source type (handles filtered metrics properly)
     const clientMetrics = relevantData.filter(m => m.sourceType === 'Client');
     const industryMetrics = relevantData.filter(m => m.sourceType === 'Industry_Avg');
-    const cdMetrics = relevantData.filter(m => m.sourceType === 'CD_Avg');
     
     // Calculate averages for each source type
     const avgClient = clientMetrics.length > 0 ? 
       clientMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / clientMetrics.length : 0;
     const avgIndustry = industryMetrics.length > 0 ? 
       industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : 0;
-    const avgCD = cdMetrics.length > 0 ? 
-      cdMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / cdMetrics.length : 0;
+    
+    // Use the constant CD_Avg value from props instead of looking in time series data
+    // Convert CD_Avg from decimal to percentage for Rate metrics
+    const processedAvgCD = metricName?.includes('Rate') ? (cdAvg || 0) * 100 : (cdAvg || 0);
+    
+
     
     dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
-    dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
+    dataPoint['Clear Digital Clients Avg'] = Math.round(processedAvgCD * 10) / 10;
     
     // NO COMPETITOR DATA - only show authentic client data
     // Competitors contain synthetic data, so we exclude them to maintain data integrity
@@ -140,10 +148,7 @@ function generateRealTimeSeriesData(
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
   
-  // DEBUG: Check what TimeSeriesChart receives for Bounce Rate
-  if (metricName === 'Bounce Rate') {
-    console.log(`🔍 TIME SERIES CHART received for Bounce Rate:`, { clientData, cdAvg, industryAvg });
-  }
+
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
   const data = useMemo(() => 
     generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),
