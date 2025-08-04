@@ -188,7 +188,7 @@ export default function Dashboard() {
 
 
 
-  // Group metrics by name for chart display - SIMPLIFIED for performance
+  // Group metrics by name for chart display - FIXED to calculate averages across time periods
   const groupedMetrics = useMemo(() => {
     // Quick return for empty states
     if (!dashboardData) return {};
@@ -197,14 +197,34 @@ export default function Dashboard() {
       return averagedMetrics as Record<string, Record<string, number>>;
     }
     
-    // Fast grouping without complex operations
+    // Calculate averages when multiple time periods are involved
     const result: Record<string, Record<string, number>> = {};
+    const counts: Record<string, Record<string, number>> = {};
+    
     for (const metric of metrics) {
       if (!result[metric.metricName]) {
         result[metric.metricName] = {};
+        counts[metric.metricName] = {};
       }
-      result[metric.metricName][metric.sourceType] = Number(metric.value) || 0;
+      if (!result[metric.metricName][metric.sourceType]) {
+        result[metric.metricName][metric.sourceType] = 0;
+        counts[metric.metricName][metric.sourceType] = 0;
+      }
+      
+      const value = Number(metric.value) || 0;
+      result[metric.metricName][metric.sourceType] += value;
+      counts[metric.metricName][metric.sourceType] += 1;
     }
+    
+    // Calculate averages
+    for (const metricName in result) {
+      for (const sourceType in result[metricName]) {
+        if (counts[metricName][sourceType] > 0) {
+          result[metricName][sourceType] = result[metricName][sourceType] / counts[metricName][sourceType];
+        }
+      }
+    }
+    
     return result;
   }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);
 
