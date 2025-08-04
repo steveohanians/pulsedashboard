@@ -1353,9 +1353,11 @@ export function registerRoutes(app: Express): Server {
 
       // SEMRUSH INTEGRATION: Automatically fetch 15 months of historical data
       try {
-        logger.info("Starting SEMrush integration for new portfolio company", { 
+        logger.info("🚀 Starting SEMrush integration for new portfolio company", { 
           companyId: newCompany.id,
-          companyName: newCompany.name 
+          companyName: newCompany.name,
+          websiteUrl: newCompany.websiteUrl,
+          semrushApiKeyPresent: !!process.env.SEMRUSH_API_KEY
         });
 
         const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.js');
@@ -1364,33 +1366,45 @@ export function registerRoutes(app: Express): Server {
         // Process SEMrush data in background (non-blocking)
         integration.processNewPortfolioCompany(newCompany).then((result) => {
           if (result.success) {
-            logger.info("SEMrush integration completed successfully", {
+            logger.info("✅ SEMrush integration completed successfully", {
               companyId: newCompany.id,
+              companyName: newCompany.name,
               periodsProcessed: result.periodsProcessed,
               metricsStored: result.metricsStored,
               trafficChannelsStored: result.trafficChannelsStored,
               deviceDistributionStored: result.deviceDistributionStored,
-              averagesUpdated: result.averagesUpdated
+              averagesUpdated: result.averagesUpdated,
+              totalDataPoints: (result.metricsStored || 0) + (result.trafficChannelsStored || 0) + (result.deviceDistributionStored || 0)
             });
           } else {
-            logger.error("SEMrush integration failed", {
+            logger.error("❌ SEMrush integration failed", {
               companyId: newCompany.id,
-              error: result.error
+              companyName: newCompany.name,
+              error: result.error,
+              apiKeyPresent: !!process.env.SEMRUSH_API_KEY
             });
           }
         }).catch((error) => {
-          logger.error("SEMrush integration error", {
+          logger.error("💥 SEMrush integration error", {
             companyId: newCompany.id,
-            error: (error as Error).message
+            companyName: newCompany.name,
+            error: (error as Error).message,
+            stack: (error as Error).stack
           });
         });
 
-        logger.info("SEMrush integration started in background", { companyId: newCompany.id });
+        logger.info("🔄 SEMrush integration started in background", { 
+          companyId: newCompany.id,
+          estimatedCompletionTime: "30-60 seconds",
+          dataToFetch: "15 months of historical data (6 metrics per month)"
+        });
 
       } catch (error) {
-        logger.error("Failed to start SEMrush integration", {
+        logger.error("🚨 Failed to start SEMrush integration", {
           companyId: newCompany.id,
-          error: (error as Error).message
+          companyName: newCompany.name,
+          error: (error as Error).message,
+          apiKeyPresent: !!process.env.SEMRUSH_API_KEY
         });
       }
       

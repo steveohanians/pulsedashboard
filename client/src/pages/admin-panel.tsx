@@ -493,14 +493,34 @@ export default function AdminPanel() {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/admin/cd-portfolio", data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
       setIsDialogOpen(false);
       setEditingItem(null);
+      
+      // Show immediate success message
       toast({
         title: "Company added to portfolio",
         description: "Company has been successfully added to Clear Digital portfolio.",
       });
+      
+      // Show SEMrush integration status after a brief delay
+      setTimeout(() => {
+        toast({
+          title: "SEMrush Integration Started",
+          description: "🔄 Fetching 15 months of historical data from SEMrush API. This process runs in the background and may take a few minutes.",
+          duration: 8000,
+        });
+      }, 1000);
+      
+      // Show completion notice after estimated time
+      setTimeout(() => {
+        toast({
+          title: "SEMrush Data Integration",
+          description: "📊 Historical data fetching should be complete. Check server logs for detailed status. Refresh the dashboard to see new portfolio averages.",
+          duration: 10000,
+        });
+      }, 30000); // 30 seconds estimated completion time
     },
     onError: (error: Error) => {
       toast({
@@ -2414,6 +2434,16 @@ export default function AdminPanel() {
                               {createCdPortfolioCompanyMutation.isPending ? "Adding..." : "Add Company"}
                             </Button>
                           </div>
+                          {createCdPortfolioCompanyMutation.isPending && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                              <div className="flex items-center space-x-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <span className="text-sm text-blue-700">
+                                  Creating company and initializing SEMrush data integration...
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </form>
                       </DialogContent>
                     </Dialog>
