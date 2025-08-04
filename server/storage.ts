@@ -65,6 +65,8 @@ export interface IStorage {
   getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]>;
   getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]>;
   createMetric(metric: InsertMetric): Promise<Metric>;
+  clearClientMetricsByPeriod(clientId: string, timePeriod: string): Promise<void>;
+  clearAllClientMetrics(clientId: string): Promise<void>;
   
   // Benchmarks
   getBenchmarks(metricName: string, industryVertical: string, businessSize: string, timePeriod: string): Promise<Benchmark[]>;
@@ -834,6 +836,16 @@ export class DatabaseStorage implements IStorage {
       and(
         eq(metrics.clientId, clientId),
         eq(metrics.timePeriod, timePeriod),
+        eq(metrics.sourceType, 'Client')
+      )
+    );
+  }
+
+  // Clear ALL CLIENT metrics for a specific client (all periods, preserve benchmarks)
+  async clearAllClientMetrics(clientId: string): Promise<void> {
+    await db.delete(metrics).where(
+      and(
+        eq(metrics.clientId, clientId),
         eq(metrics.sourceType, 'Client')
       )
     );

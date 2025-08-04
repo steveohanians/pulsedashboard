@@ -76,6 +76,27 @@ export class GA4StorageService {
   }
 
   /**
+   * Clear ALL existing GA4 data for a client (all periods)
+   */
+  async clearAllClientData(clientId: string): Promise<void> {
+    try {
+      await storage.clearAllClientMetrics(clientId);
+      logger.info(`Cleared ALL GA4 data for client ${clientId}`);
+    } catch (error) {
+      logger.error(`Error clearing all data for client ${clientId}:`, error);
+      throw error;
+    }
+  }
+    try {
+      await storage.clearAllClientMetrics(clientId);
+      logger.info(`Cleared ALL GA4 data for client ${clientId}`);
+    } catch (error) {
+      logger.error(`Error clearing all data for client ${clientId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Replace daily data with monthly summary for optimization
    */
   async replaceDailyWithMonthly(clientId: string, period: DataPeriod, monthlyData: GA4MetricData): Promise<void> {

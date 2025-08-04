@@ -142,6 +142,52 @@ export class GA4DataManager {
   }
 
   /**
+   * Clear all existing GA4 data for client
+   */
+  async clearAllClientData(clientId: string): Promise<void> {
+    try {
+      logger.info(`Clearing all existing GA4 data for client ${clientId}`);
+      await this.storageService.clearAllClientData(clientId);
+      logger.info(`Successfully cleared all GA4 data for client ${clientId}`);
+    } catch (error) {
+      logger.error(`Error clearing data for client ${clientId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Complete 15-month GA4 data refresh with cleanup
+   */
+  async completeDataRefresh(clientId: string): Promise<FetchResult> {
+    try {
+      logger.info(`Starting complete 15-month data refresh for client ${clientId}`);
+      
+      // Step 1: Clear all existing data
+      await this.clearAllClientData(clientId);
+      
+      // Step 2: Fetch fresh data with force refresh
+      const result = await this.smartFetch({ 
+        clientId, 
+        periods: DATA_MANAGEMENT.DEFAULT_PERIODS,
+        forceRefresh: true 
+      });
+      
+      logger.info(`Complete data refresh finished for client ${clientId}`, result);
+      return result;
+      
+    } catch (error) {
+      logger.error(`Complete data refresh failed for client ${clientId}:`, error);
+      return {
+        success: false,
+        periodsProcessed: 0,
+        dailyDataPeriods: [],
+        monthlyDataPeriods: [],
+        errors: [`Complete refresh failed: ${error}`]
+      };
+    }
+  }
+
+  /**
    * Smart 15-month data fetching with intelligent optimization
    */
   async smartFetch(options: SmartFetchOptions): Promise<FetchResult> {
@@ -263,7 +309,7 @@ export class GA4DataManager {
       const month = date.getMonth() + 1;
       const period = `${year}-${String(month).padStart(2, '0')}`;
       
-      // Recent 3 months get daily data, older periods get monthly summaries
+      // Recent 1 month gets daily data, older periods get monthly summaries
       const type = i < DATA_MANAGEMENT.DAILY_DATA_THRESHOLD_MONTHS ? 'daily' : 'monthly';
       
       const dateRange = this.getDateRangeForPeriod(period);
