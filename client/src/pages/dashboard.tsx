@@ -166,8 +166,28 @@ export default function Dashboard() {
 
   // Delete competitor mutation  
   const deleteCompetitorMutation = useMutation({
-    mutationFn: (competitorId: string) => apiRequest(`/api/competitors/${competitorId}`, { method: 'DELETE' }),
+    mutationFn: async (competitorId: string) => {
+      logger.info("Deleting competitor:", competitorId);
+      try {
+        const response = await fetch(`/api/competitors/${competitorId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to delete competitor: ${response.status}`);
+        }
+        // Check if response has content before parsing JSON
+        const text = await response.text();
+        const result = text ? JSON.parse(text) : { success: true };
+        logger.info("Delete successful:", result);
+        return result;
+      } catch (error) {
+        logger.error("Delete failed:", error);
+        throw error;
+      }
+    },
     onSuccess: () => {
+      logger.info("Delete mutation onSuccess triggered");
       // Invalidate cache first, then refetch - ensures UI updates properly
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
@@ -175,8 +195,10 @@ export default function Dashboard() {
       // Force refetch the dashboard data immediately
       dashboardQuery.refetch();
       setDeletingCompetitorId(null);
+      logger.info("Cache invalidated and competitor deleted successfully");
     },
-    onError: () => {
+    onError: (error) => {
+      logger.error("Delete mutation onError triggered:", error);
       setDeletingCompetitorId(null);
     }
   });
