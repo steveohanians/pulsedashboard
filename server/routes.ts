@@ -1360,7 +1360,7 @@ export function registerRoutes(app: Express): Server {
           semrushApiKeyPresent: !!process.env.SEMRUSH_API_KEY
         });
 
-        const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.js');
+        const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.ts');
         const integration = new PortfolioIntegration(storage);
         
         // Process SEMrush data in background (non-blocking)
