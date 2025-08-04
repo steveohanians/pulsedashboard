@@ -338,8 +338,23 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
       } else {
         channelMap.set(channelName, value);
       }
+    } else if (metric.value && Array.isArray(metric.value)) {
+      // GA4 data as direct array (new format)
+      metric.value.forEach(channelData => {
+        // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
+        if (channelData.channel && channelData.percentage !== undefined) {
+          const channelName = channelData.channel;
+          const value = parseFloat(channelData.percentage);
+          
+          if (channelMap.has(channelName)) {
+            channelMap.set(channelName, channelMap.get(channelName) + value);
+          } else {
+            channelMap.set(channelName, value);
+          }
+        }
+      });
     } else if (metric.value && typeof metric.value === 'string') {
-      // GA4 JSON format - use correct field names
+      // GA4 JSON format (legacy) - use correct field names
       try {
         const channelsData = JSON.parse(metric.value);
         if (Array.isArray(channelsData)) {
