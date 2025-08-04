@@ -11,9 +11,9 @@ const INSIGHTS_STORAGE_KEY = 'pulse_dashboard_insights';
 
 interface StoredInsight {
   data: {
-    context?: string;
-    insight?: string;
-    recommendation?: string;
+    contextText?: string;
+    insightText?: string;
+    recommendationText?: string;
     status?: 'success' | 'needs_improvement' | 'warning';
   };
   month: string; // Format: "2025-07"
@@ -189,9 +189,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   if (insight) {
     return (
       <AIInsights
-        context={insight.context || ''}
-        insight={insight.insight || ''}
-        recommendation={insight.recommendation || ''}
+        context={insight.contextText || ''}
+        insight={insight.insightText || ''}
+        recommendation={insight.recommendationText || ''}
         status={insight.status}
         isTyping={insight.isTyping}
         hasCustomContext={false}
