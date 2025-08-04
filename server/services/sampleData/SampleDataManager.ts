@@ -182,19 +182,33 @@ export class SampleDataManager {
         for (let periodIndex = 0; periodIndex < periodList.length; periodIndex++) {
           const period = periodList[periodIndex];
           
-          // Get client baseline for this period  
-          const clientMetrics = await storage.getMetricsByClient(clientId, period.period);
-          const clientBaseline = this.extractClientBaseline(clientMetrics);
-          
-          if (clientBaseline) {
-            const competitorMetrics = generator.generateCompetitorMetrics(
-              clientBaseline, 
-              compIndex, 
-              periodIndex
-            );
-            
-            await this.storeCompetitorMetrics(competitorDomain, period.period, competitorMetrics);
+          // Get client baseline - first try current period, then use latest available data
+          let clientMetrics = await storage.getMetricsByClient(clientId, period.period);
+          if (!clientMetrics || clientMetrics.length === 0) {
+            // Fallback to latest client data or generate realistic baseline
+            const allClientMetrics = await storage.getMetricsByClient(clientId, '2025-07');
+            clientMetrics = allClientMetrics.length > 0 ? allClientMetrics : [];
           }
+          
+          let clientBaseline = this.extractClientBaseline(clientMetrics);
+          
+          // If no client baseline available, use realistic industry baseline
+          if (!clientBaseline) {
+            clientBaseline = {
+              bounceRate: 35 + (Math.random() * 10), // 35-45%
+              sessionDuration: 200 + (Math.random() * 100), // 200-300 seconds
+              pagesPerSession: 2.5 + (Math.random() * 1), // 2.5-3.5 pages
+              sessionsPerUser: 1.4 + (Math.random() * 0.4) // 1.4-1.8 sessions
+            };
+          }
+          
+          const competitorMetrics = generator.generateCompetitorMetrics(
+            clientBaseline, 
+            compIndex, 
+            periodIndex
+          );
+          
+          await this.storeCompetitorMetrics(clientId, competitorDomain, period.period, competitorMetrics);
         }
 
         competitorsGenerated++;
@@ -259,7 +273,7 @@ export class SampleDataManager {
   /**
    * Store competitor metrics
    */
-  private async storeCompetitorMetrics(domain: string, period: string, metrics: any): Promise<void> {
+  private async storeCompetitorMetrics(clientId: string, domain: string, period: string, metrics: any): Promise<void> {
     const metricsToStore = [
       { name: METRIC_NAMES.BOUNCE_RATE, value: metrics.bounceRate.toFixed(2) },
       { name: METRIC_NAMES.SESSION_DURATION, value: metrics.sessionDuration.toFixed(2) },
@@ -269,7 +283,7 @@ export class SampleDataManager {
 
     for (const metric of metricsToStore) {
       await storage.createMetric({
-        clientId: domain, // Use domain as clientId for competitors
+        clientId: clientId, // Use actual client ID, not domain
         metricName: metric.name,
         value: metric.value,
         sourceType: 'Competitor',
