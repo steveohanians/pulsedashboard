@@ -29,6 +29,21 @@ import { logger } from "@/utils/logger";
 // Performance tracking removed per user request
 import { ChartOptimizer, MemoryOptimizer, AsyncLoader } from "@/utils/frontend-optimizer";
 
+// Traffic channel color mapping
+const TRAFFIC_CHANNEL_COLORS = {
+  'Organic Search': '#10b981', // emerald-500
+  'Direct': '#3b82f6', // blue-500
+  'Social Media': '#8b5cf6', // violet-500
+  'Paid Search': '#f59e0b', // amber-500
+  'Email': '#ec4899', // pink-500
+  'Referral': '#06b6d4', // cyan-500
+  'Other': '#6b7280', // gray-500
+};
+
+const getChannelColor = (channelName: string): string => {
+  return TRAFFIC_CHANNEL_COLORS[channelName as keyof typeof TRAFFIC_CHANNEL_COLORS] || TRAFFIC_CHANNEL_COLORS.Other;
+};
+
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   
@@ -361,7 +376,10 @@ export default function Dashboard() {
     if (clientTrafficMetrics.length > 0) {
       // Use the corrected processChannelData function from chartUtilities.ts
       const channelMap = aggregateChannelData(clientTrafficMetrics);
-      const sortedChannels = sortChannelsByLegendOrder(channelMap);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
+        ...channel,
+        color: getChannelColor(channel.name)
+      }));
       
       console.log('🔍 PROCESSED CHANNELS DEBUG:', {
         processedChannelsLength: sortedChannels.length,
@@ -386,7 +404,10 @@ export default function Dashboard() {
     const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
     if (cdMetrics.length > 0) {
       const channelMap = aggregateChannelData(cdMetrics);
-      const sortedChannels = sortChannelsByLegendOrder(channelMap);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
+        ...channel,
+        color: getChannelColor(channel.name)
+      }));
       result.push({
         sourceType: 'CD_Avg',
         label: 'Clear Digital Client Avg',
@@ -398,7 +419,10 @@ export default function Dashboard() {
     const industryMetrics = trafficMetrics.filter(m => m.sourceType === 'Industry_Avg');
     if (industryMetrics.length > 0) {
       const channelMap = aggregateChannelData(industryMetrics);
-      const sortedChannels = sortChannelsByLegendOrder(channelMap);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
+        ...channel,
+        color: getChannelColor(channel.name)
+      }));
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
@@ -415,7 +439,10 @@ export default function Dashboard() {
       
       if (competitorMetrics.length > 0) {
         const channelMap = aggregateChannelData(competitorMetrics);
-        const sortedChannels = sortChannelsByLegendOrder(channelMap);
+        const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
+          ...channel,
+          color: getChannelColor(channel.name)
+        }));
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
@@ -1512,7 +1539,6 @@ export default function Dashboard() {
                           cdAvg={metricData.CD_Avg || 0}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           timeSeriesData={timeSeriesData}
-                          isTimeSeries={isTimeSeries}
                           periods={periods}
                           competitors={competitors.map((comp: any) => {
                             // Find metric for this competitor
