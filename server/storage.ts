@@ -803,10 +803,11 @@ export class DatabaseStorage implements IStorage {
 
   // Clear competitor metrics for a specific client and time period
   async clearCompetitorMetricsByPeriod(clientId: string, timePeriod: string): Promise<void> {
-    await db.delete(competitorMetrics).where(
+    await db.delete(metrics).where(
       and(
-        eq(competitorMetrics.clientId, clientId),
-        eq(competitorMetrics.timePeriod, timePeriod)
+        eq(metrics.clientId, clientId),
+        eq(metrics.timePeriod, timePeriod),
+        eq(metrics.sourceType, 'Competitor')
       )
     );
   }
@@ -838,7 +839,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  // Create a competitor metric
+  // Create a competitor metric (using main metrics table)
   async createCompetitorMetric(data: {
     clientId: string;
     competitorId: string;
@@ -846,16 +847,14 @@ export class DatabaseStorage implements IStorage {
     value: string;
     timePeriod: string;
   }): Promise<any> {
-    const [result] = await db.insert(competitorMetrics).values({
-      id: crypto.randomUUID(),
+    return this.createMetric({
       clientId: data.clientId,
       competitorId: data.competitorId,
       metricName: data.metricName,
       value: data.value,
-      timePeriod: data.timePeriod,
-      createdAt: new Date()
-    }).returning();
-    return result;
+      sourceType: 'Competitor',
+      timePeriod: data.timePeriod
+    });
   }
 }
 

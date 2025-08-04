@@ -157,8 +157,31 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
       throw new Error(`Client not found: ${clientId}`);
     }
     
-    const competitors = await storage.getCompetitorsByClient(clientId);
-    logger.info('Found competitors', { count: competitors.length });
+    let competitors = await storage.getCompetitorsByClient(clientId);
+    logger.info('Found existing competitors', { count: competitors.length });
+    
+    // If no competitors exist, create some sample competitors
+    if (competitors.length === 0) {
+      logger.info('No competitors found, creating sample competitors for comprehensive data generation');
+      
+      const sampleCompetitors = [
+        { domain: 'herodigital.com', label: 'Hero Digital' },
+        { domain: 'focuslab.agency', label: 'Focus Lab Agency' },
+        { domain: 'digitalagency.com', label: 'Digital Agency Co.' }
+      ];
+      
+      for (const comp of sampleCompetitors) {
+        const newCompetitor = await storage.createCompetitor({
+          clientId,
+          domain: comp.domain,
+          label: comp.label,
+          status: 'active' as any
+        });
+        competitors.push(newCompetitor);
+      }
+      
+      logger.info('Created sample competitors', { count: competitors.length });
+    }
     
     // Base values for consistent metric generation
     const baseValues = {
@@ -219,16 +242,25 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
         for (const competitor of competitors) {
           for (const metricName of CORE_METRICS) {
             const value = generateMetricValue(metricName, 'Competitor', baseValues);
-            await storage.createCompetitorMetric({
+            
+            // Create competitor metric using regular metrics table with proper competitor_id
+            await storage.createMetric({
               clientId,
-              competitorId: competitor.id,
+              competitorId: competitor.id, // Ensure competitor ID is properly set
               metricName,
               value,
+              sourceType: 'Competitor',
               timePeriod: period
             });
             totalMetricsCreated++;
           }
         }
+        
+        logger.info(`Generated competitor data for period ${period}`, { 
+          competitorCount: competitors.length, 
+          metricsPerCompetitor: CORE_METRICS.length,
+          totalCompetitorMetrics: competitors.length * CORE_METRICS.length
+        });
       }
       
       // 3. Generate INDUSTRY AVERAGE data
