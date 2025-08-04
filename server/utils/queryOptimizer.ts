@@ -180,6 +180,13 @@ export async function getDashboardDataOptimized(
     periodsToQuery
   );
   
+  // DEBUG: Check periods to understand why timeSeriesData is undefined
+  console.log(`🔍 queryOptimizer DEBUG:`, {
+    periodsToQueryLength: periodsToQuery.length,
+    periodsToQuery: periodsToQuery,
+    willCreateTimeSeriesData: periodsToQuery.length > 1
+  });
+  
   const timeSeriesData = periodsToQuery.length > 1 ? groupMetricsByPeriod(processedData) : undefined;
   
   // Debug: Check what's actually in timeSeriesData for first period
