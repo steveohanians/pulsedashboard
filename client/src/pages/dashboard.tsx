@@ -346,69 +346,56 @@ export default function Dashboard() {
     }
     
     const result = [];
-    
-    // Helper function to process channel data with correct aggregation and ordering
-    const processChannelData = (sourceMetrics: any[]) => {
-      // Use the corrected aggregateChannelData function from chartUtilities.ts
-      const channelMap = aggregateChannelData(sourceMetrics);
-      
-      // Use the new sorting function to get properly ordered channels
-      const sortedChannels = sortChannelsByLegendOrder(channelMap);
-      
-      // Add colors from the chart color scheme
-      const channelsWithColors = sortedChannels.map(channel => ({
-        ...channel,
-        color: CHART_COLORS.TRAFFIC_CHANNELS[channel.name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-      }));
-      
-      // Ensure percentages add up to 100%
-      const total = channelsWithColors.reduce((sum, channel) => sum + channel.value, 0);
-      if (total > 0) {
-        let runningTotal = 0;
-        channelsWithColors.forEach((channel, index) => {
-          if (index === channelsWithColors.length - 1) {
-            // Last channel gets the remainder
-            channel.value = 100 - runningTotal;
-            channel.percentage = 100 - runningTotal;
-          } else {
-            const normalizedValue = Math.round((channel.value / total) * 100);
-            channel.value = normalizedValue;
-            channel.percentage = normalizedValue;
-            runningTotal += normalizedValue;
-          }
-        });
-      }
-      
-      return channelsWithColors;
-    };
 
     // Client data
     const clientTrafficMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+    console.log('🔍 CLIENT DEBUG:', {
+      clientTrafficMetricsLength: clientTrafficMetrics.length,
+      clientTrafficMetrics: clientTrafficMetrics.slice(0, 3),
+      clientName: client?.name,
+      hasClientData: clientTrafficMetrics.length > 0
+    });
+    
     if (clientTrafficMetrics.length > 0) {
+      // Use the corrected processChannelData function from chartUtilities.ts
+      const channelMap = aggregateChannelData(clientTrafficMetrics);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap);
+      
+      console.log('🔍 PROCESSED CHANNELS DEBUG:', {
+        processedChannelsLength: sortedChannels.length,
+        processedChannels: sortedChannels
+      });
+      
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        channels: processChannelData(clientTrafficMetrics)
+        channels: sortedChannels
       });
+    } else {
+      console.warn('❌ No client traffic metrics found!');
     }
 
     // CD Average data
     const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
     if (cdMetrics.length > 0) {
+      const channelMap = aggregateChannelData(cdMetrics);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap);
       result.push({
         sourceType: 'CD_Avg',
         label: 'Clear Digital Client Avg',
-        channels: processChannelData(cdMetrics)
+        channels: sortedChannels
       });
     }
 
     // Industry Average data
     const industryMetrics = trafficMetrics.filter(m => m.sourceType === 'Industry_Avg');
     if (industryMetrics.length > 0) {
+      const channelMap = aggregateChannelData(industryMetrics);
+      const sortedChannels = sortChannelsByLegendOrder(channelMap);
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
-        channels: processChannelData(industryMetrics)
+        channels: sortedChannels
       });
     }
 
@@ -420,10 +407,12 @@ export default function Dashboard() {
       );
       
       if (competitorMetrics.length > 0) {
+        const channelMap = aggregateChannelData(competitorMetrics);
+        const sortedChannels = sortChannelsByLegendOrder(channelMap);
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
-          channels: processChannelData(competitorMetrics)
+          channels: sortedChannels
         });
       } else {
         // Fallback if no data - generate consistent but varied data
