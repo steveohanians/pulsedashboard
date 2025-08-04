@@ -306,11 +306,20 @@ export default function Dashboard() {
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
     console.log('🚀 TRAFFIC CHANNEL FUNCTION CALLED!');
+    console.log('🔥 TRAFFIC CHANNEL PATH DEBUG:', {
+      hasTrafficChannelMetrics: !!dashboardData?.trafficChannelMetrics,
+      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0,
+      isTimeSeries,
+      hasTimeSeriesData: !!timeSeriesData,
+      metricsLength: metrics.length
+    });
+    
     let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
+      console.log('🔥 USING DEDICATED TRAFFIC CHANNEL METRICS:', trafficMetrics);
       // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
