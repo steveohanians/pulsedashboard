@@ -2576,6 +2576,35 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
+
+  // Debug route to test GA4 API directly for July 2025 (no auth for testing)
+  app.post("/api/debug/ga4-july", async (req, res) => {
+    try {
+      logger.info('DEBUG: Testing GA4 API for July 2025...');
+      const result = await ga4DataService.fetchGA4Data('demo-client-id', '2025-07-01', '2025-07-31');
+      
+      logger.info('DEBUG: July 2025 GA4 API Response:', { 
+        hasMainMetrics: !!result?.mainMetrics,
+        hasTrafficChannels: !!result?.trafficChannels?.length,
+        trafficChannelsCount: result?.trafficChannels?.length || 0,
+        channels: result?.trafficChannels?.map((tc: any) => `${tc.channel}: ${tc.percentage}%`) || []
+      });
+      
+      res.json({
+        success: true,
+        data: result,
+        debug: {
+          hasMainMetrics: !!result?.mainMetrics,
+          hasTrafficChannels: !!result?.trafficChannels?.length,
+          trafficChannelsCount: result?.trafficChannels?.length || 0,
+          channels: result?.trafficChannels?.map((tc: any) => `${tc.channel}: ${tc.percentage}%`) || []
+        }
+      });
+    } catch (error) {
+      logger.error('DEBUG: July 2025 GA4 API Error:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
   
   // GA4 Service Account Management routes
   app.use("/api/admin", ga4ServiceAccountRoutes);

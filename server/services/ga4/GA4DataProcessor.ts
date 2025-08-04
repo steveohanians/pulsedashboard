@@ -207,40 +207,30 @@ export class GA4DataProcessor {
    */
   private normalizeChannelName(channel: string): string {
     const channelMap: Record<string, string> = {
-      'Organic Search': 'Organic Search',
       'Direct': 'Direct',
       '(none)': 'Direct', // GA4 sometimes uses (none) for direct traffic
-      'Display': 'Direct', // Group Display with Direct (both are direct traffic types)
-      'Social': 'Social Media',
-      'Paid Social': 'Social Media',
       'Paid Search': 'Paid Search',
-      'Email': 'Email',
+      'Organic Search': 'Organic Search',
       'Referral': 'Referral',
+      'Email': 'Email',
+      'Paid Social': 'Social Media',
+      'Organic Social': 'Social Media',
+      'Social': 'Social Media',
+      'Cross-network': 'Other',
+      'Unassigned': 'Other',
+      'Display': 'Other',
       'Video': 'Other',
       'YouTube': 'Other',
       'Affiliates': 'Other',
       'Organic Video': 'Other',
-      'Organic Social': 'Social Media',
       'Audio': 'Other',
       'SMS': 'Other',
       'Push': 'Other',
       'Mobile Push Notifications': 'Other'
     };
 
-    // Return mapped name if exists, otherwise preserve specific channel names for known GA4 channels
-    const mappedChannel = channelMap[channel];
-    if (mappedChannel) {
-      return mappedChannel;
-    }
-    
-    // For known specific GA4 channels that should be preserved, keep their names
-    const preservedChannels = ['Cross-network', 'Unassigned'];
-    if (preservedChannels.includes(channel)) {
-      return channel;
-    }
-    
-    // Everything else becomes "Other"
-    return 'Other';
+    // Return mapped name if exists, otherwise map to "Other"
+    return channelMap[channel] || 'Other';
   }
 
   /**
