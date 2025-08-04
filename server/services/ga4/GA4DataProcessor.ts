@@ -140,17 +140,29 @@ export class GA4DataProcessor {
         sum + parseInt(row.metricValues[0].value), 0
       );
 
-      return response.rows.map((row: any) => {
-        const channel = row.dimensionValues[0].value;
+      const results = response.rows.map((row: any) => {
+        const rawChannel = row.dimensionValues[0].value;
         const sessions = parseInt(row.metricValues[0].value);
         const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
+        const normalizedChannel = this.normalizeChannelName(rawChannel);
+
+        // Debug logging to see what raw channel names we're getting
+        if (rawChannel !== normalizedChannel) {
+          logger.info(`GA4 Channel mapping: "${rawChannel}" -> "${normalizedChannel}"`);
+        }
 
         return {
-          channel: this.normalizeChannelName(channel),
+          channel: normalizedChannel,
           sessions,
           percentage: Math.round(percentage * 10) / 10 // Round to 1 decimal
         };
       });
+      
+      logger.info(`GA4 Traffic Channels extracted: ${results.length} channels`, {
+        channels: results.map(r => `${r.channel}: ${r.percentage}%`)
+      });
+      
+      return results;
 
     } catch (error) {
       logger.error('Error extracting traffic channels:', error);
@@ -191,22 +203,33 @@ export class GA4DataProcessor {
   }
 
   /**
-   * Normalize channel names for consistency
+   * Normalize channel names for consistency - preserve unknown channels instead of grouping as "Other"
    */
   private normalizeChannelName(channel: string): string {
     const channelMap: Record<string, string> = {
       'Organic Search': 'Organic Search',
       'Direct': 'Direct',
+      '(none)': 'Direct', // GA4 sometimes uses (none) for direct traffic
       'Social': 'Social Media',
+      'Paid Social': 'Social Media',
       'Paid Search': 'Paid Search',
       'Email': 'Email',
       'Referral': 'Referral',
       'Display': 'Display',
       'Video': 'Video',
-      'Affiliates': 'Affiliates'
+      'YouTube': 'Video',
+      'Affiliates': 'Affiliates',
+      'Organic Video': 'Video',
+      'Organic Social': 'Social Media',
+      'Audio': 'Audio',
+      'SMS': 'SMS',
+      'Push': 'Push Notifications',
+      'Mobile Push Notifications': 'Push Notifications'
     };
 
-    return channelMap[channel] || 'Other';
+    // Return mapped name if exists, otherwise preserve the original channel name
+    // This way we don't lose specific channel information by grouping everything as "Other"
+    return channelMap[channel] || channel;
   }
 
   /**
