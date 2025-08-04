@@ -10,7 +10,7 @@ import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
-import { getFiltersOptimized, getDashboardDataOptimized } from "./utils/queryOptimizer";
+import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache } from "./utils/queryOptimizer";
 import { performanceCache } from "./cache/performance-cache";
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
@@ -1057,8 +1057,18 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       logger.info("Attempting to delete competitor", { competitorId: id });
       
-      const deleted = await storage.deleteCompetitor(id);
-      logger.info("Competitor deletion completed", { competitorId: id });
+      // Get client ID for cache invalidation before deletion
+      const competitor = await storage.getCompetitor(id);
+      const clientId = competitor?.clientId;
+      
+      await storage.deleteCompetitor(id);
+      logger.info("Deleted competitor", { id });
+      
+      // Clear relevant caches after competitor deletion
+      if (clientId) {
+        clearCache(`dashboard:${clientId}`); // Clear all dashboard caches for this client
+        logger.info("Cache cleared after competitor deletion", { competitorId: id, clientId });
+      }
       
       res.sendStatus(204);
     } catch (error) {

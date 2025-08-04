@@ -24,6 +24,20 @@ export function setCachedData(key: string, data: any, ttlMs: number = 60000): vo
   });
 }
 
+export function clearCache(pattern?: string): void {
+  if (pattern) {
+    // Clear specific cache entries matching pattern
+    for (const [key] of queryCache) {
+      if (key.includes(pattern)) {
+        queryCache.delete(key);
+      }
+    }
+  } else {
+    // Clear all cache entries
+    queryCache.clear();
+  }
+}
+
 // Optimized filters query with caching
 export async function getFiltersOptimized() {
   const cacheKey = 'filters';
