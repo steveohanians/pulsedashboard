@@ -82,7 +82,7 @@ export class GA4DataManager {
   }
 
   /**
-   * Fetch and store daily GA4 data for a specific period
+   * Fetch and store daily GA4 data for a specific period (WITH TRAFFIC CHANNELS & DEVICE DATA)
    */
   async fetchDailyData(
     clientId: string, 
@@ -100,12 +100,15 @@ export class GA4DataManager {
         return null;
       }
 
-      // Fetch daily data from GA4 API
-      const rawDailyData = await this.apiService.fetchDailyMainMetrics(
-        propertyAccess, 
-        startDate, 
-        endDate
-      );
+      // Fetch daily main metrics AND period-level traffic channels + device data
+      logger.info(`🔍 DEBUG: Fetching batch data for period ${period}`);
+      const [rawDailyData, rawBatchData] = await Promise.all([
+        this.apiService.fetchDailyMainMetrics(propertyAccess, startDate, endDate),
+        this.apiService.fetchBatchData(propertyAccess, startDate, endDate)
+      ]);
+
+      logger.info(`🔍 DEBUG: Batch data fetched. Traffic channels rows: ${rawBatchData.trafficChannels?.rows?.length || 0}`);
+      logger.info(`🔍 DEBUG: Device data rows: ${rawBatchData.deviceData?.rows?.length || 0}`);
 
       // Process the daily data
       const processedDailyData = this.processor.processDailyGA4Response(rawDailyData);
@@ -113,6 +116,24 @@ export class GA4DataManager {
       if (!processedDailyData) {
         logger.error('Failed to process daily GA4 data');
         return null;
+      }
+
+      // ALSO process and store the period-level Traffic Channels and Device Data
+      logger.info(`🔍 DEBUG: Processing batch data for period ${period}`);
+      const processedPeriodData = this.processor.processGA4Response(
+        rawBatchData.mainMetrics,
+        rawBatchData.trafficChannels,
+        rawBatchData.deviceData
+      );
+
+      logger.info(`🔍 DEBUG: Processed period data: ${processedPeriodData ? 'SUCCESS' : 'NULL'}`);
+      if (processedPeriodData) {
+        logger.info(`🔍 DEBUG: Traffic channels count: ${processedPeriodData.channelData?.length || 0}`);
+        // Store period-level data (Traffic Channels & Device Distribution)
+        await this.storageService.storeGA4Metrics(clientId, period, processedPeriodData);
+        logger.info(`✅ Stored Traffic Channels and Device data for period ${period}`);
+      } else {
+        logger.error(`❌ Failed to process period data for ${period}`);
       }
 
       // Store the daily data
@@ -234,15 +255,7 @@ export class GA4DataManager {
     }
   }
 
-  /**
-   * Generate date range for a period
-   */
-  private getDateRangeForPeriod(period: string): { startDate: string; endDate: string } {
-    const [year, month] = period.split('-');
-    const startDate = `${year}-${month}-01`;
-    const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
-    return { startDate, endDate };
-  }
+
 
   /**
    * Generate period list for smart fetching
