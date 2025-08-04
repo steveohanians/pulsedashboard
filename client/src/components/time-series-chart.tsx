@@ -48,18 +48,20 @@ function generateTimeSeriesData(
   metricName?: string
 ): Array<Record<string, unknown>> {
   // If we have actual time-series data and multiple periods, use it
+  console.log(`🔍 Chart ${metricName}: Checking conditions - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length);
   if (timeSeriesData && periods && periods.length > 0) {
-    console.log(`🔍 Chart ${metricName}: Using time-series data with ${periods.length} periods:`, periods);
-    console.log(`🔍 Chart ${metricName}: timeSeriesData keys:`, Object.keys(timeSeriesData));
-    console.log(`🔍 Chart ${metricName}: competitors:`, competitors.map(c => ({id: c.id, label: c.label})));
+    console.log(`✅ Chart ${metricName}: Using AUTHENTIC time-series data with ${periods.length} periods:`, periods);
+    console.log(`✅ Chart ${metricName}: timeSeriesData keys:`, Object.keys(timeSeriesData));
+    console.log(`✅ Chart ${metricName}: competitors:`, competitors.map(c => ({id: c.id, label: c.label})));
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
   // Otherwise, fallback to single-point data (current behavior for single periods)
-  console.log(`🔍 Chart ${metricName}: Using AUTHENTIC GA4 data for ${metricName}`, {
+  console.log(`❌ Chart ${metricName}: Condition failed - FALLING BACK to sample data instead of authentic GA4!`, {
     clientData,
     hasTimeSeriesData: !!timeSeriesData,
-    periodsCount: periods?.length || 0
+    periodsCount: periods?.length || 0,
+    timePeriod
   });
   return generateFallbackTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
 }
@@ -108,7 +110,8 @@ function generateRealTimeSeriesData(
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
     
-    console.log(`🔍 Period ${period} averages: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
+    console.log(`🔍 Period ${period} AUTHENTIC averages: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
+    console.log(`🔍 AUTHENTIC GA4 DATA: Period ${period} -> Chart Date "${dataPoint.date}" shows Client ${dataPoint[clientKey]}%`);
     
     // Add competitor data (also average multiple values)
     competitors.forEach(competitor => {
@@ -140,6 +143,7 @@ function generateRealTimeSeriesData(
 
 // Generate fallback time series data (current behavior)
 function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string, metricName?: string): any[] {
+  console.log(`🚨 FALLBACK DATA GENERATOR: Creating sample data for ${metricName} - THIS OVERRIDES AUTHENTIC GA4!`);
   const data: any[] = [];
   
   // Determine the date range and intervals based on time period
@@ -273,6 +277,7 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
     });
   }
 
+  console.log(`🚨 FALLBACK DATA GENERATOR: Generated ${data.length} sample points for ${metricName}:`, data.slice(0, 2));
   return data;
 }
 

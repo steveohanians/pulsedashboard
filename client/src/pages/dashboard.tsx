@@ -1683,6 +1683,8 @@ export default function Dashboard() {
                           industryAvg={metricData.Industry_Avg || 0}
                           cdAvg={metricData.CD_Avg || 0}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                          timeSeriesData={timeSeriesData}
+                          periods={periods}
                           competitors={competitors.map((comp: any) => {
                             // Find metric for this competitor
                             const competitorMetric = metrics.find((m: any) => 
