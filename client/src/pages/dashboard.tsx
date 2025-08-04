@@ -329,7 +329,10 @@ export default function Dashboard() {
       trafficMetricsCount: trafficMetrics.length,
       clientMetricsCount: clientMetrics.length,
       firstFewMetrics: trafficMetrics.slice(0, 5),
-      clientMetrics: clientMetrics.slice(0, 5)
+      clientMetrics: clientMetrics.slice(0, 5),
+      dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
+      hasTrafficChannelMetrics: !!dashboardData?.trafficChannelMetrics,
+      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0
     });
     
     if (trafficMetrics.length === 0) {

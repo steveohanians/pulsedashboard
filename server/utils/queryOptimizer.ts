@@ -293,10 +293,16 @@ export async function getDashboardDataOptimized(
     }
   }
 
+  // Extract traffic channel and device distribution data separately for chart components
+  const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
+  const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
+
   const result = {
     client,
     competitors,
     insights: [], // Load insights asynchronously
+    trafficChannelMetrics, // Add separate traffic channel data for stacked bar chart
+    deviceDistributionMetrics, // Add separate device distribution data for donut chart
     // For multi-period queries OR "Last Month" (daily data), structure as time series
     ...(shouldCreateTimeSeriesData ? {
       isTimeSeries: true,
