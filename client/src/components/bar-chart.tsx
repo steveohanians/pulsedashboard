@@ -83,6 +83,8 @@ function processTimeSeriesForBar(
 
 // Generate stable time series data for bar chart
 function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string, metricName?: string): Array<Record<string, unknown>> {
+
+  
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const data: Array<Record<string, unknown>> = [];
   
@@ -184,6 +186,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     const clientVariations = generateTemporalVariationSync(clientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
     const industryVariations = generateTemporalVariationSync(industryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
     const cdVariations = generateTemporalVariationSync(cdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
+
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
@@ -225,11 +228,14 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     });
   }
 
+
   return data;
 }
 
 export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
+  
+
   
   // Check if we have any valid data
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
@@ -452,16 +458,14 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             />
           )}
           
-          {/* Clear Digital Clients Average bars - dashed outline */}
+          {/* Clear Digital Clients Average bars - FIXED to use solid fill instead of dashed outline */}
           {visibleBars[`${companyName} Clients Avg`] && (
             <Bar 
               dataKey={`${companyName} Clients Avg`} 
-              fill="none"
-              stroke={colors[`${companyName} Clients Avg`]}
-              strokeWidth={2}
-              strokeDasharray="8,4"
+              fill={colors[`${companyName} Clients Avg`]}
+              stroke="transparent"
+              strokeWidth={1}
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke={colors[`${companyName} Clients Avg`]} strokeDasharray="8,4" hideBottomBorder={true} />}
               isAnimationActive={isInitialRender}
             />
           )}
