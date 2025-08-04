@@ -320,6 +320,8 @@ export default function Dashboard() {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
       console.log('🔥 USING DEDICATED TRAFFIC CHANNEL METRICS:', trafficMetrics);
+      console.log('🔥 TRAFFIC METRICS LENGTH:', trafficMetrics.length);
+      console.log('🔥 FIRST TRAFFIC METRIC:', trafficMetrics[0]);
       // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period

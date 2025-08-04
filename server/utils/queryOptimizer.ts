@@ -297,6 +297,10 @@ export async function getDashboardDataOptimized(
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
   const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
   
+  console.log('🔥 QUERY OPTIMIZER: processedData length:', processedData.length);
+  console.log('🔥 QUERY OPTIMIZER: Traffic Channel metrics found:', trafficChannelMetrics.length);
+  console.log('🔥 QUERY OPTIMIZER: First Traffic Channel metric:', trafficChannelMetrics[0]);
+  
   // Debug logging disabled for performance
 
   const result = {
