@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { ga4DataService } from '../services/ga4DataService';
+import { GA4DataManager } from '../services/ga4';
+
 import { db } from '../db';
 import { ga4PropertyAccess, clients } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
@@ -56,6 +57,19 @@ const validateClientId = asyncErrorHandler(async (req: any, res: any, next: any)
 });
 
 const router = Router();
+const ga4Manager = new GA4DataManager();
+
+// Utility function to get date range for period
+function getDateRangeForPeriod(period: string): { startDate: string; endDate: string } {
+  const [year, month] = period.split('-');
+  const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+  const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of month
+
+  return {
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0]
+  };
+}
 
 /**
  * Manually trigger GA4 data fetch for a client
@@ -74,7 +88,7 @@ router.post('/fetch/:clientId', adminRequired, validateClientId, asyncErrorHandl
     });
   }
   
-  const ga4Data = await ga4DataService.fetchGA4Data(clientId, startDate, endDate);
+  const ga4Data = await ga4Manager.fetchPeriodData(clientId, startDate, endDate, period);
   
   if (!ga4Data) {
     return res.status(404).json({
@@ -82,9 +96,6 @@ router.post('/fetch/:clientId', adminRequired, validateClientId, asyncErrorHandl
       message: 'No GA4 data available for this client'
     });
   }
-  
-  // Store the fetched data
-  await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
   
   res.json({
     success: true,
@@ -113,10 +124,10 @@ router.get('/:clientId/:period', validateClientId, asyncErrorHandler(async (req,
   logger.info(`GA4 data requested for client: ${clientId}, period: ${period}`);
   
   // Convert period (YYYY-MM) to date range
-  const dateRange = ga4DataService.getDateRangeForPeriod(period);
+  const dateRange = getDateRangeForPeriod(period);
   
   // Fetch fresh GA4 data
-  const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+  const ga4Data = await ga4Manager.fetchPeriodData(clientId, dateRange.startDate, dateRange.endDate);
   
   if (!ga4Data) {
     return res.status(404).json({
@@ -140,55 +151,25 @@ router.post('/refresh/:clientId', validateClientId, asyncErrorHandler(async (req
   
   logger.info(`Manual GA4 data refresh triggered for client: ${clientId}`);
   
-  // Get current period
-  const currentDate = new Date();
-  const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const dateRange = ga4DataService.getDateRangeForPeriod(period);
+  // Use the new GA4DataManager refresh method
+  const refreshSuccess = await ga4Manager.refreshCurrentPeriod(clientId);
   
-  logger.info(`Refreshing GA4 data for period: ${period} (${dateRange.startDate} to ${dateRange.endDate})`);
-  
-  // Clear existing client data for this period
-  const { storage } = await import('../storage');
-  await storage.clearClientMetricsByPeriod(clientId, period);
-  
-  // Fetch and store fresh GA4 data
-  const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
-  
-  if (!ga4Data) {
-    return res.status(404).json({
+  if (!refreshSuccess) {
+    return res.status(500).json({
       success: false,
-      message: 'No GA4 data available for this client and period'
+      message: 'Failed to refresh GA4 data for this client'
     });
   }
-  
-  // Store the refreshed data
-  await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
   
   // Clear performance cache to ensure fresh data on next dashboard load
   const { performanceCache } = await import('../cache/performance-cache');
   performanceCache.clear();
   
-  logger.info(`Successfully refreshed and stored GA4 data for ${clientId}`, {
-    period,
-    bounceRate: ga4Data.bounceRate,
-    sessionDuration: ga4Data.sessionDuration,
-    totalSessions: ga4Data.totalSessions
-  });
+  logger.info(`Successfully refreshed GA4 data for ${clientId}`);
   
   res.json({
     success: true,
-    message: `Successfully refreshed GA4 data for ${clientId}`,
-    data: {
-      period,
-      bounceRate: `${ga4Data.bounceRate.toFixed(1)}%`,
-      sessionDuration: `${ga4Data.sessionDuration.toFixed(0)}s`,
-      pagesPerSession: ga4Data.pagesPerSession.toFixed(2),
-      sessionsPerUser: ga4Data.sessionsPerUser.toFixed(2),
-      totalSessions: ga4Data.totalSessions,
-      totalUsers: ga4Data.totalUsers,
-      trafficChannelsCount: ga4Data.trafficChannels.length,
-      deviceTypesCount: ga4Data.deviceDistribution.length
-    }
+    message: `Successfully refreshed GA4 data for ${clientId}`
   });
 }));
 
@@ -213,11 +194,10 @@ router.post('/sync/:clientId', adminRequired, validateClientId, asyncErrorHandle
   
   for (const period of periodsToSync) {
     try {
-      const dateRange = ga4DataService.getDateRangeForPeriod(period);
-      const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+      const dateRange = getDateRangeForPeriod(period);
+      const ga4Data = await ga4Manager.fetchPeriodData(clientId, dateRange.startDate, dateRange.endDate, period);
       
       if (ga4Data) {
-        await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
         syncResults.push({
           period,
           success: true,
@@ -263,10 +243,10 @@ router.post('/daily/:clientId/:period', validateClientId, asyncErrorHandler(asyn
   logger.info(`Daily GA4 data fetch triggered for client: ${clientId}, period: ${period}`);
   
   // Convert period to date range
-  const dateRange = ga4DataService.getDateRangeForPeriod(period);
+  const dateRange = getDateRangeForPeriod(period);
   
   // Fetch daily breakdown data
-  const dailyData = await ga4DataService.fetchDailyGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+  const dailyData = await ga4Manager.fetchDailyData(clientId, dateRange.startDate, dateRange.endDate, period);
   
   if (!dailyData || dailyData.length === 0) {
     return res.status(404).json({
@@ -274,9 +254,6 @@ router.post('/daily/:clientId/:period', validateClientId, asyncErrorHandler(asyn
       message: 'No daily GA4 data available for this client and period'
     });
   }
-
-  // Store daily metrics
-  await ga4DataService.storeDailyGA4Metrics(clientId, dailyData, period);
   
   res.json({
     success: true,

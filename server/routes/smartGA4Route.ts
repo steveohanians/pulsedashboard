@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { SmartGA4DataFetcher } from '../services/smartGA4DataFetcher';
+import { GA4DataManager } from '../services/ga4';
 import { isAuthenticated } from '../middleware/auth';
 import logger from '../utils/logger';
 
@@ -22,8 +22,8 @@ router.post('/smart-fetch/:clientId', isAuthenticated, async (req, res) => {
 
     logger.info(`Starting smart 15-month GA4 data fetch for client: ${clientId}`);
     
-    const smartFetcher = new SmartGA4DataFetcher();
-    const result = await smartFetcher.fetch15MonthData(clientId);
+    const ga4Manager = new GA4DataManager();
+    const result = await ga4Manager.smartFetch({ clientId });
     
     if (result.success) {
       logger.info(`Smart fetch completed successfully for ${clientId}`, {
@@ -80,22 +80,19 @@ router.get('/status/:clientId', isAuthenticated, async (req, res) => {
       });
     }
 
-    const smartFetcher = new SmartGA4DataFetcher();
-    // Note: We need to expose these methods or create a status check method
-    // For now, let's create a simple response structure
-    const statusMessage = 'Data status check available after implementing public methods';
+    const ga4Manager = new GA4DataManager();
+    const isValidAccess = await ga4Manager.validateClientAccess(clientId);
     
-    // Convert Map to object for JSON response
-    const statusData: Record<string, any> = {};
-    existingDataStatus.forEach((value, key) => {
-      statusData[key] = value;
-    });
+    const statusMessage = isValidAccess 
+      ? 'GA4 access validated successfully' 
+      : 'GA4 access validation failed - check property configuration';
     
     return res.json({
       success: true,
       message: statusMessage,
       data: {
         clientId,
+        accessValid: isValidAccess,
         available: true
       }
     });
