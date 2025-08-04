@@ -156,33 +156,82 @@ export class GA4DataManager {
   }
 
   /**
-   * Complete 15-month GA4 data refresh with cleanup
+   * 🚀 COMPLETE GA4 DATA SYNC - Your single command for full data refresh
+   * 
+   * This method executes the complete GA4 data synchronization process:
+   * 
+   * 1. CLEARS all existing GA4 data from databases and JSON files
+   * 2. FETCHES 15 months of fresh GA4 data using proper logic:
+   *    - Month 1: Daily data for Bounce Rate, Session Duration, Pages per Session, Sessions per User
+   *             + Monthly data for Traffic Channels, Device Distribution  
+   *    - Months 2-15: Monthly data for all 6 chart types
+   * 3. PROCESSES and STORES all data with correct mapping
+   * 4. ENSURES all 6 charts refresh with authentic GA4 data
+   * 
+   * Call this method when you need complete GA4 data refresh.
    */
-  async completeDataRefresh(clientId: string): Promise<FetchResult> {
+  async executeCompleteGA4DataSync(clientId: string): Promise<{
+    success: boolean;
+    summary: string;
+    periodsProcessed: number;
+    dailyDataPeriods: string[];
+    monthlyDataPeriods: string[];
+    errors: string[];
+    chartsRefreshed: string[];
+  }> {
     try {
-      logger.info(`Starting complete 15-month data refresh for client ${clientId}`);
+      logger.info(`🚀 EXECUTING COMPLETE GA4 DATA SYNC for client ${clientId}`);
       
-      // Step 1: Clear all existing data
+      // Step 1: Clear all existing GA4 data (databases + JSON files)
+      logger.info(`Step 1: Clearing all existing GA4 data for client ${clientId}`);
       await this.clearAllClientData(clientId);
       
-      // Step 2: Fetch fresh data with force refresh
+      // Step 2: Execute 15-month smart fetch with force refresh
+      logger.info(`Step 2: Fetching 15 months of fresh GA4 data for client ${clientId}`);
       const result = await this.smartFetch({ 
         clientId, 
         periods: DATA_MANAGEMENT.DEFAULT_PERIODS,
         forceRefresh: true 
       });
       
-      logger.info(`Complete data refresh finished for client ${clientId}`, result);
-      return result;
+      // Step 3: Generate summary
+      const chartsRefreshed = [
+        'Bounce Rate',
+        'Session Duration', 
+        'Pages per Session',
+        'Sessions per User',
+        'Traffic Channels',
+        'Device Distribution'
+      ];
+      
+      const summary = result.success 
+        ? `✅ Successfully synced ${result.periodsProcessed} periods: ${result.dailyDataPeriods.length} with daily data, ${result.monthlyDataPeriods.length} with monthly data`
+        : `❌ Sync failed: ${result.errors.join(', ')}`;
+      
+      logger.info(`🚀 COMPLETE GA4 DATA SYNC FINISHED for client ${clientId}: ${summary}`);
+      
+      return {
+        success: result.success,
+        summary,
+        periodsProcessed: result.periodsProcessed,
+        dailyDataPeriods: result.dailyDataPeriods,
+        monthlyDataPeriods: result.monthlyDataPeriods,
+        errors: result.errors,
+        chartsRefreshed: result.success ? chartsRefreshed : []
+      };
       
     } catch (error) {
-      logger.error(`Complete data refresh failed for client ${clientId}:`, error);
+      const errorMessage = `Complete GA4 data sync failed: ${error}`;
+      logger.error(`❌ ${errorMessage} for client ${clientId}`);
+      
       return {
         success: false,
+        summary: `❌ ${errorMessage}`,
         periodsProcessed: 0,
         dailyDataPeriods: [],
         monthlyDataPeriods: [],
-        errors: [`Complete refresh failed: ${error}`]
+        errors: [errorMessage],
+        chartsRefreshed: []
       };
     }
   }

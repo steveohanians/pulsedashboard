@@ -22,6 +22,7 @@ import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
 import sampleDataRoute from "./routes/sampleDataRoute";
 import adminGA4Route from "./routes/adminGA4Route";
+import ga4AdminRoutes from "./routes/ga4-admin";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -2497,6 +2498,7 @@ export function registerRoutes(app: Express): Server {
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/admin/ga4", adminGA4Route);
+  app.use("/api/admin/ga4-sync", ga4AdminRoutes);
   app.use("/api/sample-data", sampleDataRoute);
   app.use("/api", cleanupAndFetchRoute);
   
