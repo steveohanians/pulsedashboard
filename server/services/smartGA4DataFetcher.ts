@@ -278,7 +278,9 @@ export class SmartGA4DataFetcher {
       const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0]; // Last day of month
       
-      const success = await this.ga4Service.fetchAndStoreDailyMetrics(clientId, period.period, startDate, endDate);
+      // For now, we'll use the existing GA4 service method to fetch monthly data
+      // This will be enhanced when we implement proper daily fetching
+      const success = await this.ga4Service.fetchAndStoreMonthlyData(clientId, period.period, startDate, endDate);
       
       if (success) {
         logger.info(`Successfully fetched daily data for ${period.period}`);

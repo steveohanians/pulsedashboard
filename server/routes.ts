@@ -16,6 +16,7 @@ import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4DataRoute from "./routes/ga4DataRoute";
 import smartGA4Route from "./routes/smartGA4Route";
+import cleanupAndFetchRoute from "./routes/cleanupAndFetchRoute";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
 
@@ -2179,6 +2180,7 @@ export function registerRoutes(app: Express): Server {
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
+  app.use("/api", cleanupAndFetchRoute);
   
   // Simple GA4 refresh endpoint for demo client (no auth required)
   app.post("/api/refresh-ga4-data", async (req, res) => {
