@@ -683,7 +683,7 @@ export function registerRoutes(app: Express): Server {
         benchmarks: {
           industryAverage: industryAverage,
           cdPortfolioAverage: cdPortfolioAverage,
-          competitors: competitorData
+          competitors: competitorData.filter((c: any) => c.value !== null).map((c: any) => ({ name: c.name, value: c.value as number }))
         },
         context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValue} for ${targetPeriod}. Industry average: ${industryAverage}, CD Portfolio average: ${cdPortfolioAverage}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
       };
@@ -981,7 +981,7 @@ export function registerRoutes(app: Express): Server {
         benchmarks: {
           industryAverage: industryAvgFromDB, // Use DB value instead of frontend average
           cdPortfolioAverage: cdAvgFromDB, // Use DB value instead of frontend average
-          competitors: competitorData
+          competitors: competitorData.filter((c: any) => c.value !== null).map((c: any) => ({ name: c.name, value: c.value as number }))
         },
         context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValueFromDB} for ${timePeriod}. Industry average: ${industryAvgFromDB}, CD Portfolio average: ${cdAvgFromDB}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
         userContext: sanitizedUserContext // Add sanitized user context to the enriched data
@@ -1056,7 +1056,13 @@ export function registerRoutes(app: Express): Server {
       const context = await aggregator.aggregateDataForInsights(clientId, period as string);
       
       // Generate comprehensive insights
-      const { dashboardSummary, metricInsights } = await generateComprehensiveInsights(context);
+      const { dashboardSummary, metricInsights } = await generateComprehensiveInsights({
+        ...context,
+        metrics: context.metrics.map(m => ({
+          ...m,
+          percentageChange: m.percentageChange ?? undefined
+        }))
+      });
       
       // Store insights in database
       const storedInsights = [];
@@ -1508,7 +1514,7 @@ export function registerRoutes(app: Express): Server {
           } else {
             logger.warn("Competitor data regeneration was disabled", { 
               competitorId: competitor.id, 
-              message: result.message 
+              message: result.message || 'No message provided'
             });
           }
         }
