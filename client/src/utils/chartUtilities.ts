@@ -326,7 +326,7 @@ export function calculateYAxisDomain(data: any[], clientKey: string, competitors
 export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> {
   const channelMap = new Map();
   
-  sourceMetrics.forEach(metric => {
+  sourceMetrics.forEach((metric, index) => {
     // Handle both individual channel records and legacy JSON format
     if (metric.channel) {
       // Individual channel record (new format)
@@ -358,7 +358,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
       try {
         const channelsData = JSON.parse(metric.value);
         if (Array.isArray(channelsData)) {
-          channelsData.forEach(channelData => {
+          channelsData.forEach((channelData: any) => {
             // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
             if (channelData.channel && channelData.percentage !== undefined) {
               const channelName = channelData.channel;

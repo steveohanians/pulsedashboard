@@ -140,10 +140,12 @@ export class GA4DataProcessor {
         sum + parseInt(row.metricValues[0].value), 0
       );
 
-      const results = response.rows.map((row: any) => {
+      // First pass: normalize and collect all channels
+      const channelMap = new Map<string, { sessions: number }>();
+
+      response.rows.forEach((row: any) => {
         const rawChannel = row.dimensionValues[0].value;
         const sessions = parseInt(row.metricValues[0].value);
-        const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
         const normalizedChannel = this.normalizeChannelName(rawChannel);
 
         // Debug logging to see what raw channel names we're getting
@@ -151,14 +153,28 @@ export class GA4DataProcessor {
           logger.info(`GA4 Channel mapping: "${rawChannel}" -> "${normalizedChannel}"`);
         }
 
+        // Consolidate channels with same normalized name
+        if (channelMap.has(normalizedChannel)) {
+          channelMap.get(normalizedChannel)!.sessions += sessions;
+        } else {
+          channelMap.set(normalizedChannel, { sessions });
+        }
+      });
+
+      // Second pass: calculate percentages from consolidated data
+      const results = Array.from(channelMap.entries()).map(([channel, data]) => {
+        const percentage = totalSessions > 0 ? (data.sessions / totalSessions) * 100 : 0;
         return {
-          channel: normalizedChannel,
-          sessions,
+          channel,
+          sessions: data.sessions,
           percentage: Math.round(percentage * 10) / 10 // Round to 1 decimal
         };
       });
+
+      // Sort by sessions descending for consistent ordering
+      results.sort((a, b) => b.sessions - a.sessions);
       
-      logger.info(`GA4 Traffic Channels extracted: ${results.length} channels`, {
+      logger.info(`GA4 Traffic Channels consolidated: ${results.length} channels`, {
         channels: results.map(r => `${r.channel}: ${r.percentage}%`)
       });
       
@@ -218,7 +234,7 @@ export class GA4DataProcessor {
       'Social': 'Social Media',
       'Cross-network': 'Other',
       'Unassigned': 'Other',
-      'Display': 'Other',
+
       'Video': 'Other',
       'YouTube': 'Other',
       'Affiliates': 'Other',
