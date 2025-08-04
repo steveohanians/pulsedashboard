@@ -180,7 +180,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClients(): Promise<Client[]> {
-    return await this.clientRepo.findAll({ active: true });
+    // Get clients with current GA4 property information from property access table
+    const results = await db.select({
+      client: clients,
+      ga4PropertyAccess: ga4PropertyAccess
+    })
+    .from(clients)
+    .leftJoin(ga4PropertyAccess, eq(clients.id, ga4PropertyAccess.clientId))
+    .where(eq(clients.active, true));
+
+    // Map the results to update the ga4PropertyId with current data
+    return results.map(result => ({
+      ...result.client,
+      // Use current property ID from property access table, fallback to client table if none
+      ga4PropertyId: result.ga4PropertyAccess?.propertyId || result.client.ga4PropertyId
+    }));
   }
 
   async createClient(insertClient: InsertClient): Promise<Client> {
