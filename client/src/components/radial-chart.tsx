@@ -24,19 +24,19 @@ export default function MetricRadialChart({ metricName, timePeriod, clientData, 
     {
       name: clientKey,
       value: clientData,
-      fill: 'hsl(318, 97%, 50%)', // Primary pink
+      fill: 'hsl(var(--color-client))',
       type: 'client'
     },
     {
       name: 'Industry Avg',
       value: industryAvg,
-      fill: '#9ca3af', // Light grey
+      fill: 'hsl(var(--color-industry-avg))',
       type: 'average'
     },
     {
       name: 'CD Client Avg',
       value: cdAvg,
-      fill: '#4b5563', // Dark grey
+      fill: 'hsl(var(--color-cd-avg))',
       type: 'average'
     },
     ...competitors.map((comp, index) => ({

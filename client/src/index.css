@@ -52,10 +52,27 @@
   --color-competitor-1: hsl(266, 85%, 58%);
   --color-competitor-2: hsl(197, 94%, 43%);
   --color-competitor-3: hsl(0, 84%, 60%);
+  --color-default: hsl(220, 9%, 46%);
+  
+  /* Device Colors */
   --color-device-desktop: hsl(217, 91%, 60%);
   --color-device-mobile: hsl(162, 73%, 46%);
   --color-device-tablet: hsl(266, 85%, 58%);
   --color-device-other: hsl(220, 9%, 46%);
+  
+  /* Traffic Channel Colors */
+  --color-channel-organic: hsl(160, 84%, 39%);
+  --color-channel-direct: hsl(217, 91%, 60%);
+  --color-channel-social: hsl(266, 85%, 58%);
+  --color-channel-paid: hsl(43, 96%, 56%);
+  --color-channel-email: hsl(318, 97%, 50%);
+  --color-channel-referral: hsl(197, 94%, 43%);
+  --color-channel-other: hsl(220, 9%, 46%);
+  
+  /* Performance Colors */
+  --color-excellent: hsl(160, 84%, 39%);
+  --color-good: hsl(43, 96%, 56%);
+  --color-poor: hsl(0, 84%, 60%);
   
   /* Sidebar Variables (Missing) */
   --sidebar-background: var(--background);
@@ -119,10 +136,27 @@
   --color-competitor-1: hsl(266, 85%, 58%);
   --color-competitor-2: hsl(197, 94%, 43%);
   --color-competitor-3: hsl(0, 84%, 60%);
+  --color-default: hsl(220, 9%, 46%);
+  
+  /* Device Colors */
   --color-device-desktop: hsl(217, 91%, 60%);
   --color-device-mobile: hsl(162, 73%, 46%);
   --color-device-tablet: hsl(266, 85%, 58%);
   --color-device-other: hsl(220, 9%, 46%);
+  
+  /* Traffic Channel Colors */
+  --color-channel-organic: hsl(160, 84%, 39%);
+  --color-channel-direct: hsl(217, 91%, 60%);
+  --color-channel-social: hsl(266, 85%, 58%);
+  --color-channel-paid: hsl(43, 96%, 56%);
+  --color-channel-email: hsl(318, 97%, 50%);
+  --color-channel-referral: hsl(197, 94%, 43%);
+  --color-channel-other: hsl(220, 9%, 46%);
+  
+  /* Performance Colors */
+  --color-excellent: hsl(160, 84%, 39%);
+  --color-good: hsl(43, 96%, 56%);
+  --color-poor: hsl(0, 84%, 60%);
   
   /* Sidebar Variables */
   --sidebar-background: var(--background);

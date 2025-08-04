@@ -29,9 +29,9 @@ export default function MetricGaugeChart({ metricName, timePeriod, clientData, i
   
   // Create gauge data
   const gaugeData = [
-    { name: 'Excellent', value: excellent, fill: '#10b981' }, // Green
-    { name: 'Good', value: good - excellent, fill: '#f59e0b' }, // Yellow
-    { name: 'Poor', value: poor - good, fill: '#ef4444' }, // Red
+    { name: 'Excellent', value: excellent, fill: 'hsl(var(--color-excellent))' },
+    { name: 'Good', value: good - excellent, fill: 'hsl(var(--color-good))' },
+    { name: 'Poor', value: poor - good, fill: 'hsl(var(--color-poor))' },
     { name: 'Empty', value: maxValue * 0.5, fill: 'transparent' } // Bottom half
   ];
   

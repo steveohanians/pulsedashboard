@@ -149,13 +149,17 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   
   // Define colors for each line
   const colors: Record<string, string> = {
-    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color (exact match to CSS variable)
-    'Industry Avg': '#9ca3af', // Light grey
-    'Clear Digital Clients Avg': '#4b5563', // Dark grey
+    [clientKey]: 'hsl(var(--color-client))',
+    'Industry Avg': 'hsl(var(--color-industry-avg))',
+    'Clear Digital Clients Avg': 'hsl(var(--color-cd-avg))',
   };
 
-  // Additional colors for competitors
-  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+  // Additional colors for competitors using CSS variables
+  const competitorColors = [
+    'hsl(var(--color-competitor-1))',
+    'hsl(var(--color-competitor-2))', 
+    'hsl(var(--color-competitor-3))'
+  ];
 
   // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];

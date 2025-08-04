@@ -19,13 +19,13 @@ interface StackedBarChartProps {
 }
 
 const CHANNEL_COLORS = {
-  'Organic Search': '#10b981', // emerald-500
-  'Direct': '#3b82f6', // blue-500
-  'Social Media': '#8b5cf6', // violet-500
-  'Paid Search': '#f59e0b', // amber-500
-  'Email': '#ec4899', // pink-500
-  'Referral': '#06b6d4', // cyan-500
-  'Other': '#6b7280', // gray-500
+  'Organic Search': 'hsl(var(--color-channel-organic))',
+  'Direct': 'hsl(var(--color-channel-direct))',
+  'Social Media': 'hsl(var(--color-channel-social))',
+  'Paid Search': 'hsl(var(--color-channel-paid))',
+  'Email': 'hsl(var(--color-channel-email))',
+  'Referral': 'hsl(var(--color-channel-referral))',
+  'Other': 'hsl(var(--color-channel-other))',
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {

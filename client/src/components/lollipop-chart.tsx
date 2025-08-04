@@ -34,10 +34,10 @@ interface LollipopChartProps {
 }
 
 const DEVICE_COLORS = {
-  Desktop: '#3B82F6',   // Blue
-  Mobile: '#EF4444',    // Red  
-  Tablet: '#F59E0B',    // Amber
-  Other: '#6B7280'      // Gray
+  Desktop: 'hsl(var(--color-device-desktop))',
+  Mobile: 'hsl(var(--color-device-mobile))',
+  Tablet: 'hsl(var(--color-device-tablet))',
+  Other: 'hsl(var(--color-device-other))'
 };
 
 export default function LollipopChart({ 

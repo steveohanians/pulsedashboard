@@ -178,7 +178,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
     'Clear Digital Clients Avg': 'hsl(var(--color-cd-avg))',
   };
 
-  // Additional colors for competitors
+  // Additional colors for competitors using CSS variables
   const competitorColors = [
     'hsl(var(--color-competitor-1))',
     'hsl(var(--color-competitor-2))', 

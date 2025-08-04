@@ -260,13 +260,17 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Define colors for each bar series (with dynamic company name)
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const colors: Record<string, string> = {
-    [clientKey]: 'hsl(318, 97%, 50%)', // Primary pink color
-    'Industry Avg': '#9ca3af', // Light grey
-    [`${companyName} Clients Avg`]: '#4b5563', // Dark grey (matching bounce rate chart)
+    [clientKey]: 'hsl(var(--color-client))',
+    'Industry Avg': 'hsl(var(--color-industry-avg))',
+    [`${companyName} Clients Avg`]: 'hsl(var(--color-cd-avg))',
   };
 
-  // Additional colors for competitors
-  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+  // Additional colors for competitors using CSS variables
+  const competitorColors = [
+    'hsl(var(--color-competitor-1))',
+    'hsl(var(--color-competitor-2))', 
+    'hsl(var(--color-competitor-3))'
+  ];
   
   // Add competitor colors to the main colors object
   competitors.forEach((comp, index) => {
