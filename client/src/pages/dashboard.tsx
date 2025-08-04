@@ -488,6 +488,13 @@ export default function Dashboard() {
   const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
+    // Quick validation that GA4 device data is found
+    const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
+    const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
+    if (ga4DeviceArrayMetric) {
+      console.log('✅ GA4 device data found:', ga4DeviceArrayMetric.value.length, 'device types');
+    }
+    
     const DEVICE_COLORS = {
       'Desktop': '#3b82f6',
       'Mobile': '#10b981', 
@@ -497,96 +504,127 @@ export default function Dashboard() {
 
     const result = [];
 
-    // Helper function to deduplicate metrics by device
-    const deduplicateByDevice = (sourceMetrics: any[]) => {
+    // Helper function to aggregate device data from various formats
+    const aggregateDeviceData = (sourceMetrics: any[]) => {
       const deviceMap = new Map();
+      
       sourceMetrics.forEach(metric => {
-        const deviceName = metric.channel || 'Other';
-        if (!deviceMap.has(deviceName)) {
-          deviceMap.set(deviceName, metric);
+        // Handle individual device records (competitors/averages format)
+        if (metric.channel) {
+          const deviceName = metric.channel;
+          const value = parseFloat(metric.value);
+          
+          if (deviceMap.has(deviceName)) {
+            deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+          } else {
+            deviceMap.set(deviceName, value);
+          }
+        } else if (Array.isArray(metric.value)) {
+          // GA4 array format - already parsed by backend
+          metric.value.forEach((device: any) => {
+            const deviceName = device.device || device.name || device.category;
+            const value = parseFloat(device.percentage || device.value || device.sessions);
+            
+            if (deviceName && !isNaN(value)) {
+              if (deviceMap.has(deviceName)) {
+                deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+              } else {
+                deviceMap.set(deviceName, value);
+              }
+            }
+          });
+        } else if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
+          // GA4 JSON string format - parse and aggregate
+          try {
+            const deviceData = JSON.parse(metric.value);
+            if (Array.isArray(deviceData)) {
+              deviceData.forEach((device: any) => {
+                const deviceName = device.device || device.name || device.category;
+                const value = parseFloat(device.percentage || device.value || device.sessions);
+                
+                if (deviceName && !isNaN(value)) {
+                  if (deviceMap.has(deviceName)) {
+                    deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+                  } else {
+                    deviceMap.set(deviceName, value);
+                  }
+                }
+              });
+            }
+          } catch (e) {
+            console.warn(`Invalid device JSON data: ${metric.value}`);
+          }
+        } else {
+          // Handle simple value format
+          const deviceName = metric.channel || 'Other';
+          const value = parseFloat(metric.value);
+          
+          if (deviceName && !isNaN(value)) {
+            if (deviceMap.has(deviceName)) {
+              deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+            } else {
+              deviceMap.set(deviceName, value);
+            }
+          }
         }
       });
-      return Array.from(deviceMap.values());
+
+      // Convert to array format expected by chart
+      const devices = Array.from(deviceMap.entries()).map(([name, value]) => ({
+        name,
+        value: Math.round(value),
+        percentage: Math.round(value),
+        color: DEVICE_COLORS[name as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+      }));
+
+      // Ensure percentages add up to 100%
+      const total = devices.reduce((sum, device) => sum + device.value, 0);
+      if (total > 0) {
+        let runningTotal = 0;
+        devices.forEach((device, index) => {
+          if (index === devices.length - 1) {
+            // Last device gets the remainder
+            device.value = 100 - runningTotal;
+            device.percentage = 100 - runningTotal;
+          } else {
+            const normalizedValue = Math.round((device.value / total) * 100);
+            device.value = normalizedValue;
+            device.percentage = normalizedValue;
+            runningTotal += normalizedValue;
+          }
+        });
+      }
+
+      return devices;
     };
 
-    // Client data - use database data if available, otherwise fallback
-    const clientMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
-    if (clientMetrics.length > 0) {
-      const uniqueClientMetrics = deduplicateByDevice(clientMetrics);
+    // Client data
+    const clientDeviceData = deviceMetrics.filter(m => m.sourceType === 'Client');
+    if (clientDeviceData.length > 0) {
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        devices: uniqueClientMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
-        }))
-      });
-    } else {
-      // Fallback data for client
-      result.push({
-        sourceType: 'Client',
-        label: client?.name || 'Client',
-        devices: [
-          { name: 'Desktop', value: 52, percentage: 52, color: DEVICE_COLORS['Desktop'] },
-          { name: 'Mobile', value: 40, percentage: 40, color: DEVICE_COLORS['Mobile'] },
-          { name: 'Tablet', value: 8, percentage: 8, color: DEVICE_COLORS['Tablet'] }
-        ]
+        devices: aggregateDeviceData(clientDeviceData)
       });
     }
 
-    // CD Average data - use database data if available, otherwise fallback
-    const cdMetrics = deviceMetrics.filter(m => m.sourceType === 'CD_Avg');
-    if (cdMetrics.length > 0) {
-      const uniqueCdMetrics = deduplicateByDevice(cdMetrics);
+    // CD Average data
+    const cdDeviceData = deviceMetrics.filter(m => m.sourceType === 'CD_Avg');
+    if (cdDeviceData.length > 0) {
       result.push({
         sourceType: 'CD_Avg',
         label: 'Clear Digital Client Avg',
-        devices: uniqueCdMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
-        }))
-      });
-    } else {
-      // Fallback data for CD average
-      result.push({
-        sourceType: 'CD_Avg',
-        label: 'Clear Digital Client Avg',
-        devices: [
-          { name: 'Desktop', value: 50, percentage: 50, color: DEVICE_COLORS['Desktop'] },
-          { name: 'Mobile', value: 43, percentage: 43, color: DEVICE_COLORS['Mobile'] },
-          { name: 'Tablet', value: 7, percentage: 7, color: DEVICE_COLORS['Tablet'] }
-        ]
+        devices: aggregateDeviceData(cdDeviceData)
       });
     }
 
-    // Industry Average data - use database data if available, otherwise fallback
-    const industryMetrics = deviceMetrics.filter(m => m.sourceType === 'Industry_Avg');
-    if (industryMetrics.length > 0) {
-      const uniqueIndustryMetrics = deduplicateByDevice(industryMetrics);
+    // Industry Average data
+    const industryDeviceData = deviceMetrics.filter(m => m.sourceType === 'Industry_Avg');
+    if (industryDeviceData.length > 0) {
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
-        devices: uniqueIndustryMetrics.map(m => ({
-          name: m.channel || 'Other',
-          value: parseFloat(m.value),
-          percentage: parseFloat(m.value),
-          color: DEVICE_COLORS[m.channel as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
-        }))
-      });
-    } else {
-      // Fallback data for industry average
-      result.push({
-        sourceType: 'Industry_Avg',
-        label: 'Industry Avg',
-        devices: [
-          { name: 'Desktop', value: 45, percentage: 45, color: DEVICE_COLORS['Desktop'] },
-          { name: 'Mobile', value: 47, percentage: 47, color: DEVICE_COLORS['Mobile'] },
-          { name: 'Tablet', value: 8, percentage: 8, color: DEVICE_COLORS['Tablet'] }
-        ]
+        devices: aggregateDeviceData(industryDeviceData)
       });
     }
 
