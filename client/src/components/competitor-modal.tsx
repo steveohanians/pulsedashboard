@@ -32,10 +32,22 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate all dashboard-related queries
       queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          Boolean(query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`))
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('/api/dashboard') || queryKey.includes('dashboard');
+        }
       });
+      
+      // Also refresh the page data
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('/api/dashboard');
+        }
+      });
+      
       setDomain("");
       setLabel("");
       toast({
@@ -57,10 +69,22 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       await apiRequest("DELETE", `/api/competitors/${competitorId}`);
     },
     onSuccess: () => {
+      // Invalidate all dashboard-related queries
       queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          Boolean(query.queryKey[0]?.toString().startsWith(`/api/dashboard/${clientId}`))
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('/api/dashboard') || queryKey.includes('dashboard');
+        }
       });
+      
+      // Also refresh the page data
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('/api/dashboard');
+        }
+      });
+      
       toast({
         title: "Competitor removed",
         description: "The competitor has been successfully removed.",
