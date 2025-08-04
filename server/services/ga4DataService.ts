@@ -550,6 +550,127 @@ export class GA4DataService {
       })
       .where(eq(ga4ServiceAccounts.id, serviceAccountId));
   }
+
+  /**
+   * Fetch and store monthly summarized GA4 data for a period
+   */
+  async fetchAndStoreMonthlyData(clientId: string, period: string, startDate: string, endDate: string): Promise<boolean> {
+    try {
+      const propertyAccess = await this.getPropertyAccess(clientId);
+      if (!propertyAccess) {
+        logger.warn(`No GA4 property access for client: ${clientId}`);
+        return false;
+      }
+
+      // Fetch aggregated data for the entire month
+      const monthlyData = await this.fetchGA4MonthlyMetrics(propertyAccess.propertyId, propertyAccess.accessToken, startDate, endDate);
+      
+      if (!monthlyData) {
+        logger.error(`Failed to fetch monthly GA4 data for ${period}`);
+        return false;
+      }
+
+      // Store monthly metrics
+      await this.storeMonthlyMetrics(clientId, period, monthlyData);
+      
+      logger.info(`Successfully stored monthly GA4 data for ${period}`);
+      return true;
+      
+    } catch (error) {
+      logger.error(`Error in fetchAndStoreMonthlyData for ${period}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Fetch aggregated monthly metrics from GA4
+   */
+  private async fetchGA4MonthlyMetrics(propertyId: string, accessToken: string, startDate: string, endDate: string): Promise<GA4MetricData | null> {
+    try {
+      const body = {
+        requests: [{
+          property: `properties/${propertyId}`,
+          dateRanges: [{
+            startDate,
+            endDate
+          }],
+          metrics: [
+            { name: 'bounceRate' },
+            { name: 'averageSessionDuration' },
+            { name: 'screenPageViewsPerSession' },
+            { name: 'sessionsPerUser' },
+            { name: 'sessions' },
+            { name: 'totalUsers' }
+          ],
+          dimensions: [],
+          keepEmptyRows: true
+        }]
+      };
+
+      const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:batchRunReports`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        logger.error(`GA4 API error: ${response.status} - ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (!data.reports?.[0]?.rows?.[0]) {
+        logger.warn('No data returned from GA4 API for monthly fetch');
+        return null;
+      }
+
+      const row = data.reports[0].rows[0];
+      const values = row.metricValues;
+
+      return {
+        bounceRate: parseFloat(values[0].value || '0') * 100, // Convert to percentage
+        sessionDuration: parseFloat(values[1].value || '0'),
+        pagesPerSession: parseFloat(values[2].value || '0'),
+        sessionsPerUser: parseFloat(values[3].value || '0'),
+        totalSessions: parseInt(values[4].value || '0'),
+        totalUsers: parseInt(values[5].value || '0'),
+        trafficChannels: [], // Not needed for monthly summary
+        deviceDistribution: [] // Not needed for monthly summary
+      };
+
+    } catch (error) {
+      logger.error('Error fetching monthly GA4 metrics:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Store monthly summarized metrics
+   */
+  private async storeMonthlyMetrics(clientId: string, period: string, data: GA4MetricData): Promise<void> {
+    const metrics = [
+      { name: 'Bounce Rate', value: data.bounceRate.toFixed(2) },
+      { name: 'Session Duration', value: data.sessionDuration.toFixed(2) },
+      { name: 'Pages per Session', value: data.pagesPerSession.toFixed(2) },
+      { name: 'Sessions per User', value: data.sessionsPerUser.toFixed(2) }
+    ];
+
+    for (const metric of metrics) {
+      await storage.createMetric({
+        clientId,
+        metricName: metric.name,
+        value: metric.value,
+        sourceType: 'Client',
+        timePeriod: period
+      });
+    }
+
+    logger.debug(`Stored ${metrics.length} monthly metrics for ${period}`);
+  }
 }
 
 export const ga4DataService = new GA4DataService();

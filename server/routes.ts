@@ -15,6 +15,7 @@ import { performanceCache } from "./cache/performance-cache";
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4DataRoute from "./routes/ga4DataRoute";
+import smartGA4Route from "./routes/smartGA4Route";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
 

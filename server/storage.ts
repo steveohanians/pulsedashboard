@@ -854,20 +854,18 @@ export class DatabaseStorage implements IStorage {
   async createBenchmarkMetric(data: {
     metricName: string;
     value: string;
-    sourceType: string;
+    sourceType: any;
     timePeriod: string;
     businessSize: string;
     industryVertical: string;
   }): Promise<any> {
     const [result] = await db.insert(benchmarks).values({
-      id: crypto.randomUUID(),
       metricName: data.metricName,
       value: data.value,
       sourceType: data.sourceType,
       timePeriod: data.timePeriod,
       businessSize: data.businessSize,
-      industryVertical: data.industryVertical,
-      createdAt: new Date()
+      industryVertical: data.industryVertical
     }).returning();
     return result;
   }
@@ -889,9 +887,44 @@ export class DatabaseStorage implements IStorage {
       timePeriod: data.timePeriod
     });
   }
+
+  // Methods for smart GA4 fetcher
+  async getMetricsForPeriod(clientId: string, timePeriod: string, metricName: string): Promise<Metric[]> {
+    return await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.clientId, clientId),
+          eq(metrics.timePeriod, timePeriod),
+          eq(metrics.metricName, metricName)
+        )
+      );
+  }
+
+  async deleteMetricsForPeriod(clientId: string, timePeriod: string, metricName: string): Promise<void> {
+    await db
+      .delete(metrics)
+      .where(
+        and(
+          eq(metrics.clientId, clientId),
+          eq(metrics.timePeriod, timePeriod),
+          eq(metrics.metricName, metricName)
+        )
+      );
+  }
+
+  async getMetricsForTimePeriodPattern(clientId: string, timePeriodPattern: string): Promise<Metric[]> {
+    return await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.clientId, clientId),
+          like(metrics.timePeriod, timePeriodPattern)
+        )
+      );
+  }
 }
 
 export const storage = new DatabaseStorage();
-
-// Add missing competitorMetrics import/table
-const competitorMetrics = metrics; // Using metrics table for competitor data
