@@ -73,6 +73,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   const [insight, setInsight] = useState<StoredInsight['data'] & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
+    hasCustomContext?: boolean;
   } | null>(null);
   const queryClient = useQueryClient();
   
@@ -194,7 +195,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         recommendation={insight.recommendationText || ''}
         status={insight.status}
         isTyping={insight.isTyping}
-        hasCustomContext={false}
+        hasCustomContext={insight.hasCustomContext || false}
         clientId={clientId}
         metricName={metricName}
         timePeriod={timePeriod}
