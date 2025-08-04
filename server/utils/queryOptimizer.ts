@@ -294,11 +294,7 @@ export async function getDashboardDataOptimized(
   
   // Debug logging disabled for performance
 
-  // 🔍 DEBUG: Check final processedData for CD_Avg
-  const cdAvgInProcessed = processedData.find(m => m.sourceType === 'CD_Avg' && m.metricName === 'Bounce Rate');
-  if (cdAvgInProcessed) {
-    console.log('🔍 Final CD_Avg Bounce Rate in processedData:', cdAvgInProcessed.value);
-  }
+
 
   const result = {
     client,
@@ -335,12 +331,7 @@ function processMetricsData(
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
   
-  // 🔍 DEBUG: Track CD_Avg data flow
-  const cdAvgBounceRate = allFilteredCdAvgMetrics.find(m => m.metricName === 'Bounce Rate');
-  if (cdAvgBounceRate) {
-    console.log('🔍 CD_Avg Bounce Rate raw from DB:', cdAvgBounceRate.value);
-    console.log('🔍 CD_Avg Bounce Rate parsed:', parseMetricValue(cdAvgBounceRate.value));
-  }
+
   
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
@@ -388,15 +379,7 @@ function processMetricsData(
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = parseMetricValue(m.value);
         
-        // 🔍 DEBUG: Track CD_Avg processing
-        if (m.sourceType === 'CD_Avg' && m.metricName === 'Bounce Rate') {
-          console.log('🔍 Processing CD_Avg Bounce Rate:', { 
-            raw: m.value, 
-            parsed: finalValue,
-            sourceType: m.sourceType,
-            timePeriod: m.timePeriod 
-          });
-        }
+
         
         result.push({
           metricName: m.metricName,

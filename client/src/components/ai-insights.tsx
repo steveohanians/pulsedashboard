@@ -457,7 +457,7 @@ export default function AIInsights({
                         </p>
                         <div className="space-y-2">
                           <textarea
-                            placeholder="e.g., We recently launched a new marketing campaign targeting mobile users, or our website had technical issues last week..."
+                            placeholder="Goals, current initiatives, site updates, UX issues, seasonality, or internal priorities..."
                             value={userContext}
                             onChange={(e) => {
                               const newValue = e.target.value;

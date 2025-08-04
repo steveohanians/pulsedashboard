@@ -64,10 +64,7 @@ function processTimeSeriesForBar(
     dataPoint[clientKey] = clientMetric ? Math.round(parseMetricValue(clientMetric.value) * 10) / 10 : 0;
     dataPoint['Industry Avg'] = industryMetric ? Math.round(parseMetricValue(industryMetric.value) * 10) / 10 : 0;
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
-    // 🔍 DEBUG: Track CD_Avg processing in bar chart
-    if (metricName === 'Bounce Rate') {
-      console.log('🔍 Bar Chart CD_Avg lookup:', { cdMetric: cdMetric, value: cdMetric?.value });
-    }
+
     dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseMetricValue(cdMetric.value) * 10) / 10 : 0;
     
     // Add competitor data
