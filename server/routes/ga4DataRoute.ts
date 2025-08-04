@@ -132,18 +132,24 @@ router.get('/:clientId/:period', validateClientId, asyncErrorHandler(async (req,
 }));
 
 /**
- * GA4 Data Refresh endpoint for admin use
+ * GA4 Data Refresh endpoint - Manual refresh only when requested
  * POST /api/ga4-data/refresh/:clientId
  */
-router.post('/refresh/:clientId', adminRequired, validateClientId, asyncErrorHandler(async (req, res) => {
+router.post('/refresh/:clientId', validateClientId, asyncErrorHandler(async (req, res) => {
   const { clientId } = req.params;
   
-  logger.info(`GA4 data refresh triggered for client: ${clientId}`);
+  logger.info(`Manual GA4 data refresh triggered for client: ${clientId}`);
   
   // Get current period
   const currentDate = new Date();
   const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const dateRange = ga4DataService.getDateRangeForPeriod(period);
+  
+  logger.info(`Refreshing GA4 data for period: ${period} (${dateRange.startDate} to ${dateRange.endDate})`);
+  
+  // Clear existing client data for this period
+  const { storage } = await import('../storage');
+  await storage.clearClientMetricsByPeriod(clientId, period);
   
   // Fetch and store fresh GA4 data
   const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
@@ -151,12 +157,23 @@ router.post('/refresh/:clientId', adminRequired, validateClientId, asyncErrorHan
   if (!ga4Data) {
     return res.status(404).json({
       success: false,
-      message: 'No GA4 data available for this client'
+      message: 'No GA4 data available for this client and period'
     });
   }
   
   // Store the refreshed data
   await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
+  
+  // Clear performance cache to ensure fresh data on next dashboard load
+  const { performanceCache } = await import('../cache/performance-cache');
+  performanceCache.clear();
+  
+  logger.info(`Successfully refreshed and stored GA4 data for ${clientId}`, {
+    period,
+    bounceRate: ga4Data.bounceRate,
+    sessionDuration: ga4Data.sessionDuration,
+    totalSessions: ga4Data.totalSessions
+  });
   
   res.json({
     success: true,

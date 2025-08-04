@@ -148,45 +148,7 @@ export function registerRoutes(app: Express): Server {
         industryVertical: industryVertical as string
       };
 
-      // 🔥 GA4 INTEGRATION: Fetch real GA4 data for Demo Company
-      if (clientId === "demo-client-id") {
-        logger.info(`Fetching real GA4 data for Demo Company (${clientId}) for periods: ${periodsToQuery.join(', ')}`);
-        
-        try {
-          // Clear any existing CLIENT data first for these periods (preserve benchmarks)
-          for (const period of periodsToQuery) {
-            // Delete only existing CLIENT data to ensure GA4 data takes precedence
-            await storage.clearClientMetricsByPeriod(clientId, period);
-            
-            const { startDate, endDate } = ga4DataService.getDateRangeForPeriod(period);
-            logger.info(`GA4 date range for period ${period}: ${startDate} to ${endDate}`);
-            
-            const ga4Data = await ga4DataService.fetchGA4Data(clientId, startDate, endDate);
-            
-            if (ga4Data) {
-              // Store the GA4 metrics in database
-              await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
-              logger.info(`Successfully stored GA4 data for Demo Company period: ${period} - Bounce Rate: ${ga4Data.bounceRate}%`);
-            } else {
-              logger.warn(`No GA4 data available for Demo Company period: ${period}`);
-            }
-          }
-        } catch (ga4Error) {
-          logger.error(`GA4 data fetch failed for Demo Company: ${(ga4Error as Error).message}`);
-          // Continue with sample data if GA4 fails
-        }
-
-        // 🔄 CACHE INVALIDATION: Clear cache after GA4 data update to ensure immediate frontend update
-        performanceCache.clear(); // Clear all cache to ensure fresh data
-        
-        // Force immediate cache invalidation for all periods  
-        setTimeout(() => {
-          performanceCache.clear();
-          logger.info(`Secondary cache clear completed - ensuring frontend gets fresh data`);
-        }, 100);
-        
-        logger.info(`Full cache cleared after GA4 data update for immediate frontend refresh`);
-      }
+      // GA4 INTEGRATION: Manual refresh only - no automatic fetching on dashboard load
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
       const result = await getDashboardDataOptimized(
@@ -2191,6 +2153,69 @@ export function registerRoutes(app: Express): Server {
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
+  
+  // Simple GA4 refresh endpoint for demo client (no auth required)
+  app.post("/api/refresh-ga4-data", async (req, res) => {
+    try {
+      const clientId = "demo-client-id";
+      logger.info(`Manual GA4 data refresh triggered for ${clientId}`);
+      
+      // Get current period
+      const currentDate = new Date();
+      const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      const dateRange = ga4DataService.getDateRangeForPeriod(period);
+      
+      logger.info(`Refreshing GA4 data for period: ${period} (${dateRange.startDate} to ${dateRange.endDate})`);
+      
+      // Clear existing client data for this period
+      await storage.clearClientMetricsByPeriod(clientId, period);
+      
+      // Fetch and store fresh GA4 data
+      const ga4Data = await ga4DataService.fetchGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+      
+      if (!ga4Data) {
+        return res.status(404).json({
+          success: false,
+          message: 'No GA4 data available for this client and period'
+        });
+      }
+      
+      // Store the refreshed data
+      await ga4DataService.storeGA4Metrics(clientId, period, ga4Data);
+      
+      // Clear performance cache to ensure fresh data on next dashboard load
+      performanceCache.clear();
+      
+      logger.info(`Successfully refreshed and stored GA4 data for ${clientId}`, {
+        period,
+        bounceRate: ga4Data.bounceRate,
+        sessionDuration: ga4Data.sessionDuration,
+        totalSessions: ga4Data.totalSessions
+      });
+      
+      res.json({
+        success: true,
+        message: `Successfully refreshed GA4 data for ${clientId}`,
+        data: {
+          period,
+          bounceRate: `${ga4Data.bounceRate.toFixed(1)}%`,
+          sessionDuration: `${ga4Data.sessionDuration.toFixed(0)}s`,
+          pagesPerSession: ga4Data.pagesPerSession.toFixed(2),
+          sessionsPerUser: ga4Data.sessionsPerUser.toFixed(2),
+          totalSessions: ga4Data.totalSessions,
+          totalUsers: ga4Data.totalUsers,
+          trafficChannelsCount: ga4Data.trafficChannels.length,
+          deviceTypesCount: ga4Data.deviceDistribution.length
+        }
+      });
+    } catch (error) {
+      logger.error('GA4 refresh failed:', { error: (error as Error).message });
+      res.status(500).json({ 
+        success: false, 
+        message: `GA4 refresh failed: ${(error as Error).message}` 
+      });
+    }
+  });
   
   // GA4 Service Account Management routes
   app.use("/api/admin", ga4ServiceAccountRoutes);
