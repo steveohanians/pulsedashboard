@@ -318,7 +318,13 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
+      console.log('🔥 TRAFFIC FALLBACK DEBUG:', {
+        metricsLength: metrics.length,
+        allMetricNames: [...new Set(metrics.map(m => m.metricName))],
+        hasTrafficChannels: metrics.some(m => m.metricName === 'Traffic Channels')
+      });
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+      console.log('🔥 FILTERED TRAFFIC METRICS:', trafficMetrics);
       // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     

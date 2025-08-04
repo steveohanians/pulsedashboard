@@ -29,6 +29,10 @@ const CHANNEL_COLORS = {
 };
 
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
+  console.log('🔥 STACKED BAR CHART RECEIVED DATA:', JSON.stringify(data, null, 2));
+  console.log('🔥 DATA LENGTH:', data.length);
+  console.log('🔥 DEMO COMPANY DATA:', data.find(d => d.label.includes('Demo')));
+  
   const [hoveredSegment, setHoveredSegment] = useState<{
     channelName: string;
     value: number;
