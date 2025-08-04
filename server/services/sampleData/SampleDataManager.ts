@@ -171,8 +171,8 @@ export class SampleDataManager {
       const competitorDomain = competitorConfig.domains[compIndex];
       
       try {
-        // Create competitor entry
-        await storage.createCompetitor({
+        // Create competitor entry and get the returned competitor object with ID
+        const competitor = await storage.createCompetitor({
           clientId,
           domain: competitorDomain,
           label: competitorDomain.split('.')[0] || 'competitor'
@@ -208,7 +208,7 @@ export class SampleDataManager {
             periodIndex
           );
           
-          await this.storeCompetitorMetrics(clientId, competitorDomain, period.period, competitorMetrics);
+          await this.storeCompetitorMetrics(clientId, competitor.id, period.period, competitorMetrics);
         }
 
         competitorsGenerated++;
@@ -271,9 +271,9 @@ export class SampleDataManager {
   }
 
   /**
-   * Store competitor metrics
+   * Store competitor metrics with proper competitor ID linking
    */
-  private async storeCompetitorMetrics(clientId: string, domain: string, period: string, metrics: any): Promise<void> {
+  private async storeCompetitorMetrics(clientId: string, competitorId: string, period: string, metrics: any): Promise<void> {
     const metricsToStore = [
       { name: METRIC_NAMES.BOUNCE_RATE, value: metrics.bounceRate.toFixed(2) },
       { name: METRIC_NAMES.SESSION_DURATION, value: metrics.sessionDuration.toFixed(2) },
@@ -283,7 +283,8 @@ export class SampleDataManager {
 
     for (const metric of metricsToStore) {
       await storage.createMetric({
-        clientId: clientId, // Use actual client ID, not domain
+        clientId: clientId,
+        competitorId: competitorId, // Link to specific competitor
         metricName: metric.name,
         value: metric.value,
         sourceType: 'Competitor',
