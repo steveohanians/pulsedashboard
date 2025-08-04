@@ -85,18 +85,19 @@ async function generateCompetitorHistoricalData(clientId: string, competitor: an
 function extractClientBaseline(clientMetrics: any[]): any {
   if (!clientMetrics || clientMetrics.length === 0) return null;
   
-  const bounceRateMetric = clientMetrics.find(m => m.metricName === 'bounceRate');
-  const sessionDurationMetric = clientMetrics.find(m => m.metricName === 'sessionDuration');
-  const pagesPerSessionMetric = clientMetrics.find(m => m.metricName === 'pagesPerSession');
-  const sessionsPerUserMetric = clientMetrics.find(m => m.metricName === 'sessionsPerUser');
+  // Use proper metric names that match database storage
+  const bounceRateMetric = clientMetrics.find(m => m.metricName === 'Bounce Rate');
+  const sessionDurationMetric = clientMetrics.find(m => m.metricName === 'Session Duration');
+  const pagesPerSessionMetric = clientMetrics.find(m => m.metricName === 'Pages per Session');
+  const sessionsPerUserMetric = clientMetrics.find(m => m.metricName === 'Sessions per User');
   
   if (!bounceRateMetric || !sessionDurationMetric) return null;
   
   return {
-    bounceRate: typeof bounceRateMetric.value === 'object' ? bounceRateMetric.value.value : bounceRateMetric.value,
-    sessionDuration: typeof sessionDurationMetric.value === 'object' ? sessionDurationMetric.value.value : sessionDurationMetric.value,
-    pagesPerSession: pagesPerSessionMetric ? (typeof pagesPerSessionMetric.value === 'object' ? pagesPerSessionMetric.value.value : pagesPerSessionMetric.value) : 2.8,
-    sessionsPerUser: sessionsPerUserMetric ? (typeof sessionsPerUserMetric.value === 'object' ? sessionsPerUserMetric.value.value : sessionsPerUserMetric.value) : 1.6
+    bounceRate: typeof bounceRateMetric.value === 'object' ? bounceRateMetric.value.value : parseFloat(bounceRateMetric.value),
+    sessionDuration: typeof sessionDurationMetric.value === 'object' ? sessionDurationMetric.value.value : parseFloat(sessionDurationMetric.value),
+    pagesPerSession: pagesPerSessionMetric ? (typeof pagesPerSessionMetric.value === 'object' ? pagesPerSessionMetric.value.value : parseFloat(pagesPerSessionMetric.value)) : 2.8,
+    sessionsPerUser: sessionsPerUserMetric ? (typeof sessionsPerUserMetric.value === 'object' ? sessionsPerUserMetric.value.value : parseFloat(sessionsPerUserMetric.value)) : 1.6
   };
 }
 
