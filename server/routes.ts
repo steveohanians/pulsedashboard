@@ -169,7 +169,7 @@ async function storeCompetitorMetrics(clientId: string, competitorId: string, pe
   });
   
   // Import metric names constants to ensure proper naming
-  const { METRIC_NAMES } = await import('../services/sampleData/constants');
+  const { METRIC_NAMES } = await import('./services/sampleData/constants');
   
   logger.info("DETAILED: Imported metric names", {
     metricNames: METRIC_NAMES
