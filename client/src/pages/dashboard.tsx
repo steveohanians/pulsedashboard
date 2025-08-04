@@ -229,10 +229,18 @@ export default function Dashboard() {
   console.log('🔍 Dashboard Debug:', {
     isTimeSeries,
     timeSeriesDataExists: !!timeSeriesData,
-    timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
+    timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData).join(', ') : 'none',
     periodsCount: periods?.length || 0,
     metricsCount: metrics.length,
-    authenticGA4BounceRate: metrics.find(m => m.metricName === 'Bounce Rate' && m.sourceType === 'Client')?.value
+    authenticGA4BounceRate: metrics.find(m => m.metricName === 'Bounce Rate' && m.sourceType === 'Client')?.value,
+    fullDataStructure: {
+      hasTimeSeriesData: !!timeSeriesData,
+      hasPeriods: !!periods,
+      isTimeSeriesFlag: isTimeSeries,
+      periodsList: periods,
+      timeSeriesFirstPeriod: timeSeriesData ? Object.keys(timeSeriesData)[0] : null,
+      timeSeriesFirstPeriodCount: timeSeriesData && Object.keys(timeSeriesData)[0] ? timeSeriesData[Object.keys(timeSeriesData)[0]]?.length : 0
+    }
   });
 
 
