@@ -326,14 +326,14 @@ export default function Dashboard() {
     }
     
     // Debug traffic channel data processing
-    console.log('🔍 Traffic Channel Debug:', {
+    console.log('🔍 TRAFFIC CHANNEL FULL DEBUG:', {
       trafficMetricsCount: trafficMetrics.length,
       clientMetricsCount: clientMetrics.length,
-      firstFewMetrics: trafficMetrics.slice(0, 5),
-      clientMetrics: clientMetrics.slice(0, 5),
       dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
       hasTrafficChannelMetrics: !!dashboardData?.trafficChannelMetrics,
-      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0
+      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0,
+      fullTrafficMetrics: trafficMetrics,
+      allClientMetrics: clientMetrics
     });
     
     if (trafficMetrics.length === 0) {
@@ -349,11 +349,12 @@ export default function Dashboard() {
 
     // Client data
     const clientTrafficMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    console.log('🔍 CLIENT DEBUG:', {
+    console.log('🔍 CLIENT TRAFFIC PROCESSING DEBUG:', {
       clientTrafficMetricsLength: clientTrafficMetrics.length,
-      clientTrafficMetrics: clientTrafficMetrics.slice(0, 3),
+      fullClientTrafficMetrics: clientTrafficMetrics,
       clientName: client?.name,
-      hasClientData: clientTrafficMetrics.length > 0
+      hasClientData: clientTrafficMetrics.length > 0,
+      aboutToProcess: clientTrafficMetrics.length > 0 ? 'YES' : 'NO'
     });
     
     if (clientTrafficMetrics.length > 0) {
@@ -363,14 +364,19 @@ export default function Dashboard() {
       
       console.log('🔍 PROCESSED CHANNELS DEBUG:', {
         processedChannelsLength: sortedChannels.length,
-        processedChannels: sortedChannels
+        processedChannels: sortedChannels,
+        clientLabel: client?.name || 'Client',
+        aboutToPushToResult: 'YES'
       });
       
-      result.push({
+      const clientEntry = {
         sourceType: 'Client',
         label: client?.name || 'Client',
         channels: sortedChannels
-      });
+      };
+      
+      console.log('🔍 PUSHING CLIENT ENTRY:', clientEntry);
+      result.push(clientEntry);
     } else {
       console.warn('❌ No client traffic metrics found!');
     }
@@ -451,6 +457,12 @@ export default function Dashboard() {
       }
     });
 
+    console.log('🔍 FINAL TRAFFIC CHANNEL RESULT:', {
+      resultLength: result.length,
+      fullResult: result,
+      resultSourceTypes: result.map(r => r.sourceType)
+    });
+    
     return result;
   };
 
