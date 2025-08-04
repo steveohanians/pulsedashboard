@@ -128,18 +128,25 @@ async function storeCompetitorMetrics(clientId: string, competitorId: string, pe
 // Helper function to generate period list for competitor data
 function generateCompetitorPeriodList(): Array<{ period: string; type: 'daily' | 'monthly' }> {
   const periods = [];
-  const now = new Date();
   
-  // Generate 15 months of data going backwards from current month
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  // Generate exactly the same periods as sample data (2024-06 to 2025-07)
+  // This ensures consistency with existing client data
+  const startYear = 2024;
+  const startMonth = 6; // June
+  const endYear = 2025;
+  const endMonth = 7; // July
+  
+  for (let year = startYear; year <= endYear; year++) {
+    const monthStart = year === startYear ? startMonth : 1;
+    const monthEnd = year === endYear ? endMonth : 12;
     
-    // Use monthly data for all periods (consistent with sample data)
-    periods.push({ period, type: 'monthly' as const });
+    for (let month = monthStart; month <= monthEnd; month++) {
+      const period = `${year}-${String(month).padStart(2, '0')}`;
+      periods.push({ period, type: 'monthly' as const });
+    }
   }
   
-  return periods.reverse(); // Return chronological order (oldest first)
+  return periods; // Already in chronological order
 }
 
 export function registerRoutes(app: Express): Server {
