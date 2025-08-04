@@ -129,34 +129,9 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]
   );
 
-  // Check if we have any valid data AFTER all hooks are called
+  // Check data validity AFTER all hooks
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
-  
-  // Show no data state if no valid data (BUT AFTER ALL HOOKS)
-  if (!hasData) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center text-slate-500">
-          <div className="mb-2">📈</div>
-          <div className="text-sm">No data available</div>
-          <div className="text-xs text-slate-400 mt-1">Trend data will appear here once metrics are collected</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show empty state if no authentic data is available
-  if (!data || data.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center text-slate-500">
-          <div className="mb-2">📊</div>
-          <div className="text-sm">No authentic data available</div>
-          <div className="text-xs text-slate-400 mt-1">Authentic GA4 data will appear here when available</div>
-        </div>
-      </div>
-    );
-  }
+  const hasChartData = data && data.length > 0;
 
   const clientKey = clientUrl || 'Client';
   
@@ -223,6 +198,31 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
       [lineKey]: !prev[lineKey]
     }));
   };
+
+  // Render based on data availability - NO EARLY RETURNS
+  if (!hasData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📈</div>
+          <div className="text-sm">No data available</div>
+          <div className="text-xs text-slate-400 mt-1">Trend data will appear here once metrics are collected</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasChartData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📊</div>
+          <div className="text-sm">No authentic data available</div>
+          <div className="text-xs text-slate-400 mt-1">Authentic GA4 data will appear here when available</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">
