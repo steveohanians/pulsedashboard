@@ -180,6 +180,21 @@ export async function getDashboardDataOptimized(
     periodsToQuery
   );
   
+  const timeSeriesData = periodsToQuery.length > 1 ? groupMetricsByPeriod(processedData) : undefined;
+  
+  // Debug: Check what's actually in timeSeriesData for first period
+  if (timeSeriesData && Object.keys(timeSeriesData).length > 0) {
+    const firstPeriod = Object.keys(timeSeriesData)[0];
+    const firstPeriodData = timeSeriesData[firstPeriod];
+    const competitorCount = firstPeriodData.filter(m => m.sourceType === 'Competitor').length;
+    console.log(`📊 TimeSeriesData first period ${firstPeriod}: ${firstPeriodData.length} total, ${competitorCount} competitors`);
+    
+    if (competitorCount > 0) {
+      const competitorSample = firstPeriodData.filter(m => m.sourceType === 'Competitor').slice(0, 2);
+      console.log(`📊 TimeSeriesData competitor sample:`, competitorSample);
+    }
+  }
+
   const result = {
     client,
     competitors,
@@ -188,7 +203,7 @@ export async function getDashboardDataOptimized(
     ...(periodsToQuery.length > 1 ? {
       isTimeSeries: true,
       periods: periodsToQuery,
-      timeSeriesData: groupMetricsByPeriod(processedData),
+      timeSeriesData,
       metrics: processedData // Keep flat structure for backward compatibility
     } : {
       isTimeSeries: false,
@@ -292,12 +307,29 @@ function processMetricsData(
 function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
   const grouped: Record<string, any[]> = {};
   
+  console.log(`📊 groupMetricsByPeriod: Processing ${metrics.length} total metrics`);
+  const competitorCount = metrics.filter(m => m.sourceType === 'Competitor').length;
+  console.log(`📊 groupMetricsByPeriod: Found ${competitorCount} competitor metrics`);
+  
   metrics.forEach(metric => {
     const period = metric.timePeriod;
     if (!grouped[period]) {
       grouped[period] = [];
     }
     grouped[period].push(metric);
+  });
+  
+  console.log(`📊 groupMetricsByPeriod: Grouped into ${Object.keys(grouped).length} periods`);
+  Object.keys(grouped).forEach(period => {
+    const periodCompetitors = grouped[period].filter(m => m.sourceType === 'Competitor').length;
+    console.log(`📊 Period ${period}: ${grouped[period].length} total, ${periodCompetitors} competitors`);
+    
+    // Log sample competitor metric names for debugging
+    const competitorMetrics = grouped[period].filter(m => m.sourceType === 'Competitor');
+    if (competitorMetrics.length > 0) {
+      const uniqueMetricNames = [...new Set(competitorMetrics.map(m => m.metricName))];
+      console.log(`📊 Period ${period} competitor metric names:`, uniqueMetricNames.slice(0, 5));
+    }
   });
   
   return grouped;

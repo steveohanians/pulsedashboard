@@ -49,11 +49,14 @@ function generateTimeSeriesData(
 ): Array<Record<string, unknown>> {
   // If we have actual time-series data and multiple periods, use it
   if (timeSeriesData && periods && periods.length > 0) {
-    logger.component('TimeSeriesChart', `Using time-series data for ${metricName}, periods:`, periods);
+    console.log(`🔍 Chart ${metricName}: Using time-series data with ${periods.length} periods:`, periods);
+    console.log(`🔍 Chart ${metricName}: timeSeriesData keys:`, Object.keys(timeSeriesData));
+    console.log(`🔍 Chart ${metricName}: competitors:`, competitors.map(c => ({id: c.id, label: c.label})));
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
   // Otherwise, fallback to single-point data (current behavior for single periods)
+  console.log(`🔍 Chart ${metricName}: Using fallback data (no time-series data available)`);
   return generateFallbackTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
 }
 
@@ -75,7 +78,10 @@ function generateRealTimeSeriesData(
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
     const relevantData = periodData.filter(m => m.metricName === metricName);
-    logger.component('TimeSeriesChart', `Period ${period} filtered data for ${metricName}:`, relevantData);
+    console.log(`🔍 Period ${period}: ${periodData.length} total metrics, ${relevantData.length} for ${metricName}`);
+    if (relevantData.length > 0) {
+      console.log(`🔍 Period ${period} sample data:`, relevantData.slice(0, 3));
+    }
     
     const dataPoint: Record<string, unknown> = {
       date: generatePeriodLabel(period)
@@ -98,7 +104,7 @@ function generateRealTimeSeriesData(
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
     
-    logger.component('TimeSeriesChart', `Averaged values for ${period}: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
+    console.log(`🔍 Period ${period} averages: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
     
     // Add competitor data (also average multiple values)
     competitors.forEach(competitor => {
@@ -106,22 +112,25 @@ function generateRealTimeSeriesData(
         m.sourceType === 'Competitor' && m.competitorId === competitor.id
       );
       
-      logger.component('TimeSeriesChart', `Competitor ${competitor.label} (${competitor.id}) metrics for ${period}:`, competitorMetrics);
+      console.log(`🔍 Competitor ${competitor.label} (${competitor.id}) for ${period}: ${competitorMetrics.length} metrics`);
+      if (competitorMetrics.length > 0) {
+        console.log(`🔍 First competitor metric:`, competitorMetrics[0]);
+      }
       
       const avgCompetitor = competitorMetrics.length > 0 ? 
         competitorMetrics.reduce((sum, m) => {
           const value = typeof m.value === 'number' ? m.value : parseFloat(m.value);
-          logger.component('TimeSeriesChart', `Processing competitor value: ${m.value} -> ${value}`);
           return sum + value;
         }, 0) / competitorMetrics.length : 0;
       dataPoint[competitor.label] = Math.round(avgCompetitor * 10) / 10;
       
-      logger.component('TimeSeriesChart', `Final competitor ${competitor.label} value for ${period}: ${dataPoint[competitor.label]}`);
+      console.log(`🔍 Final ${competitor.label} value for ${period}: ${dataPoint[competitor.label]}`);
     });
     
     data.push(dataPoint);
   });
   
+  console.log(`🔍 Final chart data for ${metricName}:`, data);
   return data;
 }
 
