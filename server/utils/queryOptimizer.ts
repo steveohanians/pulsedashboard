@@ -86,7 +86,8 @@ export async function getDashboardDataOptimized(
   client: any,
   periodsToQuery: string[],
   businessSize: string,
-  industryVertical: string
+  industryVertical: string,
+  timePeriod?: string
 ) {
   const cacheKey = `dashboard-${client.id}-${periodsToQuery.join(',')}-${businessSize}-${industryVertical}`;
   const cached = getCachedData(cacheKey);
@@ -184,10 +185,53 @@ export async function getDashboardDataOptimized(
   console.log(`🔍 queryOptimizer DEBUG:`, {
     periodsToQueryLength: periodsToQuery.length,
     periodsToQuery: periodsToQuery,
-    willCreateTimeSeriesData: periodsToQuery.length > 1
+    timePeriod,
+    willCreateTimeSeriesData: periodsToQuery.length > 1 || timePeriod === 'Last Month'
   });
   
-  const timeSeriesData = periodsToQuery.length > 1 ? groupMetricsByPeriod(processedData) : undefined;
+  // Create timeSeriesData for multi-period queries OR "Last Month" (for daily data visualization)
+  const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || timePeriod === 'Last Month';
+  let timeSeriesData = shouldCreateTimeSeriesData ? groupMetricsByPeriod(processedData) : undefined;
+  
+  // For "Last Month", also include daily data if available for intra-month chart variations
+  if (timePeriod === 'Last Month' && timeSeriesData) {
+    try {
+      const lastMonthPeriod = periodsToQuery[0]; // Should be 2025-07
+      const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
+      
+      if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
+        console.log(`🔍 Including ${cachedDailyData.length} daily metrics for Last Month chart display`);
+        
+        // Convert daily data to time series format grouped by day
+        const dailyGrouped: Record<string, any[]> = {};
+        
+        cachedDailyData.forEach(metric => {
+          const dayKey = metric.timePeriod; // Format: 2025-07-daily-20250701
+          if (!dailyGrouped[dayKey]) {
+            dailyGrouped[dayKey] = [];
+          }
+          dailyGrouped[dayKey].push({
+            metricName: metric.metricName,
+            value: metric.value,
+            sourceType: 'Client', // Daily data is always client data
+            timePeriod: dayKey,
+            channel: null,
+            competitorId: null
+          });
+        });
+        
+        // Replace the single-period data with daily breakdown
+        if (Object.keys(dailyGrouped).length > 0) {
+          console.log(`🔍 Replacing single period ${lastMonthPeriod} with ${Object.keys(dailyGrouped).length} daily periods`);
+          timeSeriesData = dailyGrouped;
+          // Also update the periods to reflect daily data
+          periodsToQuery = Object.keys(dailyGrouped).sort();
+        }
+      }
+    } catch (error) {
+      console.warn('Could not include daily data in time series:', error);
+    }
+  }
   
   // Debug: Check what's actually in timeSeriesData for first period
   if (timeSeriesData && Object.keys(timeSeriesData).length > 0) {
@@ -206,8 +250,8 @@ export async function getDashboardDataOptimized(
     client,
     competitors,
     insights: [], // Load insights asynchronously
-    // For multi-period queries (Last Quarter, Last Year), structure as time series
-    ...(periodsToQuery.length > 1 ? {
+    // For multi-period queries OR "Last Month" (daily data), structure as time series
+    ...(shouldCreateTimeSeriesData ? {
       isTimeSeries: true,
       periods: periodsToQuery,
       timeSeriesData,

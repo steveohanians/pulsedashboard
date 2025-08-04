@@ -54,10 +54,18 @@ function generateTimeSeriesData(
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
-  // For Last Month view, check if we have valid client data to show
+  // For Last Month view, use daily data if available, otherwise show single authentic point
   if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
     console.log(`✅ Chart ${metricName}: Last Month view with authentic client data: ${clientData}`);
-    // Generate a single data point for Last Month using the correct period label
+    
+    // Check if we have time series data for the last month - this would be daily data
+    if (timeSeriesData && periods && periods.length === 1 && periods[0] === '2025-07') {
+      console.log(`🔍 Chart ${metricName}: Checking for daily data in Last Month view`);
+      // Use the existing time series generation but for daily data
+      return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
+    }
+    
+    // Fallback to single data point for Last Month using the correct period label
     const clientKey = clientUrl || 'democompany.com';
     // Use the current period which should be July 2025 (2025-07)
     const currentMonth = generatePeriodLabel('2025-07'); // This will show "Jul 25"

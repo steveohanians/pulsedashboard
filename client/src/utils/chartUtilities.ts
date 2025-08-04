@@ -19,11 +19,28 @@ export function seededRandom(seed: number): number {
  * Consolidates duplicate functions from bar-chart.tsx and time-series-chart.tsx
  */
 export function generatePeriodLabel(period: string): string {
+  // Handle daily format: YYYY-MM-daily-YYYYMMDD
+  if (period.includes('-daily-')) {
+    const dailyDatePart = period.split('-daily-')[1]; // Get YYYYMMDD
+    if (dailyDatePart && dailyDatePart.length === 8) {
+      const year = dailyDatePart.substring(0, 4);
+      const month = dailyDatePart.substring(4, 6);
+      const day = dailyDatePart.substring(6, 8);
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  }
+  
+  // Handle YYYY-MM format (monthly data)
   const [year, month] = period.split('-');
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const shortYear = year.slice(-2);
-  return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
+  if (year && month) {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const shortYear = year.slice(-2);
+    return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
+  }
+  
+  return period; // fallback
 }
 
 /**

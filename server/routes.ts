@@ -397,7 +397,8 @@ export function registerRoutes(app: Express): Server {
         client,
         periodsToQuery,
         businessSize as string,
-        industryVertical as string
+        industryVertical as string,
+        timePeriod as string
       );
 
       // 🚀 OPTIMIZATION 4: Queue AI insights generation in background (non-blocking)
