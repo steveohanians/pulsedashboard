@@ -53,7 +53,8 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
     lastMonthPeriod,
     currentQuarterPeriods,
     yearPeriodsCount: yearPeriods.length,
-    yearPeriodsRange: yearPeriods.length > 0 ? `${yearPeriods[0]} to ${yearPeriods[yearPeriods.length - 1]}` : 'none'
+    yearPeriodsRange: yearPeriods.length > 0 ? `${yearPeriods[0]} to ${yearPeriods[yearPeriods.length - 1]}` : 'none',
+    actualYearPeriods: yearPeriods
   });
   
   return {
