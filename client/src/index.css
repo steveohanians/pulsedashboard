@@ -56,7 +56,7 @@
   
   /* Device Colors */
   --color-device-desktop: hsl(217, 91%, 60%);
-  --color-device-mobile: hsl(197, 94%, 43%);
+  --color-device-mobile: hsl(43, 96%, 56%);
   --color-device-tablet: hsl(266, 85%, 58%);
   --color-device-other: hsl(220, 9%, 46%);
   
@@ -136,7 +136,7 @@
   
   /* Device Colors */
   --color-device-desktop: hsl(217, 91%, 60%);
-  --color-device-mobile: hsl(197, 94%, 43%);
+  --color-device-mobile: hsl(43, 96%, 56%);
   --color-device-tablet: hsl(266, 85%, 58%);
   --color-device-other: hsl(220, 9%, 46%);
   
