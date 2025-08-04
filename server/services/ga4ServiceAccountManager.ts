@@ -596,22 +596,27 @@ class GA4ServiceAccountManager {
   }
 
   /**
-   * Get all property access records for a client
+   * Get the single property access record for a client (one-to-one relationship)
    */
-  async getClientPropertyAccess(clientId: string): Promise<(GA4PropertyAccess & { serviceAccount: GA4ServiceAccount })[]> {
+  async getClientPropertyAccess(clientId: string): Promise<(GA4PropertyAccess & { serviceAccount: GA4ServiceAccount }) | null> {
     try {
-      const records = await db.select({
+      const [record] = await db.select({
         propertyAccess: ga4PropertyAccess,
         serviceAccount: ga4ServiceAccounts
       })
       .from(ga4PropertyAccess)
       .leftJoin(ga4ServiceAccounts, eq(ga4PropertyAccess.serviceAccountId, ga4ServiceAccounts.id))
-      .where(eq(ga4PropertyAccess.clientId, clientId));
+      .where(eq(ga4PropertyAccess.clientId, clientId))
+      .limit(1);
 
-      return records.map(record => ({
+      if (!record?.propertyAccess || !record?.serviceAccount) {
+        return null;
+      }
+
+      return {
         ...record.propertyAccess,
-        serviceAccount: record.serviceAccount!
-      }));
+        serviceAccount: record.serviceAccount
+      };
     } catch (error) {
       logger.error(`Failed to get property access for client ${clientId}:`, error);
       throw error;

@@ -51,13 +51,13 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
     queryKey: ["/api/admin/ga4-service-accounts"],
   });
 
-  // Fetch current property access for this client
-  const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess[]>({
+  // Fetch current property access for this client (single property per client)
+  const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess | null>({
     queryKey: ["/api/admin/ga4-property-access/client", clientId],
     enabled: !!clientId,
   });
 
-  const currentAccess = propertyAccess?.find(access => access.propertyId === propertyId);
+  const currentAccess = propertyAccess;
   const activeServiceAccounts = serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [];
   
   // Initialize component state from props and reset form state
@@ -71,22 +71,25 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
     setSelectedServiceAccount("");
   }, [currentGA4PropertyId]);
 
-  // Auto-populate service account from property access data
+  // Auto-populate property ID and service account from existing property access data
   useEffect(() => {
-    if (propertyAccess && propertyId) {
-      const accessForCurrentProperty = propertyAccess.find(access => access.propertyId === propertyId);
-      if (accessForCurrentProperty && !selectedServiceAccount) {
-        setSelectedServiceAccount(accessForCurrentProperty.serviceAccountId);
-        onServiceAccountUpdate?.(accessForCurrentProperty.serviceAccountId);
-
+    if (propertyAccess) {
+      // If we have existing property access, populate the form with that data
+      if (propertyAccess.propertyId && propertyAccess.propertyId !== propertyId) {
+        setPropertyId(propertyAccess.propertyId);
+        onGA4PropertyUpdate(propertyAccess.propertyId);
+      }
+      if (propertyAccess.serviceAccountId && !selectedServiceAccount) {
+        setSelectedServiceAccount(propertyAccess.serviceAccountId);
+        onServiceAccountUpdate?.(propertyAccess.serviceAccountId);
       }
     }
-  }, [propertyAccess, propertyId, onServiceAccountUpdate]);
+  }, [propertyAccess, onGA4PropertyUpdate, onServiceAccountUpdate]);
   
   // Only show status while testing or if we just completed a test (not for existing saved data)
   const [hasTestedConnection, setHasTestedConnection] = useState(false);
   // Show status if testing, just tested, or if there's existing access data to display
-  const showStatus = isTestingConnection || hasTestedConnection || (currentAccess && propertyId === currentAccess.propertyId);
+  const showStatus = isTestingConnection || hasTestedConnection || (currentAccess && currentAccess.accessVerified);
 
   const handlePropertyIdChange = (value: string) => {
 
