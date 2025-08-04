@@ -239,10 +239,25 @@ export default function Dashboard() {
     //   sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
     // });
     
-    // Debug logging disabled for performance
-    // if (dashboardData?.trafficChannelMetrics) {
-    //   logger.debug(`TrafficChannelMetrics received:`, dashboardData.trafficChannelMetrics.slice(0, 5));
-    // }
+    // Debug GA4 traffic channel data processing
+    if (trafficMetrics.length > 0) {
+      console.log('Traffic metrics found:', trafficMetrics.length);
+      console.log('All traffic metrics by source:', trafficMetrics.reduce((acc, m) => {
+        acc[m.sourceType] = (acc[m.sourceType] || 0) + 1;
+        return acc;
+      }, {}));
+      
+      const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
+      console.log('Client traffic metrics:', clientMetrics.length, clientMetrics);
+      
+      const ga4Metric = trafficMetrics.find(m => m.sourceType === 'Client' && typeof m.value === 'string' && m.value.startsWith('['));
+      if (ga4Metric) {
+        console.log('GA4 JSON metric found:', ga4Metric.value.substring(0, 100) + '...');
+      } else {
+        console.log('No GA4 JSON metric found - checking Client metrics:', 
+          clientMetrics.map(m => ({ value: typeof m.value, preview: String(m.value).substring(0, 50) })));
+      }
+    }
     
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
@@ -274,7 +289,7 @@ export default function Dashboard() {
           } else {
             channelMap.set(channelName, value);
           }
-        } else {
+        } else if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
           // GA4 JSON format - parse and aggregate
           try {
             const channelData = JSON.parse(metric.value);
@@ -295,7 +310,19 @@ export default function Dashboard() {
             }
           } catch (e) {
             // Fallback for invalid JSON
-            logger.warn(`Invalid traffic channel JSON data: ${metric.value}`);
+            console.warn(`Invalid traffic channel JSON data: ${metric.value}`);
+          }
+        } else {
+          // Handle simple value format (for competitors/averages)
+          const channelName = metric.channel || 'Unknown';
+          const value = parseFloat(metric.value);
+          
+          if (channelName && !isNaN(value)) {
+            if (channelMap.has(channelName)) {
+              channelMap.set(channelName, channelMap.get(channelName) + value);
+            } else {
+              channelMap.set(channelName, value);
+            }
           }
         }
       });
