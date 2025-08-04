@@ -88,23 +88,56 @@ export async function getDashboardDataOptimized(
     }
   }
 
-  // Run all database queries in parallel with timeout protection
-  const dataPromise = Promise.all([
-    // Fetch metrics for all periods in parallel
-    Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
-    // Fetch competitors (single call)
-    storage.getCompetitorsByClient(client.id),
-    // Fetch competitor metrics for all periods in parallel
-    Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(client.id, p))),
-    // Fetch filtered industry metrics for all periods in parallel
-    Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
-    // Fetch filtered CD avg metrics for all periods in parallel
-    Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
-  ]);
+  // For large datasets (>10 periods), use sequential batches to avoid connection timeout
+  // For smaller datasets, use parallel queries for performance
+  let dataPromise;
   
-  // Add timeout to prevent hanging
+  if (periodsToQuery.length > 10) {
+    // Sequential processing for large historical datasets
+    dataPromise = (async () => {
+      const [competitors] = await Promise.all([
+        storage.getCompetitorsByClient(client.id)
+      ]);
+      
+      // Process periods in smaller batches to avoid connection timeout
+      const batchSize = 8;
+      const allMetricsArrays = [];
+      const allCompetitorMetricsArrays = [];
+      const allFilteredIndustryMetricsArrays = [];
+      const allFilteredCdAvgMetricsArrays = [];
+      
+      for (let i = 0; i < periodsToQuery.length; i += batchSize) {
+        const batch = periodsToQuery.slice(i, i + batchSize);
+        const [batchMetrics, batchCompMetrics, batchIndMetrics, batchCdMetrics] = await Promise.all([
+          Promise.all(batch.map(p => storage.getMetricsByClient(client.id, p))),
+          Promise.all(batch.map(p => storage.getMetricsByCompetitors(client.id, p))),
+          Promise.all(batch.map(p => storage.getFilteredIndustryMetrics(p, filters))),
+          Promise.all(batch.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
+        ]);
+        
+        allMetricsArrays.push(...batchMetrics);
+        allCompetitorMetricsArrays.push(...batchCompMetrics);
+        allFilteredIndustryMetricsArrays.push(...batchIndMetrics);
+        allFilteredCdAvgMetricsArrays.push(...batchCdMetrics);
+      }
+      
+      return [allMetricsArrays, competitors, allCompetitorMetricsArrays, allFilteredIndustryMetricsArrays, allFilteredCdAvgMetricsArrays];
+    })();
+  } else {
+    // Parallel processing for smaller datasets
+    dataPromise = Promise.all([
+      Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
+      storage.getCompetitorsByClient(client.id),
+      Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(client.id, p))),
+      Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
+      Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
+    ]);
+  }
+  
+  // Add timeout to prevent hanging - longer timeout for large historical datasets
+  const timeoutMs = periodsToQuery.length > 10 ? 30000 : 15000;
   const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Database query timeout')), 5000)
+    setTimeout(() => reject(new Error('Database query timeout')), timeoutMs)
   );
   
   const [
