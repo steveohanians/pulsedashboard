@@ -1474,7 +1474,11 @@ export default function Dashboard() {
 
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
-          {metricNames.map((metricName) => {
+          {(() => {
+            console.log('🔍 ALL METRIC NAMES BEING RENDERED:', metricNames);
+            console.log('🔍 LOOKING FOR TRAFFIC CHANNELS IN ARRAY:', metricNames.includes('Traffic Channels'));
+            return metricNames;
+          })().map((metricName) => {
             console.log('🔍 RENDERING METRIC:', metricName, 'Active Section:', activeSection);
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
