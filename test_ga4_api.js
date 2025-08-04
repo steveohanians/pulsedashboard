@@ -1,48 +1,39 @@
-// Test actual GA4 API connection
-const fetch = require('node-fetch');
-
-async function testGA4API() {
-  const token = 'ya29.A0AS3H6Nx9S-ZNm_EDNqdBSbTKc8yKiUwlj_3ipk2bnobjUxrwM2Pgkc42Pb4JUZZonbreMScX3Elhr56yqgdyGpurfbQSgHArW_apw5u14ckYsJQWfWkkD1y--mh48MS4dugqkZBnsNcYI8oSKyFs6m9bVdIp3NzXBwoZx34-SBGeyND45-5_LeFRCosS353tc6zVt97jaCgYKAbsSARcSFQHGX2MimX27TDuL_0fU6-9wXYV1kg0207';
+// Test GA4 storage after fixing TypeScript errors
+async function testGA4Storage() {
+  console.log('🧪 Testing GA4 storage...');
   
-  const requestBody = {
-    property: "properties/276066025",
-    dateRanges: [{"startDate": "2025-07-01", "endDate": "2025-07-31"}],
-    metrics: [
-      {"name": "bounceRate"},
-      {"name": "averageSessionDuration"},
-      {"name": "screenPageViewsPerSession"},
-      {"name": "sessionsPerUser"},
-      {"name": "sessions"},
-      {"name": "totalUsers"}
-    ]
-  };
-
-  console.log('Making GA4 API request...');
-  console.log('Request body:', JSON.stringify(requestBody, null, 2));
+  // Test one period to verify storage works
+  const testPeriod = '2024-08';
   
   try {
-    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/276066025:runReport`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers));
+    console.log(`📅 Testing storage for ${testPeriod}...`);
     
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
+    const response = await fetch(`http://localhost:5000/api/ga4-data/demo-client-id/${testPeriod}`, {
+      method: 'GET'
+    });
     
     if (response.ok) {
-      const data = JSON.parse(responseText);
-      console.log('Parsed response:', JSON.stringify(data, null, 2));
+      const result = await response.json();
+      console.log(`✅ Fetched ${testPeriod}: ${result.data.bounceRate.toFixed(1)}% bounce rate`);
+    } else {
+      console.error(`❌ Failed to fetch ${testPeriod}: ${response.status}`);
     }
+    
+    // Wait a moment and check database
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const checkResponse = await fetch('http://localhost:5000/api/admin/metrics-count', {
+      method: 'GET'
+    });
+    
+    if (checkResponse.ok) {
+      const counts = await checkResponse.json();
+      console.log('📊 Database check:', counts);
+    }
+    
   } catch (error) {
-    console.error('Error making GA4 API request:', error);
+    console.error('❌ Test failed:', error.message);
   }
 }
 
-testGA4API();
+testGA4Storage().catch(console.error);

@@ -1,48 +1,42 @@
-// Force refresh GA4 data with real API values
-import { storage } from './server/storage.js';
+// Force refresh GA4 data with proper storage for all historical periods
+const periods = [
+  '2024-06', '2024-07', '2024-08', '2024-09', '2024-10', 
+  '2024-11', '2024-12', '2025-01', '2025-02', '2025-03', 
+  '2025-04', '2025-05', '2025-06'  // Skip 2025-07 as it's already stored
+];
 
-const realGA4Data = {
-  bounceRate: 25.8, // From API: 0.25796550716164862 * 100
-  sessionDuration: 190, // From API: 189.98528999824612 
-  pagesPerSession: 1.48, // From API: 1.4830458930137387
-  sessionsPerUser: 1.18, // From API: 1.1827139152981849
-  totalSessions: 6842,
-  totalUsers: 5819
-};
-
-async function forceUpdateGA4Data() {
-  console.log('Forcing update with real GA4 data for July 2025...');
+async function forceRefreshGA4Data() {
+  console.log('🔧 Force refreshing GA4 data with proper storage...');
   
-  // Delete existing fake data
-  console.log('Deleting existing client data for 2025-07...');
-  
-  // Insert real GA4 data
-  const clientId = 'demo-client-id';
-  const period = '2025-07';
-  
-  const metrics = [
-    { metricName: 'Bounce Rate', value: realGA4Data.bounceRate.toString(), sourceType: 'Client' },
-    { metricName: 'Session Duration', value: realGA4Data.sessionDuration.toString(), sourceType: 'Client' },
-    { metricName: 'Pages per Session', value: realGA4Data.pagesPerSession.toString(), sourceType: 'Client' },
-    { metricName: 'Sessions per User', value: realGA4Data.sessionsPerUser.toString(), sourceType: 'Client' }
-  ];
-  
-  for (const metric of metrics) {
+  for (const period of periods) {
     try {
-      await storage.createMetric({
-        clientId,
-        metricName: metric.metricName,
-        value: metric.value,
-        sourceType: metric.sourceType,
-        timePeriod: period
+      console.log(`📅 Processing ${period}...`);
+      
+      // Call the fixed GET endpoint which now stores data
+      const response = await fetch(`http://localhost:5000/api/ga4-data/demo-client-id/${period}`, {
+        method: 'GET'
       });
-      console.log(`✅ Inserted real GA4 data: ${metric.metricName} = ${metric.value}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log(`✅ ${period}: Bounce Rate ${result.data.bounceRate.toFixed(1)}% - STORED`);
+        } else {
+          console.error(`❌ ${period}: No data returned`);
+        }
+      } else {
+        console.error(`❌ ${period}: HTTP ${response.status}`);
+      }
+      
+      // Short delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
     } catch (error) {
-      console.error(`❌ Failed to insert ${metric.metricName}:`, error.message);
+      console.error(`❌ ${period}: ${error.message}`);
     }
   }
   
-  console.log('✅ Completed GA4 data refresh with real API values');
+  console.log('🎉 GA4 refresh complete - checking storage...');
 }
 
-forceUpdateGA4Data().catch(console.error);
+forceRefreshGA4Data().catch(console.error);

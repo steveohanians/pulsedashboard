@@ -155,12 +155,12 @@ export class GA4StorageService {
     ];
 
     for (const metric of metrics) {
-      await storage.createDailyMetric({
+      await storage.createMetric({
         clientId,
-        date: dayData.date,
         metricName: metric.name,
         value: metric.value,
-        timePeriod: period
+        sourceType: 'Client',
+        timePeriod: `${period}-daily-${dayData.date}`
       });
     }
   }
@@ -171,7 +171,7 @@ export class GA4StorageService {
   private async checkPeriodDataStatus(clientId: string, period: string): Promise<ExistingDataStatus[]> {
     try {
       // Check for existing monthly data
-      const monthlyMetrics = await storage.getClientMetricsByPeriod(clientId, period);
+      const monthlyMetrics = await storage.getMetricsByClient(clientId, period);
       
       // Check for existing daily data
       const dailyMetrics = await storage.getDailyClientMetrics(clientId, period);
@@ -180,8 +180,8 @@ export class GA4StorageService {
 
       // Analyze each metric type
       for (const metricName of Object.values(METRIC_NAMES)) {
-        const monthlyCount = monthlyMetrics.filter(m => m.metricName === metricName).length;
-        const dailyCount = dailyMetrics.filter(m => m.metricName === metricName).length;
+        const monthlyCount = monthlyMetrics.filter((m: any) => m.metricName === metricName).length;
+        const dailyCount = dailyMetrics.filter((m: any) => m.metricName === metricName).length;
 
         let dataType: 'daily' | 'monthly' | 'none' = 'none';
         let recordCount = 0;

@@ -126,8 +126,8 @@ router.get('/:clientId/:period', validateClientId, asyncErrorHandler(async (req,
   // Convert period (YYYY-MM) to date range
   const dateRange = getDateRangeForPeriod(period);
   
-  // Fetch fresh GA4 data
-  const ga4Data = await ga4Manager.fetchPeriodData(clientId, dateRange.startDate, dateRange.endDate);
+  // Fetch fresh GA4 data and store it with period parameter
+  const ga4Data = await ga4Manager.fetchPeriodData(clientId, dateRange.startDate, dateRange.endDate, period);
   
   if (!ga4Data) {
     return res.status(404).json({
