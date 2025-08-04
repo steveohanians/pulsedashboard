@@ -259,10 +259,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis 
           dataKey="date" 
-          fontSize={9} 
+          fontSize={8} 
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
-          interval={data.length > 15 ? "preserveStartEnd" : 0}
+          interval={timePeriod === "Last Month" ? Math.floor(data.length / 8) : 0}
           angle={-45}
           textAnchor="end"
           height={60}
