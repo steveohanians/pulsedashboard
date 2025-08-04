@@ -21,7 +21,7 @@ interface TimeSeriesChartProps {
   }>;
   timeSeriesData?: Record<string, Array<{
     metricName: string;
-    value: string;
+    value: string | number;
     sourceType: string;
     competitorId?: string;
   }>>;
@@ -40,7 +40,7 @@ function generateTimeSeriesData(
   clientUrl?: string,
   timeSeriesData?: Record<string, Array<{
     metricName: string;
-    value: string;
+    value: string | number;
     sourceType: string;
     competitorId?: string;
   }>>,
@@ -59,7 +59,7 @@ function generateTimeSeriesData(
 
 // Generate real time-series data from database
 function generateRealTimeSeriesData(
-  timeSeriesData: Record<string, Array<{ metricName: string; value: string; sourceType: string; competitorId?: string }>>,
+  timeSeriesData: Record<string, Array<{ metricName: string; value: string | number; sourceType: string; competitorId?: string }>>,
   periods: string[],
   competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
@@ -88,11 +88,11 @@ function generateRealTimeSeriesData(
     
     // Calculate averages for each source type
     const avgClient = clientMetrics.length > 0 ? 
-      clientMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / clientMetrics.length : 0;
+      clientMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / clientMetrics.length : 0;
     const avgIndustry = industryMetrics.length > 0 ? 
-      industryMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / industryMetrics.length : 0;
+      industryMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / industryMetrics.length : 0;
     const avgCD = cdMetrics.length > 0 ? 
-      cdMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / cdMetrics.length : 0;
+      cdMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / cdMetrics.length : 0;
     
     dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
@@ -110,8 +110,8 @@ function generateRealTimeSeriesData(
       
       const avgCompetitor = competitorMetrics.length > 0 ? 
         competitorMetrics.reduce((sum, m) => {
-          const value = parseFloat(m.value);
-          logger.component('TimeSeriesChart', `Parsing competitor value: ${m.value} -> ${value}`);
+          const value = typeof m.value === 'number' ? m.value : parseFloat(m.value);
+          logger.component('TimeSeriesChart', `Processing competitor value: ${m.value} -> ${value}`);
           return sum + value;
         }, 0) / competitorMetrics.length : 0;
       dataPoint[competitor.label] = Math.round(avgCompetitor * 10) / 10;

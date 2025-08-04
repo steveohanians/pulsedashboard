@@ -255,15 +255,13 @@ function processMetricsData(
             const parsed = JSON.parse(m.value);
             if (parsed && typeof parsed.value !== 'undefined') {
               finalValue = parsed.value;
-              console.log(`✓ Parsed competitor JSON string: ${m.value} -> ${finalValue}`);
             }
           } catch (e) {
-            console.warn('Failed to parse competitor JSON value:', m.value);
+            // Keep original value if parsing fails
           }
         } else if (typeof m.value === 'object' && m.value !== null && typeof m.value.value !== 'undefined') {
           // Handle already-parsed objects with value property  
           finalValue = m.value.value;
-          console.log(`✓ Extracted from competitor object: ${JSON.stringify(m.value)} -> ${finalValue}`);
         }
         
         result.push({
@@ -286,10 +284,6 @@ function processMetricsData(
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
-  
-  console.log(`📊 Processed ${processedData.length} total metrics including ${allCompetitorMetrics.length} competitor metrics`);
-  const competitorSample = processedData.filter(m => m.sourceType === 'Competitor').slice(0, 3);
-  console.log('🔍 Sample competitor data:', competitorSample);
   
   return processedData;
 }
