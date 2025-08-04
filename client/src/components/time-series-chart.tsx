@@ -57,9 +57,10 @@ function generateTimeSeriesData(
   // For Last Month view, check if we have valid client data to show
   if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
     console.log(`✅ Chart ${metricName}: Last Month view with authentic client data: ${clientData}`);
-    // Generate a single data point for Last Month  
+    // Generate a single data point for Last Month using the correct period label
     const clientKey = clientUrl || 'democompany.com';
-    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    // Use the current period which should be July 2025 (2025-07)
+    const currentMonth = generatePeriodLabel('2025-07'); // This will show "Jul 25"
     
     return [{
       date: currentMonth,

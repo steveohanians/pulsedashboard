@@ -235,6 +235,16 @@ export class GA4DataManager {
   }
 
   /**
+   * Generate date range for a period
+   */
+  private getDateRangeForPeriod(period: string): { startDate: string; endDate: string } {
+    const [year, month] = period.split('-');
+    const startDate = `${year}-${month}-01`;
+    const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+    return { startDate, endDate };
+  }
+
+  /**
    * Generate period list for smart fetching
    */
   private generatePeriods(count: number): DataPeriod[] {
