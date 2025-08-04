@@ -68,6 +68,11 @@ export interface IStorage {
   clearClientMetricsByPeriod(clientId: string, timePeriod: string): Promise<void>;
   clearAllClientMetrics(clientId: string): Promise<void>;
   
+  // SEMrush Integration Methods
+  getMetricsBySourceType(sourceType: string): Promise<Metric[]>;
+  deleteMetricsBySourceType(sourceType: string): Promise<void>;
+  getMetricsByCompanyId(companyId: string): Promise<Metric[]>;
+  
   // Benchmarks
   getBenchmarks(metricName: string, industryVertical: string, businessSize: string, timePeriod: string): Promise<Benchmark[]>;
   createBenchmark(benchmark: InsertBenchmark): Promise<Benchmark>;
@@ -828,6 +833,38 @@ export class DatabaseStorage implements IStorage {
       .where(eq(ga4ServiceAccounts.id, serviceAccountId))
       .limit(1);
     return result || undefined;
+  }
+
+  // SEMrush Integration Methods
+  async getMetricsBySourceType(sourceType: string): Promise<Metric[]> {
+    return await db
+      .select()
+      .from(metrics)
+      .where(eq(metrics.sourceType, sourceType))
+      .orderBy(metrics.timePeriod, metrics.metricName);
+  }
+
+  async deleteMetricsBySourceType(sourceType: string): Promise<void> {
+    await db
+      .delete(metrics)
+      .where(eq(metrics.sourceType, sourceType));
+  }
+
+  async getMetricsByCompanyId(companyId: string): Promise<Metric[]> {
+    // For CD Portfolio companies, we need to get metrics where the company is linked
+    // Since CD Portfolio metrics don't have a direct company field, we'll get by sourceType
+    // and use tags or other mechanisms to identify company-specific data
+    return await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, 'CD_Portfolio'),
+          isNull(metrics.clientId), // CD Portfolio metrics don't have clientId
+          isNull(metrics.competitorId) // CD Portfolio metrics don't have competitorId
+        )
+      )
+      .orderBy(metrics.timePeriod, metrics.metricName);
   }
 
   // Clear ONLY CLIENT metrics for a specific client and time period (preserve benchmarks)

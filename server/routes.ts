@@ -1351,8 +1351,48 @@ export function registerRoutes(app: Express): Server {
         admin: req.user?.id 
       });
 
-      // CD Portfolio company created successfully - no additional data generation needed
-      logger.info("Created CD portfolio company", { companyId: newCompany.id });
+      // SEMRUSH INTEGRATION: Automatically fetch 15 months of historical data
+      try {
+        logger.info("Starting SEMrush integration for new portfolio company", { 
+          companyId: newCompany.id,
+          companyName: newCompany.name 
+        });
+
+        const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.js');
+        const integration = new PortfolioIntegration(storage);
+        
+        // Process SEMrush data in background (non-blocking)
+        integration.processNewPortfolioCompany(newCompany).then((result) => {
+          if (result.success) {
+            logger.info("SEMrush integration completed successfully", {
+              companyId: newCompany.id,
+              periodsProcessed: result.periodsProcessed,
+              metricsStored: result.metricsStored,
+              trafficChannelsStored: result.trafficChannelsStored,
+              deviceDistributionStored: result.deviceDistributionStored,
+              averagesUpdated: result.averagesUpdated
+            });
+          } else {
+            logger.error("SEMrush integration failed", {
+              companyId: newCompany.id,
+              error: result.error
+            });
+          }
+        }).catch((error) => {
+          logger.error("SEMrush integration error", {
+            companyId: newCompany.id,
+            error: (error as Error).message
+          });
+        });
+
+        logger.info("SEMrush integration started in background", { companyId: newCompany.id });
+
+      } catch (error) {
+        logger.error("Failed to start SEMrush integration", {
+          companyId: newCompany.id,
+          error: (error as Error).message
+        });
+      }
       
       res.status(201).json(newCompany);
     } catch (error) {
