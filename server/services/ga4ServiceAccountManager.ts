@@ -624,6 +624,47 @@ class GA4ServiceAccountManager {
   }
 
   /**
+   * Update an existing property access record
+   */
+  async updatePropertyAccess(accessId: string, updateData: { propertyId?: string; serviceAccountId?: string }): Promise<GA4PropertyAccess | null> {
+    try {
+      // First check if record exists
+      const [existing] = await db.select().from(ga4PropertyAccess)
+        .where(eq(ga4PropertyAccess.id, accessId))
+        .limit(1);
+
+      if (!existing) {
+        return null;
+      }
+
+      // Update the record
+      const [updated] = await db.update(ga4PropertyAccess)
+        .set({
+          ...updateData,
+          // Reset verification status since property or service account changed
+          accessVerified: false,
+          lastVerified: null,
+          propertyName: null,
+          accessLevel: null,
+          errorMessage: null,
+          syncStatus: 'pending'
+        })
+        .where(eq(ga4PropertyAccess.id, accessId))
+        .returning();
+
+      logger.info(`Updated GA4 property access record`, {
+        accessId,
+        updateData
+      });
+
+      return updated;
+    } catch (error) {
+      logger.error(`Failed to update property access ${accessId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get the best available service account for a new client
    * Based on current property count and availability
    */

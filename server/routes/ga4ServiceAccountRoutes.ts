@@ -230,6 +230,47 @@ router.post('/ga4-property-access', async (req, res) => {
 });
 
 /**
+ * PUT /api/admin/ga4-property-access/:id
+ * Update an existing property access record
+ */
+router.put('/ga4-property-access/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = z.object({
+      propertyId: z.string().optional(),
+      serviceAccountId: z.string().optional()
+    }).parse(req.body);
+    
+    const result = await ga4ServiceAccountManager.updatePropertyAccess(id, updateData);
+    
+    if (!result) {
+      return res.status(404).json({ message: 'Property access record not found' });
+    }
+    
+    logger.info('Property access updated by admin', {
+      accessId: id,
+      updateData,
+      adminId: req.user?.id
+    });
+    
+    res.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: 'Invalid update data',
+        errors: error.errors 
+      });
+    }
+    
+    logger.error('Failed to update property access:', error);
+    res.status(500).json({ 
+      message: 'Failed to update property access',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * POST /api/admin/ga4-property-access/:id/verify
  * Manually trigger property access verification
  */

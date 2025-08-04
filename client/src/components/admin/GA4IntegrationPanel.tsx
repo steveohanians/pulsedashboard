@@ -91,12 +91,24 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
   // Show status if testing, just tested, or if there's existing access data to display
   const showStatus = isTestingConnection || hasTestedConnection || (currentAccess && currentAccess.accessVerified);
 
-  const handlePropertyIdChange = (value: string) => {
-
+  const handlePropertyIdChange = async (value: string) => {
     setPropertyId(value);
     onGA4PropertyUpdate(value);
     // Reset test status when property ID changes
     setHasTestedConnection(false);
+    
+    // Auto-save property ID changes if there's an existing access record
+    if (currentAccess && value !== currentAccess.propertyId) {
+      try {
+        await apiRequest("PUT", `/api/admin/ga4-property-access/${currentAccess.id}`, {
+          propertyId: value
+        });
+        // Refresh property access data to show updated info
+        refetchPropertyAccess();
+      } catch (error) {
+        console.error("Failed to save property ID change:", error);
+      }
+    }
   };
 
   const handleTestConnection = async () => {
@@ -183,9 +195,22 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
         <div>
           <Label htmlFor="serviceAccount">Service Account</Label>
-          <Select value={selectedServiceAccount} onValueChange={(value) => {
+          <Select value={selectedServiceAccount} onValueChange={async (value) => {
             setSelectedServiceAccount(value);
             onServiceAccountUpdate?.(value);
+            
+            // Auto-save service account changes if there's an existing access record
+            if (currentAccess && value !== currentAccess.serviceAccountId) {
+              try {
+                await apiRequest("PUT", `/api/admin/ga4-property-access/${currentAccess.id}`, {
+                  serviceAccountId: value
+                });
+                // Refresh property access data to show updated info
+                refetchPropertyAccess();
+              } catch (error) {
+                console.error("Failed to save service account change:", error);
+              }
+            }
           }}>
             <SelectTrigger>
               <SelectValue placeholder="Select a service account" />
