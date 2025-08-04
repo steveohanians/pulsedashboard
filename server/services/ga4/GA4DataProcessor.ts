@@ -187,7 +187,7 @@ export class GA4DataProcessor {
   }
 
   /**
-   * Extract device distribution from GA4 response
+   * Extract device distribution from GA4 response and combine mobile+tablet into single Mobile category
    */
   private extractDeviceDistribution(response: any): Array<{device: string; sessions: number; percentage: number}> {
     try {
@@ -200,17 +200,38 @@ export class GA4DataProcessor {
         sum + parseInt(row.metricValues[0].value), 0
       );
 
-      return response.rows.map((row: any) => {
+      // Aggregate mobile and tablet into single Mobile category
+      const deviceTotals = new Map<string, number>();
+      
+      response.rows.forEach((row: any) => {
         const device = row.dimensionValues[0].value;
         const sessions = parseInt(row.metricValues[0].value);
-        const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
+        const normalizedDevice = this.normalizeDeviceName(device);
+        
+        if (deviceTotals.has(normalizedDevice)) {
+          deviceTotals.set(normalizedDevice, deviceTotals.get(normalizedDevice)! + sessions);
+        } else {
+          deviceTotals.set(normalizedDevice, sessions);
+        }
+      });
 
+      // Convert to final format with percentages
+      const result = Array.from(deviceTotals.entries()).map(([device, sessions]) => {
+        const percentage = totalSessions > 0 ? (sessions / totalSessions) * 100 : 0;
         return {
-          device: this.normalizeDeviceName(device),
+          device,
           sessions,
           percentage: Math.round(percentage * 10) / 10 // Round to 1 decimal
         };
       });
+
+      logger.info('GA4 Device distribution processed with mobile+tablet combination', {
+        originalDevices: response.rows.length,
+        combinedDevices: result.length,
+        devices: result.map(r => `${r.device}: ${r.percentage}%`)
+      });
+
+      return result;
 
     } catch (error) {
       logger.error('Error extracting device distribution:', error);
@@ -250,16 +271,16 @@ export class GA4DataProcessor {
   }
 
   /**
-   * Normalize device names for consistency
+   * Normalize device names for consistency - combine mobile and tablet into Mobile category
    */
   private normalizeDeviceName(device: string): string {
     const deviceMap: Record<string, string> = {
       'desktop': 'Desktop',
       'mobile': 'Mobile',
-      'tablet': 'Tablet'
+      'tablet': 'Mobile' // Combine tablet with mobile to match SEMrush format
     };
 
-    return deviceMap[device.toLowerCase()] || 'Other';
+    return deviceMap[device.toLowerCase()] || 'Mobile'; // Default unknown devices to Mobile
   }
 
   /**

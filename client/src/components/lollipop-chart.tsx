@@ -4,8 +4,6 @@ interface LollipopChartProps {
   data: {
     Desktop: number;
     Mobile: number;
-    Tablet: number;
-    Other?: number;
   };
   competitors: Array<{
     id: string;
@@ -13,8 +11,6 @@ interface LollipopChartProps {
     value: {
       Desktop: number;
       Mobile: number;
-      Tablet: number;
-      Other?: number;
     };
   }>;
   clientUrl?: string;
@@ -22,22 +18,16 @@ interface LollipopChartProps {
   industryAvg: {
     Desktop: number;
     Mobile: number;
-    Tablet: number;
-    Other?: number;
   };
   cdAvg: {
     Desktop: number;
     Mobile: number;
-    Tablet: number;
-    Other?: number;
   };
 }
 
 const DEVICE_COLORS = {
   Desktop: 'hsl(var(--color-device-desktop))',
-  Mobile: 'hsl(var(--color-device-mobile))',
-  Tablet: 'hsl(var(--color-device-tablet))',
-  Other: 'hsl(var(--color-device-other))'
+  Mobile: 'hsl(var(--color-device-mobile))'
 };
 
 export default function LollipopChart({ 
@@ -57,12 +47,10 @@ export default function LollipopChart({
     const parts = cleanUrl.split('.');
     return parts[0] || 'Demo Company';
   };
-  // Convert percentages to proportions (0-1 scale)
+  // Convert percentages to proportions (0-1 scale) - simplified for 2-device model
   const normalizeData = (deviceData: Record<string, number>) => ({
     Desktop: (deviceData.Desktop || 0) / 100,
-    Mobile: (deviceData.Mobile || 0) / 100,
-    Tablet: (deviceData.Tablet || 0) / 100,
-    Other: (deviceData.Other || 0) / 100,
+    Mobile: (deviceData.Mobile || 0) / 100
   });
 
   // Prepare chart data
@@ -84,12 +72,12 @@ export default function LollipopChart({
     },
     ...competitors.map(comp => ({
       label: comp.label,
-      data: normalizeData(comp.value || { Desktop: 55, Mobile: 35, Tablet: 10 }),
+      data: normalizeData(comp.value || { Desktop: 55, Mobile: 45 }),
       type: 'competitor'
     }))
   ];
 
-  const devices = ['Desktop', 'Mobile', 'Tablet'] as const;
+  const devices = ['Desktop', 'Mobile'] as const;
 
 
 

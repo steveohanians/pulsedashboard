@@ -469,9 +469,7 @@ export default function Dashboard() {
     
     const DEVICE_COLORS = {
       'Desktop': '#3b82f6',
-      'Mobile': '#10b981', 
-      'Tablet': '#8b5cf6',
-      'Other': '#6b7280',
+      'Mobile': '#10b981'
     };
 
     const result = [];
@@ -549,7 +547,7 @@ export default function Dashboard() {
           name: normalizedName,
           value: Math.round(value),
           percentage: Math.round(value),
-          color: DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Other
+          color: DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Mobile
         };
       });
 
@@ -1576,7 +1574,7 @@ export default function Dashboard() {
                           data={(() => {
                             const deviceData = processDeviceDistributionData();
                             const clientData = deviceData.find(d => d.sourceType === 'Client');
-                            const result = { Desktop: 0, Mobile: 0, Tablet: 0, Other: 0 };
+                            const result = { Desktop: 0, Mobile: 0 }; // Simplified 2-device model
                             clientData?.devices.forEach(device => {
                               result[device.name as keyof typeof result] = device.percentage;
                             });
@@ -1594,18 +1592,12 @@ export default function Dashboard() {
                             const mobileVariance = (seed % 16) - 8;
                             
                             let desktop = Math.max(30, Math.min(70, desktopBase + desktopVariance));
-                            let mobile = Math.max(25, Math.min(60, mobileBase + mobileVariance));
-                            let tablet = Math.max(5, 100 - desktop - mobile);
-                            
-                            const total = desktop + mobile + tablet;
-                            desktop = Math.round((desktop / total) * 100);
-                            mobile = Math.round((mobile / total) * 100);
-                            tablet = 100 - desktop - mobile;
+                            let mobile = 100 - desktop; // Mobile includes tablet traffic
                             
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: { Desktop: desktop, Mobile: mobile, Tablet: tablet }
+                              value: { Desktop: desktop, Mobile: mobile }
                             };
                           })}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
@@ -1613,7 +1605,7 @@ export default function Dashboard() {
                           industryAvg={(() => {
                             const deviceData = processDeviceDistributionData();
                             const industryData = deviceData.find(d => d.sourceType === 'Industry_Avg');
-                            const result = { Desktop: 45, Mobile: 45, Tablet: 10, Other: 0 };
+                            const result = { Desktop: 45, Mobile: 55 }; // Simplified 2-device model
                             industryData?.devices.forEach(device => {
                               result[device.name as keyof typeof result] = device.percentage;
                             });
@@ -1622,7 +1614,7 @@ export default function Dashboard() {
                           cdAvg={(() => {
                             const deviceData = processDeviceDistributionData();
                             const cdData = deviceData.find(d => d.sourceType === 'CD_Avg');
-                            const result = { Desktop: 50, Mobile: 43, Tablet: 7, Other: 0 };
+                            const result = { Desktop: 50, Mobile: 50 }; // Simplified 2-device model
                             cdData?.devices.forEach(device => {
                               result[device.name as keyof typeof result] = device.percentage;
                             });
