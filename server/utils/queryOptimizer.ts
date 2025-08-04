@@ -296,6 +296,14 @@ export async function getDashboardDataOptimized(
   // Extract traffic channel and device distribution data separately for chart components
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
   const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
+  
+  console.log(`🔍 Traffic/Device Debug: processedData=${processedData.length}, trafficChannels=${trafficChannelMetrics.length}, deviceDistribution=${deviceDistributionMetrics.length}`);
+  if (trafficChannelMetrics.length > 0) {
+    console.log(`🔍 Traffic Channels found:`, trafficChannelMetrics.slice(0, 3));
+  }
+  if (deviceDistributionMetrics.length > 0) {
+    console.log(`🔍 Device Distribution found:`, deviceDistributionMetrics.slice(0, 3));
+  }
 
   const result = {
     client,
@@ -337,7 +345,17 @@ function processMetricsData(
     const result: any[] = [];
     
     metrics.forEach(m => {
-      if (m.metricName === 'Traffic Channels' && !m.channel && typeof m.value === 'string') {
+      if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel) {
+        // Individual channel record format (authentic data)
+        result.push({
+          metricName: m.metricName,
+          value: parseFloat(m.value) || 0,
+          sourceType: m.sourceType,
+          timePeriod: m.timePeriod,
+          channel: m.channel,
+          competitorId: m.competitorId
+        });
+      } else if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && !m.channel && typeof m.value === 'string') {
         // Parse GA4 JSON format: [{"channel": "Direct", "sessions": 4439, "percentage": 64.87...}]
         try {
           const channelData = JSON.parse(m.value);
@@ -397,12 +415,21 @@ function processMetricsData(
     return result;
   };
   
+  // Debug: Check input metrics for traffic channel data
+  const clientMetricsWithChannels = allMetrics.filter(m => (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel);
+  console.log(`🔍 Input Debug: allMetrics=${allMetrics.length}, clientChannelMetrics=${clientMetricsWithChannels.length}`);
+  if (clientMetricsWithChannels.length > 0) {
+    console.log(`🔍 Sample channel metrics:`, clientMetricsWithChannels.slice(0, 3));
+  }
+
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
+  
+  console.log(`🔍 Processing Debug: processedData length=${processedData.length}`);
   
   return processedData;
 }
