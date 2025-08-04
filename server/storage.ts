@@ -234,6 +234,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(competitors).where(eq(competitors.clientId, clientId));
   }
 
+  async getCompetitor(id: string): Promise<Competitor | undefined> {
+    const [competitor] = await db.select().from(competitors).where(eq(competitors.id, id));
+    return competitor || undefined;
+  }
+
   // Competitors - consolidated using DatabaseRepository
   async createCompetitor(insertCompetitor: InsertCompetitor): Promise<Competitor> {
     return await this.competitorRepo.create(insertCompetitor);
