@@ -339,14 +339,15 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
         channelMap.set(channelName, value);
       }
     } else if (metric.value && typeof metric.value === 'string') {
-      // Legacy JSON format
+      // GA4 JSON format - use correct field names
       try {
         const channelsData = JSON.parse(metric.value);
         if (Array.isArray(channelsData)) {
           channelsData.forEach(channel => {
-            if (channel.name && channel.value !== undefined) {
-              const channelName = channel.name;
-              const value = parseFloat(channel.value);
+            // Use correct GA4 field names: channel.channel and channel.percentage
+            if (channel.channel && channel.percentage !== undefined) {
+              const channelName = channel.channel;
+              const value = parseFloat(channel.percentage);
               
               if (channelMap.has(channelName)) {
                 channelMap.set(channelName, channelMap.get(channelName) + value);
@@ -364,4 +365,47 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
   });
   
   return channelMap;
+}
+
+/**
+ * Sort traffic channels by legend order for consistent display
+ */
+export function sortChannelsByLegendOrder(channelMap: Map<string, number>): Array<{name: string; value: number; percentage: number}> {
+  // Define the preferred order to match legend display (left to right)
+  const channelOrder = [
+    'Organic Search',
+    'Direct', 
+    'Social Media',
+    'Paid Search',
+    'Email',
+    'Referral',
+    'Other'
+  ];
+  
+  const sortedChannels: Array<{name: string; value: number; percentage: number}> = [];
+  
+  // Add channels in the preferred order
+  channelOrder.forEach(channelName => {
+    if (channelMap.has(channelName)) {
+      const value = channelMap.get(channelName)!;
+      sortedChannels.push({
+        name: channelName,
+        value: value,
+        percentage: value // For traffic channels, value is already the percentage
+      });
+    }
+  });
+  
+  // Add any channels that weren't in our predefined order (shouldn't happen with GA4 data)
+  channelMap.forEach((value, channelName) => {
+    if (!channelOrder.includes(channelName)) {
+      sortedChannels.push({
+        name: channelName,
+        value: value,
+        percentage: value
+      });
+    }
+  });
+  
+  return sortedChannels;
 }

@@ -23,6 +23,7 @@ import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
+import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 // Performance tracking removed per user request
@@ -346,134 +347,26 @@ export default function Dashboard() {
     
     const result = [];
     
-    // Helper function to aggregate channel data across multiple periods
-    const aggregateChannelData = (sourceMetrics: any[]) => {
-
-      const channelMap = new Map();
+    // Helper function to process channel data with correct aggregation and ordering
+    const processChannelData = (sourceMetrics: any[]) => {
+      // Use the corrected aggregateChannelData function from chartUtilities.ts
+      const channelMap = aggregateChannelData(sourceMetrics);
       
-      sourceMetrics.forEach(metric => {
-        // Handle both individual channel records and GA4 array format
-        if (metric.channel) {
-          // Individual channel record (competitors/averages format)
-          const channelName = metric.channel;
-          const value = parseFloat(metric.value);
-          
-          if (channelMap.has(channelName)) {
-            channelMap.set(channelName, channelMap.get(channelName) + value);
-          } else {
-            channelMap.set(channelName, value);
-          }
-        } else if (Array.isArray(metric.value)) {
-          // GA4 array format - already parsed by backend
-          metric.value.forEach((channel: any) => {
-            const channelName = channel.channel || channel.name;
-            const value = parseFloat(channel.percentage || channel.value || channel.sessions);
-            
-            if (channelName && !isNaN(value)) {
-              if (channelMap.has(channelName)) {
-                channelMap.set(channelName, channelMap.get(channelName) + value);
-              } else {
-                channelMap.set(channelName, value);
-              }
-            }
-          });
-        } else if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
-          // GA4 JSON string format - parse and aggregate
-          try {
-            const channelData = JSON.parse(metric.value);
-            if (Array.isArray(channelData)) {
-              channelData.forEach((channel: any) => {
-                const channelName = channel.channel || channel.name;
-                const value = parseFloat(channel.percentage || channel.value || channel.sessions);
-                
-                if (channelName && !isNaN(value)) {
-                  if (channelMap.has(channelName)) {
-                    channelMap.set(channelName, channelMap.get(channelName) + value);
-                  } else {
-                    channelMap.set(channelName, value);
-                  }
-                }
-              });
-            }
-          } catch (e) {
-            console.warn(`Invalid traffic channel JSON data: ${metric.value}`);
-          }
-        } else {
-          // Handle simple value format
-          const channelName = metric.channel || 'Unknown';
-          const value = parseFloat(metric.value);
-          
-          if (channelName && !isNaN(value)) {
-            if (channelMap.has(channelName)) {
-              channelMap.set(channelName, channelMap.get(channelName) + value);
-            } else {
-              channelMap.set(channelName, value);
-            }
-          }
-        }
-      });
+      // Use the new sorting function to get properly ordered channels
+      const sortedChannels = sortChannelsByLegendOrder(channelMap);
       
-      // Define consistent channel order - match GA4 channel names
-      const channelOrder = ['Direct', 'Organic Search', 'Paid Search', 'Referral', 'Email', 'Organic Social', 'Paid Social', 'Other'];
-      
-      // Map GA4 channel names to display names
-      const channelNameMap: Record<string, string> = {
-        'Direct': 'Direct',
-        'Organic Search': 'Organic Search', 
-        'Paid Search': 'Paid Search',
-        'Referral': 'Referral',
-        'Email': 'Email',
-        'Organic Social': 'Social Media',
-        'Paid Social': 'Social Media',
-        'Unassigned': 'Other',
-        'Cross-network': 'Other'
-      };
-      
-      // Group similar channels and convert to array with consistent ordering
-      const groupedChannelMap = new Map();
-      
-      // Group channels by display name
-      channelMap.forEach((value, channelName) => {
-        const displayName = channelNameMap[channelName] || 'Other';
-        if (groupedChannelMap.has(displayName)) {
-          groupedChannelMap.set(displayName, groupedChannelMap.get(displayName) + value);
-        } else {
-          groupedChannelMap.set(displayName, value);
-        }
-      });
-      
-      // Convert to array with consistent ordering
-      const displayOrder = ['Direct', 'Organic Search', 'Paid Search', 'Referral', 'Email', 'Social Media', 'Other'];
-      const channels = displayOrder
-        .map(displayName => {
-          if (groupedChannelMap.has(displayName)) {
-            const totalValue = groupedChannelMap.get(displayName);
-            const averageValue = totalValue / (periods?.length || 1);
-            return {
-              name: displayName,
-              value: Math.round(averageValue),
-              percentage: Math.round(averageValue),
-              color: CHART_COLORS.TRAFFIC_CHANNELS[displayName as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
-            };
-          }
-          return null;
-        })
-        .filter(channel => channel !== null) as Array<{
-          name: string;
-          value: number;
-          percentage: number;
-          color: string;
-        }>;
-      
-
+      // Add colors from the chart color scheme
+      const channelsWithColors = sortedChannels.map(channel => ({
+        ...channel,
+        color: CHART_COLORS.TRAFFIC_CHANNELS[channel.name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+      }));
       
       // Ensure percentages add up to 100%
-      const total = channels.reduce((sum, channel) => sum + channel.value, 0);
-
+      const total = channelsWithColors.reduce((sum, channel) => sum + channel.value, 0);
       if (total > 0) {
         let runningTotal = 0;
-        channels.forEach((channel, index) => {
-          if (index === channels.length - 1) {
+        channelsWithColors.forEach((channel, index) => {
+          if (index === channelsWithColors.length - 1) {
             // Last channel gets the remainder
             channel.value = 100 - runningTotal;
             channel.percentage = 100 - runningTotal;
@@ -486,9 +379,7 @@ export default function Dashboard() {
         });
       }
       
-
-      
-      return channels;
+      return channelsWithColors;
     };
 
     // Client data
@@ -497,7 +388,7 @@ export default function Dashboard() {
       result.push({
         sourceType: 'Client',
         label: client?.name || 'Client',
-        channels: aggregateChannelData(clientTrafficMetrics)
+        channels: processChannelData(clientTrafficMetrics)
       });
     }
 
@@ -507,7 +398,7 @@ export default function Dashboard() {
       result.push({
         sourceType: 'CD_Avg',
         label: 'Clear Digital Client Avg',
-        channels: aggregateChannelData(cdMetrics)
+        channels: processChannelData(cdMetrics)
       });
     }
 
@@ -517,7 +408,7 @@ export default function Dashboard() {
       result.push({
         sourceType: 'Industry_Avg',
         label: 'Industry Avg',
-        channels: aggregateChannelData(industryMetrics)
+        channels: processChannelData(industryMetrics)
       });
     }
 
@@ -532,7 +423,7 @@ export default function Dashboard() {
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
-          channels: aggregateChannelData(competitorMetrics)
+          channels: processChannelData(competitorMetrics)
         });
       } else {
         // Fallback if no data - generate consistent but varied data
