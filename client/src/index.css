@@ -74,7 +74,7 @@
   --color-good: hsl(43, 96%, 56%);
   --color-poor: hsl(0, 84%, 60%);
   
-  /* Sidebar Variables (Missing) */
+  /* Sidebar Variables */
   --sidebar-background: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -84,10 +84,6 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 }
-
-
-
-
 
 .dark {
   /* Base Colors */
