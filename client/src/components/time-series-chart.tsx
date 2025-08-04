@@ -48,10 +48,26 @@ function generateTimeSeriesData(
   metricName?: string
 ): Array<Record<string, unknown>> {
   // Only use authentic time-series data - no fallback generation
-  console.log(`🔍 Chart ${metricName}: Checking for authentic data - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length);
+  console.log(`🔍 Chart ${metricName}: Checking for authentic data - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length, 'clientData:', clientData);
   if (timeSeriesData && periods && periods.length > 0) {
     console.log(`✅ Chart ${metricName}: Using AUTHENTIC time-series data with ${periods.length} periods:`, periods);
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
+  }
+  
+  // For Last Month view, check if we have valid client data to show
+  if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
+    console.log(`✅ Chart ${metricName}: Last Month view with authentic client data: ${clientData}`);
+    // Generate a single data point for Last Month  
+    const clientKey = clientUrl || 'democompany.com';
+    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    
+    return [{
+      date: currentMonth,
+      [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
+      'Industry Avg': 0, // No synthetic data
+      'Clear Digital Clients Avg': 0, // No synthetic data
+      ...competitors.reduce((acc, comp) => ({ ...acc, [comp.label]: 0 }), {})
+    }];
   }
   
   // No authentic data available - return empty data rather than fake data
