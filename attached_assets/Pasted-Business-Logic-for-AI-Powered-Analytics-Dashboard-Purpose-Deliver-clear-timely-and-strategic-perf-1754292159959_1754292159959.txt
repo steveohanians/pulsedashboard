@@ -1,0 +1,118 @@
+Business Logic for AI-Powered Analytics Dashboard
+Purpose: Deliver clear, timely, and strategic performance insights using GA4 data, benchmark comparisons, and AI-generated recommendations. The system is designed for efficiency, automation, and alignment with Clear Digital’s service model.
+
+1. 📆 Timeframe Logic
+The dashboard always reflects the most recently completed full month.
+
+Example: If today is August 3, the dashboard shows data for July.
+
+Do not fetch or display current-month data.
+
+2. 📊 Data Fetching and Storage (GA4) — Clients Only
+a. Timeframe Scope & Retention
+Data retention is indefinite (forever) — the system stores GA4 data permanently.
+
+On initial setup, fetch up to 15 months of historical data, if it does not already exist.
+
+b. Ongoing Monthly Fetch Logic
+On the first day of each new month:
+
+Fetch daily data for the newly completed month.
+
+Condense the previous month's daily data into a single monthly summary value and store that.
+
+This helps reduce storage while preserving monthly trends.
+
+Do not modify existing monthly data from prior periods unless reprocessing is manually triggered.
+
+c. Daily vs. Monthly Granularity
+Most recent full month: Store daily data to support detailed charting.
+
+Older months: Store a single summarized monthly value per metric.
+
+d. Monthly Rollover Behavior
+At the beginning of each month:
+
+Fetch new month’s daily GA4 data.
+
+Condense previous month’s daily data to monthly.
+
+Clear:
+
+All AI-generated insights from prior month
+
+Any user-provided context tied to prior month
+
+Prepare the dashboard for manual insight generation.
+
+e. Data Isolation
+Fetching real GA4 data for the client must never affect benchmark, competitor, or portfolio data in storage or visualization. These datasets remain fully independent.
+
+3. 🧠 AI Insight Generation Logic
+a. Trigger Points
+Insights are only generated manually via “Generate Insights” or “Regenerate” button.
+
+b. Structure
+Each insight includes:
+
+Context – What the metric means + current performance
+
+Insight – Strategic interpretation
+
+Recommendations – Three actionable, concise bullets
+
+c. Output Requirements
+Follow prompt template rules for structure, tone, length, and formatting
+
+Use client’s name explicitly
+
+Bold key metrics and recommendation actions
+
+4. 🧠 User-Provided Context Integration
+Users may input strategic context (e.g., KPIs, campaign updates)
+
+Input is sanitized and tied to the current month only
+
+On monthly rollover:
+
+Clear user-provided context
+
+Require re-entry for new month
+
+5. 🧪 Sample Data Logic (Benchmarks, Competitors, Portfolio)
+a. Sample Data Generation
+Generate 15 months of realistic time-series data for:
+
+Competitors
+
+Benchmark companies
+
+Clear Digital portfolio
+
+Requirements:
+
+Mimic GA4 metric behavior
+
+Show reasonable monthly fluctuations
+
+Use existing predefined generation methods (no invented logic)
+
+b. Competitor Management
+On add: Generate historical sample data (15 months)
+
+On delete: Remove that competitor’s sample data entirely
+
+c. Data Isolation
+Creating or modifying sample data (for benchmarks, competitors, or portfolio) must never affect client GA4 data or visualizations.
+
+d. Future Integration
+Eventually, all sample data for benchmarks, competitors, and portfolio will be sourced from SEMrush, structured to match Google Analytics (GA4) format.
+
+6. 📁 Final Data Storage & Maintenance Summary
+Data Type	Granularity	Retention	Behavior
+GA4 Metric Data (Client)	Daily (latest month), Monthly (past months)	Forever	Fetch 15-month historical on setup; fetch new daily data monthly; condense previous month to monthly
+AI-Generated Insights	Monthly	1-month rolling	Cleared on monthly rollover
+User-Provided Context	Monthly	1-month rolling	Cleared on monthly rollover
+Benchmark Sample Data	Monthly	Forever	Generated once per addition
+Competitor Sample Data	Monthly	Forever	Re-generated on add/delete
+Portfolio Sample Data	Monthly	Forever	Generated on setup, static unless reset

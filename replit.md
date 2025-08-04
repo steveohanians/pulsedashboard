@@ -37,6 +37,38 @@ For each request:
 - Document all architectural changes with key details and dates
 - Maintain current project context in Overview and Recent Changes sections
 
+### 5. Business Logic Compliance
+Before making any coding changes or recommendations, always consider the established business logic:
+
+#### Timeframe Logic
+- Dashboard always shows the most recently completed full month (not current partial month)
+- Example: If today is August 3, dashboard shows July data
+
+#### GA4 Data Management (Clients Only)
+- Data retention is indefinite (forever)
+- Initial setup: fetch up to 15 months of historical data if it doesn't exist
+- Monthly rollover: fetch daily data for newly completed month, condense previous month's daily data to monthly summary
+- Most recent full month: store daily data for detailed charting
+- Older months: store single summarized monthly value per metric
+- GA4 data fetching must never affect benchmark, competitor, or portfolio data
+
+#### AI Insight Generation
+- Insights only generated manually via "Generate Insights" or "Regenerate" button
+- Structure: Context + Insight + Recommendations (3 actionable bullets)
+- Use client's name explicitly, bold key metrics and actions
+- Clear all AI insights and user context on monthly rollover
+
+#### Sample Data Logic (Benchmarks, Competitors, Portfolio)
+- Generate 15 months of realistic time-series data using existing methods
+- Competitor add: generate 15-month historical data
+- Competitor delete: remove all that competitor's data
+- Sample data modifications must never affect client GA4 data
+- Future integration will source from SEMrush in GA4 format
+
+#### Data Isolation Principle
+- Client GA4 data, benchmark data, competitor data, and portfolio data remain completely independent
+- Changes to one dataset must never affect others
+
 ## System Architecture
 
 Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear separation between frontend, backend, and data layers.

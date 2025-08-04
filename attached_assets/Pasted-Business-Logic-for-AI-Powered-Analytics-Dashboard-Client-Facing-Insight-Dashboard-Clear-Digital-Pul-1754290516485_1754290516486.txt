@@ -1,0 +1,135 @@
+Business Logic for AI-Powered Analytics Dashboard
+Client-Facing Insight Dashboard (Clear Digital Pulse™)
+Purpose: Provide clients with strategic, competitive, and performance-based insights through a monthly dashboard powered by GA4 data, benchmark comparisons, and AI-generated analysis.
+
+1. 📆 Timeframe Logic
+The dashboard is always based on the most recently completed full month.
+
+Example: If today is August 3, display metrics for July.
+
+Do not fetch or show partial-month (e.g., current month) data unless explicitly requested.
+
+2. 📊 Data Fetching and Storage (GA4)
+a. Timeframe Scope
+Maintain data covering the past 15 months (rolling window).
+
+b. Fetch Strategy
+Before fetching new GA4 data, always:
+
+Check if the required data already exists locally (in DB or cache).
+
+If yes, use the cached version instead of calling GA4.
+
+c. Granularity Handling
+For the current or most recent full month:
+
+Store daily data (used for detailed insights and AI generation).
+
+For older months:
+
+Summarize daily data into a single monthly value per metric.
+
+Replace daily records with monthly summary (or archive if needed).
+
+This balances granularity with performance.
+
+d. Supported Metrics (example set, not exhaustive)
+Bounce Rate
+
+Session Duration
+
+Pages per Session
+
+Sessions per User
+
+Traffic by Channel
+
+Traffic by Device
+
+Conversion metrics (if applicable)
+
+3. 🧠 AI Insight Generation Logic
+a. When Insights Are Generated
+Insights are pre-generated when new data is ingested (not on dashboard load).
+
+Insights can also be manually regenerated or edited.
+
+b. Structure of Each Insight Block
+Context: What the metric means + how the client performed relative to benchmark/competitors.
+
+Insight: Patterns, competitive gaps or advantages.
+
+Recommendation: 3 strategic, scannable bullets with actionable suggestions.
+
+c. Prompt Behavior
+Insights must:
+
+Use the client’s name (not “the client”).
+
+Be concise: under 120–150 words total.
+
+Use bold for key metrics and actions.
+
+Avoid phrases like “score” for ratio-based metrics (e.g., Sessions per User).
+
+Avoid generic phrases like “improve experience”; provide specific, realistic suggestions.
+
+d. Recommendation Personalization
+Recommendations should subtly reflect Clear Digital’s service capabilities, such as:
+
+UX/UI enhancements
+
+Analytics & tracking improvements
+
+Content strategy
+
+Visual design optimization
+
+Technical infrastructure (e.g., CMS, platform speed)
+
+These should not be branded or promotional, but described naturally (e.g., “refine brand voice” not “Brand Messaging Service”).
+
+4. 🧠 User-Provided Context Integration
+Users can optionally add custom context (e.g., KPIs, recent campaigns).
+
+When present:
+
+This context is appended to the prompt.
+
+It should influence insights and recommendations without overriding core data.
+
+The user input is linted:
+
+Stripped of unsafe content (e.g., script tags, prompt injection).
+
+Filtered for profanity and off-topic entries.
+
+Limited to 2000 characters.
+
+5. 📈 Visualizations & Data Display
+Graphs must show true time-series data (e.g., daily or weekly trends over last month).
+
+Do not repeat single static values across date ranges.
+
+Show:
+
+The client’s actual metric
+
+Industry benchmark
+
+Clear Digital portfolio average
+
+Key competitor performance
+
+Visuals must match the selected granularity (e.g., daily for July, monthly for previous months).
+
+6. 🔁 Regeneration, Editing & Versioning
+Users can:
+
+Copy, delete, or regenerate insights
+
+Add manual context and regenerate
+
+Past insights are stored and editable per metric/month/client
+
+Insight text should persist unless explicitly regenerated
