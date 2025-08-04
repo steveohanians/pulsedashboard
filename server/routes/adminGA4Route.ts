@@ -108,7 +108,7 @@ router.post('/refresh-current-daily/:clientId', asyncErrorHandler(async (req: an
     const periodMapping = generateDynamicPeriodMapping();
     const currentPeriod = periodMapping.currentPeriod || '2025-07';
     
-    const [year, month] = (currentPeriod as string).split('-');
+    const [year, month] = String(currentPeriod).split('-');
     const startDate = `${year}-${month}-01`;
     const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
     
@@ -116,7 +116,7 @@ router.post('/refresh-current-daily/:clientId', asyncErrorHandler(async (req: an
     // await ga4Manager.clearClientDataForPeriod(clientId, currentPeriod);
     
     // Fetch daily data for current month
-    const dailyData = await ga4Manager.fetchDailyData(clientId, startDate, endDate, currentPeriod as string);
+    const dailyData = await ga4Manager.fetchDailyData(clientId, startDate, endDate, String(currentPeriod));
     
     if (!dailyData || dailyData.length === 0) {
       return res.status(404).json({
@@ -136,7 +136,7 @@ router.post('/refresh-current-daily/:clientId', asyncErrorHandler(async (req: an
       message: `Successfully refreshed current month with ${dailyData.length} days of data`,
       period: currentPeriod,
       daysProcessed: dailyData.length,
-      sampleData: dailyData.slice(0, 3).map(day => ({
+      previewData: dailyData.slice(0, 3).map(day => ({
         date: day.date,
         bounceRate: `${day.metrics.bounceRate.toFixed(1)}%`,
         sessionDuration: `${day.metrics.sessionDuration.toFixed(0)}s`

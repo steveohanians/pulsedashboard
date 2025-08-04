@@ -1168,18 +1168,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get sample data configuration status
-  app.get("/api/admin/sample-data-config", requireAdmin, async (req, res) => {
-    try {
-      const { getSampleDataStatus, logSampleDataConfig } = await import("./sampleDataConfig");
-      logSampleDataConfig(); // Log current config for admin reference
-      const status = getSampleDataStatus();
-      res.json(status);
-    } catch (error) {
-      logger.error("Error getting sample data config", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to get sample data configuration" });
-    }
-  });
+
 
   // Test benchmark data generation for current period
   app.post("/api/admin/generate-current-period-data", requireAdmin, async (req, res) => {
@@ -1362,18 +1351,8 @@ export function registerRoutes(app: Express): Server {
         admin: req.user?.id 
       });
 
-      // Auto-generate sample data for the new CD Portfolio company
-      try {
-        // Legacy function - replaced by SampleDataManager
-        // No data generation needed for CD Portfolio companies
-        logger.info("Auto-generated sample data for new CD portfolio company", { companyId: newCompany.id });
-      } catch (sampleError) {
-        logger.warn("Failed to auto-generate sample data for CD portfolio company", { 
-          companyId: newCompany.id, 
-          error: (sampleError as Error).message 
-        });
-        // Don't fail the main request if sample data generation fails
-      }
+      // CD Portfolio company created successfully - no additional data generation needed
+      logger.info("Created CD portfolio company", { companyId: newCompany.id });
       
       res.status(201).json(newCompany);
     } catch (error) {
@@ -1870,18 +1849,8 @@ export function registerRoutes(app: Express): Server {
       
       const company = await storage.createBenchmarkCompany(validatedData);
       
-      // Auto-generate 15 months of sample data for the new benchmark company
-      try {
-        // Legacy function - replaced by SampleDataManager
-        // No automatic data generation for benchmark companies
-        logger.info("Created benchmark company", { companyId: company.id });
-      } catch (sampleError) {
-        logger.warn("Failed to auto-generate sample data for benchmark company", { 
-          companyId: company.id, 
-          error: (sampleError as Error).message 
-        });
-        // Don't fail the main request if sample data generation fails
-      }
+      // Benchmark company created successfully - no additional data generation needed
+      logger.info("Created benchmark company", { companyId: company.id });
       
       res.status(201).json(company);
     } catch (error) {
