@@ -11,6 +11,32 @@ Performance priority: Demands enterprise-grade performance with immediate loadin
 Data management principles: Dashboard shows "Last Month" data only (not current partial month). Follow established 15-month historical data logic: check existing data before re-fetching, summarize daily to monthly for storage optimization, only fetch new/active months not yet pulled.
 Learning principles: Follow established patterns and logic instead of creating new approaches. When modifying data, only touch the specific entities requested - never assume broader changes are needed.
 
+## Agent Learning Protocols
+
+### 1. Explicit Scope Confirmation
+Before making any changes that affect data or architecture:
+- State exactly what entities/data will be modified
+- Confirm the scope matches the user's request
+- Wait for confirmation before proceeding with any destructive operations
+
+### 2. Pattern Research Mandatory
+When encountering any task:
+- Search for existing implementations in the codebase first
+- Use established naming conventions and logic patterns
+- Only create new approaches if existing patterns don't exist
+
+### 3. Structured Problem-Solving
+For each request:
+1. Identify the EXACT scope (which entities, which data)
+2. Research existing patterns and logic
+3. Propose the approach based on established patterns
+4. Get confirmation before executing
+
+### 4. Documentation Requirements
+- Update replit.md immediately when users express preferences
+- Document all architectural changes with key details and dates
+- Maintain current project context in Overview and Recent Changes sections
+
 ## System Architecture
 
 Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear separation between frontend, backend, and data layers.
