@@ -141,36 +141,59 @@ function processMetricsData(
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
   
+  // Helper function to process traffic channel data
+  const processTrafficChannelData = (metrics: any[]): any[] => {
+    const result: any[] = [];
+    
+    metrics.forEach(m => {
+      if (m.metricName === 'Traffic Channels' && !m.channel && typeof m.value === 'string') {
+        // Parse GA4 JSON format: [{"channel": "Direct", "sessions": 4439, "percentage": 64.87...}]
+        try {
+          const channelData = JSON.parse(m.value);
+          if (Array.isArray(channelData)) {
+            channelData.forEach((channel: any) => {
+              result.push({
+                metricName: m.metricName,
+                value: channel.percentage || channel.value || channel.sessions,
+                sourceType: m.sourceType,
+                timePeriod: m.timePeriod,
+                channel: channel.channel || channel.name,
+                competitorId: m.competitorId
+              });
+            });
+          }
+        } catch (e) {
+          // Fallback for invalid JSON - keep original
+          result.push({
+            metricName: m.metricName,
+            value: m.value,
+            sourceType: m.sourceType,
+            timePeriod: m.timePeriod,
+            channel: m.channel,
+            competitorId: m.competitorId
+          });
+        }
+      } else {
+        // Regular metric - keep as-is
+        result.push({
+          metricName: m.metricName,
+          value: m.value,
+          sourceType: m.sourceType,
+          timePeriod: m.timePeriod,
+          channel: m.channel,
+          competitorId: m.competitorId
+        });
+      }
+    });
+    
+    return result;
+  };
+  
   return [
-    ...allMetrics.map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      sourceType: m.sourceType,
-      timePeriod: m.timePeriod,
-      channel: m.channel
-    })),
-    ...allCompetitorMetrics.map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      sourceType: 'Competitor',
-      competitorId: m.competitorId,
-      timePeriod: m.timePeriod,
-      channel: m.channel
-    })),
-    ...allFilteredIndustryMetrics.map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      sourceType: 'Industry_Avg',
-      timePeriod: m.timePeriod,
-      channel: m.channel
-    })),
-    ...allFilteredCdAvgMetrics.map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      sourceType: 'CD_Avg',
-      timePeriod: m.timePeriod,
-      channel: m.channel
-    }))
+    ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
+    ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
+    ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
+    ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
 }
 
