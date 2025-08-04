@@ -37,20 +37,15 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
     currentQuarterPeriods.push(period);
   }
   
-  // Generate extended historical period for "Last Year" to include all sample data
-  // Include 15+ months from 2024-04 to show complete historical trends
+  // Generate "Last Year" period - exactly 12 months ending with target month
   const yearPeriods = [];
   
-  // Start from April 2024 to capture all historical sample data
-  const historicalStart = new Date(2024, 3, 1); // April 2024 (month is 0-indexed)
-  const currentDate = new Date(targetMonth);
-  
-  // Generate all months from historical start to target month
-  const tempDate = new Date(historicalStart);
-  while (tempDate <= currentDate) {
-    const monthPeriod = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}`;
-    yearPeriods.push(monthPeriod);
-    tempDate.setMonth(tempDate.getMonth() + 1);
+  // Start 12 months before target month to get exactly 12 months
+  for (let i = 11; i >= 0; i--) {
+    const monthDate = new Date(targetMonth);
+    monthDate.setMonth(monthDate.getMonth() - i);
+    const period = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    yearPeriods.push(period);
   }
   
   logger.info("Generated dynamic period mapping", {
@@ -64,7 +59,7 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   return {
     "Last Month": [currentPeriod], // Last complete month
     "Last Quarter": currentQuarterPeriods, // Current quarter (up to 3 months, ending with last complete month)
-    "Last Year": yearPeriods, // Last 12 months ending with last complete month
+    "Last Year": yearPeriods, // Exactly 12 months ending with last complete month
     "Custom Date Range": [currentPeriod] // Default to last complete month for custom ranges
   };
 }
