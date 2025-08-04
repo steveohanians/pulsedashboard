@@ -11,10 +11,10 @@ const INSIGHTS_STORAGE_KEY = 'pulse_dashboard_insights';
 
 interface StoredInsight {
   data: {
-    insights?: string[];
-    recommendations?: string[];
-    sentiment?: string;
-    title?: string;
+    context?: string;
+    insight?: string;
+    recommendation?: string;
+    status?: 'success' | 'needs_improvement' | 'warning';
   };
   month: string; // Format: "2025-07"
   timestamp: number;
@@ -72,8 +72,7 @@ interface MetricInsightBoxProps {
 export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<StoredInsight['data'] & { 
     isTyping?: boolean; 
-    isFromStorage?: boolean; 
-    status?: 'success' | 'needs_improvement' | 'warning';
+    isFromStorage?: boolean;
   } | null>(null);
   const queryClient = useQueryClient();
   
@@ -190,9 +189,9 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   if (insight) {
     return (
       <AIInsights
-        context={''}
-        insight={insight.insights?.[0] || ''}
-        recommendation={insight.recommendations?.[0] || ''}
+        context={insight.context || ''}
+        insight={insight.insight || ''}
+        recommendation={insight.recommendation || ''}
         status={insight.status}
         isTyping={insight.isTyping}
         hasCustomContext={false}
