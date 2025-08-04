@@ -25,43 +25,94 @@ const CORE_METRICS = [
 const TRAFFIC_CHANNELS = ['Organic Search', 'Direct', 'Social Media', 'Referral', 'Email', 'Paid Search'];
 const DEVICE_TYPES = ['Mobile', 'Desktop', 'Tablet'];
 
-// Generate realistic metric values with controlled variance
-function generateMetricValue(metricName: string, sourceType: string, baseValues: Record<string, number>): string {
+// Generate realistic metric values with controlled variance and trend patterns
+function generateMetricValue(
+  metricName: string, 
+  sourceType: string, 
+  baseValues: Record<string, number>, 
+  monthIndex: number, 
+  totalMonths: number,
+  competitorId?: string
+): string {
   const base = baseValues[metricName] || 100;
-  let variance = 0.1; // 10% variance by default
   
-  // Adjust variance and base values by source type
-  let multiplier = 1;
+  // Create trend patterns over time (15 months)
+  const trendProgress = monthIndex / (totalMonths - 1); // 0 to 1
+  
+  // Define different trend patterns for each source type
+  let trendMultiplier = 1;
+  let baseMultiplier = 1;
+  let variance = 0.1;
+  
   switch (sourceType) {
     case 'Client':
-      multiplier = 1;
-      variance = 0.05; // Less variance for client data
+      // Client shows improving trend over time
+      if (metricName === 'Bounce Rate') {
+        trendMultiplier = 1 - (trendProgress * 0.15); // Decreasing bounce rate (good)
+        baseMultiplier = 1;
+        variance = 0.03;
+      } else {
+        trendMultiplier = 1 + (trendProgress * 0.12); // Increasing other metrics (good)
+        baseMultiplier = 1;
+        variance = 0.03;
+      }
       break;
+      
     case 'Competitor':
-      multiplier = 0.85 + Math.random() * 0.3; // 85-115% of client
-      variance = 0.15;
+      // Different competitors have different performance levels
+      const competitorVariant = competitorId ? competitorId.slice(-2) : '00';
+      const competitorSeed = parseInt(competitorVariant, 16) / 255;
+      
+      if (metricName === 'Bounce Rate') {
+        baseMultiplier = 0.8 + (competitorSeed * 0.4); // 80%-120% of client base
+        trendMultiplier = 1 - (trendProgress * 0.08); // Slight improvement
+      } else {
+        baseMultiplier = 0.85 + (competitorSeed * 0.3); // 85%-115% of client base
+        trendMultiplier = 1 + (trendProgress * 0.08); // Slight improvement
+      }
+      variance = 0.12;
       break;
+      
     case 'Industry_Avg':
-      multiplier = 0.9 + Math.random() * 0.2; // 90-110% of client
-      variance = 0.1;
-      break;
-    case 'CD_Avg':
-      multiplier = 1.05 + Math.random() * 0.1; // 105-115% of client (CD performs better)
+      // Industry average shows moderate improvement
+      if (metricName === 'Bounce Rate') {
+        baseMultiplier = 1.15; // Higher bounce rate than client
+        trendMultiplier = 1 - (trendProgress * 0.05); // Slow improvement
+      } else {
+        baseMultiplier = 0.92; // Lower performance than client
+        trendMultiplier = 1 + (trendProgress * 0.06); // Slow improvement
+      }
       variance = 0.08;
+      break;
+      
+    case 'CD_Avg':
+      // CD Portfolio performs best
+      if (metricName === 'Bounce Rate') {
+        baseMultiplier = 0.85; // Lower bounce rate (better)
+        trendMultiplier = 1 - (trendProgress * 0.10); // Good improvement
+      } else {
+        baseMultiplier = 1.08; // Higher performance
+        trendMultiplier = 1 + (trendProgress * 0.10); // Good improvement
+      }
+      variance = 0.06;
       break;
   }
   
-  const adjustedBase = base * multiplier;
-  const variation = (Math.random() - 0.5) * 2 * variance; // -variance to +variance
-  const finalValue = adjustedBase * (1 + variation);
+  // Apply seasonal variation (quarterly cycles)
+  const seasonalVariation = Math.sin((monthIndex / 3) * Math.PI * 2) * 0.05;
+  
+  // Calculate final value
+  const adjustedBase = base * baseMultiplier * trendMultiplier * (1 + seasonalVariation);
+  const randomVariation = (Math.random() - 0.5) * 2 * variance;
+  const finalValue = adjustedBase * (1 + randomVariation);
   
   // Format based on metric type
   if (metricName === 'Bounce Rate') {
-    return Math.max(10, Math.min(90, finalValue)).toFixed(1);
+    return Math.max(15, Math.min(85, finalValue)).toFixed(1);
   } else if (metricName === 'Pages per Session' || metricName === 'Sessions per User') {
-    return Math.max(1, finalValue).toFixed(2);
+    return Math.max(1.2, finalValue).toFixed(2);
   } else if (metricName === 'Session Duration') {
-    return Math.max(30, Math.round(finalValue)).toString();
+    return Math.max(45, Math.round(finalValue)).toString();
   }
   
   return Math.max(0, Math.round(finalValue)).toString();
@@ -194,16 +245,17 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
     const entitiesGenerated: string[] = [];
     let totalMetricsCreated = 0;
     
-    // Generate data for each period
-    for (const period of periods) {
-      logger.info(`Generating data for period: ${period}`);
+    // Generate data for each period with proper trend patterns
+    for (let periodIndex = 0; periodIndex < periods.length; periodIndex++) {
+      const period = periods[periodIndex];
+      logger.info(`Generating data for period: ${period} (${periodIndex + 1}/${periods.length})`);
       
       // 1. Generate CLIENT data (unless GA4 client and skipGA4Client is true)
       if (!skipGA4Client || clientId !== 'demo-client-id') {
-        entitiesGenerated.push('Client');
+        if (periodIndex === 0) entitiesGenerated.push('Client');
         
         for (const metricName of CORE_METRICS) {
-          const value = generateMetricValue(metricName, 'Client', baseValues);
+          const value = generateMetricValue(metricName, 'Client', baseValues, periodIndex, periods.length);
           await storage.createMetric({
             clientId,
             metricName,
@@ -237,11 +289,18 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
       
       // 2. Generate COMPETITOR data
       if (competitors.length > 0) {
-        entitiesGenerated.push('Competitors');
+        if (periodIndex === 0) entitiesGenerated.push('Competitors');
         
         for (const competitor of competitors) {
           for (const metricName of CORE_METRICS) {
-            const value = generateMetricValue(metricName, 'Competitor', baseValues);
+            const value = generateMetricValue(
+              metricName, 
+              'Competitor', 
+              baseValues, 
+              periodIndex, 
+              periods.length,
+              competitor.id
+            );
             
             // Create competitor metric using regular metrics table with proper competitor_id
             await storage.createMetric({
@@ -256,17 +315,19 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
           }
         }
         
-        logger.info(`Generated competitor data for period ${period}`, { 
-          competitorCount: competitors.length, 
-          metricsPerCompetitor: CORE_METRICS.length,
-          totalCompetitorMetrics: competitors.length * CORE_METRICS.length
-        });
+        if (periodIndex % 3 === 0) { // Log every quarter
+          logger.info(`Generated competitor data for period ${period}`, { 
+            competitorCount: competitors.length, 
+            metricsPerCompetitor: CORE_METRICS.length,
+            totalCompetitorMetrics: competitors.length * CORE_METRICS.length
+          });
+        }
       }
       
       // 3. Generate INDUSTRY AVERAGE data
-      entitiesGenerated.push('Industry_Avg');
+      if (periodIndex === 0) entitiesGenerated.push('Industry_Avg');
       for (const metricName of CORE_METRICS) {
-        const value = generateMetricValue(metricName, 'Industry_Avg', baseValues);
+        const value = generateMetricValue(metricName, 'Industry_Avg', baseValues, periodIndex, periods.length);
         await storage.createBenchmarkMetric({
           metricName,
           value,
@@ -279,9 +340,9 @@ export async function generateComprehensiveSampleData(config: SampleDataConfig):
       }
       
       // 4. Generate CD PORTFOLIO AVERAGE data
-      entitiesGenerated.push('CD_Avg');
+      if (periodIndex === 0) entitiesGenerated.push('CD_Avg');
       for (const metricName of CORE_METRICS) {
-        const value = generateMetricValue(metricName, 'CD_Avg', baseValues);
+        const value = generateMetricValue(metricName, 'CD_Avg', baseValues, periodIndex, periods.length);
         await storage.createBenchmarkMetric({
           metricName,
           value,
