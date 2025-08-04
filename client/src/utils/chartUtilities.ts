@@ -19,6 +19,31 @@ export function seededRandom(seed: number): number {
  * Consolidates duplicate functions from bar-chart.tsx and time-series-chart.tsx
  */
 export function generatePeriodLabel(period: string): string {
+  // Handle grouped period format: YYYY-MM-group-N
+  if (period.includes('-group-')) {
+    const groupParts = period.split('-group-');
+    if (groupParts.length === 2) {
+      const [monthPart, groupNum] = groupParts;
+      const [year, month] = monthPart.split('-');
+      if (year && month) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const groupNumber = parseInt(groupNum);
+        
+        // Calculate approximate date range for the group (each group ~5-6 days)
+        const groupSize = 5; // Average group size
+        const startDay = (groupNumber - 1) * groupSize + 1;
+        const endDay = Math.min(groupNumber * groupSize, 31);
+        
+        if (startDay === endDay) {
+          return `${monthNames[parseInt(month) - 1]} ${startDay}`;
+        } else {
+          return `${monthNames[parseInt(month) - 1]} ${startDay}-${endDay}`;
+        }
+      }
+    }
+  }
+  
   // Handle daily format: YYYY-MM-daily-YYYYMMDD
   if (period.includes('-daily-')) {
     const dailyDatePart = period.split('-daily-')[1]; // Get YYYYMMDD

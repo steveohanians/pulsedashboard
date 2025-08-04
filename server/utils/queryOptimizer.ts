@@ -193,7 +193,7 @@ export async function getDashboardDataOptimized(
   const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || timePeriod === 'Last Month';
   let timeSeriesData = shouldCreateTimeSeriesData ? groupMetricsByPeriod(processedData) : undefined;
   
-  // For "Last Month", also include daily data if available for intra-month chart variations
+  // For "Last Month", also include daily data if available, but group into 6 periods (every 5-6 days)
   if (timePeriod === 'Last Month' && timeSeriesData) {
     try {
       const lastMonthPeriod = periodsToQuery[0]; // Should be 2025-07
@@ -202,30 +202,77 @@ export async function getDashboardDataOptimized(
       if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
         console.log(`🔍 Including ${cachedDailyData.length} daily metrics for Last Month chart display`);
         
-        // Convert daily data to time series format grouped by day
-        const dailyGrouped: Record<string, any[]> = {};
+        // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
+        const dailyByDate: Record<string, any[]> = {};
         
+        // First, group by day
         cachedDailyData.forEach(metric => {
           const dayKey = metric.timePeriod; // Format: 2025-07-daily-20250701
-          if (!dailyGrouped[dayKey]) {
-            dailyGrouped[dayKey] = [];
+          if (!dailyByDate[dayKey]) {
+            dailyByDate[dayKey] = [];
           }
-          dailyGrouped[dayKey].push({
-            metricName: metric.metricName,
-            value: metric.value,
-            sourceType: 'Client', // Daily data is always client data
-            timePeriod: dayKey,
-            channel: null,
-            competitorId: null
-          });
+          dailyByDate[dayKey].push(metric);
         });
         
-        // Replace the single-period data with daily breakdown
-        if (Object.keys(dailyGrouped).length > 0) {
-          console.log(`🔍 Replacing single period ${lastMonthPeriod} with ${Object.keys(dailyGrouped).length} daily periods`);
-          timeSeriesData = dailyGrouped;
-          // Also update the periods to reflect daily data
-          periodsToQuery = Object.keys(dailyGrouped).sort();
+        // Sort days and group into 6 periods (every ~5 days)
+        const sortedDays = Object.keys(dailyByDate).sort();
+        const daysInMonth = sortedDays.length;
+        const groupSize = Math.ceil(daysInMonth / 6); // ~5-6 days per group
+        
+        const groupedPeriods: Record<string, any[]> = {};
+        
+        for (let i = 0; i < 6; i++) {
+          const startIdx = i * groupSize;
+          const endIdx = Math.min(startIdx + groupSize, daysInMonth);
+          const daysInGroup = sortedDays.slice(startIdx, endIdx);
+          
+          if (daysInGroup.length === 0) break;
+          
+          // Create a period label (e.g., "Jul 1-5", "Jul 26-31")
+          const firstDay = daysInGroup[0].split('-daily-')[1]; // 20250701
+          const lastDay = daysInGroup[daysInGroup.length - 1].split('-daily-')[1]; // 20250705
+          
+          const firstDate = new Date(parseInt(firstDay.substring(0, 4)), parseInt(firstDay.substring(4, 6)) - 1, parseInt(firstDay.substring(6, 8)));
+          const lastDate = new Date(parseInt(lastDay.substring(0, 4)), parseInt(lastDay.substring(4, 6)) - 1, parseInt(lastDay.substring(6, 8)));
+          
+          const periodKey = `${lastMonthPeriod}-group-${i + 1}`;
+          groupedPeriods[periodKey] = [];
+          
+          // Collect all metrics from all days in this group
+          const allMetricsInGroup: Record<string, number[]> = {};
+          
+          daysInGroup.forEach(dayKey => {
+            dailyByDate[dayKey].forEach(metric => {
+              const metricKey = `${metric.metricName}-Client`;
+              if (!allMetricsInGroup[metricKey]) {
+                allMetricsInGroup[metricKey] = [];
+              }
+              allMetricsInGroup[metricKey].push(parseFloat(metric.value) || 0);
+            });
+          });
+          
+          // Calculate averages for each metric in this group
+          Object.keys(allMetricsInGroup).forEach(metricKey => {
+            const [metricName] = metricKey.split('-');
+            const values = allMetricsInGroup[metricKey];
+            const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+            
+            groupedPeriods[periodKey].push({
+              metricName,
+              value: average,
+              sourceType: 'Client',
+              timePeriod: periodKey,
+              channel: null,
+              competitorId: null
+            });
+          });
+        }
+        
+        // Replace the single-period data with grouped periods
+        if (Object.keys(groupedPeriods).length > 0) {
+          console.log(`🔍 Replacing single period ${lastMonthPeriod} with ${Object.keys(groupedPeriods).length} grouped periods (every ~${groupSize} days)`);
+          timeSeriesData = groupedPeriods;
+          periodsToQuery = Object.keys(groupedPeriods).sort();
         }
       }
     } catch (error) {
