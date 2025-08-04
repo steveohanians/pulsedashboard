@@ -1,6 +1,7 @@
 // Database query optimization utilities
 import { performanceCache } from '../cache/performance-cache';
 import { storage } from '../storage';
+import { parseMetricValue } from './metricParser';
 import logger from './logger';
 
 // Optimized query for filtered metrics with caching
@@ -98,7 +99,7 @@ export async function preAggregateMetrics(
         
         metrics.forEach(m => {
           if (!grouped[m.metricName]) grouped[m.metricName] = [];
-          grouped[m.metricName].push(parseFloat(m.value));
+          grouped[m.metricName].push(parseMetricValue(m.value) || 0);
         });
         
         Object.entries(grouped).forEach(([name, values]) => {
