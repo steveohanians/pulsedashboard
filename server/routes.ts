@@ -537,7 +537,7 @@ export function registerRoutes(app: Express): Server {
       logger.info('Starting comprehensive sample data generation', { clientId, months, forceReplace });
 
       // Import here to avoid circular dependencies
-      const { SampleDataManager } = await import('../services/sampleData');
+      const { SampleDataManager } = await import('./services/sampleData');
       const sampleDataManager = new SampleDataManager();
       
       const result = await sampleDataManager.generateSampleData({
