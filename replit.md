@@ -47,12 +47,13 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **GA4 Integration Architecture**: Clients provide GA4 Property ID and grant guest access. Clear Digital uses Google service account for API access (read-only) and pulls data via GA4 Reporting API. Automated ETL process transforms GA4 data. OAuth 2.0 flow is used for secure GA4 service account management. **Important**: Google Analytics Data API must be enabled in Google Cloud Console for property verification to work.
 - **Performance Optimization System**: Comprehensive optimization system reducing load times from 43+ seconds to 24.25 seconds (45% improvement). Features intelligent caching (5-15 min TTL), parallelized database queries, background AI processing, full chart optimization, database indexing, and connection pooling. Cache hit rates provide sub-second response times.
 - **Bulletproof 15-Month Sample Data Generation System**: Complete and verified sample data generation covering April 2024 through July 2025 (15 months) for ALL entities with proper trend variations:
-  - **Client Data**: 52 metrics across 13 periods (excluding GA4 months) with improving trends (Bounce Rate 38.5% → 30.1%, Session Duration 165s → 201s)
-  - **Competitor Data**: 104 metrics for 2 competitors across 13 periods with realistic competitive patterns (Hero Digital outperforming Focus Lab Agency)
-  - **Industry/CD Benchmarks**: 142 metrics (71 each) across all 15 periods with appropriate performance baselines
-  - **Trend Patterns**: Client improving 15% bounce rate decrease, competitors with 8% improvement, industry with 5-6% improvement, CD Portfolio with 10% improvement
-  - **Verification Status**: All entities properly created with correct time periods, proper competitor_id linking, and realistic seasonal variations
-  - **API Endpoint**: `/api/generate-sample-data/:clientId` (now truly bulletproof)
+  - **Client Data**: All 6 core metrics across periods with realistic improving trends
+  - **Competitor Data**: 1-3 active competitors per client with dynamic variations (5-10% monthly fluctuations for visibility)
+  - **Metrics Generated**: Bounce Rate, Session Duration, Pages per Session, Sessions per User, Traffic Channels, Device Distribution
+  - **Benchmark Calculation**: Real-time averaging of actual company data for Industry_Avg and CD_Avg (no separate benchmarks table)
+  - **Variation Logic**: All competitors show realistic up/down patterns with 5-10% monthly changes for clear visual differentiation
+  - **Verification Status**: Dynamic competitor count based on client configuration, proper seasonal variations across all 6 metrics
+  - **API Endpoint**: `/api/generate-sample-data/:clientId` with flexible competitor management
 
 ## External Dependencies
 
