@@ -100,17 +100,28 @@ export async function getDashboardDataOptimized(
   ] = await Promise.race([dataPromise, timeoutPromise]) as any;
   
   // Process and structure the data
+  const processedData = processMetricsData(
+    allMetricsArrays,
+    allCompetitorMetricsArrays,
+    allFilteredIndustryMetricsArrays,
+    allFilteredCdAvgMetricsArrays,
+    periodsToQuery
+  );
+  
   const result = {
     client,
     competitors,
-    metrics: processMetricsData(
-      allMetricsArrays,
-      allCompetitorMetricsArrays,
-      allFilteredIndustryMetricsArrays,
-      allFilteredCdAvgMetricsArrays,
-      periodsToQuery
-    ),
-    insights: [] // Load insights asynchronously
+    insights: [], // Load insights asynchronously
+    // For multi-period queries (Last Quarter, Last Year), structure as time series
+    ...(periodsToQuery.length > 1 ? {
+      isTimeSeries: true,
+      periods: periodsToQuery,
+      timeSeriesData: groupMetricsByPeriod(processedData),
+      metrics: processedData // Keep flat structure for backward compatibility
+    } : {
+      isTimeSeries: false,
+      metrics: processedData
+    })
   };
   
   setCachedData(cacheKey, result, 5 * 60 * 1000); // 5 minutes cache
@@ -161,6 +172,21 @@ function processMetricsData(
       channel: m.channel
     }))
   ];
+}
+
+// Group metrics by time period for time series charts
+function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
+  const grouped: Record<string, any[]> = {};
+  
+  metrics.forEach(metric => {
+    const period = metric.timePeriod;
+    if (!grouped[period]) {
+      grouped[period] = [];
+    }
+    grouped[period].push(metric);
+  });
+  
+  return grouped;
 }
 
 // Separate function for heavy data (charts, metrics) - lazy loaded
