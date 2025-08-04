@@ -24,7 +24,7 @@ export class RealPerformanceTimer {
           
           if (entry.entryType === 'largest-contentful-paint') {
             this.largestContentfulPaint = entry.startTime;
-            console.log(`🖼️ [REAL-PERF] Largest Contentful Paint: ${entry.startTime.toFixed(0)}ms`);
+
           }
         }
       });
@@ -47,7 +47,7 @@ export class RealPerformanceTimer {
   }
 
   startDashboardTiming() {
-    console.log(`📊 [REAL-PERF] Dashboard component mounting at: ${Date.now() - this.navigationStart}ms after navigation`);
+
   }
 
   markDashboardComplete() {
@@ -63,12 +63,10 @@ export class RealPerformanceTimer {
       console.log(`🎨 First Contentful Paint: ${this.firstContentfulPaint.toFixed(0)}ms (${(this.firstContentfulPaint/1000).toFixed(1)}s)`);
     }
     if (this.largestContentfulPaint > 0) {
-      console.log(`🖼️ Largest Contentful Paint: ${this.largestContentfulPaint.toFixed(0)}ms (${(this.largestContentfulPaint/1000).toFixed(1)}s)`);
+
     }
-    console.log(`📊 Dashboard Visual Complete: ${totalTime}ms (${(totalTime/1000).toFixed(2)}s)`);
-    console.log(`🎯 TOTAL LOAD TIME: ${(totalTime/1000).toFixed(2)} SECONDS`);
-    console.log(`📈 Elements: ${visualElements.charts} charts, ${visualElements.metrics} metrics, ${visualElements.paths} graphics`);
-    console.log(`=======================================\n`);
+
+
 
     return totalTime;
   }

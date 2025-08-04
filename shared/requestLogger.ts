@@ -72,8 +72,9 @@ export class RequestLogger {
             } catch {
               logEntry.error = responseBody;
             }
-          } else if (responseBody.error || responseBody.message) {
-            logEntry.error = responseBody.error || responseBody.message;
+          } else if (typeof responseBody === 'object' && responseBody !== null) {
+            const errorObj = responseBody as { error?: string; message?: string };
+            logEntry.error = errorObj.error || errorObj.message;
           }
         }
         

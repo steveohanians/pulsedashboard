@@ -242,24 +242,6 @@ export default function Dashboard() {
   const insights = dashboardData?.insights || [];
 
   // Debug timeSeriesData to understand why charts are using fallback
-  console.log('🔍 Dashboard Debug - GA4 AUTHENTIC DATA CHECK:', {
-    isTimeSeries,
-    timeSeriesDataExists: !!timeSeriesData,
-    timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData).join(', ') : 'none',
-    periodsCount: periods?.length || 0,
-    metricsCount: metrics.length,
-    authenticGA4BounceRate: metrics.find(m => m.metricName === 'Bounce Rate' && m.sourceType === 'Client')?.value,
-    authenticGA4SessionDuration: metrics.find(m => m.metricName === 'Session Duration' && m.sourceType === 'Client')?.value,
-    authenticGA4PagesPerSession: metrics.find(m => m.metricName === 'Pages per Session' && m.sourceType === 'Client')?.value,
-    fullDataStructure: {
-      hasTimeSeriesData: !!timeSeriesData,
-      hasPeriods: !!periods,
-      isTimeSeriesFlag: isTimeSeries,
-      periodsList: periods,
-      timeSeriesFirstPeriod: timeSeriesData ? Object.keys(timeSeriesData)[0] : null,
-      timeSeriesDataSample: timeSeriesData && Object.keys(timeSeriesData)[0] ? timeSeriesData[Object.keys(timeSeriesData)[0]]?.slice(0, 2) : null
-    }
-  });
 
 
 
@@ -305,23 +287,14 @@ export default function Dashboard() {
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
-    console.log('🚀 TRAFFIC CHANNEL FUNCTION CALLED!');
-    console.log('🔥 TRAFFIC CHANNEL PATH DEBUG:', {
-      hasTrafficChannelMetrics: !!dashboardData?.trafficChannelMetrics,
-      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0,
-      isTimeSeries,
-      hasTimeSeriesData: !!timeSeriesData,
-      metricsLength: metrics.length
-    });
+
     
     let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
-      console.log('🔥 USING DEDICATED TRAFFIC CHANNEL METRICS:', trafficMetrics);
-      console.log('🔥 TRAFFIC METRICS LENGTH:', trafficMetrics.length);
-      console.log('🔥 FIRST TRAFFIC METRIC:', trafficMetrics[0]);
+
       // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
@@ -329,13 +302,7 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
-      console.log('🔥 TRAFFIC FALLBACK DEBUG:', {
-        metricsLength: metrics.length,
-        allMetricNames: [...new Set(metrics.map(m => m.metricName))],
-        hasTrafficChannels: metrics.some(m => m.metricName === 'Traffic Channels')
-      });
       trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-      console.log('🔥 FILTERED TRAFFIC METRICS:', trafficMetrics);
       // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     
@@ -355,19 +322,10 @@ export default function Dashboard() {
     const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
     const ga4ArrayMetric = clientMetrics.find(m => Array.isArray(m.value));
     if (ga4ArrayMetric) {
-      console.log('✅ GA4 traffic channels found:', ga4ArrayMetric.value.length, 'channels');
+
     }
     
     // Debug traffic channel data processing
-    console.log('🔍 TRAFFIC CHANNEL FULL DEBUG:', {
-      trafficMetricsCount: trafficMetrics.length,
-      clientMetricsCount: clientMetrics.length,
-      dashboardDataKeys: dashboardData ? Object.keys(dashboardData) : 'none',
-      hasTrafficChannelMetrics: !!dashboardData?.trafficChannelMetrics,
-      trafficChannelMetricsLength: dashboardData?.trafficChannelMetrics?.length || 0,
-      fullTrafficMetrics: trafficMetrics,
-      allClientMetrics: clientMetrics
-    });
     
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
@@ -382,32 +340,18 @@ export default function Dashboard() {
 
     // Client data
     const clientTrafficMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    console.log('🔍 CLIENT TRAFFIC PROCESSING DEBUG:', {
-      clientTrafficMetricsLength: clientTrafficMetrics.length,
-      fullClientTrafficMetrics: clientTrafficMetrics,
-      clientName: client?.name,
-      hasClientData: clientTrafficMetrics.length > 0,
-      aboutToProcess: clientTrafficMetrics.length > 0 ? 'YES' : 'NO'
-    });
     
     if (clientTrafficMetrics.length > 0) {
-      console.log('🔍 RAW CLIENT TRAFFIC METRICS:', clientTrafficMetrics);
+
       
       // Use the corrected processChannelData function from chartUtilities.ts
       const channelMap = aggregateChannelData(clientTrafficMetrics);
-      console.log('🔍 AGGREGATED CHANNEL MAP:', channelMap);
+
       
       const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
         ...channel,
         color: getChannelColor(channel.name)
       }));
-      
-      console.log('🔍 FINAL SORTED CHANNELS FOR CLIENT:', {
-        channelsLength: sortedChannels.length,
-        channels: sortedChannels,
-        hasValidChannels: sortedChannels.length > 0,
-        channelNames: sortedChannels.map(c => c.name)
-      });
       
       const clientEntry = {
         sourceType: 'Client',
@@ -415,7 +359,7 @@ export default function Dashboard() {
         channels: sortedChannels
       };
       
-      console.log('🔍 CLIENT ENTRY BEING PUSHED:', JSON.stringify(clientEntry, null, 2));
+
       result.push(clientEntry);
     } else {
       console.warn('❌ No client traffic metrics found! Available metrics:', 
@@ -506,12 +450,6 @@ export default function Dashboard() {
         });
       }
     });
-
-    console.log('🔍 FINAL TRAFFIC CHANNEL RESULT:', {
-      resultLength: result.length,
-      fullResult: result,
-      resultSourceTypes: result.map(r => r.sourceType)
-    });
     
     return result;
   };
@@ -524,7 +462,7 @@ export default function Dashboard() {
     const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
     const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
     if (ga4DeviceArrayMetric) {
-      console.log('✅ GA4 device data found:', ga4DeviceArrayMetric.value.length, 'device types');
+
     }
     
     const DEVICE_COLORS = {
@@ -1497,11 +1435,10 @@ export default function Dashboard() {
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
           {(() => {
-            console.log('🔍 ALL METRIC NAMES BEING RENDERED:', metricNames);
-            console.log('🔍 LOOKING FOR TRAFFIC CHANNELS IN ARRAY:', metricNames.includes('Traffic Channels'));
+
             return metricNames;
           })().map((metricName) => {
-            console.log('🔍 RENDERING METRIC:', metricName, 'Active Section:', activeSection);
+
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
@@ -1600,15 +1537,7 @@ export default function Dashboard() {
                         />
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
-                          console.log('🔥🔥🔥 TRAFFIC CHANNELS SECTION RENDERING NOW! 🔥🔥🔥');
-                          console.log('🔥 Metric Name:', metricName);
-                          console.log('🔥 Dashboard Client:', dashboardData?.client?.name);
-                          console.log('🔥 Total Metrics:', metrics?.length || 0);
-                          console.log('🔥 Traffic Channel Metrics in Data:', metrics?.filter(m => m.metricName === 'Traffic Channels').length || 0);
-                          
                           const trafficData = processTrafficChannelData();
-                          console.log('🔥 PROCESSED TRAFFIC DATA:', JSON.stringify(trafficData, null, 2));
-                          console.log('🔥 Demo Company in Result?', trafficData.some(d => d.label.includes('Demo')));
 
                           return (
                             <StackedBarChart 

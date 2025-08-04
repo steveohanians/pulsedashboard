@@ -101,14 +101,10 @@ export class GA4DataManager {
       }
 
       // Fetch daily main metrics AND period-level traffic channels + device data
-      logger.info(`🔍 DEBUG: Fetching batch data for period ${period}`);
       const [rawDailyData, rawBatchData] = await Promise.all([
         this.apiService.fetchDailyMainMetrics(propertyAccess, startDate, endDate),
         this.apiService.fetchBatchData(propertyAccess, startDate, endDate)
       ]);
-
-      logger.info(`🔍 DEBUG: Batch data fetched. Traffic channels rows: ${rawBatchData.trafficChannels?.rows?.length || 0}`);
-      logger.info(`🔍 DEBUG: Device data rows: ${rawBatchData.deviceData?.rows?.length || 0}`);
 
       // Process the daily data
       const processedDailyData = this.processor.processDailyGA4Response(rawDailyData);
@@ -119,21 +115,18 @@ export class GA4DataManager {
       }
 
       // ALSO process and store the period-level Traffic Channels and Device Data
-      logger.info(`🔍 DEBUG: Processing batch data for period ${period}`);
       const processedPeriodData = this.processor.processGA4Response(
         rawBatchData.mainMetrics,
         rawBatchData.trafficChannels,
         rawBatchData.deviceData
       );
 
-      logger.info(`🔍 DEBUG: Processed period data: ${processedPeriodData ? 'SUCCESS' : 'NULL'}`);
       if (processedPeriodData) {
-        logger.info(`🔍 DEBUG: Traffic channels count: ${processedPeriodData.channelData?.length || 0}`);
         // Store period-level data (Traffic Channels & Device Distribution)
         await this.storageService.storeGA4Metrics(clientId, period, processedPeriodData);
-        logger.info(`✅ Stored Traffic Channels and Device data for period ${period}`);
+        logger.info(`Stored Traffic Channels and Device data for period ${period}`);
       } else {
-        logger.error(`❌ Failed to process period data for ${period}`);
+        logger.error(`Failed to process period data for ${period}`);
       }
 
       // Store the daily data

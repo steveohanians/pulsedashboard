@@ -48,19 +48,15 @@ function generateTimeSeriesData(
   metricName?: string
 ): Array<Record<string, unknown>> {
   // Only use authentic time-series data - no fallback generation
-  console.log(`🔍 Chart ${metricName}: Checking for authentic data - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length, 'clientData:', clientData);
   if (timeSeriesData && periods && periods.length > 0) {
-    console.log(`✅ Chart ${metricName}: Using AUTHENTIC time-series data with ${periods.length} periods:`, periods);
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
   // For Last Month view, use daily data if available, otherwise show single authentic point
   if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
-    console.log(`✅ Chart ${metricName}: Last Month view with authentic client data: ${clientData}`);
     
     // Check if we have time series data for the last month - this would be daily data
     if (timeSeriesData && periods && periods.length === 1 && periods[0] === '2025-07') {
-      console.log(`🔍 Chart ${metricName}: Checking for daily data in Last Month view`);
       // Use the existing time series generation but for daily data
       return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
     }
@@ -80,7 +76,6 @@ function generateTimeSeriesData(
   }
   
   // No authentic data available - return empty data rather than fake data
-  console.log(`❌ Chart ${metricName}: No authentic data available - showing empty state`);
   return [];
 }
 
@@ -102,10 +97,6 @@ function generateRealTimeSeriesData(
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
     const relevantData = periodData.filter(m => m.metricName === metricName);
-    console.log(`🔍 Period ${period}: ${periodData.length} total metrics, ${relevantData.length} for ${metricName}`);
-    if (relevantData.length > 0) {
-      console.log(`🔍 Period ${period} sample data:`, relevantData.slice(0, 3));
-    }
     
     const dataPoint: Record<string, unknown> = {
       date: generatePeriodLabel(period)
@@ -128,9 +119,6 @@ function generateRealTimeSeriesData(
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(avgCD * 10) / 10;
     
-    console.log(`🔍 Period ${period} AUTHENTIC averages: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
-    console.log(`🔍 AUTHENTIC GA4 DATA: Period ${period} -> Chart Date "${dataPoint.date}" shows Client ${dataPoint[clientKey]}%`);
-    
     // NO COMPETITOR DATA - only show authentic client data
     // Competitors contain synthetic data, so we exclude them to maintain data integrity
     competitors.forEach(competitor => {
@@ -140,7 +128,6 @@ function generateRealTimeSeriesData(
     data.push(dataPoint);
   });
   
-  console.log(`🔍 Final chart data for ${metricName}:`, data);
   return data;
 }
 

@@ -5,7 +5,7 @@
  * Following business logic: Generate industry and portfolio averages for 15 months
  */
 
-import { PostgresStorage } from '../server/storage';
+import { storage } from '../server/storage';
 import logger from '../server/utils/logger';
 
 const METRIC_NAMES = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
@@ -43,7 +43,7 @@ async function generateBenchmarkData() {
   try {
     logger.info('Starting benchmark and portfolio data generation');
     
-    const storage = new PostgresStorage();
+    // Use the exported storage instance
     const periods = generatePeriodList(15);
     
     let metricsCreated = 0;

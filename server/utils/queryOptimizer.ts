@@ -181,13 +181,7 @@ export async function getDashboardDataOptimized(
     periodsToQuery
   );
   
-  // DEBUG: Check periods to understand why timeSeriesData is undefined
-  console.log(`🔍 queryOptimizer DEBUG:`, {
-    periodsToQueryLength: periodsToQuery.length,
-    periodsToQuery: periodsToQuery,
-    timePeriod,
-    willCreateTimeSeriesData: periodsToQuery.length > 1 || timePeriod === 'Last Month'
-  });
+
   
   // Create timeSeriesData for multi-period queries OR "Last Month" (for daily data visualization)
   const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || timePeriod === 'Last Month';
@@ -200,7 +194,7 @@ export async function getDashboardDataOptimized(
       const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
       
       if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
-        console.log(`🔍 Including ${cachedDailyData.length} daily metrics for Last Month chart display`);
+
         
         // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
         const dailyByDate: Record<string, any[]> = {};
@@ -270,7 +264,7 @@ export async function getDashboardDataOptimized(
         
         // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
-          console.log(`🔍 Replacing single period ${lastMonthPeriod} with ${Object.keys(groupedPeriods).length} grouped periods (every ~${groupSize} days)`);
+  
           timeSeriesData = groupedPeriods;
           periodsToQuery = Object.keys(groupedPeriods).sort();
         }
@@ -285,21 +279,14 @@ export async function getDashboardDataOptimized(
     const firstPeriod = Object.keys(timeSeriesData)[0];
     const firstPeriodData = timeSeriesData[firstPeriod];
     const competitorCount = firstPeriodData.filter(m => m.sourceType === 'Competitor').length;
-    console.log(`📊 TimeSeriesData first period ${firstPeriod}: ${firstPeriodData.length} total, ${competitorCount} competitors`);
-    
-    if (competitorCount > 0) {
-      const competitorSample = firstPeriodData.filter(m => m.sourceType === 'Competitor').slice(0, 2);
-      console.log(`📊 TimeSeriesData competitor sample:`, competitorSample);
-    }
+
   }
 
   // Extract traffic channel and device distribution data separately for chart components
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
   const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
   
-  console.log('🔥 QUERY OPTIMIZER: processedData length:', processedData.length);
-  console.log('🔥 QUERY OPTIMIZER: Traffic Channel metrics found:', trafficChannelMetrics.length);
-  console.log('🔥 QUERY OPTIMIZER: First Traffic Channel metric:', trafficChannelMetrics[0]);
+
   
   // Debug logging disabled for performance
 
@@ -413,12 +400,7 @@ function processMetricsData(
     return result;
   };
   
-  console.log('🔥 PRE-PROCESS: Total allMetrics:', allMetrics.length);
-  const clientTrafficChannels = allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client');
-  console.log('🔥 PRE-PROCESS: Client Traffic Channel metrics found:', clientTrafficChannels.length);
-  if (clientTrafficChannels.length > 0) {
-    console.log('🔥 PRE-PROCESS: First client Traffic Channel metric:', JSON.stringify(clientTrafficChannels[0], null, 2));
-  }
+
   
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
@@ -434,9 +416,7 @@ function processMetricsData(
 function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
   const grouped: Record<string, any[]> = {};
   
-  console.log(`📊 groupMetricsByPeriod: Processing ${metrics.length} total metrics`);
   const competitorCount = metrics.filter(m => m.sourceType === 'Competitor').length;
-  console.log(`📊 groupMetricsByPeriod: Found ${competitorCount} competitor metrics`);
   
   metrics.forEach(metric => {
     const period = metric.timePeriod;
@@ -444,19 +424,6 @@ function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
       grouped[period] = [];
     }
     grouped[period].push(metric);
-  });
-  
-  console.log(`📊 groupMetricsByPeriod: Grouped into ${Object.keys(grouped).length} periods`);
-  Object.keys(grouped).forEach(period => {
-    const periodCompetitors = grouped[period].filter(m => m.sourceType === 'Competitor').length;
-    console.log(`📊 Period ${period}: ${grouped[period].length} total, ${periodCompetitors} competitors`);
-    
-    // Log sample competitor metric names for debugging
-    const competitorMetrics = grouped[period].filter(m => m.sourceType === 'Competitor');
-    if (competitorMetrics.length > 0) {
-      const uniqueMetricNames = [...new Set(competitorMetrics.map(m => m.metricName))];
-      console.log(`📊 Period ${period} competitor metric names:`, uniqueMetricNames.slice(0, 5));
-    }
   });
   
   return grouped;

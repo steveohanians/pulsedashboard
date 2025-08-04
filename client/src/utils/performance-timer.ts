@@ -7,8 +7,8 @@ export class PerformanceTimer {
     // Reset timer for fresh measurement
     this.startTime = Date.now();
     
-    console.log(`🚀 [PERFORMANCE] FRESH TEST - Timer started at: ${this.startTime}`);
-    console.log(`📊 [PERFORMANCE] Current time: ${new Date().toISOString()}`);
+
+
   }
 
   markComplete() {
@@ -23,15 +23,12 @@ export class PerformanceTimer {
     const hasContent = rechartWrappers.length > 0 || chartContainers.length > 0;
     const hasMetrics = metricElements.length > 0;
     
-    console.log(`✅ [PERFORMANCE] Page fully rendered at: ${this.endTime}ms`);
-    console.log(`📊 [PERFORMANCE] Content verification: Charts=${hasContent}, Metrics=${hasMetrics}`);
-    console.log(`⏱️  [PERFORMANCE] TOTAL RENDER TIME: ${totalTime.toFixed(2)}ms (${(totalTime/1000).toFixed(2)}s)`);
-    console.log(`🎯 [PERFORMANCE] === USER-VISIBLE COMPLETION TIME: ${(totalTime/1000).toFixed(2)} SECONDS ===`);
-    console.log(`👁️  [PERFORMANCE] This includes all visual painting and layout completion`);
+
+
     
     // Show in seconds for easier reading
     if (totalTime > 5000) {
-      console.log(`🚨 [PERFORMANCE] SLOW LOAD DETECTED: ${(totalTime/1000).toFixed(1)}s - investigating...`);
+
     }
     
     // Also log to localStorage for retrieval

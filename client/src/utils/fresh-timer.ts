@@ -15,12 +15,7 @@ export function markComplete() {
   const metrics = document.querySelectorAll('[id^="metric-"]').length;
   const paths = document.querySelectorAll('svg path, svg circle, svg rect').length;
   
-  console.log(`\n=== FRESH TEST CONFIRMATION ===`);
-  console.log(`⏱️  Total Load Time: ${(totalTime/1000).toFixed(2)} SECONDS`);
-  console.log(`📊 Visual Elements: ${charts} charts, ${metrics} metrics, ${paths} graphics`);
-  console.log(`🕒 Started: ${new Date(startTime).toISOString()}`);
-  console.log(`🏁 Completed: ${new Date(endTime).toISOString()}`);
-  console.log(`================================\n`);
+
   
   return totalTime;
 }
