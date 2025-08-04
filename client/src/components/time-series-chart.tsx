@@ -56,7 +56,11 @@ function generateTimeSeriesData(
   }
   
   // Otherwise, fallback to single-point data (current behavior for single periods)
-  console.log(`🔍 Chart ${metricName}: Using fallback data (no time-series data available)`);
+  console.log(`🔍 Chart ${metricName}: Using AUTHENTIC GA4 data for ${metricName}`, {
+    clientData,
+    hasTimeSeriesData: !!timeSeriesData,
+    periodsCount: periods?.length || 0
+  });
   return generateFallbackTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
 }
 
