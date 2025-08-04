@@ -297,13 +297,7 @@ export async function getDashboardDataOptimized(
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
   const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
   
-  console.log(`🔍 Traffic/Device Debug: processedData=${processedData.length}, trafficChannels=${trafficChannelMetrics.length}, deviceDistribution=${deviceDistributionMetrics.length}`);
-  if (trafficChannelMetrics.length > 0) {
-    console.log(`🔍 Traffic Channels found:`, trafficChannelMetrics.slice(0, 3));
-  }
-  if (deviceDistributionMetrics.length > 0) {
-    console.log(`🔍 Device Distribution found:`, deviceDistributionMetrics.slice(0, 3));
-  }
+  // Debug logging disabled for performance
 
   const result = {
     client,
@@ -415,21 +409,12 @@ function processMetricsData(
     return result;
   };
   
-  // Debug: Check input metrics for traffic channel data
-  const clientMetricsWithChannels = allMetrics.filter(m => (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel);
-  console.log(`🔍 Input Debug: allMetrics=${allMetrics.length}, clientChannelMetrics=${clientMetricsWithChannels.length}`);
-  if (clientMetricsWithChannels.length > 0) {
-    console.log(`🔍 Sample channel metrics:`, clientMetricsWithChannels.slice(0, 3));
-  }
-
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
-  
-  console.log(`🔍 Processing Debug: processedData length=${processedData.length}`);
   
   return processedData;
 }
