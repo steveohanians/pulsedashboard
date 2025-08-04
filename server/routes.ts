@@ -1022,28 +1022,15 @@ export function registerRoutes(app: Express): Server {
       }
 
       const competitor = await storage.createCompetitor(validatedData);
-      
-      // Use the new sample data manager for consistency
-      const { SampleDataManager } = await import("./services/sampleData");
-      const sampleDataManager = new SampleDataManager();
-      
-      // Generate competitor data using the new package
-      const result = await sampleDataManager.generateSampleData({
-        clientId: validatedData.clientId,
-        periods: 15,
-        forceGeneration: true
+      logger.info("Created competitor successfully", { 
+        competitorId: competitor.id, 
+        domain: competitor.domain,
+        clientId: validatedData.clientId 
       });
-      if (result.success) {
-        logger.info("Successfully generated data for new competitor using centralized function", { 
-          competitorId: competitor.id, 
-          clientId: validatedData.clientId 
-        });
-      } else {
-        logger.warn("Competitor data generation was disabled", { 
-          competitorId: competitor.id, 
-          message: result.message 
-        });
-      }
+      
+      // Clear caches to ensure new competitor appears immediately
+      clearCache(`dashboard:${validatedData.clientId}`);
+      logger.info("Cache cleared after competitor creation", { competitorId: competitor.id, clientId: validatedData.clientId });
       
       res.status(201).json(competitor);
     } catch (error) {
@@ -1055,24 +1042,47 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      logger.info("Attempting to delete competitor", { competitorId: id });
+      logger.info("Attempting to delete competitor", { competitorId: id, user: req.user?.id });
       
-      // Get client ID for cache invalidation before deletion
+      // Get competitor info before deletion for validation and cache clearing
       const competitor = await storage.getCompetitor(id);
-      const clientId = competitor?.clientId;
+      if (!competitor) {
+        logger.warn("Competitor not found", { competitorId: id });
+        return res.status(404).json({ message: "Competitor not found" });
+      }
+      
+      // Verify user has access to this competitor's client
+      if (!req.user || (req.user.clientId !== competitor.clientId && req.user.role !== "Admin")) {
+        logger.warn("Access denied for competitor deletion", { 
+          competitorId: id, 
+          userId: req.user?.id, 
+          userClientId: req.user?.clientId,
+          competitorClientId: competitor.clientId 
+        });
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const clientId = competitor.clientId;
       
       await storage.deleteCompetitor(id);
-      logger.info("Deleted competitor", { id });
+      logger.info("Deleted competitor successfully", { 
+        id, 
+        domain: competitor.domain, 
+        clientId 
+      });
       
       // Clear relevant caches after competitor deletion
-      if (clientId) {
-        clearCache(`dashboard:${clientId}`); // Clear all dashboard caches for this client
-        logger.info("Cache cleared after competitor deletion", { competitorId: id, clientId });
-      }
+      clearCache(`dashboard:${clientId}`);
+      logger.info("Cache cleared after competitor deletion", { competitorId: id, clientId });
       
       res.sendStatus(204);
     } catch (error) {
-      logger.error("Error deleting competitor", { error: (error as Error).message, stack: (error as Error).stack, competitorId: req.params.id });
+      logger.error("Error deleting competitor", { 
+        error: (error as Error).message, 
+        stack: (error as Error).stack, 
+        competitorId: req.params.id,
+        user: req.user?.id 
+      });
       res.status(500).json({ message: "Internal server error", error: (error as Error).message });
     }
   });
