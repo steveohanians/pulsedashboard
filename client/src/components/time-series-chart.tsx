@@ -105,9 +105,18 @@ function generateRealTimeSeriesData(
       const competitorMetrics = relevantData.filter(m => 
         m.sourceType === 'Competitor' && m.competitorId === competitor.id
       );
+      
+      logger.component('TimeSeriesChart', `Competitor ${competitor.label} (${competitor.id}) metrics for ${period}:`, competitorMetrics);
+      
       const avgCompetitor = competitorMetrics.length > 0 ? 
-        competitorMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / competitorMetrics.length : 0;
+        competitorMetrics.reduce((sum, m) => {
+          const value = parseFloat(m.value);
+          logger.component('TimeSeriesChart', `Parsing competitor value: ${m.value} -> ${value}`);
+          return sum + value;
+        }, 0) / competitorMetrics.length : 0;
       dataPoint[competitor.label] = Math.round(avgCompetitor * 10) / 10;
+      
+      logger.component('TimeSeriesChart', `Final competitor ${competitor.label} value for ${period}: ${dataPoint[competitor.label]}`);
     });
     
     data.push(dataPoint);

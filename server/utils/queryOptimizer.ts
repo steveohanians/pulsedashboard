@@ -249,17 +249,21 @@ function processMetricsData(
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = m.value;
         
-        // Parse JSON-formatted competitor values like {"value": 35.76567...}
-        if (typeof m.value === 'string' && m.value.startsWith('{') && m.sourceType === 'Competitor') {
+        // Handle both JSON strings and already-parsed objects with value property
+        if (typeof m.value === 'string' && m.value.startsWith('{')) {
           try {
             const parsed = JSON.parse(m.value);
             if (parsed && typeof parsed.value !== 'undefined') {
               finalValue = parsed.value;
+              console.log(`✓ Parsed competitor JSON string: ${m.value} -> ${finalValue}`);
             }
           } catch (e) {
-            // Keep original value if parsing fails
             console.warn('Failed to parse competitor JSON value:', m.value);
           }
+        } else if (typeof m.value === 'object' && m.value !== null && typeof m.value.value !== 'undefined') {
+          // Handle already-parsed objects with value property  
+          finalValue = m.value.value;
+          console.log(`✓ Extracted from competitor object: ${JSON.stringify(m.value)} -> ${finalValue}`);
         }
         
         result.push({
@@ -276,12 +280,18 @@ function processMetricsData(
     return result;
   };
   
-  return [
+  const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
+  
+  console.log(`📊 Processed ${processedData.length} total metrics including ${allCompetitorMetrics.length} competitor metrics`);
+  const competitorSample = processedData.filter(m => m.sourceType === 'Competitor').slice(0, 3);
+  console.log('🔍 Sample competitor data:', competitorSample);
+  
+  return processedData;
 }
 
 // Group metrics by time period for time series charts
