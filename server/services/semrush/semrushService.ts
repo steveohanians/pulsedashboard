@@ -77,8 +77,7 @@ export class SemrushService {
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        display_date: period,
-        export_columns: 'target,visits,users,pages_per_visit,visit_duration,bounce_rate'
+        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate'
       });
 
       logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
@@ -92,6 +91,11 @@ export class SemrushService {
       const text = await response.text();
       logger.debug('SEMrush main metrics response', { domain, period, response: text });
 
+      if (text.includes('ERROR')) {
+        logger.warn('SEMrush API returned error', { domain, period, error: text });
+        return {};
+      }
+
       // Parse CSV-like response from SEMrush v3 API
       const lines = text.trim().split('\n');
       if (lines.length < 2) {
@@ -99,15 +103,18 @@ export class SemrushService {
         return {};
       }
 
-      // Skip header line, get data line
+      // Headers: target,visits,users,pages_per_visit,time_on_site,bounce_rate
       const data = lines[1].split(';');
       
-      return {
-        bounceRate: parseFloat(data[5]) || 0, // bounce_rate column
-        sessionDuration: parseFloat(data[4]) || 0, // visit_duration column  
+      const metrics = {
+        bounceRate: parseFloat(data[5]) || 0, // bounce_rate column (already as decimal)
+        sessionDuration: parseFloat(data[4]) || 0, // time_on_site column (seconds)
         pagesPerSession: parseFloat(data[3]) || 0, // pages_per_visit column
         sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0 // visits/users ratio
       };
+
+      logger.info('Parsed SEMrush main metrics', { domain, metrics });
+      return metrics;
 
     } catch (error) {
       logger.error('Failed to fetch SEMrush main metrics', { 
@@ -120,17 +127,18 @@ export class SemrushService {
   }
 
   /**
-   * Fetch traffic channels from SEMrush v3 API
+   * Fetch traffic channels using summary endpoint
    */
   private async fetchTrafficChannels(domain: string, period: string): Promise<SemrushMetricData['trafficChannels']> {
     try {
-      const url = `${this.baseUrl}/sources`;
+      const url = `${this.baseUrl}/summary`;
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        display_date: period,
-        export_columns: 'target,source_type,visits,traffic_share'
+        export_columns: 'target,direct,search_organic,search_paid,social_organic,referral'
       });
+
+      logger.info('Fetching SEMrush traffic channels', { domain, period });
 
       const response = await fetch(`${url}?${params}`);
       
@@ -139,26 +147,58 @@ export class SemrushService {
       }
 
       const text = await response.text();
-      const lines = text.trim().split('\n');
-      
-      if (lines.length < 2) {
+      logger.debug('SEMrush traffic channels response', { domain, period, response: text });
+
+      if (text.includes('ERROR')) {
+        logger.warn('SEMrush traffic channels returned error', { domain, period, error: text });
         return [];
       }
 
-      const channels: SemrushMetricData['trafficChannels'] = [];
-      
-      // Skip header, process data lines
-      for (let i = 1; i < lines.length; i++) {
-        const data = lines[i].split(';');
-        if (data.length >= 4) {
-          channels.push({
-            channel: this.normalizeChannelName(data[1]), // source_type column
-            sessions: parseInt(data[2]) || 0, // visits column
-            percentage: parseFloat(data[3]) || 0 // traffic_share column
-          });
-        }
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        logger.warn('No traffic channel data returned', { domain, period });
+        return [];
       }
 
+      // Headers: target,direct,search_organic,search_paid,social_organic,referral
+      const data = lines[1].split(';');
+      
+      const totalVisits = data.slice(1).reduce((sum, visits) => sum + (parseInt(visits) || 0), 0);
+      
+      if (totalVisits === 0) {
+        logger.warn('No traffic data available', { domain, period });
+        return [];
+      }
+
+      const channels = [
+        {
+          channel: 'Direct',
+          sessions: parseInt(data[1]) || 0,
+          percentage: (parseInt(data[1]) || 0) / totalVisits
+        },
+        {
+          channel: 'Organic Search',
+          sessions: parseInt(data[2]) || 0,
+          percentage: (parseInt(data[2]) || 0) / totalVisits
+        },
+        {
+          channel: 'Paid Search',
+          sessions: parseInt(data[3]) || 0,
+          percentage: (parseInt(data[3]) || 0) / totalVisits
+        },
+        {
+          channel: 'Social Media',
+          sessions: parseInt(data[4]) || 0,
+          percentage: (parseInt(data[4]) || 0) / totalVisits
+        },
+        {
+          channel: 'Referral',
+          sessions: parseInt(data[5]) || 0,
+          percentage: (parseInt(data[5]) || 0) / totalVisits
+        }
+      ].filter(channel => channel.sessions > 0); // Only include channels with data
+
+      logger.info('Parsed SEMrush traffic channels', { domain, channelsCount: channels.length, totalVisits });
       return channels;
 
     } catch (error) {
@@ -172,17 +212,18 @@ export class SemrushService {
   }
 
   /**
-   * Fetch device distribution from SEMrush v3 API
+   * Fetch device distribution using summary endpoint
    */
   private async fetchDeviceDistribution(domain: string, period: string): Promise<SemrushMetricData['deviceDistribution']> {
     try {
-      const url = `${this.baseUrl}/devices`;
+      const url = `${this.baseUrl}/summary`;
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        display_date: period,
-        export_columns: 'target,device_type,visits,traffic_share'
+        export_columns: 'target,desktop_visits,mobile_visits,desktop_share,mobile_share'
       });
+
+      logger.info('Fetching SEMrush device distribution', { domain, period });
 
       const response = await fetch(`${url}?${params}`);
       
@@ -191,26 +232,36 @@ export class SemrushService {
       }
 
       const text = await response.text();
-      const lines = text.trim().split('\n');
-      
-      if (lines.length < 2) {
+      logger.debug('SEMrush device distribution response', { domain, period, response: text });
+
+      if (text.includes('ERROR')) {
+        logger.warn('SEMrush device distribution returned error', { domain, period, error: text });
         return [];
       }
 
-      const devices: SemrushMetricData['deviceDistribution'] = [];
-      
-      // Skip header, process data lines
-      for (let i = 1; i < lines.length; i++) {
-        const data = lines[i].split(';');
-        if (data.length >= 4) {
-          devices.push({
-            device: this.normalizeDeviceName(data[1]), // device_type column
-            sessions: parseInt(data[2]) || 0, // visits column
-            percentage: parseFloat(data[3]) || 0 // traffic_share column
-          });
-        }
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        logger.warn('No device distribution data returned', { domain, period });
+        return [];
       }
 
+      // Headers: target,desktop_visits,mobile_visits,desktop_share,mobile_share
+      const data = lines[1].split(';');
+      
+      const devices = [
+        {
+          device: 'Desktop',
+          sessions: parseInt(data[1]) || 0,
+          percentage: parseFloat(data[3]) || 0 // desktop_share already as decimal
+        },
+        {
+          device: 'Mobile',
+          sessions: parseInt(data[2]) || 0,
+          percentage: parseFloat(data[4]) || 0 // mobile_share already as decimal
+        }
+      ].filter(device => device.sessions > 0); // Only include devices with data
+
+      logger.info('Parsed SEMrush device distribution', { domain, devicesCount: devices.length });
       return devices;
 
     } catch (error) {
