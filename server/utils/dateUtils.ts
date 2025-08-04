@@ -37,20 +37,28 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
     currentQuarterPeriods.push(period);
   }
   
-  // Generate last 12 months for "Last Year" (ending with target month)
+  // Generate extended historical period for "Last Year" to include all sample data
+  // Include 15+ months from 2024-04 to show complete historical trends
   const yearPeriods = [];
-  for (let i = 11; i >= 0; i--) {
-    const monthDate = new Date(targetMonth);
-    monthDate.setMonth(monthDate.getMonth() - i);
-    const monthPeriod = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Start from April 2024 to capture all historical sample data
+  const historicalStart = new Date(2024, 3, 1); // April 2024 (month is 0-indexed)
+  const currentDate = new Date(targetMonth);
+  
+  // Generate all months from historical start to target month
+  const tempDate = new Date(historicalStart);
+  while (tempDate <= currentDate) {
+    const monthPeriod = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}`;
     yearPeriods.push(monthPeriod);
+    tempDate.setMonth(tempDate.getMonth() + 1);
   }
   
   logger.info("Generated dynamic period mapping", {
     currentPeriod,
     lastMonthPeriod,
     currentQuarterPeriods,
-    yearPeriodsCount: yearPeriods.length
+    yearPeriodsCount: yearPeriods.length,
+    yearPeriodsRange: yearPeriods.length > 0 ? `${yearPeriods[0]} to ${yearPeriods[yearPeriods.length - 1]}` : 'none'
   });
   
   return {
