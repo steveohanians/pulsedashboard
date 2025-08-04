@@ -1448,6 +1448,7 @@ export default function Dashboard() {
         {/* Enhanced Metrics Grid */}
         <div className="space-y-8 lg:space-y-16">
           {metricNames.map((metricName) => {
+            console.log('🔍 RENDERING METRIC:', metricName, 'Active Section:', activeSection);
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
@@ -1547,7 +1548,9 @@ export default function Dashboard() {
                         />
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
+                          console.log('🔥 TRAFFIC CHANNELS CONDITION MET!', metricName);
                           const trafficData = processTrafficChannelData();
+                          console.log('🔥 TRAFFIC DATA RECEIVED:', trafficData);
 
                           return (
                             <StackedBarChart 
