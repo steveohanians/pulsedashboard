@@ -121,9 +121,15 @@ function generateRealTimeSeriesData(
     const avgIndustry = industryMetrics.length > 0 ? 
       industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : 0;
     
-    // Use the constant CD_Avg value from props instead of looking in time series data
+    // Check if we have CD_Avg metrics in the time series data for this period
+    const cdMetrics = relevantData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');
+    const avgCD = cdMetrics.length > 0 ? 
+      cdMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / cdMetrics.length : (cdAvg || 0);
+    
     // Convert CD_Avg from decimal to percentage for Rate metrics
-    const processedAvgCD = metricName?.includes('Rate') ? (cdAvg || 0) * 100 : (cdAvg || 0);
+    const processedAvgCD = metricName?.includes('Rate') ? avgCD * 100 : avgCD;
+    
+
     
 
     
