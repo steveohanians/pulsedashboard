@@ -59,6 +59,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Complete Daily Chart Display Fix**: Resolved "Last Month" charts showing single dots instead of daily variations by including daily data for single-period queries and enhancing label generation.
 - **Systematic Data Authenticity Fix - Device Distribution & Traffic Channels**: Resolved dual storage systems to ensure only authentic GA4 API data is used for Device Distribution and Traffic Channels, removing synthetic data.
 - **Enhanced GA4 Channel Mapping System**: Improved GA4DataProcessor.normalizeChannelName() to preserve specific channel names (Cross-network, Unassigned, Social Media) for clearer traffic channel attribution.
+- **Traffic Channels Duplicate Data Fix**: Resolved critical issue where duplicate Traffic Channels metrics in database caused doubled percentages (Direct showing 129% instead of 64.7%). Implemented database cleanup and backend consolidation logic to prevent future duplicates.
 
 ## External Dependencies
 
