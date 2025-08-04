@@ -102,11 +102,14 @@ function extractClientBaseline(clientMetrics: any[]): any {
 
 // Helper function to store competitor metrics
 async function storeCompetitorMetrics(clientId: string, competitorId: string, period: string, competitorMetrics: any): Promise<void> {
+  // Import metric names constants to ensure proper naming
+  const { METRIC_NAMES } = await import('../services/sampleData/constants');
+  
   const metrics = [
-    { metricName: 'bounceRate', value: { value: competitorMetrics.bounceRate }, sourceType: 'Competitor' as const },
-    { metricName: 'sessionDuration', value: { value: competitorMetrics.sessionDuration }, sourceType: 'Competitor' as const },
-    { metricName: 'pagesPerSession', value: { value: competitorMetrics.pagesPerSession }, sourceType: 'Competitor' as const },
-    { metricName: 'sessionsPerUser', value: { value: competitorMetrics.sessionsPerUser }, sourceType: 'Competitor' as const }
+    { metricName: METRIC_NAMES.BOUNCE_RATE, value: competitorMetrics.bounceRate.toFixed(2), sourceType: 'Competitor' as const },
+    { metricName: METRIC_NAMES.SESSION_DURATION, value: competitorMetrics.sessionDuration.toFixed(2), sourceType: 'Competitor' as const },
+    { metricName: METRIC_NAMES.PAGES_PER_SESSION, value: competitorMetrics.pagesPerSession.toFixed(2), sourceType: 'Competitor' as const },
+    { metricName: METRIC_NAMES.SESSIONS_PER_USER, value: competitorMetrics.sessionsPerUser.toFixed(2), sourceType: 'Competitor' as const }
   ];
   
   for (const metric of metrics) {
