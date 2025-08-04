@@ -39,7 +39,7 @@ function requireAdmin(req: any, res: any, next: any) {
 }
 
 // Helper function to generate historical data for a single competitor
-async function generateCompetitorHistoricalData(clientId: string, competitor: any): Promise<void> {
+async function generateCompetitorHistoricalData(clientId: string, competitor: any, competitorIndex: number = 0): Promise<void> {
   logger.info("DETAILED: Starting competitor historical data generation", {
     clientId,
     competitorId: competitor.id,
@@ -101,7 +101,7 @@ async function generateCompetitorHistoricalData(clientId: string, competitor: an
       
       const competitorMetrics = generator.generateCompetitorMetrics(
         clientBaseline, 
-        0, // competitorIndex
+        competitorIndex, // Use unique competitor index for variation
         periodList.indexOf(period) // periodIndex
       );
       
@@ -1247,7 +1247,11 @@ export function registerRoutes(app: Express): Server {
           competitorId: competitor.id, 
           domain: competitor.domain 
         });
-        await generateCompetitorHistoricalData(validatedData.clientId, competitor);
+        // Get existing competitors count to assign unique index
+        const existingCompetitors = await storage.getCompetitorsByClient(validatedData.clientId);
+        const competitorIndex = existingCompetitors.length; // Use count as index for uniqueness
+        
+        await generateCompetitorHistoricalData(validatedData.clientId, competitor, competitorIndex);
         logger.info("Successfully generated historical data for new competitor", { 
           competitorId: competitor.id, 
           domain: competitor.domain 
