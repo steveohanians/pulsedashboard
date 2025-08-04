@@ -324,6 +324,14 @@ export default function Dashboard() {
       console.log('✅ GA4 traffic channels found:', ga4ArrayMetric.value.length, 'channels');
     }
     
+    // Debug traffic channel data processing
+    console.log('🔍 Traffic Channel Debug:', {
+      trafficMetricsCount: trafficMetrics.length,
+      clientMetricsCount: clientMetrics.length,
+      firstFewMetrics: trafficMetrics.slice(0, 5),
+      clientMetrics: clientMetrics.slice(0, 5)
+    });
+    
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
         metricsCount: metrics.length,
