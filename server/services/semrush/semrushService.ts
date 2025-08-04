@@ -174,27 +174,27 @@ export class SemrushService {
         {
           channel: 'Direct',
           sessions: parseInt(data[1]) || 0,
-          percentage: (parseInt(data[1]) || 0) / totalVisits
+          percentage: ((parseInt(data[1]) || 0) / totalVisits) * 100 // Convert to percentage
         },
         {
           channel: 'Organic Search',
           sessions: parseInt(data[2]) || 0,
-          percentage: (parseInt(data[2]) || 0) / totalVisits
+          percentage: ((parseInt(data[2]) || 0) / totalVisits) * 100 // Convert to percentage
         },
         {
           channel: 'Paid Search',
           sessions: parseInt(data[3]) || 0,
-          percentage: (parseInt(data[3]) || 0) / totalVisits
+          percentage: ((parseInt(data[3]) || 0) / totalVisits) * 100 // Convert to percentage
         },
         {
           channel: 'Social Media',
           sessions: parseInt(data[4]) || 0,
-          percentage: (parseInt(data[4]) || 0) / totalVisits
+          percentage: ((parseInt(data[4]) || 0) / totalVisits) * 100 // Convert to percentage
         },
         {
           channel: 'Referral',
           sessions: parseInt(data[5]) || 0,
-          percentage: (parseInt(data[5]) || 0) / totalVisits
+          percentage: ((parseInt(data[5]) || 0) / totalVisits) * 100 // Convert to percentage
         }
       ].filter(channel => channel.sessions > 0); // Only include channels with data
 
@@ -252,12 +252,12 @@ export class SemrushService {
         {
           device: 'Desktop',
           sessions: parseInt(data[1]) || 0,
-          percentage: parseFloat(data[3]) || 0 // desktop_share already as decimal
+          percentage: (parseFloat(data[3]) || 0) * 100 // Convert decimal to percentage
         },
         {
           device: 'Mobile',
           sessions: parseInt(data[2]) || 0,
-          percentage: parseFloat(data[4]) || 0 // mobile_share already as decimal
+          percentage: (parseFloat(data[4]) || 0) * 100 // Convert decimal to percentage
         }
       ].filter(device => device.sessions > 0); // Only include devices with data
 
