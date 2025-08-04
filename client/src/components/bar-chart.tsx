@@ -340,17 +340,17 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
           margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           barCategoryGap="20%"
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis 
             dataKey="period"
             fontSize={9}
-            tick={{ fill: '#64748b' }}
-            axisLine={{ stroke: '#cbd5e1' }}
+            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+            axisLine={{ stroke: 'hsl(var(--border))' }}
           />
           <YAxis 
             fontSize={9}
-            tick={{ fill: '#64748b' }}
-            axisLine={{ stroke: '#cbd5e1' }}
+            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+            axisLine={{ stroke: 'hsl(var(--border))' }}
             domain={yAxisDomain}
             tickFormatter={(value) => {
               if (metricName.includes('Rate')) {
@@ -366,20 +366,20 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             type="number"
           />
           <Tooltip 
-            cursor={{ fill: '#d1d5db', fillOpacity: 0.3 }}
+            cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.3 }}
             content={({ active, payload, label }) => {
               if (!active || !payload || !label) return null;
               
               return (
                 <div style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'hsl(var(--popover))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '6px',
                   boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                   padding: '8px 12px',
                   fontSize: '12px'
                 }}>
-                  <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                  <div style={{ color: 'hsl(var(--foreground))', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
                     {label}
                   </div>
                   {payload.map((entry: any, index: number) => (
@@ -394,7 +394,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                         }} 
                       />
                       <span style={{ 
-                        color: '#374151',
+                        color: 'hsl(var(--foreground))',
                         fontSize: '11px'
                       }}>
                         {entry.dataKey === clientKey ? (
@@ -441,11 +441,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             <Bar 
               dataKey="Industry Avg" 
               fill="none"
-              stroke="#9ca3af"
+              stroke={colors['Industry Avg']}
               strokeWidth={2}
               strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke="#9ca3af" strokeDasharray="5,5" hideBottomBorder={true} />}
+              shape={(props: any) => <DashedBar {...props} stroke={colors['Industry Avg']} strokeDasharray="5,5" hideBottomBorder={true} />}
               isAnimationActive={isInitialRender}
             />
           )}
@@ -455,11 +455,11 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             <Bar 
               dataKey={`${companyName} Clients Avg`} 
               fill="none"
-              stroke="#4b5563"
+              stroke={colors[`${companyName} Clients Avg`]}
               strokeWidth={2}
               strokeDasharray="8,4"
               radius={[2, 2, 0, 0]}
-              shape={(props: any) => <DashedBar {...props} stroke="#4b5563" strokeDasharray="8,4" hideBottomBorder={true} />}
+              shape={(props: any) => <DashedBar {...props} stroke={colors[`${companyName} Clients Avg`]} strokeDasharray="8,4" hideBottomBorder={true} />}
               isAnimationActive={isInitialRender}
             />
           )}

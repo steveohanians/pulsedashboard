@@ -247,12 +247,12 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           data={data} 
           margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
         >
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
         <XAxis 
           dataKey="date" 
           fontSize={9} 
-          tick={{ fill: '#64748b' }}
-          axisLine={{ stroke: '#cbd5e1' }}
+          tick={{ fill: 'hsl(var(--muted-foreground))' }}
+          axisLine={{ stroke: 'hsl(var(--border))' }}
           interval={0}
           angle={-45}
           textAnchor="end"
@@ -260,8 +260,8 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
         />
         <YAxis 
           fontSize={9}
-          tick={{ fill: '#64748b' }}
-          axisLine={{ stroke: '#cbd5e1' }}
+          tick={{ fill: 'hsl(var(--muted-foreground))' }}
+          axisLine={{ stroke: 'hsl(var(--border))' }}
           domain={yAxisDomain}
           tickFormatter={(value) => {
             if (metricName === "Pages per Session" || metricName === "Sessions per User") {
@@ -278,14 +278,14 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
             
             return (
               <div style={{
-                backgroundColor: 'white',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'hsl(var(--popover))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '6px',
                 boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                 padding: '8px 12px',
                 fontSize: '12px'
               }}>
-                <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                <div style={{ color: 'hsl(var(--foreground))', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
                   {label}
                 </div>
                 {payload.map((entry: any, index: number) => (
@@ -301,7 +301,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                     />
                     <span style={{ 
                       fontWeight: entry.name === clientKey ? 'bold' : 'normal',
-                      color: entry.name === clientKey ? colors[clientKey] : '#374151'
+                      color: entry.name === clientKey ? colors[clientKey] : 'hsl(var(--foreground))'
                     }}>
                       {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Pages per Session') ? ' pages' : metricName.includes('Sessions per User') ? ' sessions' : ''}
                     </span>
