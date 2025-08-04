@@ -226,20 +226,22 @@ export default function Dashboard() {
   const insights = dashboardData?.insights || [];
 
   // Debug timeSeriesData to understand why charts are using fallback
-  console.log('🔍 Dashboard Debug:', {
+  console.log('🔍 Dashboard Debug - GA4 AUTHENTIC DATA CHECK:', {
     isTimeSeries,
     timeSeriesDataExists: !!timeSeriesData,
     timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData).join(', ') : 'none',
     periodsCount: periods?.length || 0,
     metricsCount: metrics.length,
     authenticGA4BounceRate: metrics.find(m => m.metricName === 'Bounce Rate' && m.sourceType === 'Client')?.value,
+    authenticGA4SessionDuration: metrics.find(m => m.metricName === 'Session Duration' && m.sourceType === 'Client')?.value,
+    authenticGA4PagesPerSession: metrics.find(m => m.metricName === 'Pages per Session' && m.sourceType === 'Client')?.value,
     fullDataStructure: {
       hasTimeSeriesData: !!timeSeriesData,
       hasPeriods: !!periods,
       isTimeSeriesFlag: isTimeSeries,
       periodsList: periods,
       timeSeriesFirstPeriod: timeSeriesData ? Object.keys(timeSeriesData)[0] : null,
-      timeSeriesFirstPeriodCount: timeSeriesData && Object.keys(timeSeriesData)[0] ? timeSeriesData[Object.keys(timeSeriesData)[0]]?.length : 0
+      timeSeriesDataSample: timeSeriesData && Object.keys(timeSeriesData)[0] ? timeSeriesData[Object.keys(timeSeriesData)[0]]?.slice(0, 2) : null
     }
   });
 
