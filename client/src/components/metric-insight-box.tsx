@@ -173,7 +173,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           </p>
           <Button 
             disabled={true}
-            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg shadow-primary/25 font-medium px-6 py-2.5"
+            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
             size="sm"
           >
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />

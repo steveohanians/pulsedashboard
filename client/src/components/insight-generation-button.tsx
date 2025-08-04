@@ -62,7 +62,7 @@ export default function InsightGenerationButton({
       <Button
         onClick={() => generateInsightsMutation.mutate()}
         disabled={isGenerating}
-        className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 relative overflow-hidden group"
+        className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white transition-all duration-200 relative overflow-hidden group"
         size="default"
       >
         <div className="flex items-center gap-2">
