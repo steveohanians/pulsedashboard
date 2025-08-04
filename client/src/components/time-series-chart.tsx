@@ -106,25 +106,10 @@ function generateRealTimeSeriesData(
     console.log(`🔍 Period ${period} AUTHENTIC averages: Client=${dataPoint[clientKey]}, Industry=${dataPoint['Industry Avg']}, CD=${dataPoint['Clear Digital Clients Avg']}`);
     console.log(`🔍 AUTHENTIC GA4 DATA: Period ${period} -> Chart Date "${dataPoint.date}" shows Client ${dataPoint[clientKey]}%`);
     
-    // Add competitor data (also average multiple values)
+    // NO COMPETITOR DATA - only show authentic client data
+    // Competitors contain synthetic data, so we exclude them to maintain data integrity
     competitors.forEach(competitor => {
-      const competitorMetrics = relevantData.filter(m => 
-        m.sourceType === 'Competitor' && m.competitorId === competitor.id
-      );
-      
-      console.log(`🔍 Competitor ${competitor.label} (${competitor.id}) for ${period}: ${competitorMetrics.length} metrics`);
-      if (competitorMetrics.length > 0) {
-        console.log(`🔍 First competitor metric:`, competitorMetrics[0]);
-      }
-      
-      const avgCompetitor = competitorMetrics.length > 0 ? 
-        competitorMetrics.reduce((sum, m) => {
-          const value = typeof m.value === 'number' ? m.value : parseFloat(m.value);
-          return sum + value;
-        }, 0) / competitorMetrics.length : 0;
-      dataPoint[competitor.label] = Math.round(avgCompetitor * 10) / 10;
-      
-      console.log(`🔍 Final ${competitor.label} value for ${period}: ${dataPoint[competitor.label]}`);
+      dataPoint[competitor.label] = 0; // Show zero instead of synthetic competitor data
     });
     
     data.push(dataPoint);
