@@ -177,8 +177,8 @@ export function registerRoutes(app: Express): Server {
         }
 
         // 🔄 CACHE INVALIDATION: Clear cache after GA4 data update to ensure immediate frontend update
-        performanceCache.invalidateClientCache(clientId);
-        logger.info(`Cache invalidated for Demo Company after GA4 data update`);
+        performanceCache.clear(); // Clear all cache to ensure fresh data
+        logger.info(`Full cache cleared after GA4 data update for immediate frontend refresh`);
       }
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
