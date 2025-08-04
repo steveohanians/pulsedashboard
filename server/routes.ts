@@ -366,7 +366,7 @@ export function registerRoutes(app: Express): Server {
         );
         return {
           name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
-          value: competitorMetric ? parseFloat(competitorMetric.value as string) : null
+          value: competitorMetric ? parseMetricValue(competitorMetric.value) : null
         };
       }).filter((c: any) => c.value !== null);
       
@@ -684,7 +684,7 @@ export function registerRoutes(app: Express): Server {
         );
         return {
           name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
-          value: competitorMetric ? parseFloat(competitorMetric.value as string) : null
+          value: competitorMetric ? parseMetricValue(competitorMetric.value) : null
         };
       }).filter((c: any) => c.value !== null);
 
@@ -948,7 +948,7 @@ export function registerRoutes(app: Express): Server {
         if (!acc[metric.metricName]) {
           acc[metric.metricName] = {};
         }
-        acc[metric.metricName][metric.sourceType] = parseFloat(metric.value);
+        acc[metric.metricName][metric.sourceType] = parseMetricValue(metric.value) || 0;
         return acc;
       }, {});
 
