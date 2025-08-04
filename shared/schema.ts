@@ -113,7 +113,6 @@ export const cdPortfolioCompanies = pgTable("cd_portfolio_companies", {
   websiteUrl: text("website_url").notNull(),
   industryVertical: text("industry_vertical").notNull(),
   businessSize: text("business_size").notNull(),
-  description: text("description"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

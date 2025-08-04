@@ -2404,15 +2404,6 @@ export default function AdminPanel() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div>
-                            <Label htmlFor="cd-company-description">Description</Label>
-                            <Textarea 
-                              id="cd-company-description"
-                              name="description" 
-                              placeholder="Optional description of the company"
-                              rows={3}
-                            />
-                          </div>
                           <div className="flex justify-end space-x-2">
                             <Button 
                               type="button"
