@@ -90,10 +90,10 @@ export class SampleDataValidator {
   private async checkExistingGA4Data(clientId: string): Promise<boolean> {
     try {
       // Check for any existing metrics from GA4 sources
-      const existingMetrics = await storage.getClientMetrics(clientId);
+      const existingMetrics = await storage.getMetricsByClient(clientId, new Date().toISOString().slice(0, 7));
       
       // Look for recent data that might be from GA4
-      const recentMetrics = existingMetrics.filter(metric => {
+      const recentMetrics = existingMetrics.filter((metric: any) => {
         const metricDate = new Date(metric.timePeriod);
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
@@ -170,7 +170,7 @@ export class SampleDataValidator {
   async validateGeneratedData(clientId: string, periods: string[]): Promise<boolean> {
     try {
       for (const period of periods) {
-        const existingMetrics = await storage.getClientMetricsByPeriod(clientId, period);
+        const existingMetrics = await storage.getMetricsByClient(clientId, period);
         if (existingMetrics.length > 0) {
           logger.warn(`Found existing metrics for client ${clientId}, period ${period} - skipping generation`);
           return false;
@@ -188,7 +188,7 @@ export class SampleDataValidator {
    */
   async validateClientExists(clientId: string): Promise<boolean> {
     try {
-      const client = await storage.getClientById(clientId);
+      const client = await storage.getClient(clientId);
       return !!client;
     } catch (error) {
       logger.error(`Error validating client existence for ${clientId}:`, error);

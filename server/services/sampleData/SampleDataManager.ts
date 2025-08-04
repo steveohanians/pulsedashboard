@@ -175,15 +175,15 @@ export class SampleDataManager {
         await storage.createCompetitor({
           clientId,
           domain: competitorDomain,
-          isActive: true
+          label: competitorDomain.split('.')[0] || 'competitor'
         });
 
         // Generate metrics for each period
         for (let periodIndex = 0; periodIndex < periodList.length; periodIndex++) {
           const period = periodList[periodIndex];
           
-          // Get client baseline for this period
-          const clientMetrics = await storage.getClientMetricsByPeriod(clientId, period.period);
+          // Get client baseline for this period  
+          const clientMetrics = await storage.getMetricsByClient(clientId, period.period);
           const clientBaseline = this.extractClientBaseline(clientMetrics);
           
           if (clientBaseline) {
@@ -311,7 +311,7 @@ export class SampleDataManager {
       const period = `${year}-${String(month).padStart(2, '0')}`;
       
       // Recent 3 months could be daily, older are monthly (for sample data, use monthly for simplicity)
-      const type = 'monthly';
+      const type: 'daily' | 'monthly' = 'monthly';
       
       periods.push({ period, type });
     }
