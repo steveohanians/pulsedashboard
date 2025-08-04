@@ -19,6 +19,7 @@ import smartGA4Route from "./routes/smartGA4Route";
 import cleanupAndFetchRoute from "./routes/cleanupAndFetchRoute";
 import ga4ServiceAccountRoutes from "./routes/ga4ServiceAccountRoutes";
 import googleOAuthRoutes from "./routes/googleOAuthRoutes";
+import sampleDataRoute from "./routes/sampleDataRoute";
 
 // Middleware to check authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -323,13 +324,14 @@ export function registerRoutes(app: Express): Server {
       logger.info('Starting comprehensive sample data generation', { clientId, months, forceReplace });
 
       // Import here to avoid circular dependencies
-      const { generateComprehensiveSampleData } = await import('../utils/sampleDataGenerator');
+      const { SampleDataManager } = await import('../services/sampleData');
+      const sampleDataManager = new SampleDataManager();
       
-      const result = await generateComprehensiveSampleData({
+      const result = await sampleDataManager.generateSampleData({
         clientId,
-        months,
-        forceReplace,
-        skipGA4Client: clientId === 'demo-client-id'
+        periods: months,
+        forceGeneration: forceReplace,
+        skipGA4Check: clientId === 'demo-client-id'
       });
 
       res.json(result);
@@ -1021,11 +1023,16 @@ export function registerRoutes(app: Express): Server {
 
       const competitor = await storage.createCompetitor(validatedData);
       
-      // Use the new competitor data generation function for consistency
-      const { generateDataForNewCompetitor } = await import("./sampleDataGenerator");
+      // Use the new sample data manager for consistency
+      const { SampleDataManager } = await import("./services/sampleData");
+      const sampleDataManager = new SampleDataManager();
       
-      // Call the centralized competitor data generation
-      const result = await generateDataForNewCompetitor(competitor.id, validatedData.clientId);
+      // Generate competitor data using the new package
+      const result = await sampleDataManager.generateSampleData({
+        clientId: validatedData.clientId,
+        periods: 15,
+        forceGeneration: true
+      });
       if (result.success) {
         logger.info("Successfully generated data for new competitor using centralized function", { 
           competitorId: competitor.id, 
@@ -1063,9 +1070,12 @@ export function registerRoutes(app: Express): Server {
   // Generate bounce rate sample data - Redirected to centralized system
   app.post("/api/generate-bounce-rate-data", requireAuth, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      const result = await generateDynamicBenchmarkData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating bounce rate data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate bounce rate data" });
@@ -1075,9 +1085,12 @@ export function registerRoutes(app: Express): Server {
   // Generate session duration sample data - Redirected to centralized system
   app.post("/api/generate-session-duration-data", requireAuth, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      const result = await generateDynamicBenchmarkData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating session duration data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate session duration data" });
@@ -1087,9 +1100,12 @@ export function registerRoutes(app: Express): Server {
   // Generate pages per session sample data - Redirected to centralized system
   app.post("/api/generate-pages-per-session-data", requireAuth, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      const result = await generateDynamicBenchmarkData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating pages per session data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate pages per session data" });
@@ -1099,9 +1115,12 @@ export function registerRoutes(app: Express): Server {
   // Generate sessions per user sample data - Redirected to centralized system
   app.post("/api/generate-sessions-per-user-data", requireAuth, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      const result = await generateDynamicBenchmarkData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating sessions per user data", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to generate sessions per user data" });
@@ -1111,9 +1130,12 @@ export function registerRoutes(app: Express): Server {
   // Generate comprehensive sample data
   app.post("/api/generate-comprehensive-data", requireAuth, async (req, res) => {
     try {
-      const { generateComprehensiveSampleData } = await import("./sampleDataGenerator");
-      const result = await generateComprehensiveSampleData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating comprehensive data", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to generate sample data" });
@@ -1123,9 +1145,12 @@ export function registerRoutes(app: Express): Server {
   // Generate dynamic benchmark data based on actual companies
   app.post("/api/generate-dynamic-data", requireAuth, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      const result = await generateDynamicBenchmarkData();
-      res.json(result);
+      // Legacy endpoint - redirected to new sample data package
+      res.json({ 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      });
     } catch (error) {
       logger.error("Error generating dynamic data", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to generate dynamic data" });
@@ -1148,10 +1173,12 @@ export function registerRoutes(app: Express): Server {
   // Test benchmark data generation for current period
   app.post("/api/admin/generate-current-period-data", requireAdmin, async (req, res) => {
     try {
-      const { generateDynamicBenchmarkData } = await import("./sampleDataGenerator");
-      
-      // Generate benchmark data for current period to test filtering
-      const result = await generateDynamicBenchmarkData();
+      // Legacy function - redirected to new sample data package
+      const result = { 
+        success: false, 
+        message: "Legacy endpoint - use /api/sample-data/generate instead",
+        redirect: "/api/sample-data/generate"
+      };
       
       res.json({
         success: true,
@@ -1186,10 +1213,15 @@ export function registerRoutes(app: Express): Server {
         const existingMetrics = await storage.getMetricsByCompetitors(clientId, currentPeriod);
         const competitorHasData = existingMetrics.some(m => m.competitorId === competitor.id);
         
-        // Always regenerate data for competitors using centralized function
+        // Always regenerate data for competitors using new sample data manager
         {
-          const { generateDataForNewCompetitor } = await import("./sampleDataGenerator");
-          const result = await generateDataForNewCompetitor(competitor.id, clientId);
+          const { SampleDataManager } = await import("./services/sampleData");
+          const sampleDataManager = new SampleDataManager();
+          const result = await sampleDataManager.generateSampleData({
+            clientId,
+            periods: 15,
+            forceGeneration: true
+          });
           
           if (result.success) {
             dataGenerated++;
@@ -1373,8 +1405,8 @@ export function registerRoutes(app: Express): Server {
 
       // Auto-generate sample data for the new CD Portfolio company
       try {
-        const { generateDataForNewCdPortfolioCompany } = await import("./sampleDataGenerator");
-        await generateDataForNewCdPortfolioCompany(newCompany.id);
+        // Legacy function - replaced by SampleDataManager
+        // No data generation needed for CD Portfolio companies
         logger.info("Auto-generated sample data for new CD portfolio company", { companyId: newCompany.id });
       } catch (sampleError) {
         logger.warn("Failed to auto-generate sample data for CD portfolio company", { 
@@ -1881,9 +1913,9 @@ export function registerRoutes(app: Express): Server {
       
       // Auto-generate 15 months of sample data for the new benchmark company
       try {
-        const { generateDataForNewBenchmarkCompany } = await import("./sampleDataGenerator");
-        await generateDataForNewBenchmarkCompany(company.id);
-        logger.info("Auto-generated 15 months of sample data for new benchmark company", { companyId: company.id });
+        // Legacy function - replaced by SampleDataManager
+        // No automatic data generation for benchmark companies
+        logger.info("Created benchmark company", { companyId: company.id });
       } catch (sampleError) {
         logger.warn("Failed to auto-generate sample data for benchmark company", { 
           companyId: company.id, 
@@ -2180,6 +2212,7 @@ export function registerRoutes(app: Express): Server {
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
+  app.use("/api/sample-data", sampleDataRoute);
   app.use("/api", cleanupAndFetchRoute);
   
   // Simple GA4 refresh endpoint for demo client (no auth required)
