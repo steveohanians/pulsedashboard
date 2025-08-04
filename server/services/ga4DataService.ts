@@ -13,6 +13,18 @@ interface GA4MetricData {
   totalUsers: number;
 }
 
+interface GA4DailyData {
+  date: string;
+  metrics: {
+    bounceRate: number;
+    sessionDuration: number;
+    pagesPerSession: number;
+    sessionsPerUser: number;
+    totalSessions: number;
+    totalUsers: number;
+  };
+}
+
 interface GA4PropertyAccess {
   propertyId: string;
   serviceAccountId: string;
@@ -252,7 +264,156 @@ export class GA4DataService {
   }
 
   /**
-   * Fetch main metrics from GA4 API
+   * Store daily GA4 metrics for authentic temporal data
+   */
+  async storeDailyGA4Metrics(clientId: string, dailyData: Array<{date: string, metrics: any}>, period: string): Promise<void> {
+    try {
+      if (!dailyData || dailyData.length === 0) {
+        logger.warn('No daily data to store for client:', clientId);
+        return;
+      }
+
+      // Store each day's metrics as individual records
+      for (const dayData of dailyData) {
+        const { date, metrics } = dayData;
+        
+        // Store each metric type with the specific date
+        await storage.createMetric({
+          clientId,
+          metricName: 'Bounce Rate',
+          value: metrics.bounceRate.toString(),
+          sourceType: 'Client',
+          timePeriod: `${period}-daily-${date}` // Format: 2025-06-daily-20250603
+        });
+
+        await storage.createMetric({
+          clientId,
+          metricName: 'Session Duration',
+          value: metrics.sessionDuration.toString(),
+          sourceType: 'Client',
+          timePeriod: `${period}-daily-${date}`
+        });
+
+        await storage.createMetric({
+          clientId,
+          metricName: 'Pages per Session',
+          value: metrics.pagesPerSession.toString(),
+          sourceType: 'Client',
+          timePeriod: `${period}-daily-${date}`
+        });
+
+        await storage.createMetric({
+          clientId,
+          metricName: 'Sessions per User',
+          value: metrics.sessionsPerUser.toString(),
+          sourceType: 'Client',
+          timePeriod: `${period}-daily-${date}`
+        });
+      }
+
+      logger.info('Successfully stored daily GA4 metrics', {
+        clientId,
+        period,
+        daysStored: dailyData.length,
+        metricsPerDay: 4
+      });
+
+    } catch (error) {
+      logger.error('Error storing daily GA4 metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch daily metrics breakdown for authentic temporal data
+   */
+  async fetchDailyGA4Data(clientId: string, startDate: string, endDate: string): Promise<Array<{date: string, metrics: any}> | null> {
+    try {
+      const propertyAccess = await this.getPropertyAccess(clientId);
+      if (!propertyAccess) {
+        return null;
+      }
+
+      logger.info('Making GA4 Daily Metrics API request', {
+        propertyId: propertyAccess.propertyId,
+        startDate,
+        endDate
+      });
+
+      // Fetch daily breakdown for main metrics
+      const dailyMetricsResponse = await this.fetchDailyMainMetrics(propertyAccess.propertyId, propertyAccess.accessToken, startDate, endDate);
+
+      // Process daily data
+      const dailyData = dailyMetricsResponse.rows?.map((row: any) => {
+        const date = row.dimensionValues?.[0]?.value || '';
+        const bounceRate = parseFloat(row.metricValues?.[0]?.value || '0') * 100;
+        const sessionDuration = parseFloat(row.metricValues?.[1]?.value || '0');
+        const pagesPerSession = parseFloat(row.metricValues?.[2]?.value || '0');
+        const sessionsPerUser = parseFloat(row.metricValues?.[3]?.value || '0');
+        const totalSessions = parseInt(row.metricValues?.[4]?.value || '0');
+        const totalUsers = parseInt(row.metricValues?.[5]?.value || '0');
+
+        return {
+          date,
+          metrics: {
+            bounceRate,
+            sessionDuration,
+            pagesPerSession,
+            sessionsPerUser,
+            totalSessions,
+            totalUsers
+          }
+        };
+      }) || [];
+
+      logger.info(`Fetched ${dailyData.length} days of GA4 data for client ${clientId}`);
+      return dailyData;
+
+    } catch (error) {
+      logger.error('Error fetching daily GA4 data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch daily main metrics with date dimension
+   */
+  private async fetchDailyMainMetrics(propertyId: string, accessToken: string, startDate: string, endDate: string) {
+    const reportRequest = {
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'date' }], // Add date dimension for daily breakdown
+      metrics: [
+        { name: 'bounceRate' },
+        { name: 'averageSessionDuration' },
+        { name: 'screenPageViewsPerSession' },
+        { name: 'sessionsPerUser' },
+        { name: 'sessions' },
+        { name: 'totalUsers' }
+      ],
+      orderBys: [{ dimension: { dimensionName: 'date' } }] // Sort by date
+    };
+
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reportRequest)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('GA4 daily main metrics API error:', { status: response.status, error: errorText });
+      throw new Error(`GA4 API error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Fetch main metrics from GA4 API (aggregated for period)
    */
   private async fetchMainMetrics(propertyId: string, accessToken: string, startDate: string, endDate: string) {
     const reportRequest = {

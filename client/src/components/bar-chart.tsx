@@ -25,7 +25,7 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariation } from '../utils/chartUtilities';
+import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(
@@ -179,13 +179,13 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   
   if (timePeriod === "Last Month") {
     // Generate temporal variations for each data source
-    const clientVariations = generateTemporalVariation(clientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
-    const industryVariations = generateTemporalVariation(industryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
-    const cdVariations = generateTemporalVariation(cdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
+    const clientVariations = generateTemporalVariationSync(clientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
+    const industryVariations = generateTemporalVariationSync(industryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
+    const cdVariations = generateTemporalVariationSync(cdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariation(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName || 'Unknown'}`)
+      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName || 'Unknown'}`)
     );
     
     dates.forEach((period, index) => {

@@ -253,4 +253,46 @@ router.post('/sync/:clientId', adminRequired, validateClientId, asyncErrorHandle
   });
 }));
 
+/**
+ * POST /api/ga4-data/daily/:clientId/:period
+ * Fetch and store daily GA4 metrics for authentic temporal data
+ */
+router.post('/daily/:clientId/:period', validateClientId, asyncErrorHandler(async (req, res) => {
+  const { clientId, period } = req.params;
+  
+  logger.info(`Daily GA4 data fetch triggered for client: ${clientId}, period: ${period}`);
+  
+  // Convert period to date range
+  const dateRange = ga4DataService.getDateRangeForPeriod(period);
+  
+  // Fetch daily breakdown data
+  const dailyData = await ga4DataService.fetchDailyGA4Data(clientId, dateRange.startDate, dateRange.endDate);
+  
+  if (!dailyData || dailyData.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'No daily GA4 data available for this client and period'
+    });
+  }
+
+  // Store daily metrics
+  await ga4DataService.storeDailyGA4Metrics(clientId, dailyData, period);
+  
+  res.json({
+    success: true,
+    message: `Successfully fetched and stored ${dailyData.length} days of GA4 metrics for ${clientId}`,
+    period,
+    daysProcessed: dailyData.length,
+    dateRange: {
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate
+    },
+    sample: dailyData.slice(0, 3).map(day => ({
+      date: day.date,
+      bounceRate: day.metrics.bounceRate.toFixed(1) + '%',
+      sessionDuration: day.metrics.sessionDuration.toFixed(0) + 's'
+    }))
+  });
+}));
+
 export default router;

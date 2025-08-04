@@ -72,6 +72,22 @@ export async function getDashboardDataOptimized(
   // Prepare filters for industry data
   const filters = { businessSize, industryVertical };
   
+  // For "Last Month" period, also fetch daily GA4 data if available
+  if (periodsToQuery.includes('2025-07') || periodsToQuery.includes('2025-06')) {
+    const lastMonthPeriod = periodsToQuery.find(p => p === '2025-07' || p === '2025-06');
+    if (lastMonthPeriod) {
+      try {
+        const dailyMetrics = await storage.getDailyClientMetrics(client.id, lastMonthPeriod);
+        if (dailyMetrics.length > 0) {
+          // Cache the daily data for charts to use
+          setCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`, dailyMetrics, 5 * 60 * 1000);
+        }
+      } catch (error) {
+        console.warn('Could not fetch daily metrics:', error);
+      }
+    }
+  }
+
   // Run all database queries in parallel with timeout protection
   const dataPromise = Promise.all([
     // Fetch metrics for all periods in parallel

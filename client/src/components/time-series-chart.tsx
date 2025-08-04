@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, aggregateChannelData, generateTemporalVariation } from '../utils/chartUtilities';
+import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
 import { logger } from '@/utils/logger';
 import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 
@@ -207,13 +207,13 @@ function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, 
   
   if (timePeriod === "Last Month") {
     // Generate temporal variations for each data source
-    const clientVariations = generateTemporalVariation(clientData, dates, metricName || 'Unknown', `client-${metricName}`);
-    const industryVariations = generateTemporalVariation(industryAvg, dates, metricName || 'Unknown', `industry-${metricName}`);
-    const cdVariations = generateTemporalVariation(cdAvg, dates, metricName || 'Unknown', `cd-${metricName}`);
+    const clientVariations = generateTemporalVariationSync(clientData, dates, metricName || 'Unknown', `client-${metricName}`);
+    const industryVariations = generateTemporalVariationSync(industryAvg, dates, metricName || 'Unknown', `industry-${metricName}`);
+    const cdVariations = generateTemporalVariationSync(cdAvg, dates, metricName || 'Unknown', `cd-${metricName}`);
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariation(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName}`)
+      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName}`)
     );
     
     dates.forEach((date, index) => {

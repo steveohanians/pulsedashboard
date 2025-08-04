@@ -19,7 +19,7 @@ interface AreaChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { seededRandom, generatePacificTimePeriods, generateTemporalVariation } from '../utils/chartUtilities';
+import { seededRandom, generatePacificTimePeriods, generateTemporalVariationSync } from '../utils/chartUtilities';
 
 // Generate stable time series data for area chart
 interface AreaDataPoint {
@@ -36,7 +36,7 @@ interface CompetitorData {
   value: number;
 }
 
-function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: CompetitorData[], clientUrl?: string): AreaDataPoint[] {
+function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: CompetitorData[], clientUrl?: string, metricName?: string): AreaDataPoint[] {
   const data: AreaDataPoint[] = [];
   
   // Determine the date range based on time period
@@ -108,13 +108,14 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
   
   if (timePeriod === "Last Month") {
     // Generate temporal variations for each data source
-    const clientVariations = generateTemporalVariation(clientData, dates, metricName, `client-${metricName}`);
-    const industryVariations = generateTemporalVariation(industryAvg, dates, metricName, `industry-${metricName}`);
-    const cdVariations = generateTemporalVariation(cdAvg, dates, metricName, `cd-${metricName}`);
+    const safeMetricName = metricName || 'Unknown Metric';
+    const clientVariations = generateTemporalVariationSync(clientData, dates, safeMetricName, `client-${safeMetricName}`);
+    const industryVariations = generateTemporalVariationSync(industryAvg, dates, safeMetricName, `industry-${safeMetricName}`);
+    const cdVariations = generateTemporalVariationSync(cdAvg, dates, safeMetricName, `cd-${safeMetricName}`);
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariation(competitor.value || clientData, dates, metricName, `comp-${competitor.id}-${metricName}`)
+      generateTemporalVariationSync(competitor.value || clientData, dates, safeMetricName, `comp-${competitor.id}-${safeMetricName}`)
     );
     
     dates.forEach((date, index) => {
@@ -164,8 +165,8 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
 export default function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: AreaChartProps) {
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
-    generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl]
+    generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]
   );
 
   const clientKey = clientUrl || 'Client';

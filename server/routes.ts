@@ -71,6 +71,31 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Daily metrics endpoint for authentic GA4 temporal data
+  app.get("/api/metrics/daily/:clientId/:period/:metricName", requireAuth, async (req, res) => {
+    const { clientId, period, metricName } = req.params;
+    
+    try {
+      const dailyMetrics = await storage.getDailyClientMetrics(clientId, period);
+      const metricsForName = dailyMetrics.filter(m => m.metricName === metricName);
+      
+      // Sort by date for proper time series order
+      metricsForName.sort((a, b) => a.timePeriod.localeCompare(b.timePeriod));
+      
+      res.json({
+        success: true,
+        data: metricsForName,
+        count: metricsForName.length
+      });
+    } catch (error) {
+      logger.error('Error fetching daily metrics:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch daily metrics'
+      });
+    }
+  });
+
   // Dashboard endpoint with performance caching
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
     try {

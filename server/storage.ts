@@ -16,7 +16,7 @@ import {
   type GA4PropertyAccess, type InsertGA4PropertyAccess
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, sql, like } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -475,6 +475,20 @@ export class DatabaseStorage implements IStorage {
     // const channelsWithNames = trafficChannels.filter(r => r.channel);
     // logger.debug(`Traffic channel breakdown: Total=${trafficChannels.length}, With channel names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 3).map(r => ({ channel: r.channel, sourceType: r.sourceType, value: r.value })));
     
+    return results;
+  }
+
+  // Get daily metrics for authentic temporal data (replaces synthetic temporal variations)
+  async getDailyClientMetrics(clientId: string, period: string): Promise<Metric[]> {
+    const dailyPattern = `${period}-daily-%`;
+    const results = await db.select().from(metrics).where(
+      and(
+        eq(metrics.clientId, clientId),
+        like(metrics.timePeriod, dailyPattern)
+      )
+    ).orderBy(metrics.timePeriod);
+    
+    logger.debug(`getDailyClientMetrics(${clientId}, ${period}): ${results.length} daily metrics found`);
     return results;
   }
 

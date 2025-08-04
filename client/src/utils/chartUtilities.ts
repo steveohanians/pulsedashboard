@@ -84,45 +84,95 @@ export function generatePacificTimePeriods(timePeriod: string) {
 }
 
 /**
- * Generate realistic temporal variation for time series data
- * Creates daily/weekly variations within a base value for authentic chart trends
+ * Fetch stored daily GA4 metrics for time series charts
+ * Retrieves real daily data from the database
  */
-export function generateTemporalVariation(
+export async function fetchStoredDailyMetrics(
+  clientId: string,
+  period: string,
+  metricName: string
+): Promise<number[]> {
+  try {
+    // Get the daily metrics from our stored cache
+    const response = await fetch(`/api/metrics/daily/${clientId}/${period}/${encodeURIComponent(metricName)}`);
+    
+    if (!response.ok) {
+      console.debug(`No stored daily data found for ${metricName}, falling back to synthetic`);
+      return [];
+    }
+    
+    const dailyMetrics = await response.json();
+    if (dailyMetrics.data && dailyMetrics.data.length > 0) {
+      return dailyMetrics.data.map((metric: any) => parseFloat(metric.value));
+    }
+    
+    return [];
+    
+  } catch (error) {
+    console.error('Error fetching stored daily metrics:', error);
+    return [];
+  }
+}
+
+/**
+ * Generate temporal variation using real GA4 data when available
+ * Falls back to synthetic data when real data is not available
+ */
+export async function generateTemporalVariation(
+  baseValue: number, 
+  dates: string[], 
+  metricName: string,
+  seed: string = 'default',
+  clientId?: string,
+  period?: string
+): Promise<number[]> {
+  // Try to fetch real daily data if client info is provided
+  if (clientId && period && metricName) {
+    const realData = await fetchStoredDailyMetrics(clientId, period, metricName);
+    if (realData.length > 0) {
+      logger.debug(`Using real GA4 daily data for ${metricName}: ${realData.length} days`);
+      // Ensure we have the right number of data points for our dates
+      return realData.slice(0, dates.length);
+    }
+  }
+  
+  // Fallback to synthetic variation
+  return generateTemporalVariationFallback(baseValue, dates, metricName, seed);
+}
+
+/**
+ * Synchronous version for backwards compatibility
+ */
+export function generateTemporalVariationSync(
   baseValue: number, 
   dates: string[], 
   metricName: string,
   seed: string = 'default'
 ): number[] {
-  // Create deterministic variation based on seed for consistency
+  return generateTemporalVariationFallback(baseValue, dates, metricName, seed);
+}
+
+/**
+ * Fallback temporal variation generator (when GA4 data unavailable)
+ * Simplified version of the original synthetic generator
+ */
+function generateTemporalVariationFallback(
+  baseValue: number, 
+  dates: string[], 
+  metricName: string,
+  seed: string = 'default'
+): number[] {
   const variations: number[] = [];
   let seededRandom = createSeededRandom(seed);
   
-  // Define variation ranges based on metric type for realism
-  const variationConfig = {
-    'Bounce Rate': { range: 0.08, trending: 'improving' }, // 8% variation, improving trend
-    'Session Duration': { range: 0.12, trending: 'improving' }, // 12% variation, improving trend  
-    'Pages per Session': { range: 0.10, trending: 'stable' }, // 10% variation, stable
-    'Sessions per User': { range: 0.15, trending: 'stable' }, // 15% variation, stable
-    'Traffic Channels': { range: 0.05, trending: 'stable' }, // 5% variation, stable
-    'Device Distribution': { range: 0.03, trending: 'stable' } // 3% variation, stable
-  };
-  
-  const config = variationConfig[metricName as keyof typeof variationConfig] || { range: 0.10, trending: 'stable' };
+  const variationRange = 0.10; // 10% variation as fallback
   
   dates.forEach((date, index) => {
-    // Generate base random variation
-    const randomFactor = (seededRandom() - 0.5) * 2; // -1 to 1
-    let dailyVariation = baseValue * (1 + randomFactor * config.range);
+    const randomFactor = (seededRandom() - 0.5) * 2;
+    let dailyVariation = baseValue * (1 + randomFactor * variationRange);
     
-    // Apply trending if specified
-    if (config.trending === 'improving') {
-      const trendFactor = (index / (dates.length - 1)) * 0.05; // 5% improvement over period
-      dailyVariation *= (1 + trendFactor);
-    }
-    
-    // Ensure positive values and reasonable bounds
-    dailyVariation = Math.max(dailyVariation, baseValue * 0.5);
-    dailyVariation = Math.min(dailyVariation, baseValue * 1.5);
+    dailyVariation = Math.max(dailyVariation, baseValue * 0.8);
+    dailyVariation = Math.min(dailyVariation, baseValue * 1.2);
     
     variations.push(Math.round(dailyVariation * 100) / 100);
   });
