@@ -210,26 +210,37 @@ export class GA4DataProcessor {
       'Organic Search': 'Organic Search',
       'Direct': 'Direct',
       '(none)': 'Direct', // GA4 sometimes uses (none) for direct traffic
+      'Display': 'Direct', // Group Display with Direct (both are direct traffic types)
       'Social': 'Social Media',
       'Paid Social': 'Social Media',
       'Paid Search': 'Paid Search',
       'Email': 'Email',
       'Referral': 'Referral',
-      'Display': 'Display',
-      'Video': 'Video',
-      'YouTube': 'Video',
-      'Affiliates': 'Affiliates',
-      'Organic Video': 'Video',
+      'Video': 'Other',
+      'YouTube': 'Other',
+      'Affiliates': 'Other',
+      'Organic Video': 'Other',
       'Organic Social': 'Social Media',
-      'Audio': 'Audio',
-      'SMS': 'SMS',
-      'Push': 'Push Notifications',
-      'Mobile Push Notifications': 'Push Notifications'
+      'Audio': 'Other',
+      'SMS': 'Other',
+      'Push': 'Other',
+      'Mobile Push Notifications': 'Other'
     };
 
-    // Return mapped name if exists, otherwise preserve the original channel name
-    // This way we don't lose specific channel information by grouping everything as "Other"
-    return channelMap[channel] || channel;
+    // Return mapped name if exists, otherwise preserve specific channel names for known GA4 channels
+    const mappedChannel = channelMap[channel];
+    if (mappedChannel) {
+      return mappedChannel;
+    }
+    
+    // For known specific GA4 channels that should be preserved, keep their names
+    const preservedChannels = ['Cross-network', 'Unassigned'];
+    if (preservedChannels.includes(channel)) {
+      return channel;
+    }
+    
+    // Everything else becomes "Other"
+    return 'Other';
   }
 
   /**
