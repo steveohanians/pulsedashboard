@@ -29,7 +29,7 @@ export function clearCache(pattern?: string): void {
   if (pattern) {
     // Clear specific cache entries matching pattern
     const keysToDelete = [];
-    for (const [key] of queryCache) {
+    for (const [key] of Array.from(queryCache.keys())) {
       if (key.includes(pattern)) {
         keysToDelete.push(key);
       }
@@ -242,7 +242,10 @@ export async function getDashboardDataOptimized(
               if (!allMetricsInGroup[metricKey]) {
                 allMetricsInGroup[metricKey] = [];
               }
-              allMetricsInGroup[metricKey].push(parseMetricValue(metric.value));
+              const parsedValue = parseMetricValue(metric.value);
+            if (parsedValue !== null) {
+              allMetricsInGroup[metricKey].push(parsedValue);
+            }
             });
           });
           
@@ -291,6 +294,12 @@ export async function getDashboardDataOptimized(
   
   // Debug logging disabled for performance
 
+  // 🔍 DEBUG: Check final processedData for CD_Avg
+  const cdAvgInProcessed = processedData.find(m => m.sourceType === 'CD_Avg' && m.metricName === 'Bounce Rate');
+  if (cdAvgInProcessed) {
+    console.log('🔍 Final CD_Avg Bounce Rate in processedData:', cdAvgInProcessed.value);
+  }
+
   const result = {
     client,
     competitors,
@@ -325,6 +334,13 @@ function processMetricsData(
   const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
+  
+  // 🔍 DEBUG: Track CD_Avg data flow
+  const cdAvgBounceRate = allFilteredCdAvgMetrics.find(m => m.metricName === 'Bounce Rate');
+  if (cdAvgBounceRate) {
+    console.log('🔍 CD_Avg Bounce Rate raw from DB:', cdAvgBounceRate.value);
+    console.log('🔍 CD_Avg Bounce Rate parsed:', parseMetricValue(cdAvgBounceRate.value));
+  }
   
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
@@ -370,21 +386,16 @@ function processMetricsData(
         }
       } else {
         // Regular metric - handle JSON-wrapped values from competitor data
-        let finalValue = m.value;
+        let finalValue = parseMetricValue(m.value);
         
-        // Handle both JSON strings and already-parsed objects with value property
-        if (typeof m.value === 'string' && m.value.startsWith('{')) {
-          try {
-            const parsed = JSON.parse(m.value);
-            if (parsed && typeof parsed.value !== 'undefined') {
-              finalValue = parsed.value;
-            }
-          } catch (e) {
-            // Keep original value if parsing fails
-          }
-        } else if (typeof m.value === 'object' && m.value !== null && typeof m.value.value !== 'undefined') {
-          // Handle already-parsed objects with value property  
-          finalValue = m.value.value;
+        // 🔍 DEBUG: Track CD_Avg processing
+        if (m.sourceType === 'CD_Avg' && m.metricName === 'Bounce Rate') {
+          console.log('🔍 Processing CD_Avg Bounce Rate:', { 
+            raw: m.value, 
+            parsed: finalValue,
+            sourceType: m.sourceType,
+            timePeriod: m.timePeriod 
+          });
         }
         
         result.push({

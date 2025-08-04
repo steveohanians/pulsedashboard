@@ -250,6 +250,13 @@ export default function Dashboard() {
 
   // Group metrics by name for chart display - FIXED to calculate averages across time periods
   const groupedMetrics = useMemo(() => {
+    // 🔍 DEBUG: Track frontend data processing
+    const cdAvgMetrics = (dashboardData?.metrics || []).filter(m => m.sourceType === 'CD_Avg');
+    console.log('🔍 Frontend CD_Avg metrics found:', cdAvgMetrics.length);
+    const cdAvgBounceRate = cdAvgMetrics.find(m => m.metricName === 'Bounce Rate');
+    if (cdAvgBounceRate) {
+      console.log('🔍 Frontend CD_Avg Bounce Rate:', cdAvgBounceRate.value);
+    }
     // Quick return for empty states
     if (!dashboardData) return {};
     
