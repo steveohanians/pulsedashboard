@@ -87,14 +87,6 @@ export class GA4StorageService {
       throw error;
     }
   }
-    try {
-      await storage.clearAllClientMetrics(clientId);
-      logger.info(`Cleared ALL GA4 data for client ${clientId}`);
-    } catch (error) {
-      logger.error(`Error clearing all data for client ${clientId}:`, error);
-      throw error;
-    }
-  }
 
   /**
    * Replace daily data with monthly summary for optimization
