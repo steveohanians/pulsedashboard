@@ -343,11 +343,11 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
       try {
         const channelsData = JSON.parse(metric.value);
         if (Array.isArray(channelsData)) {
-          channelsData.forEach(channel => {
-            // Use correct GA4 field names: channel.channel and channel.percentage
-            if (channel.channel && channel.percentage !== undefined) {
-              const channelName = channel.channel;
-              const value = parseFloat(channel.percentage);
+          channelsData.forEach(channelData => {
+            // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
+            if (channelData.channel && channelData.percentage !== undefined) {
+              const channelName = channelData.channel;
+              const value = parseFloat(channelData.percentage);
               
               if (channelMap.has(channelName)) {
                 channelMap.set(channelName, channelMap.get(channelName) + value);
