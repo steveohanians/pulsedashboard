@@ -31,8 +31,14 @@ export class GA4DataProcessor {
       // Process device distribution
       const deviceDistribution = this.extractDeviceDistribution(deviceDataResponse);
 
+      // Ensure all required fields are present
       return {
-        ...mainMetrics,
+        bounceRate: mainMetrics.bounceRate ?? 0,
+        sessionDuration: mainMetrics.sessionDuration ?? 0,
+        pagesPerSession: mainMetrics.pagesPerSession ?? 0,
+        sessionsPerUser: mainMetrics.sessionsPerUser ?? 0,
+        totalSessions: mainMetrics.totalSessions ?? 0,
+        totalUsers: mainMetrics.totalUsers ?? 0,
         trafficChannels,
         deviceDistribution
       };

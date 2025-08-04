@@ -18,6 +18,11 @@ export interface GA4RawData {
     channel: string;
     sessions: number;
   }[];
+  deviceDistribution: {
+    device: string;
+    sessions: number;
+    percentage: number;
+  }[];
   timePeriod: string;
 }
 
@@ -96,9 +101,8 @@ export class GA4DataProcessor {
       });
     });
 
-    // Add device distribution (simulated from GA4 data)
-    const deviceDistribution = this.generateDeviceDistribution(ga4Data.sessions);
-    deviceDistribution.forEach(device => {
+    // Add authentic device distribution from GA4 API
+    ga4Data.deviceDistribution.forEach(device => {
       metricRecords.push({
         clientId,
         metricName: 'Device Distribution',
@@ -114,15 +118,9 @@ export class GA4DataProcessor {
   }
 
   /**
-   * Generate device distribution from total sessions
-   * This is a placeholder until we get actual device data from GA4
+   * REMOVED: generateDeviceDistribution function
+   * All device distribution data now comes from authentic GA4 API sources via deviceDistribution field
    */
-  private generateDeviceDistribution(totalSessions: number) {
-    // DEPRECATED: Device distribution generation removed for data authenticity
-    // All Device Distribution data must come from authentic GA4 sources only
-    console.warn('generateDeviceDistribution called - should use authentic GA4 data only');
-    return [];
-  }
 
   /**
    * Test data processing with sample GA4 data
