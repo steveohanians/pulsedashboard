@@ -10,7 +10,7 @@ import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
 import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
-import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache } from "./utils/queryOptimizer";
+import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { performanceCache } from "./cache/performance-cache";
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
@@ -1029,8 +1029,12 @@ export function registerRoutes(app: Express): Server {
       });
       
       // Clear caches to ensure new competitor appears immediately
-      clearCache(`dashboard:${validatedData.clientId}`);
-      logger.info("Cache cleared after competitor creation", { competitorId: competitor.id, clientId: validatedData.clientId });
+      clearCache(`dashboard-${validatedData.clientId}`);
+      logger.info("Cache cleared after competitor creation", { 
+        competitorId: competitor.id, 
+        clientId: validatedData.clientId,
+        cacheKeys: debugCacheKeys()
+      });
       
       res.status(201).json(competitor);
     } catch (error) {
@@ -1072,8 +1076,12 @@ export function registerRoutes(app: Express): Server {
       });
       
       // Clear relevant caches after competitor deletion
-      clearCache(`dashboard:${clientId}`);
-      logger.info("Cache cleared after competitor deletion", { competitorId: id, clientId });
+      clearCache(`dashboard-${clientId}`);
+      logger.info("Cache cleared after competitor deletion", { 
+        competitorId: id, 
+        clientId,
+        cacheKeys: debugCacheKeys()
+      });
       
       res.sendStatus(204);
     } catch (error) {

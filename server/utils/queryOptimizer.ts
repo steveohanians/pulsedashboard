@@ -27,15 +27,24 @@ export function setCachedData(key: string, data: any, ttlMs: number = 60000): vo
 export function clearCache(pattern?: string): void {
   if (pattern) {
     // Clear specific cache entries matching pattern
+    const keysToDelete = [];
     for (const [key] of queryCache) {
       if (key.includes(pattern)) {
-        queryCache.delete(key);
+        keysToDelete.push(key);
       }
     }
+    keysToDelete.forEach(key => queryCache.delete(key));
+    console.log(`Cache cleared: deleted ${keysToDelete.length} keys matching pattern "${pattern}"`);
   } else {
     // Clear all cache entries
+    const totalKeys = queryCache.size;
     queryCache.clear();
+    console.log(`Cache cleared: deleted all ${totalKeys} keys`);
   }
+}
+
+export function debugCacheKeys(): string[] {
+  return Array.from(queryCache.keys());
 }
 
 // Optimized filters query with caching
