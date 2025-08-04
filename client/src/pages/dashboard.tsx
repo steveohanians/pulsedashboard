@@ -1656,7 +1656,7 @@ export default function Dashboard() {
                             </div>
                           )}
                           {metricStatuses[metricName] === 'needs_improvement' && (
-                            <div className="w-12 h-12 bg-orange-500/70 rounded-full flex items-center justify-center status-icon-warning" title="Performance needs improvement">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0 bg-[#ffffff]" title="Performance needs improvement">
                               <AlertTriangle className="h-6 w-6 text-white relative z-10" />
                             </div>
                           )}
