@@ -33,7 +33,7 @@ export default function Dashboard() {
   
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();
-  const [timePeriod, setTimePeriod] = useState("Last Month");
+  const [timePeriod, setTimePeriod] = useState("Last Year");
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
@@ -224,6 +224,16 @@ export default function Dashboard() {
   const periods = dashboardData?.periods;
   const competitors = dashboardData?.competitors || [];
   const insights = dashboardData?.insights || [];
+
+  // Debug timeSeriesData to understand why charts are using fallback
+  console.log('🔍 Dashboard Debug:', {
+    isTimeSeries,
+    timeSeriesDataExists: !!timeSeriesData,
+    timeSeriesDataKeys: timeSeriesData ? Object.keys(timeSeriesData) : 'none',
+    periodsCount: periods?.length || 0,
+    metricsCount: metrics.length,
+    authenticGA4BounceRate: metrics.find(m => m.metricName === 'Bounce Rate' && m.sourceType === 'Client')?.value
+  });
 
 
 
@@ -1618,6 +1628,9 @@ export default function Dashboard() {
                           industryAvg={metricData.Industry_Avg || 0}
                           cdAvg={metricData.CD_Avg || 0}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                          timeSeriesData={timeSeriesData}
+                          isTimeSeries={isTimeSeries}
+                          periods={periods}
                           competitors={competitors.map((comp: any) => {
                             // Find metric for this competitor
                             const competitorMetric = metrics.find((m: any) => 
@@ -1629,8 +1642,6 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : 42.3
                             };
                           })}
-                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
-                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Session Duration" ? (
                         <MetricBarChart 
@@ -1651,8 +1662,6 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : 3.2
                             };
                           })}
-                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
-                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
@@ -1685,8 +1694,6 @@ export default function Dashboard() {
                               value: competitorMetric ? parseFloat(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
                             };
                           })}
-                          timeSeriesData={isTimeSeries ? timeSeriesData : undefined}
-                          periods={isTimeSeries ? periods : undefined}
                         />
                       ) : metricName === "Device Distribution" ? (
                         <LollipopChart 
