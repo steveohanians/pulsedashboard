@@ -46,6 +46,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Code Consolidation**: Achieved enterprise-level code organization by consolidating duplicate functions and patterns across the codebase, including centralized utilities, shared modules for validation, random generation, API patterns, error handling, and database operations.
 - **GA4 Integration Architecture**: Clients provide GA4 Property ID and grant guest access. Clear Digital uses Google service account for API access (read-only) and pulls data via GA4 Reporting API. Automated ETL process transforms GA4 data. OAuth 2.0 flow is used for secure GA4 service account management. **Important**: Google Analytics Data API must be enabled in Google Cloud Console for property verification to work.
 - **Performance Optimization System**: Comprehensive optimization system reducing load times from 43+ seconds to 24.25 seconds (45% improvement). Features intelligent caching (5-15 min TTL), parallelized database queries, background AI processing, full chart optimization, database indexing, and connection pooling. Cache hit rates provide sub-second response times.
+- **Comprehensive Sample Data Generation System**: Bulletproof 15-month data generation for ALL entities (Client, Competitors, Industry_Avg, CD_Avg) with automatic deduplication, proper time series structuring, complete cache management, and smart GA4 client handling. API endpoint: `/api/generate-sample-data/:clientId`.
 
 ## External Dependencies
 

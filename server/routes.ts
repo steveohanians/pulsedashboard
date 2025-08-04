@@ -320,6 +320,43 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // 🚀 Generate comprehensive sample data endpoint
+  app.post("/api/generate-sample-data/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { months = 15, forceReplace = true } = req.body;
+
+      // Verify admin access
+      if (!req.user || req.user.role !== "Admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      logger.info('Starting comprehensive sample data generation', { clientId, months, forceReplace });
+
+      // Import here to avoid circular dependencies
+      const { generateComprehensiveSampleData } = await import('../utils/sampleDataGenerator');
+      
+      const result = await generateComprehensiveSampleData({
+        clientId,
+        months,
+        forceReplace,
+        skipGA4Client: clientId === 'demo-client-id'
+      });
+
+      res.json(result);
+    } catch (error) {
+      logger.error("Sample data generation error", { 
+        error: (error as Error).message, 
+        stack: (error as Error).stack,
+        clientId: req.params.clientId 
+      });
+      res.status(500).json({ 
+        success: false,
+        message: `Failed to generate sample data: ${(error as Error).message}`
+      });
+    }
+  });
+
   // Generate metric-specific insights
   app.post("/api/generate-metric-insight/:clientId", requireAuth, async (req, res) => {
     try {

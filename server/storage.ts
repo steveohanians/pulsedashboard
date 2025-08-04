@@ -22,6 +22,7 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import { DatabaseRepository } from "./utils/databaseUtils";
 import logger from "./utils/logger";
+import crypto from 'crypto';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -799,6 +800,66 @@ export class DatabaseStorage implements IStorage {
       )
     );
   }
+
+  // Clear competitor metrics for a specific client and time period
+  async clearCompetitorMetricsByPeriod(clientId: string, timePeriod: string): Promise<void> {
+    await db.delete(competitorMetrics).where(
+      and(
+        eq(competitorMetrics.clientId, clientId),
+        eq(competitorMetrics.timePeriod, timePeriod)
+      )
+    );
+  }
+
+  // Clear benchmark metrics (industry and CD avg) for a specific time period
+  async clearBenchmarkMetricsByPeriod(timePeriod: string): Promise<void> {
+    await db.delete(benchmarks).where(eq(benchmarks.timePeriod, timePeriod));
+  }
+
+  // Create a benchmark metric (industry avg or CD avg)
+  async createBenchmarkMetric(data: {
+    metricName: string;
+    value: string;
+    sourceType: string;
+    timePeriod: string;
+    businessSize: string;
+    industryVertical: string;
+  }): Promise<any> {
+    const [result] = await db.insert(benchmarks).values({
+      id: crypto.randomUUID(),
+      metricName: data.metricName,
+      value: data.value,
+      sourceType: data.sourceType,
+      timePeriod: data.timePeriod,
+      businessSize: data.businessSize,
+      industryVertical: data.industryVertical,
+      createdAt: new Date()
+    }).returning();
+    return result;
+  }
+
+  // Create a competitor metric
+  async createCompetitorMetric(data: {
+    clientId: string;
+    competitorId: string;
+    metricName: string;
+    value: string;
+    timePeriod: string;
+  }): Promise<any> {
+    const [result] = await db.insert(competitorMetrics).values({
+      id: crypto.randomUUID(),
+      clientId: data.clientId,
+      competitorId: data.competitorId,
+      metricName: data.metricName,
+      value: data.value,
+      timePeriod: data.timePeriod,
+      createdAt: new Date()
+    }).returning();
+    return result;
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+// Add missing competitorMetrics import/table
+const competitorMetrics = metrics; // Using metrics table for competitor data
