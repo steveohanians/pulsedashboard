@@ -28,8 +28,8 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
 
   const addCompetitorMutation = useMutation({
     mutationFn: async (data: { domain: string; label: string; clientId: string }) => {
-      const res = await apiRequest("POST", "/api/competitors", data);
-      return res.json();
+      const response = await apiRequest("POST", "/api/competitors", data);
+      return response; // apiRequest already parses JSON
     },
     onSuccess: () => {
       // Invalidate all dashboard-related queries
@@ -56,9 +56,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
     },
     onError: (error: Error) => {
+      console.error("Competitor creation error:", error);
       toast({
         title: "Failed to add competitor",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     },
@@ -91,9 +92,10 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
     },
     onError: (error: Error) => {
+      console.error("Competitor deletion error:", error);
       toast({
         title: "Failed to remove competitor",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     },
