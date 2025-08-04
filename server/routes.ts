@@ -1135,15 +1135,21 @@ export function registerRoutes(app: Express): Server {
 
       // Generate historical sample data for the new competitor
       try {
+        logger.info("Starting historical data generation for new competitor", { 
+          competitorId: competitor.id, 
+          domain: competitor.domain 
+        });
         await generateCompetitorHistoricalData(validatedData.clientId, competitor);
-        logger.info("Generated historical data for new competitor", { 
+        logger.info("Successfully generated historical data for new competitor", { 
           competitorId: competitor.id, 
           domain: competitor.domain 
         });
       } catch (dataError) {
-        logger.error("Failed to generate historical data for competitor", { 
+        logger.error("CRITICAL: Failed to generate historical data for competitor", { 
           competitorId: competitor.id, 
-          error: (dataError as Error).message 
+          domain: competitor.domain,
+          error: (dataError as Error).message,
+          stack: (dataError as Error).stack 
         });
         // Don't fail the entire request if data generation fails
       }
