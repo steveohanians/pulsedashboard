@@ -15,7 +15,7 @@ import { z } from "zod";
 // Enums
 export const roleEnum = pgEnum("role", ["Admin", "User"]);
 export const statusEnum = pgEnum("status", ["Active", "Inactive", "Invited"]);
-export const sourceTypeEnum = pgEnum("source_type", ["Client", "CD_Avg", "Industry", "Competitor", "Industry_Avg", "Competitor_Avg"]);
+export const sourceTypeEnum = pgEnum("source_type", ["Client", "CD_Portfolio", "CD_Avg", "Industry", "Competitor", "Industry_Avg", "Competitor_Avg"]);
 
 // Tables
 export const clients = pgTable("clients", {

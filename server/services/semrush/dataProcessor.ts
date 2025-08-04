@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../../utils/logger.js';
 import type { SemrushMetricData } from './semrushService.js';
 import type { InsertMetric } from '@shared/schema.js';
 
@@ -165,7 +165,7 @@ export class SemrushDataProcessor {
           const metric = data.metrics.find((m: InsertMetric) => 
             m.metricName === metricName && m.timePeriod === period
           );
-          if (metric && typeof metric.value === 'object' && 'value' in metric.value) {
+          if (metric && metric.value && typeof metric.value === 'object' && 'value' in metric.value) {
             values.push(metric.value.value as number);
           }
         }
@@ -238,7 +238,7 @@ export class SemrushDataProcessor {
           }
           
           const channelInfo = channelData.get(metric.channel)!;
-          if (typeof metric.value === 'object' && 'percentage' in metric.value) {
+          if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
             channelInfo.percentages.push(metric.value.percentage as number);
             channelInfo.sessions.push((metric.value.sessions as number) || 0);
           }

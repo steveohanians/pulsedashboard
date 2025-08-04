@@ -1426,6 +1426,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // TEMPORARY: Test SEMrush integration for existing company
+  app.post('/api/admin/cd-portfolio/:id/test-semrush', adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const companyId = req.params.id;
+      const companies = await storage.getCdPortfolioCompanies();
+      const company = companies.find(c => c.id === companyId);
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      logger.info("🧪 Testing SEMrush integration manually", { 
+        companyId: company.id,
+        companyName: company.name,
+        websiteUrl: company.websiteUrl
+      });
+
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.js');
+      const integration = new PortfolioIntegration(storage);
+      
+      const result = await integration.processNewPortfolioCompany(company);
+      
+      logger.info("🧪 SEMrush test integration result", result);
+      
+      res.json({
+        message: "SEMrush integration test completed",
+        result: result
+      });
+    } catch (error) {
+      logger.error("🧪 SEMrush test integration failed", {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      res.status(500).json({ 
+        message: "SEMrush test integration failed", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
   app.put('/api/admin/cd-portfolio/:companyId', adminLimiter, requireAdmin, async (req, res) => {
     try {
       const { companyId } = req.params;

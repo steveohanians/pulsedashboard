@@ -1,7 +1,7 @@
-import logger from '../utils/logger.js';
+import logger from '../../utils/logger.js';
 import { semrushService } from './semrushService.js';
 import { semrushDataProcessor } from './dataProcessor.js';
-import type { IStorage } from '../storage.js';
+import type { IStorage } from '../../storage.js';
 import type { CdPortfolioCompany } from '@shared/schema.js';
 
 export interface PortfolioIntegrationResult {
