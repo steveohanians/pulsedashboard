@@ -1241,21 +1241,37 @@ export function registerRoutes(app: Express): Server {
         clientId: validatedData.clientId 
       });
 
-      // Generate historical sample data for the new competitor
+      // Generate historical sample data for the new competitor BEFORE sending response
       try {
         logger.info("Starting historical data generation for new competitor", { 
           competitorId: competitor.id, 
           domain: competitor.domain 
         });
-        // Get existing competitors count to assign unique index
+        // Get existing competitors count to assign unique index (exclude the just-created one)
         const existingCompetitors = await storage.getCompetitorsByClient(validatedData.clientId);
-        const competitorIndex = existingCompetitors.length; // Use count as index for uniqueness
+        const competitorIndex = existingCompetitors.length - 1; // Subtract 1 since we just added this competitor
         
         await generateCompetitorHistoricalData(validatedData.clientId, competitor, competitorIndex);
         logger.info("Successfully generated historical data for new competitor", { 
           competitorId: competitor.id, 
-          domain: competitor.domain 
+          domain: competitor.domain,
+          competitorIndex 
         });
+        
+        // Clear both cache systems to ensure new competitor appears immediately - force clear everything
+        clearCache(); // Clear ALL query optimizer cache
+        performanceCache.clear(); // Clear ALL performance cache
+        
+        logger.info("FORCE CLEARED ALL CACHES after competitor creation and data generation", { 
+          competitorId: competitor.id, 
+          clientId: validatedData.clientId,
+          competitorIndex,
+          message: "Completely cleared both cache systems to ensure UI updates"
+        });
+        
+        // Send success response AFTER data generation completes
+        res.status(201).json({ ...competitor, dataGenerated: true });
+        
       } catch (dataError) {
         logger.error("CRITICAL: Failed to generate historical data for competitor", { 
           competitorId: competitor.id, 
@@ -1263,20 +1279,9 @@ export function registerRoutes(app: Express): Server {
           error: (dataError as Error).message,
           stack: (dataError as Error).stack 
         });
-        // Don't fail the entire request if data generation fails
+        // Send success response even if data generation fails, but indicate the issue
+        res.status(201).json({ ...competitor, dataGenerated: false, dataError: (dataError as Error).message });
       }
-      
-      // Clear both cache systems to ensure new competitor appears immediately - force clear everything
-      clearCache(); // Clear ALL query optimizer cache
-      performanceCache.clear(); // Clear ALL performance cache
-      
-      logger.info("FORCE CLEARED ALL CACHES after competitor creation", { 
-        competitorId: competitor.id, 
-        clientId: validatedData.clientId,
-        message: "Completely cleared both cache systems to ensure UI updates"
-      });
-      
-      res.status(201).json(competitor);
     } catch (error) {
       logger.error("Error creating competitor", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Invalid data" });
