@@ -374,30 +374,35 @@ export default function Dashboard() {
     });
     
     if (clientTrafficMetrics.length > 0) {
+      console.log('🔍 RAW CLIENT TRAFFIC METRICS:', clientTrafficMetrics);
+      
       // Use the corrected processChannelData function from chartUtilities.ts
       const channelMap = aggregateChannelData(clientTrafficMetrics);
+      console.log('🔍 AGGREGATED CHANNEL MAP:', channelMap);
+      
       const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
         ...channel,
         color: getChannelColor(channel.name)
       }));
       
-      console.log('🔍 PROCESSED CHANNELS DEBUG:', {
-        processedChannelsLength: sortedChannels.length,
-        processedChannels: sortedChannels,
-        clientLabel: client?.name || 'Client',
-        aboutToPushToResult: 'YES'
+      console.log('🔍 FINAL SORTED CHANNELS FOR CLIENT:', {
+        channelsLength: sortedChannels.length,
+        channels: sortedChannels,
+        hasValidChannels: sortedChannels.length > 0,
+        channelNames: sortedChannels.map(c => c.name)
       });
       
       const clientEntry = {
         sourceType: 'Client',
-        label: client?.name || 'Client',
+        label: client?.name || 'Demo Company',
         channels: sortedChannels
       };
       
-      console.log('🔍 PUSHING CLIENT ENTRY:', clientEntry);
+      console.log('🔍 CLIENT ENTRY BEING PUSHED:', JSON.stringify(clientEntry, null, 2));
       result.push(clientEntry);
     } else {
-      console.warn('❌ No client traffic metrics found!');
+      console.warn('❌ No client traffic metrics found! Available metrics:', 
+        trafficMetrics.map(m => ({ sourceType: m.sourceType, metricName: m.metricName })));
     }
 
     // CD Average data
@@ -1578,13 +1583,15 @@ export default function Dashboard() {
                         />
                       ) : metricName === "Traffic Channels" ? (
                         (() => {
-                          console.log('🔥 TRAFFIC CHANNELS CONDITION MET!', metricName);
-                          console.log('🔥 Dashboard Data:', dashboardData);
-                          console.log('🔥 Metrics Available:', metrics?.length || 0);
-                          console.log('🔥 Time Series Data Keys:', timeSeriesData ? Object.keys(timeSeriesData) : 'none');
+                          console.log('🔥🔥🔥 TRAFFIC CHANNELS SECTION RENDERING NOW! 🔥🔥🔥');
+                          console.log('🔥 Metric Name:', metricName);
+                          console.log('🔥 Dashboard Client:', dashboardData?.client?.name);
+                          console.log('🔥 Total Metrics:', metrics?.length || 0);
+                          console.log('🔥 Traffic Channel Metrics in Data:', metrics?.filter(m => m.metricName === 'Traffic Channels').length || 0);
                           
                           const trafficData = processTrafficChannelData();
-                          console.log('🔥 TRAFFIC DATA RECEIVED:', trafficData);
+                          console.log('🔥 PROCESSED TRAFFIC DATA:', JSON.stringify(trafficData, null, 2));
+                          console.log('🔥 Demo Company in Result?', trafficData.some(d => d.label.includes('Demo')));
 
                           return (
                             <StackedBarChart 
