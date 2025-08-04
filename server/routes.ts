@@ -207,8 +207,8 @@ export function registerRoutes(app: Express): Server {
       logger.info(`Dashboard data cached: ${cacheKey}`);
       
       // Add fresh timestamp to force frontend refresh
-      result.timestamp = Date.now();
-      result.dataFreshness = 'live';
+      (result as any).timestamp = Date.now();
+      (result as any).dataFreshness = 'live';
       
       return res.json(result);
 
@@ -739,8 +739,8 @@ export function registerRoutes(app: Express): Server {
           websiteUrl: client?.websiteUrl
         },
         benchmarks: {
-          industryAverage: industryAvgFromDB, // Use DB value instead of frontend average
-          cdPortfolioAverage: cdAvgFromDB, // Use DB value instead of frontend average
+          industryAverage: industryAvgFromDB || undefined, // Convert null to undefined
+          cdPortfolioAverage: cdAvgFromDB || undefined, // Convert null to undefined
           competitors: competitorData.filter((c: any) => c.value !== null).map((c: any) => ({ name: c.name, value: c.value as number }))
         },
         context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValueFromDB} for ${timePeriod}. Industry average: ${industryAvgFromDB}, CD Portfolio average: ${cdAvgFromDB}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`,
@@ -2229,7 +2229,7 @@ export function registerRoutes(app: Express): Server {
       const result = await ga4DataService.fetchGA4Data('demo-client-id', '2025-07-01', '2025-07-31');
       
       logger.info('DEBUG: July 2025 GA4 API Response:', { 
-        hasMainMetrics: !!result?.mainMetrics,
+        hasMainMetrics: !!(result as any)?.mainMetrics,
         hasTrafficChannels: !!result?.trafficChannels?.length,
         trafficChannelsCount: result?.trafficChannels?.length || 0,
         channels: result?.trafficChannels?.map((tc: any) => `${tc.channel}: ${tc.percentage}%`) || []
@@ -2239,7 +2239,7 @@ export function registerRoutes(app: Express): Server {
         success: true,
         data: result,
         debug: {
-          hasMainMetrics: !!result?.mainMetrics,
+          hasMainMetrics: !!(result as any)?.mainMetrics,
           hasTrafficChannels: !!result?.trafficChannels?.length,
           trafficChannelsCount: result?.trafficChannels?.length || 0,
           channels: result?.trafficChannels?.map((tc: any) => `${tc.channel}: ${tc.percentage}%`) || []
