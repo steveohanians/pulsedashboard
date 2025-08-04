@@ -55,12 +55,16 @@ export class SampleDataGenerator {
     competitorIndex: number, 
     periodIndex: number
   ): SampleMetricData {
-    const seed = this.seedBase + competitorIndex * 1000 + periodIndex;
+    // FORCE DIFFERENT SEEDS: Use a much larger multiplier to ensure uniqueness
+    const seed = this.seedBase + competitorIndex * 10000 + periodIndex * 100;
     const rng = this.createSeededRNG(seed);
     
-    // Competitors vary 5-15% from client baseline
-    const variationFactor = 0.05 + rng() * 0.10; // 5-15%
-    const direction = rng() > 0.5 ? 1 : -1;
+    // Add base variation based on competitor index to ensure differences
+    const baseVariation = (competitorIndex + 1) * 0.05; // 5%, 10%, 15% base difference per competitor
+    
+    // Competitors vary 5-15% from client baseline with additional index-based variation
+    const variationFactor = baseVariation + 0.05 + rng() * 0.10; // Enhanced variation
+    const direction = (competitorIndex % 2 === 0) ? 1 : -1; // Alternate direction per competitor
     
     return {
       bounceRate: this.clamp(
