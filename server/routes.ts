@@ -706,12 +706,21 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'CD_Avg'
       );
 
-      // Calculate actual July 2025 database values
-      const clientValueFromDB = clientMetricForPeriod ? parseFloat(clientMetricForPeriod.value as string) : null;
+      // Import metric parser utility
+      const { parseMetricValue } = await import("./utils/metricParser");
+
+      // Calculate actual July 2025 database values with proper parsing
+      const clientValueFromDB = clientMetricForPeriod ? parseMetricValue(clientMetricForPeriod.value) : null;
       const industryAvgFromDB = industryMetricsForPeriod.length > 0 ? 
-        industryMetricsForPeriod.reduce((sum: number, m: any) => sum + parseFloat(m.value as string), 0) / industryMetricsForPeriod.length : null;
+        industryMetricsForPeriod.reduce((sum: number, m: any) => {
+          const value = parseMetricValue(m.value);
+          return value !== null ? sum + value : sum;
+        }, 0) / industryMetricsForPeriod.length : null;
       const cdAvgFromDB = cdMetricsForPeriod.length > 0 ? 
-        cdMetricsForPeriod.reduce((sum: number, m: any) => sum + parseFloat(m.value as string), 0) / cdMetricsForPeriod.length : null;
+        cdMetricsForPeriod.reduce((sum: number, m: any) => {
+          const value = parseMetricValue(m.value);
+          return value !== null ? sum + value : sum;
+        }, 0) / cdMetricsForPeriod.length : null;
 
       logger.info('🎯 AI CONTEXT VALUES DEBUG', {
         metricName,

@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
 import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
+import { parseMetricValue } from '../utils/metricParser';
 
 interface BarChartProps {
   metricName: string;
@@ -60,17 +61,17 @@ function processTimeSeriesForBar(
     
     // Debug: Period ${period}, Metric ${metricName} - Client: ${clientMetric?.value}, Industry: ${industryMetric?.value}, CD: ${cdMetric?.value}
     
-    dataPoint[clientKey] = clientMetric ? Math.round(parseFloat(clientMetric.value) * 10) / 10 : 0;
-    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseFloat(industryMetric.value) * 10) / 10 : 0;
+    dataPoint[clientKey] = clientMetric ? Math.round(parseMetricValue(clientMetric.value) * 10) / 10 : 0;
+    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseMetricValue(industryMetric.value) * 10) / 10 : 0;
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
-    dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseFloat(cdMetric.value) * 10) / 10 : 0;
+    dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseMetricValue(cdMetric.value) * 10) / 10 : 0;
     
     // Add competitor data
     competitors.forEach(competitor => {
       const competitorMetric = periodData.find(m => 
         m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
       );
-      dataPoint[competitor.label] = competitorMetric ? Math.round(parseFloat(competitorMetric.value) * 10) / 10 : 0;
+      dataPoint[competitor.label] = competitorMetric ? Math.round(parseMetricValue(competitorMetric.value) * 10) / 10 : 0;
     });
     
     data.push(dataPoint);

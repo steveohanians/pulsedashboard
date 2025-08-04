@@ -24,6 +24,7 @@ import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
+import { parseMetricValue } from "@/utils/metricParser";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 // Performance tracking removed per user request
@@ -270,7 +271,7 @@ export default function Dashboard() {
         counts[metric.metricName][metric.sourceType] = 0;
       }
       
-      const value = Number(metric.value) || 0;
+      const value = parseMetricValue(metric.value);
       result[metric.metricName][metric.sourceType] += value;
       counts[metric.metricName][metric.sourceType] += 1;
     }

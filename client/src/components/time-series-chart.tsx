@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
 import { logger } from '@/utils/logger';
 import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
+import { parseMetricValue } from '../utils/metricParser';
 
 // Use shared DiamondDot component
 import { DiamondDot } from './shared/DiamondDot';
@@ -109,11 +110,11 @@ function generateRealTimeSeriesData(
     
     // Calculate averages for each source type
     const avgClient = clientMetrics.length > 0 ? 
-      clientMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / clientMetrics.length : 0;
+      clientMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / clientMetrics.length : 0;
     const avgIndustry = industryMetrics.length > 0 ? 
-      industryMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / industryMetrics.length : 0;
+      industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : 0;
     const avgCD = cdMetrics.length > 0 ? 
-      cdMetrics.reduce((sum, m) => sum + (typeof m.value === 'number' ? m.value : parseFloat(m.value)), 0) / cdMetrics.length : 0;
+      cdMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / cdMetrics.length : 0;
     
     dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
