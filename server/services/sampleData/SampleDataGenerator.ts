@@ -55,35 +55,40 @@ export class SampleDataGenerator {
     competitorIndex: number, 
     periodIndex: number
   ): SampleMetricData {
-    // FORCE DIFFERENT SEEDS: Use a much larger multiplier to ensure uniqueness
-    const seed = this.seedBase + competitorIndex * 10000 + periodIndex * 100;
+    // Create completely unique baseline per competitor by adding fixed offsets
+    const competitorBaseline = {
+      bounceRate: clientBaseline.bounceRate + (competitorIndex * 3) - 1.5,
+      sessionDuration: clientBaseline.sessionDuration + (competitorIndex * 20) - 10,
+      pagesPerSession: clientBaseline.pagesPerSession + (competitorIndex * 0.3) - 0.15,
+      sessionsPerUser: clientBaseline.sessionsPerUser + (competitorIndex * 0.2) - 0.1
+    };
+    
+    // Use large seed spacing to ensure completely different random sequences
+    const seed = this.seedBase + competitorIndex * 50000 + periodIndex * 1000;
     const rng = this.createSeededRNG(seed);
     
-    // Add base variation based on competitor index to ensure differences
-    const baseVariation = (competitorIndex + 1) * 0.05; // 5%, 10%, 15% base difference per competitor
-    
-    // Competitors vary 5-15% from client baseline with additional index-based variation
-    const variationFactor = baseVariation + 0.05 + rng() * 0.10; // Enhanced variation
-    const direction = (competitorIndex % 2 === 0) ? 1 : -1; // Alternate direction per competitor
+    // Apply random variation on top of the unique baseline
+    const variationFactor = 0.05 + rng() * 0.10; // 5-15% variation
+    const direction = rng() > 0.5 ? 1 : -1;
     
     return {
       bounceRate: this.clamp(
-        clientBaseline.bounceRate * (1 + direction * variationFactor),
+        competitorBaseline.bounceRate * (1 + direction * variationFactor),
         METRIC_RANGES.BOUNCE_RATE.min,
         METRIC_RANGES.BOUNCE_RATE.max
       ),
       sessionDuration: this.clamp(
-        clientBaseline.sessionDuration * (1 + direction * variationFactor * 0.5),
+        competitorBaseline.sessionDuration * (1 + direction * variationFactor * 0.5),
         METRIC_RANGES.SESSION_DURATION.min,
         METRIC_RANGES.SESSION_DURATION.max
       ),
       pagesPerSession: this.clamp(
-        clientBaseline.pagesPerSession * (1 + direction * variationFactor * 0.3),
+        competitorBaseline.pagesPerSession * (1 + direction * variationFactor * 0.3),
         METRIC_RANGES.PAGES_PER_SESSION.min,
         METRIC_RANGES.PAGES_PER_SESSION.max
       ),
       sessionsPerUser: this.clamp(
-        clientBaseline.sessionsPerUser * (1 + direction * variationFactor * 0.2),
+        competitorBaseline.sessionsPerUser * (1 + direction * variationFactor * 0.2),
         METRIC_RANGES.SESSIONS_PER_USER.min,
         METRIC_RANGES.SESSIONS_PER_USER.max
       )
