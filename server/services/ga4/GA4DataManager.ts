@@ -162,9 +162,9 @@ export class GA4DataManager {
    * 
    * 1. CLEARS all existing GA4 data from databases and JSON files
    * 2. FETCHES 15 months of fresh GA4 data using proper logic:
-   *    - Month 1: Daily data for Bounce Rate, Session Duration, Pages per Session, Sessions per User
-   *             + Monthly data for Traffic Channels, Device Distribution  
-   *    - Months 2-15: Monthly data for all 6 chart types
+   *    - Months 1-2: Daily data for Bounce Rate, Session Duration, Pages per Session, Sessions per User
+   *                 + Monthly data for Traffic Channels, Device Distribution  
+   *    - Months 3-15: Monthly data for all 6 chart types
    * 3. PROCESSES and STORES all data with correct mapping
    * 4. ENSURES all 6 charts refresh with authentic GA4 data
    * 
@@ -358,7 +358,7 @@ export class GA4DataManager {
       const month = date.getMonth() + 1;
       const period = `${year}-${String(month).padStart(2, '0')}`;
       
-      // Recent 1 month gets daily data, older periods get monthly summaries
+      // Recent 2 months get daily data (current + last month), older periods get monthly summaries
       const type = i < DATA_MANAGEMENT.DAILY_DATA_THRESHOLD_MONTHS ? 'daily' : 'monthly';
       
       const dateRange = this.getDateRangeForPeriod(period);
