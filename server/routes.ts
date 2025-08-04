@@ -196,9 +196,13 @@ export function registerRoutes(app: Express): Server {
         metrics: result.metrics
       }, 2); // Medium priority
 
-      // Cache the result and return immediately
+      // Cache the result and return immediately with fresh timestamp
       performanceCache.set(cacheKey, result);
       logger.info(`Dashboard data cached: ${cacheKey}`);
+      
+      // Add fresh timestamp to force frontend refresh
+      result.timestamp = Date.now();
+      result.dataFreshness = 'live';
       
       return res.json(result);
 
