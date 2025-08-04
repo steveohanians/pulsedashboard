@@ -1185,7 +1185,10 @@ export default function AdminPanel() {
                               {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
                             </div>
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
+                              <Badge 
+                                variant={user.role === "Admin" ? "default" : "outline"} 
+                                className={`text-xs ${user.role === "User" ? "bg-white border-primary text-primary hover:bg-primary/5" : ""}`}
+                              >
                                 {user.role}
                               </Badge>
                               <Badge variant="secondary" className="text-xs">Active</Badge>
@@ -1361,7 +1364,10 @@ export default function AdminPanel() {
                           <TableCell className="hidden lg:table-cell text-xs">{user.email}</TableCell>
                           <TableCell className="hidden md:table-cell text-xs">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
                           <TableCell>
-                            <Badge variant={user.role === "Admin" ? "default" : "secondary"} className="text-xs">
+                            <Badge 
+                              variant={user.role === "Admin" ? "default" : "outline"} 
+                              className={`text-xs ${user.role === "User" ? "bg-white border-primary text-primary hover:bg-primary/5" : ""}`}
+                            >
                               {user.role}
                             </Badge>
                           </TableCell>
