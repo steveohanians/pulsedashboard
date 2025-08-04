@@ -10,6 +10,7 @@ Dynamic filtering: Industry filters reference each other - selecting a business 
 Performance priority: Demands enterprise-grade performance with immediate loading capabilities to replace 22+ second load times.
 Data management principles: Dashboard shows "Last Month" data only (not current partial month). Follow established 15-month historical data logic: check existing data before re-fetching, summarize daily to monthly for storage optimization, only fetch new/active months not yet pulled.
 Learning principles: Follow established patterns and logic instead of creating new approaches. When modifying data, only touch the specific entities requested - never assume broader changes are needed.
+Data integrity principles: NEVER show fake, sample, or fallback data under any circumstances. Show empty states rather than synthetic data to maintain authentic data integrity. Completely eliminate all fallback data generators.
 
 ## Agent Learning Protocols
 

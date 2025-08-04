@@ -47,23 +47,16 @@ function generateTimeSeriesData(
   periods?: string[],
   metricName?: string
 ): Array<Record<string, unknown>> {
-  // If we have actual time-series data and multiple periods, use it
-  console.log(`🔍 Chart ${metricName}: Checking conditions - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length);
+  // Only use authentic time-series data - no fallback generation
+  console.log(`🔍 Chart ${metricName}: Checking for authentic data - timeSeriesData:`, !!timeSeriesData, 'periods:', !!periods, 'periods.length:', periods?.length);
   if (timeSeriesData && periods && periods.length > 0) {
     console.log(`✅ Chart ${metricName}: Using AUTHENTIC time-series data with ${periods.length} periods:`, periods);
-    console.log(`✅ Chart ${metricName}: timeSeriesData keys:`, Object.keys(timeSeriesData));
-    console.log(`✅ Chart ${metricName}: competitors:`, competitors.map(c => ({id: c.id, label: c.label})));
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName);
   }
   
-  // Otherwise, fallback to single-point data (current behavior for single periods)
-  console.log(`❌ Chart ${metricName}: Condition failed - FALLING BACK to sample data instead of authentic GA4!`, {
-    clientData,
-    hasTimeSeriesData: !!timeSeriesData,
-    periodsCount: periods?.length || 0,
-    timePeriod
-  });
-  return generateFallbackTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
+  // No authentic data available - return empty data rather than fake data
+  console.log(`❌ Chart ${metricName}: No authentic data available - showing empty state`);
+  return [];
 }
 
 // Generate real time-series data from database
@@ -141,145 +134,8 @@ function generateRealTimeSeriesData(
   return data;
 }
 
-// Generate fallback time series data (current behavior)
-function generateFallbackTimeSeriesData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: any[], clientUrl?: string, metricName?: string): any[] {
-  console.log(`🚨 FALLBACK DATA GENERATOR: Creating sample data for ${metricName} - THIS OVERRIDES AUTHENTIC GA4!`);
-  const data: any[] = [];
-  
-  // Determine the date range and intervals based on time period
-  let dates: string[] = [];
-  
-  if (timePeriod === "Last Month") {
-    // Show last month data points (dynamic based on PT current date - 1 month)
-    const now = new Date();
-    // Use Pacific Time calculation: current PT month - 1
-    const ptFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit'
-    });
-    const ptParts = ptFormatter.formatToParts(now);
-    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-    const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(endDate);
-      date.setDate(date.getDate() - (i * 5)); // Every 5 days
-      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    }
-  } else if (timePeriod === "Last Quarter") {
-    // Show current quarter months (dynamic PT)
-    const now = new Date();
-    const ptFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit'
-    });
-    const ptParts = ptFormatter.formatToParts(now);
-    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-    const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
-    const quarterStartMonth = (currentQuarter - 1) * 3;
-    
-    for (let i = 0; i < 3; i++) {
-      const quarterMonth = quarterStartMonth + i;
-      if (quarterMonth <= targetMonth.getMonth()) {
-        const monthDate = new Date(targetMonth.getFullYear(), quarterMonth, 1);
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        dates.push(`${monthNames[quarterMonth]} ${String(targetMonth.getFullYear()).slice(-2)}`);
-      }
-    }
-  } else if (timePeriod === "Last Year") {
-    // Show 12 months ending last month (dynamic)
-    const now = new Date();
-    const months = [];
-    for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(now);
-      monthDate.setMonth(monthDate.getMonth() - i - 1); // -1 for last month
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      months.push(`${monthNames[monthDate.getMonth()]} ${String(monthDate.getFullYear()).slice(-2)}`);
-    }
-    // Take every other month for display clarity (6 points)
-    dates = [months[0], months[2], months[4], months[6], months[8], months[10], months[11]];
-  } else {
-    // Custom date range - show 6 points ending last month (PT timezone)
-    const now = new Date();
-    // Use Pacific Time calculation: current PT month - 1
-    const ptFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit'
-    });
-    const ptParts = ptFormatter.formatToParts(now);
-    const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-    const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-    const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(endDate);
-      date.setDate(date.getDate() - (i * 7)); // Weekly
-      dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    }
-  }
-
-  // Generate temporal variation for "Last Month" to show authentic trends instead of flat lines
-  const clientKey = clientUrl || 'Client';
-  
-  if (timePeriod === "Last Month") {
-    // Generate temporal variations for each data source
-    const clientVariations = generateTemporalVariationSync(clientData, dates, metricName || 'Unknown', `client-${metricName}`);
-    const industryVariations = generateTemporalVariationSync(industryAvg, dates, metricName || 'Unknown', `industry-${metricName}`);
-    const cdVariations = generateTemporalVariationSync(cdAvg, dates, metricName || 'Unknown', `cd-${metricName}`);
-    
-    // Generate competitor variations
-    const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName}`)
-    );
-    
-    dates.forEach((date, index) => {
-      const point: any = {
-        date,
-        [clientKey]: Math.round(clientVariations[index] * 10) / 10,
-        'Industry Avg': Math.round(industryVariations[index] * 10) / 10,
-        'Clear Digital Clients Avg': Math.round(cdVariations[index] * 10) / 10,
-      };
-
-      // Add competitor data with temporal variations
-      competitors.forEach((competitor, compIndex) => {
-        point[competitor.label] = Math.round(competitorVariations[compIndex][index] * 10) / 10;
-      });
-
-      data.push(point);
-    });
-  } else {
-    // For other time periods, use static values (existing behavior)
-    dates.forEach((date, index) => {
-      const point: any = {
-        date,
-        [clientKey]: Math.round(clientData * 10) / 10,
-        'Industry Avg': Math.round(industryAvg * 10) / 10,
-        'Clear Digital Clients Avg': Math.round(cdAvg * 10) / 10,
-      };
-
-      // Add competitor data with actual values
-      competitors.forEach((competitor, compIndex) => {
-        const baseValue = competitor.value || clientData;
-        point[competitor.label] = Math.round(baseValue * 10) / 10;
-      });
-
-      data.push(point);
-    });
-  }
-
-  console.log(`🚨 FALLBACK DATA GENERATOR: Generated ${data.length} sample points for ${metricName}:`, data.slice(0, 2));
-  return data;
-}
+// REMOVED: Fallback data generator completely eliminated per user request
+// No fake/sample data will ever be generated - only authentic GA4 data or empty state
 
 export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
 
@@ -305,6 +161,19 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),
     [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]
   );
+
+  // Show empty state if no authentic data is available
+  if (!data || data.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <div className="mb-2">📊</div>
+          <div className="text-sm">No authentic data available</div>
+          <div className="text-xs text-slate-400 mt-1">Authentic GA4 data will appear here when available</div>
+        </div>
+      </div>
+    );
+  }
 
   const clientKey = clientUrl || 'Client';
   
