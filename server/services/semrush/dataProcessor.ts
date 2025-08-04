@@ -1,5 +1,5 @@
-import logger from '../../utils/logger.js';
-import type { SemrushMetricData } from './semrushService.js';
+import logger from '../../utils/logger.ts';
+import type { SemrushMetricData } from './semrushService.ts';
 import type { InsertMetric } from '@shared/schema.js';
 
 export interface ProcessedMetricData {

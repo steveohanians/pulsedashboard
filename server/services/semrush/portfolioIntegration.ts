@@ -1,6 +1,6 @@
-import logger from '../../utils/logger.js';
-import { semrushService } from './semrushService.js';
-import { semrushDataProcessor } from './dataProcessor.js';
+import logger from '../../utils/logger.ts';
+import { semrushService } from './semrushService.ts';
+import { semrushDataProcessor } from './dataProcessor.ts';
 import type { IStorage } from '../../storage.js';
 import type { CdPortfolioCompany } from '@shared/schema.js';
 
