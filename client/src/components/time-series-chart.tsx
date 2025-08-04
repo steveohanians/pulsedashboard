@@ -262,7 +262,7 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
           fontSize={9} 
           tick={{ fill: '#64748b' }}
           axisLine={{ stroke: '#cbd5e1' }}
-          interval="preserveStartEnd"
+          interval={data.length > 15 ? "preserveStartEnd" : 0}
           angle={-45}
           textAnchor="end"
           height={60}
