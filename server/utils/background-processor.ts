@@ -3,12 +3,13 @@ import logger from './logger';
 // Background processing queue for heavy operations
 interface ProcessingJob {
   id: string;
-  type: 'AI_INSIGHT' | 'METRIC_AGGREGATION' | 'SCORING';
+  type: 'AI_INSIGHT' | 'METRIC_AGGREGATION' | 'SCORING' | 'COMPETITOR_INTEGRATION';
   data: any;
   priority: number;
   retries: number;
   maxRetries: number;
   createdAt: number;
+  processor?: (job: any) => Promise<void>; // Custom processor function
 }
 
 class BackgroundProcessor {
@@ -18,30 +19,48 @@ class BackgroundProcessor {
   private activeJobs = 0;
 
   // Add job to background processing queue
-  enqueue(type: ProcessingJob['type'], data: any, priority = 1): string {
-    const jobId = `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  enqueue(type: ProcessingJob['type'], data: any, priority?: number): string;
+  enqueue(jobConfig: { id: string; type: ProcessingJob['type']; data: any; processor?: (job: any) => Promise<void>; priority?: number }): string;
+  enqueue(typeOrConfig: ProcessingJob['type'] | { id: string; type: ProcessingJob['type']; data: any; processor?: (job: any) => Promise<void>; priority?: number }, data?: any, priority = 1): string {
+    let job: ProcessingJob;
     
-    const job: ProcessingJob = {
-      id: jobId,
-      type,
-      data,
-      priority,
-      retries: 0,
-      maxRetries: 3,
-      createdAt: Date.now()
-    };
+    if (typeof typeOrConfig === 'string') {
+      // Legacy signature: enqueue(type, data, priority)
+      const jobId = `${typeOrConfig}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      job = {
+        id: jobId,
+        type: typeOrConfig,
+        data,
+        priority,
+        retries: 0,
+        maxRetries: 3,
+        createdAt: Date.now()
+      };
+    } else {
+      // New signature: enqueue({ id, type, data, processor })
+      job = {
+        id: typeOrConfig.id,
+        type: typeOrConfig.type,
+        data: typeOrConfig.data,
+        priority: typeOrConfig.priority || 1,
+        retries: 0,
+        maxRetries: 3,
+        createdAt: Date.now(),
+        processor: typeOrConfig.processor
+      };
+    }
 
     this.queue.push(job);
     this.queue.sort((a, b) => b.priority - a.priority); // Higher priority first
     
-    logger.info(`Background job enqueued: ${jobId} (${type})`);
+    logger.info(`Background job enqueued: ${job.id} (${job.type})`);
     
     // Start processing if not already running
     if (!this.processing) {
       this.startProcessing();
     }
     
-    return jobId;
+    return job.id;
   }
 
   private async startProcessing(): Promise<void> {
@@ -76,6 +95,13 @@ class BackgroundProcessor {
           break;
         case 'SCORING':
           await this.processScoring(job.data);
+          break;
+        case 'COMPETITOR_INTEGRATION':
+          if (job.processor) {
+            await job.processor(job);
+          } else {
+            logger.error(`No processor function provided for COMPETITOR_INTEGRATION job: ${job.id}`);
+          }
           break;
       }
       
