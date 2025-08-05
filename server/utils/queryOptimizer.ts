@@ -492,8 +492,11 @@ export async function getDashboardDataOptimized(
       deviceType: deviceType,
       valuePreview: metric.valuePreview,
       rawValue: metric.value,
+      valueType: typeof metric.value,
       timePeriod: metric.timePeriod,
       parsedValue: value,
+      hasValueProperty: 'value' in metric,
+      allMetricKeys: Object.keys(metric),
       isJSON: metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')
     });
     
@@ -566,10 +569,17 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // Use correct parser: parseMetricPercentage for Traffic Channels, parseMetricValue for others
-        if (m.metricName === 'Traffic Channels') {
+        // Use correct parser: parseMetricPercentage for both Traffic Channels and Device Distribution CD_Avg data
+        if (m.metricName === 'Traffic Channels' || (m.metricName === 'Device Distribution' && m.sourceType === 'CD_Avg')) {
           const percentageResult = parseMetricPercentage(m.value);
           finalValue = percentageResult ? percentageResult.percentage : 0;
+          console.log('🔍 PARSE SUCCESS - Device Distribution CD_Avg:', {
+            metricName: m.metricName,
+            sourceType: m.sourceType,
+            channel: m.channel,
+            rawValue: m.value,
+            parsedPercentage: finalValue
+          });
         } else {
           finalValue = parseMetricValue(m.value);
         }
