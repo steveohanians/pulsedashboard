@@ -277,6 +277,23 @@ export async function getDashboardDataOptimized(
         
         // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
+          // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
+          // Get the CD Average data from the original processed data
+          const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');
+          
+          // Add CD Average metrics to each grouped period so they appear as flat lines
+          Object.keys(groupedPeriods).forEach(periodKey => {
+            cdAvgMetrics.forEach(metric => {
+              groupedPeriods[periodKey].push({
+                metricName: metric.metricName,
+                value: metric.value,
+                sourceType: 'CD_Avg', // Standardize to CD_Avg for chart display
+                timePeriod: periodKey,
+                channel: metric.channel,
+                competitorId: null
+              });
+            });
+          });
   
           timeSeriesData = groupedPeriods;
           periodsToQuery = Object.keys(groupedPeriods).sort();

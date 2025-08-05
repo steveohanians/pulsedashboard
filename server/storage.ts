@@ -498,11 +498,46 @@ export class DatabaseStorage implements IStorage {
     // CD_Avg should NEVER be filtered by any criteria
     // It always represents the full CD portfolio regardless of industry filters
     // logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
-    const allMetrics = await db.select().from(metrics)
+    let allMetrics = await db.select().from(metrics)
       .where(and(
         eq(metrics.sourceType, 'CD_Avg'),
         eq(metrics.timePeriod, period)
       ));
+    
+    // If no metrics found for the requested period, fall back to most recent available portfolio data
+    if (allMetrics.length === 0) {
+      // Find the most recent period with CD_Avg data
+      const recentMetrics = await db.select().from(metrics)
+        .where(eq(metrics.sourceType, 'CD_Avg'))
+        .orderBy(sql`${metrics.timePeriod} DESC`)
+        .limit(50); // Get recent periods to find the latest data
+      
+      if (recentMetrics.length > 0) {
+        // Group by time period and pick the most recent one
+        const periodGroups: Record<string, Metric[]> = {};
+        recentMetrics.forEach(metric => {
+          if (!periodGroups[metric.timePeriod]) {
+            periodGroups[metric.timePeriod] = [];
+          }
+          periodGroups[metric.timePeriod].push(metric);
+        });
+        
+        // Get the most recent period with data
+        const sortedPeriods = Object.keys(periodGroups).sort().reverse();
+        if (sortedPeriods.length > 0) {
+          const mostRecentPeriod = sortedPeriods[0];
+          const fallbackMetrics = periodGroups[mostRecentPeriod];
+          
+          // Create new metrics with the requested period but fallback values
+          allMetrics = fallbackMetrics.map(metric => ({
+            ...metric,
+            timePeriod: period // Override the time period to match the request
+          }));
+          
+          logger.info(`CD_Avg fallback: Using ${mostRecentPeriod} data for period ${period} (${allMetrics.length} metrics)`);
+        }
+      }
+    }
     
     // Debug traffic channel data specifically for CD_Avg - disabled for performance
     // const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
