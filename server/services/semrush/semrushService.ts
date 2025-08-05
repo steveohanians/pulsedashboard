@@ -53,8 +53,13 @@ export class SemrushService {
     const periods: string[] = [];
     const now = new Date();
     
-    // Start from last completed month (current month - 1)
-    let currentDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    // SEMrush data is only available up to 2025-06 (June 2025)
+    // Cap the start period to respect SEMrush data availability
+    const maxAvailableDate = new Date(2025, 5, 1); // June 2025 (month 5 = June)
+    const lastCompletedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    
+    // Use the earlier of: last completed month OR max available SEMrush date
+    let currentDate = lastCompletedMonth <= maxAvailableDate ? lastCompletedMonth : maxAvailableDate;
     
     for (let i = 0; i < 15; i++) {
       const year = currentDate.getFullYear();
@@ -82,7 +87,7 @@ export class SemrushService {
       const params = new URLSearchParams({
         key: this.apiKey,
         targets: domain,
-        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate',
+        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel',
         display_date: displayDate
       });
 
@@ -109,17 +114,52 @@ export class SemrushService {
         return {};
       }
 
-      // Headers: target,visits,users,pages_per_visit,time_on_site,bounce_rate
+      // Headers: target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel
       const data = lines[1].split(';');
+      
+      const totalVisits = parseFloat(data[1]) || 0; // Total visits for percentage calculation
+      
+      // Extract traffic channel data from Summary endpoint
+      const trafficChannels = [];
+      if (totalVisits > 0) {
+        const channelData = [
+          { name: 'Direct', visits: parseFloat(data[6]) || 0 },
+          { name: 'Referral', visits: parseFloat(data[7]) || 0 },
+          { name: 'Organic Search', visits: parseFloat(data[10]) || 0 }, // search_organic
+          { name: 'Paid Search', visits: parseFloat(data[11]) || 0 }, // search_paid
+          { name: 'Social Media', visits: (parseFloat(data[12]) || 0) + (parseFloat(data[13]) || 0) }, // social_organic + social_paid
+          { name: 'Email', visits: parseFloat(data[14]) || 0 }, // mail
+          { name: 'Display Ads', visits: parseFloat(data[15]) || 0 }, // display_ad
+          { name: 'Other', visits: parseFloat(data[16]) || 0 } // unknown_channel
+        ];
+        
+        // Filter out channels with no traffic and calculate percentages
+        channelData.forEach(channel => {
+          if (channel.visits > 0) {
+            trafficChannels.push({
+              channel: channel.name,
+              sessions: Math.round(channel.visits),
+              percentage: Math.round((channel.visits / totalVisits) * 100 * 10) / 10 // Round to 1 decimal
+            });
+          }
+        });
+      }
       
       const metrics = {
         bounceRate: parseFloat(data[5]) || 0, // bounce_rate column (already as decimal)
         sessionDuration: parseFloat(data[4]) || 0, // time_on_site column (seconds)
         pagesPerSession: parseFloat(data[3]) || 0, // pages_per_visit column
-        sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0 // visits/users ratio
+        sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0, // visits/users ratio
+        trafficChannels // Add traffic channels to the response
       };
 
-      logger.info('Parsed SEMrush main metrics', { domain, metrics });
+      logger.info('Parsed SEMrush main metrics with traffic channels', { 
+        domain, 
+        metrics: {
+          ...metrics,
+          trafficChannels: trafficChannels.length
+        }
+      });
       return metrics;
 
     } catch (error) {
@@ -136,92 +176,8 @@ export class SemrushService {
    * Fetch traffic channels using summary endpoint
    */
   private async fetchTrafficChannels(domain: string, period: string): Promise<SemrushMetricData['trafficChannels']> {
-    try {
-      const url = `${this.baseUrl}/sources`;
-      
-      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
-      const [year, month] = period.split('-');
-      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
-      
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        target: domain, // Sources API uses 'target' (singular)
-        export_columns: 'target,from_target,traffic_share,traffic,channel',
-        display_date: displayDate,
-        display_limit: '50'
-      });
-
-      logger.info('Fetching SEMrush traffic channels', { domain, period });
-
-      const response = await fetch(`${url}?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`SEMrush traffic channels API error: ${response.status}`);
-      }
-
-      const text = await response.text();
-      logger.debug('SEMrush traffic channels response', { domain, period, response: text });
-
-      if (text.includes('ERROR')) {
-        logger.info('SEMrush traffic channels not available in current subscription', { domain, period, error: text.trim() });
-        return [];
-      }
-
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) {
-        logger.warn('No traffic channel data returned', { domain, period });
-        return [];
-      }
-
-      // Headers: target,direct,search_organic,search_paid,social_organic,referral
-      const data = lines[1].split(';');
-      
-      const totalVisits = data.slice(1).reduce((sum, visits) => sum + (parseInt(visits) || 0), 0);
-      
-      if (totalVisits === 0) {
-        logger.warn('No traffic data available', { domain, period });
-        return [];
-      }
-
-      const channels = [
-        {
-          channel: 'Direct',
-          sessions: parseInt(data[1]) || 0,
-          percentage: ((parseInt(data[1]) || 0) / totalVisits) * 100 // Convert to percentage
-        },
-        {
-          channel: 'Organic Search',
-          sessions: parseInt(data[2]) || 0,
-          percentage: ((parseInt(data[2]) || 0) / totalVisits) * 100 // Convert to percentage
-        },
-        {
-          channel: 'Paid Search',
-          sessions: parseInt(data[3]) || 0,
-          percentage: ((parseInt(data[3]) || 0) / totalVisits) * 100 // Convert to percentage
-        },
-        {
-          channel: 'Social Media',
-          sessions: parseInt(data[4]) || 0,
-          percentage: ((parseInt(data[4]) || 0) / totalVisits) * 100 // Convert to percentage
-        },
-        {
-          channel: 'Referral',
-          sessions: parseInt(data[5]) || 0,
-          percentage: ((parseInt(data[5]) || 0) / totalVisits) * 100 // Convert to percentage
-        }
-      ].filter(channel => channel.sessions > 0); // Only include channels with data
-
-      logger.info('Parsed SEMrush traffic channels', { domain, channelsCount: channels.length, totalVisits });
-      return channels;
-
-    } catch (error) {
-      logger.error('Failed to fetch SEMrush traffic channels', { 
-        domain, 
-        period, 
-        error: (error as Error).message 
-      });
-      return [];
-    }
+    logger.info('Traffic channels now fetched from Summary endpoint in fetchMainMetrics', { domain, period });
+    return []; // Traffic channels are now included in fetchMainMetrics response
   }
 
   /**
@@ -345,9 +301,8 @@ export class SemrushService {
         logger.info('Fetching SEMrush data for period', { domain, period });
 
         // Fetch all metrics in parallel for this period
-        const [mainMetrics, trafficChannels, deviceDistribution] = await Promise.all([
+        const [mainMetrics, deviceDistribution] = await Promise.all([
           this.fetchMainMetrics(domain, period),
-          this.fetchTrafficChannels(domain, period),
           this.fetchDeviceDistribution(domain, period)
         ]);
 
@@ -356,7 +311,7 @@ export class SemrushService {
           sessionDuration: mainMetrics.sessionDuration || 0,
           pagesPerSession: mainMetrics.pagesPerSession || 0,
           sessionsPerUser: mainMetrics.sessionsPerUser || 0,
-          trafficChannels: trafficChannels || [],
+          trafficChannels: mainMetrics.trafficChannels || [], // Now from Summary endpoint
           deviceDistribution: deviceDistribution || []
         };
 

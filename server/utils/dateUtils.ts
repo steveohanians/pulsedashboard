@@ -13,7 +13,18 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   const { year: ptYear, month: ptMonth } = parsePacificTimeDate();
   
   // Create PT date and go back 1 month for target period
-  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT date
+  let targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT date
+  
+  // SEMrush data is only available up to 2025-06 (June 2025)
+  // Cap the target period to respect data availability
+  const maxAvailableDate = new Date(2025, 5, 1); // June 2025 (month 5 = June)
+  if (targetMonth > maxAvailableDate) {
+    targetMonth = maxAvailableDate;
+    logger.info('Capping period mapping to June 2025 due to SEMrush data availability', {
+      originalPeriod: `${ptYear}-${String(ptMonth).padStart(2, '0')}`,
+      cappedPeriod: '2025-06'
+    });
+  }
   
   const currentYear = targetMonth.getFullYear();
   const currentMonth = targetMonth.getMonth(); // 0-indexed, now points to target month
