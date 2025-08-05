@@ -513,14 +513,8 @@ export default function AdminPanel() {
         });
       }, 1000);
       
-      // Show completion notice after estimated time
-      setTimeout(() => {
-        toast({
-          title: "SEMrush Data Integration",
-          description: "📊 Historical data fetching should be complete. Check server logs for detailed status. Refresh the dashboard to see new portfolio averages.",
-          duration: 10000,
-        });
-      }, 30000); // 30 seconds estimated completion time
+      // Start polling for completion status instead of hardcoded timeout
+      startPollingForIntegrationCompletion(response.id);
     },
     onError: (error: Error) => {
       toast({
@@ -530,6 +524,59 @@ export default function AdminPanel() {
       });
     },
   });
+
+  // Function to poll for SEMrush integration completion
+  const startPollingForIntegrationCompletion = (companyId: string) => {
+    const startTime = Date.now();
+    const maxPollTime = 5 * 60 * 1000; // 5 minutes max polling
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        // Check if more than 5 minutes have passed
+        if (Date.now() - startTime > maxPollTime) {
+          clearInterval(pollInterval);
+          toast({
+            title: "SEMrush Data Integration",
+            description: "⏰ Integration is taking longer than expected. Check server logs for status. Portfolio averages will update automatically when complete.",
+            duration: 10000,
+          });
+          return;
+        }
+
+        // Check if portfolio averages have been updated (indicating completion)
+        const dashboardResponse = await fetch('/api/dashboard/demo-client-id?timePeriod=Last%20Month');
+        if (dashboardResponse.ok) {
+          const dashboardData = await dashboardResponse.json();
+          
+          // Check if we have CD_Avg data in the response (indicating portfolio averages exist)
+          const hasPortfolioData = dashboardData.metrics?.some((metric: any) => 
+            metric.sourceType === 'CD_Avg' && metric.value > 0
+          ) || dashboardData.timeSeriesData && Object.values(dashboardData.timeSeriesData).some((periodData: any) =>
+            Array.isArray(periodData) && periodData.some((metric: any) => 
+              metric.sourceType === 'CD_Avg' && metric.value > 0
+            )
+          );
+
+          if (hasPortfolioData) {
+            clearInterval(pollInterval);
+            
+            // Invalidate queries to refresh the admin panel data
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/demo-client-id"] });
+            
+            toast({
+              title: "SEMrush Data Integration Complete",
+              description: "✅ Historical data has been successfully fetched and portfolio averages updated. Charts now reflect the new data.",
+              duration: 10000,
+            });
+          }
+        }
+      } catch (error) {
+        // Continue polling on error, don't break the process
+        console.warn('Integration completion check failed:', error);
+      }
+    }, 10000); // Check every 10 seconds
+  };
 
   const updateCdPortfolioCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -559,9 +606,11 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      // Also refresh dashboard data to show updated portfolio averages
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/demo-client-id"] });
       toast({
         title: "Company removed from portfolio",
-        description: "Company has been removed from Clear Digital portfolio.",
+        description: "Portfolio averages have been recalculated. Dashboard will refresh automatically.",
       });
     },
     onError: (error: Error) => {
