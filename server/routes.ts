@@ -1569,6 +1569,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Admin endpoint to manually trigger portfolio averages recalculation
+  app.post('/api/admin/cd-portfolio/recalculate-averages', requireAdmin, async (req, res) => {
+    try {
+      logger.info("Manual portfolio averages recalculation triggered", { admin: req.user?.id });
+      
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.ts');
+      const integration = new PortfolioIntegration(storage);
+      
+      // Trigger portfolio averages recalculation
+      await integration.updatePortfolioAverages();
+      
+      // Clear performance cache to ensure fresh data
+      performanceCache.clear();
+      clearCache(); // Clear query optimizer cache
+      
+      logger.info("Portfolio averages recalculation completed successfully");
+      
+      res.json({ 
+        success: true,
+        message: "Portfolio averages recalculated successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error("Error recalculating portfolio averages", { 
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        admin: req.user?.id 
+      });
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to recalculate portfolio averages",
+        error: (error as Error).message
+      });
+    }
+  });
+
   // Metric Prompts management (Admin only)
   app.get("/api/admin/metric-prompts", requireAdmin, async (req, res) => {
     try {
