@@ -23,7 +23,7 @@ export class PortfolioAverageFix {
    * Fix all CD_Avg metrics by recalculating from individual company data
    */
   public static async fixAllCdAvgMetrics(): Promise<void> {
-    logger.info('🔧 Starting CD_Avg portfolio averages fix');
+    logger.info('🔧 Starting MASSIVE CD_Avg portfolio averages fix - ALL TIME PERIODS');
 
     try {
       // Get all unique time periods that have CD_Portfolio data
@@ -31,13 +31,20 @@ export class PortfolioAverageFix {
       logger.info('Found time periods with portfolio data', { periodsCount: periods.length });
 
       let totalFixed = 0;
+      const metricNames = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
       
+      // Fix all metrics for all periods
       for (const period of periods) {
-        const fixedInPeriod = await this.fixMetricsForPeriod(period);
-        totalFixed += fixedInPeriod;
+        logger.info(`🔧 Processing period: ${period}`);
+        for (const metricName of metricNames) {
+          const fixed = await this.fixSpecificMetric(metricName, period);
+          if (fixed) {
+            totalFixed++;
+          }
+        }
       }
 
-      logger.info('✅ CD_Avg portfolio averages fix completed', { 
+      logger.info('✅ MASSIVE CD_Avg portfolio averages fix completed', { 
         periodsProcessed: periods.length,
         totalMetricsFixed: totalFixed 
       });
@@ -136,6 +143,57 @@ export class PortfolioAverageFix {
       currentCdAvg,
       correctAverage
     };
+  }
+
+  /**
+   * Fix a specific metric for a specific period
+   */
+  private static async fixSpecificMetric(metricName: string, period: string): Promise<boolean> {
+    // Get individual company values for this metric and period
+    const portfolioQuery = `
+      SELECT CAST(value::jsonb->>'value' AS NUMERIC) as metric_value
+      FROM metrics 
+      WHERE source_type = 'CD_Portfolio'
+        AND metric_name = $1
+        AND time_period = $2
+      ORDER BY created_at DESC
+    `;
+    
+    const portfolioResult = await db(portfolioQuery, [metricName, period]);
+    const values = (portfolioResult as any[]).map((row: any) => row.metric_value);
+    
+    if (values.length < 2) {
+      return false; // Need at least 2 companies to calculate average
+    }
+    
+    const correctAverage = values.reduce((sum, val) => sum + val, 0) / values.length;
+    
+    // Update the CD_Avg entry directly with proper JSON formatting
+    const updateQuery = `
+      UPDATE metrics 
+      SET value = jsonb_set(value, '{value}', to_jsonb($1::numeric)),
+          created_at = NOW()
+      WHERE source_type = 'CD_Avg' 
+        AND metric_name = $2 
+        AND time_period = $3
+    `;
+    
+    const result = await db(updateQuery, [
+      correctAverage,
+      metricName,
+      period
+    ]);
+    
+    if ((result as any).rowCount > 0) {
+      logger.info(`✅ Fixed ${metricName} for ${period}`, { 
+        individualValues: values,
+        correctAverage: correctAverage,
+        companiesCount: values.length
+      });
+      return true;
+    }
+    
+    return false;
   }
 
   /**
