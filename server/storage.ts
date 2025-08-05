@@ -567,7 +567,18 @@ export class DatabaseStorage implements IStorage {
 
     
     // If no metrics found for the requested period, fall back to most recent available portfolio data
+    // BUT ONLY if there are multiple portfolio companies (can't average single company)
     if (allMetrics.length === 0) {
+      // Check if there are at least 2 portfolio companies for valid averaging
+      const portfolioCompanies = await this.getCdPortfolioCompanies();
+      const activeCompanies = portfolioCompanies.filter(c => c.active);
+      
+      if (activeCompanies.length < 2) {
+        logger.info(`CD_Avg fallback skipped: Only ${activeCompanies.length} portfolio company(ies) - cannot calculate meaningful averages`);
+        return [];
+      }
+      
+      logger.info(`CD_Avg fallback: ${activeCompanies.length} portfolio companies available for averaging`);
       // First check if there's actual CD_Portfolio data for this specific period
       const periodSpecificPortfolio = await db.select().from(metrics)
         .where(and(

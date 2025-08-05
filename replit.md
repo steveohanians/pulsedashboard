@@ -54,6 +54,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Admin GA4 Management Routes**: Comprehensive admin interface for GA4 data management including historical data population and daily data fetching.
 - **Complete GA4 Data Sync Package**: Production-ready single-command GA4 data synchronization clearing existing data and fetching 15 months with precise logic.
 - **Comprehensive Color System Overhaul**: Fixed all color-related CSS issues using CSS variables; updated chart components for consistency.
+- **Critical Single-Company Portfolio Bug Fix**: Resolved major CD_Avg fallback logic issue where synthetic portfolio averages were generated from single-company data, causing incorrect 49.7% bounce rates to appear. Fixed by adding portfolio company count validation - fallback only runs with 2+ active companies, maintaining authentic data integrity and proper business logic (August 2025).
 - **Complete SEMrush Integration Package**: Automated SEMrush integration fetches 15 months of historical data for CD Portfolio companies, including domain extraction, intelligent data processing, portfolio average calculations, and data isolation.
 - **Unified 2-Device Model Implementation**: Standardized device distribution across GA4 and SEMrush to Desktop + Mobile.
 - **Authentic SEMrush Historical Data Integration**: Fetches authentic monthly historical data using SEMrush Analytics API v3, providing real monthly variations for bounce rates, session durations, and engagement metrics.
