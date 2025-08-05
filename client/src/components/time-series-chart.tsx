@@ -162,10 +162,27 @@ function generateRealTimeSeriesData(
     dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(processedAvgCD * 10) / 10;
     
-    // NO COMPETITOR DATA - only show authentic client data
-    // Competitors contain synthetic data, so we exclude them to maintain data integrity
+    // Add actual competitor data for each period
     competitors.forEach(competitor => {
-      dataPoint[competitor.label] = 0; // Show zero instead of synthetic competitor data
+      // Find competitor data for this period
+      const competitorData = periodData.find(d => 
+        d.competitorId === competitor.id && d.metricName === metricName
+      );
+      
+      if (competitorData) {
+        let value = parseMetricValue(competitorData.value);
+        
+        // Apply same conversions as current period
+        if (metricName === 'Bounce Rate') {
+          value = value * 100; // Convert to percentage
+        } else if (metricName === 'Session Duration') {
+          value = value / 60; // Convert to minutes  
+        }
+        
+        dataPoint[competitor.label] = Math.round(value * 10) / 10;
+      } else {
+        dataPoint[competitor.label] = 0; // No data for this period
+      }
     });
     
     data.push(dataPoint);

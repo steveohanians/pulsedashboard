@@ -14,7 +14,7 @@ export interface CompanyMetricData {
 
 export interface MetricProcessingOptions {
   metricName: string;
-  displayMode: 'average' | 'individual'; // average for portfolio, individual for competitors/benchmarks
+  displayMode: 'average' | 'individual'; // average for portfolio/benchmarks, individual for competitors
   sourceType: 'Portfolio' | 'Competitor' | 'Benchmark';
   fallbackValue?: number;
   convertToPercentage?: boolean;
