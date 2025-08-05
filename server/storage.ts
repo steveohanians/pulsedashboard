@@ -498,19 +498,25 @@ export class DatabaseStorage implements IStorage {
     // CD_Avg should NEVER be filtered by any criteria
     // It always represents the full CD portfolio regardless of industry filters
     // logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
+    
+    // SEMrush-specific period mapping: When dashboard requests 2025-07 data,
+    // check for 2025-06 data since SEMrush only has data through June 2025
+    const semrushAvailablePeriod = period === '2025-07' ? '2025-06' : period;
+    
     let allMetrics = await db.select().from(metrics)
       .where(and(
         eq(metrics.sourceType, 'CD_Avg'),
-        eq(metrics.timePeriod, period)
+        eq(metrics.timePeriod, semrushAvailablePeriod)
       ));
     
     // If no metrics found for the requested period, fall back to most recent available portfolio data
     if (allMetrics.length === 0) {
       // First check if there's actual CD_Portfolio data for this specific period
+      // Use SEMrush-available period for portfolio data lookup too
       const periodSpecificPortfolio = await db.select().from(metrics)
         .where(and(
           eq(metrics.sourceType, 'CD_Portfolio'),
-          eq(metrics.timePeriod, period)
+          eq(metrics.timePeriod, semrushAvailablePeriod)
         ));
       
       let portfolioMetrics: Metric[] = [];
@@ -519,7 +525,7 @@ export class DatabaseStorage implements IStorage {
       if (periodSpecificPortfolio.length > 0) {
         // Use period-specific portfolio data
         portfolioMetrics = periodSpecificPortfolio;
-        logger.info(`CD_Avg calculation: Using period-specific CD_Portfolio data for ${period} (${portfolioMetrics.length} metrics)`);
+        logger.info(`CD_Avg calculation: Using period-specific CD_Portfolio data for ${semrushAvailablePeriod} (mapped from ${period}) (${portfolioMetrics.length} metrics)`);
       } else {
         // Fallback: Find the most recent period with CD_Portfolio data
         const recentPortfolioMetrics = await db.select().from(metrics)
