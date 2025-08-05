@@ -120,25 +120,8 @@ export function registerRoutes(app: Express): Server {
         industryVertical = "All" 
       } = req.query;
       
-      // 🧮 OPTIMIZATION 1: Check cache first for dashboard data
-      const cacheKey = performanceCache.generateDashboardKey(
-        clientId, 
-        timePeriod as string, 
-        businessSize as string, 
-        industryVertical as string
-      );
-      
-      // FORCE CACHE BYPASS: Clear performance cache before checking  
-      performanceCache.clear();
-      console.error('🟢 PERFORMANCE CACHE CLEARED - TESTING CD_AVG JSON FIX');
-      
-      const cachedResult = performanceCache.get(cacheKey);
-      if (cachedResult) {
-        logger.info(`Cache HIT for dashboard: ${cacheKey}`);
-        return res.json(cachedResult);
-      }
-      
-      logger.info(`Cache MISS for dashboard: ${cacheKey}`);
+      // 🚫 PERFORMANCE CACHING COMPLETELY DISABLED FOR DEBUGGING
+      console.error('🚫 ALL CACHING DISABLED - FRESH DATA PROCESSING');
       
       // Generate dynamic period mapping based on current date
       const { generateDynamicPeriodMapping } = await import("./utils/dateUtils");
@@ -211,9 +194,7 @@ export function registerRoutes(app: Express): Server {
         metrics: result.metrics
       }, 2); // Medium priority
 
-      // Cache the result and return immediately with fresh timestamp
-      performanceCache.set(cacheKey, result);
-      logger.info(`Dashboard data cached: ${cacheKey}`);
+      // 🚫 CACHING DISABLED - NO RESULT STORAGE
       
       // Add fresh timestamp to force frontend refresh
       (result as any).timestamp = Date.now();

@@ -382,7 +382,19 @@ function processMetricsData(
   
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
-    console.error('🔧 PROCESSING TRAFFIC CHANNEL DATA - ENTRY:', metrics.length);
+    // 🎯 AGGRESSIVE CD_AVG DEBUGGING - ENTRY POINT
+    const cdAvgTrafficChannels = metrics.filter(m => m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels');
+    console.error('🚛 PROCESS TRAFFIC ENTRY:', { 
+      totalMetrics: metrics.length, 
+      cdAvgTrafficChannels: cdAvgTrafficChannels.length,
+      firstCdAvg: cdAvgTrafficChannels[0] ? {
+        value: cdAvgTrafficChannels[0].value,
+        type: typeof cdAvgTrafficChannels[0].value,
+        channel: cdAvgTrafficChannels[0].channel,
+        hasChannel: !!cdAvgTrafficChannels[0].channel
+      } : 'NONE'
+    });
+    
     const result: any[] = [];
     
     // Debug traffic channel input data
@@ -403,29 +415,39 @@ function processMetricsData(
     }
     
     metrics.forEach(m => {
+      // 🎯 DEBUG: Check what CD_Avg metrics have channels
+      if (m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels') {
+        console.error('🚛 CD_AVG METRIC CHECK:', {
+          hasChannel: !!m.channel,
+          channel: m.channel,
+          value: m.value,
+          willProcess: !!m.channel
+        });
+      }
+      
       if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel) {
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // COMPREHENSIVE FIX: CD_Avg traffic channels are JSON format {"percentage": 61.6}
+        // 🎯 ENHANCED CD_AVG JSON PROCESSING WITH CONSOLE.ERROR FOR VISIBILITY
         if (m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels') {
-          console.log('🚛 PROCESSING CD_AVG:', { value: m.value, type: typeof m.value, channel: m.channel });
+          console.error('🚛 CD_AVG PROCESSING ENTRY:', { value: m.value, type: typeof m.value, channel: m.channel });
           
           if (typeof m.value === 'string' && m.value.trim().startsWith('{')) {
             try {
               const parsed = JSON.parse(m.value);
-              console.log('🚛 PARSED JSON:', parsed);
+              console.error('🚛 CD_AVG JSON PARSED:', parsed, 'for channel:', m.channel);
               finalValue = Number(parsed.percentage) || 0;
-              console.log('🚛 EXTRACTED PERCENTAGE:', finalValue, 'for channel:', m.channel);
+              console.error('🚛 CD_AVG PERCENTAGE EXTRACTED:', finalValue);
             } catch (e) {
-              console.log('🚛 JSON PARSE ERROR:', e.message);
+              console.error('🚛 CD_AVG JSON PARSE ERROR:', (e as Error).message);
               finalValue = 0;
             }
           } else if (typeof m.value === 'number') {
             finalValue = m.value;
-            console.log('🚛 NUMERIC VALUE:', finalValue);
+            console.error('🚛 CD_AVG NUMERIC VALUE:', finalValue);
           } else {
-            console.log('🚛 UNEXPECTED FORMAT:', m.value);
+            console.error('🚛 CD_AVG UNEXPECTED FORMAT:', m.value);
             finalValue = 0;
           }
         } else {
@@ -558,6 +580,18 @@ function processMetricsData(
     clientTrafficChannels: allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client').length,
     cdAvgTrafficChannels: allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length,
     sampleClientTrafficChannel: allMetrics.find(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client')
+  });
+
+  // AGGRESSIVE DEBUGGING: Check CD_Avg raw data before processing
+  const cdAvgRaw = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
+  console.log('🎯 CD_AVG RAW BEFORE PROCESSING:', {
+    count: cdAvgRaw.length,
+    samples: cdAvgRaw.slice(0, 2).map(m => ({
+      value: m.value,
+      type: typeof m.value,
+      channel: m.channel,
+      valuePreview: typeof m.value === 'string' ? m.value.substring(0, 50) : m.value
+    }))
   });
 
   const processedData = [

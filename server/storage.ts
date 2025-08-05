@@ -752,7 +752,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]> {
-    return await db.select().from(metrics).where(
+    const rawResults = await db.select().from(metrics).where(
       and(
         eq(metrics.clientId, clientId),
         eq(metrics.metricName, metricName),
@@ -760,6 +760,42 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.sourceType, sourceType as any)
       )
     );
+
+    // Process JSON-wrapped values for traffic channels - ANY sourceType with CD_Avg pattern
+    if (metricName === 'Traffic Channels' && (sourceType === 'CD_Avg' || sourceType.includes('CD'))) {
+      console.log('🎯 CD_AVG TRAFFIC CHANNELS PROCESSING:', {
+        rawCount: rawResults.length,
+        firstRaw: rawResults[0] ? {
+          value: rawResults[0].value,
+          type: typeof rawResults[0].value,
+          channel: rawResults[0].channel
+        } : 'NONE'
+      });
+
+      return rawResults.map(metric => {
+        let processedValue = metric.value;
+        
+        // Extract percentage from JSON format
+        if (typeof metric.value === 'string' && metric.value.includes('{')) {
+          try {
+            const parsed = JSON.parse(metric.value);
+            console.log('🚛 PARSED JSON IN STORAGE:', parsed, 'for channel:', metric.channel);
+            processedValue = Number(parsed.percentage) || 0;
+            console.log('🚛 EXTRACTED PERCENTAGE IN STORAGE:', processedValue);
+          } catch (e) {
+            console.log('🚛 JSON PARSE ERROR IN STORAGE:', (e as Error).message);
+            processedValue = 0;
+          }
+        }
+        
+        return {
+          ...metric,
+          value: processedValue
+        };
+      });
+    }
+
+    return rawResults;
   }
 
   async createMetric(insertMetric: InsertMetric): Promise<Metric> {
