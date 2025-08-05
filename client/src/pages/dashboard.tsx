@@ -146,6 +146,17 @@ export default function Dashboard() {
     await refetchDashboard();
   };
 
+  // Log data changes for debugging
+  useEffect(() => {
+    if (dashboardData) {
+      console.log("📊 Dashboard data updated:", {
+        hasMetrics: !!dashboardData.metrics,
+        metricsCount: dashboardData.metrics?.length,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [dashboardData]);
+
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: ["/api/filters", businessSize, industryVertical],
     queryFn: () => fetch(`/api/filters?currentBusinessSize=${encodeURIComponent(businessSize)}&currentIndustryVertical=${encodeURIComponent(industryVertical)}`)

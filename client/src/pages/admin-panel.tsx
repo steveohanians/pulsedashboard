@@ -579,10 +579,12 @@ export default function AdminPanel() {
             
             console.log("🔄 Cache cleared after portfolio integration completion");
             
+            // Integration complete - cache cleared and data will refresh
+            
             toast({
-              title: "Portfolio Integration Complete",
-              description: "✅ Company added successfully! Portfolio averages updated and dashboard data refreshed. No manual refresh needed.",
-              duration: 8000,
+              title: "Portfolio Integration Complete", 
+              description: "✅ Company added successfully! Portfolio averages updated and dashboard data refreshed. Navigate to dashboard to see changes.",
+              duration: 10000,
             });
           }
         }
@@ -630,7 +632,8 @@ export default function AdminPanel() {
       
       toast({
         title: "Company removed from portfolio",
-        description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically.",
+        description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically. Navigate to dashboard to see updated numbers.",
+        duration: 10000,
       });
     },
     onError: (error: Error) => {
