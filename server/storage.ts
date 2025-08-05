@@ -336,7 +336,16 @@ export class DatabaseStorage implements IStorage {
         );
         logger.info('All portfolio metrics deleted (last company)');
       } else {
-        // Delete only CD_Avg calculated metrics, preserve CD_Portfolio source data
+        // Delete the specific company's CD_Portfolio metrics first (FIX FOR ORPHANED RECORDS)
+        await db.delete(metrics).where(
+          and(
+            eq(metrics.sourceType, 'CD_Portfolio'),
+            eq(metrics.competitorId, id)
+          )
+        );
+        logger.info('Deleted specific company CD_Portfolio metrics', { companyId: id });
+        
+        // Delete only CD_Avg calculated metrics, preserve other companies' CD_Portfolio source data
         await this.deleteAllPortfolioMetrics();
         logger.info('CD_Avg calculated metrics cleared for recalculation');
         
