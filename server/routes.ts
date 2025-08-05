@@ -1724,10 +1724,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Get all metrics for this company
-      const metrics = await storage.getMetricsByFilters({
-        sourceType: 'CD_Portfolio',
-        cdPortfolioCompanyId: companyId
-      });
+      const metrics = await storage.getMetricsByCompanyId(companyId);
 
       // Group metrics by type and time period
       const groupedData = metrics.reduce((acc: any, metric: any) => {

@@ -3587,9 +3587,14 @@ export default function AdminPanel() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
                                   {(metrics as any[]).map((metric, index) => (
                                     <div key={index} className="bg-white rounded p-2 border">
-                                      <div><span className="font-medium">Value:</span> {metric.value}</div>
+                                      <div><span className="font-medium">Value:</span> {
+                                        typeof metric.value === 'object' && metric.value !== null 
+                                          ? (metric.value.value ?? metric.value.source ?? JSON.stringify(metric.value))
+                                          : metric.value
+                                      }</div>
                                       {metric.channel && <div><span className="font-medium">Channel:</span> {metric.channel}</div>}
                                       {metric.deviceType && <div><span className="font-medium">Device:</span> {metric.deviceType}</div>}
+                                      {metric.sourceType && <div><span className="font-medium">Source:</span> {metric.sourceType}</div>}
                                     </div>
                                   ))}
                                 </div>
