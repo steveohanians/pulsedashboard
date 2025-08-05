@@ -311,10 +311,10 @@ export class DatabaseStorage implements IStorage {
       await this.cdPortfolioCompanyRepo.delete(id);
       logger.info('Company record deleted', { companyId: id });
 
-      // Step 3: Delete ALL existing CD_Portfolio and CD_Avg metrics
-      // Since individual company metrics aren't tracked, we delete all and recalculate
+      // Step 3: Delete only CD_Avg calculated metrics
+      // Preserve CD_Portfolio source data from remaining companies
       await this.deleteAllPortfolioMetrics();
-      logger.info('All portfolio metrics cleared for recalculation');
+      logger.info('CD_Avg calculated metrics cleared for recalculation');
 
       // Step 4: Recalculate portfolio averages from remaining active companies
       await this.recalculatePortfolioAverages();
@@ -1082,26 +1082,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Delete both CD_Portfolio and CD_Avg metrics for complete portfolio cleanup
+   * Delete only CD_Avg calculated metrics, preserving CD_Portfolio source data
+   * for company-specific deletion (since we can't identify which source data belongs to which company)
    */
   private async deleteAllPortfolioMetrics(): Promise<void> {
-    logger.info('Deleting all portfolio metrics (CD_Portfolio source data + CD_Avg calculated averages)');
+    logger.info('Deleting only CD_Avg calculated metrics (preserving CD_Portfolio source data for remaining companies)');
     
-    // Delete both CD_Portfolio and CD_Avg metrics for complete cleanup
-    const cdPortfolioDeleted = await db
-      .delete(metrics)
-      .where(eq(metrics.sourceType, 'CD_Portfolio' as any))
-      .returning({ id: metrics.id });
-
+    // Only delete CD_Avg metrics - these will be recalculated from remaining companies' data
+    // Preserve CD_Portfolio source data since we can't identify which metrics belong to which company
     const cdAvgDeleted = await db
       .delete(metrics)
       .where(eq(metrics.sourceType, 'CD_Avg' as any))
       .returning({ id: metrics.id });
     
-    logger.info('Complete portfolio metrics deletion completed', {
-      cdPortfolioDeleted: cdPortfolioDeleted.length,
+    logger.info('CD_Avg calculated metrics deletion completed', {
       cdAvgDeleted: cdAvgDeleted.length,
-      note: 'Complete portfolio data cleanup performed'
+      note: 'CD_Portfolio source data preserved for recalculation from remaining companies'
     });
   }
 
