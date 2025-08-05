@@ -765,7 +765,6 @@ export default function AdminPanel() {
   };
 
   const handleDeleteCdPortfolioCompany = (id: string) => {
-    setDeletingCompanyId(id);
     deleteCdPortfolioCompanyMutation.mutate(id);
   };
 
@@ -2991,7 +2990,12 @@ export default function AdminPanel() {
                                   }
                                 }}>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => setDeletingCompanyId(company.id)}
+                                    >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
