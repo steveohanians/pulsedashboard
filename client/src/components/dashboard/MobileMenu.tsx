@@ -87,25 +87,38 @@ export default function MobileMenu({
           {/* Admin links */}
           {userRole === "Admin" && (
             <div className="space-y-3 mb-8 pt-4 border-t border-slate-200">
-              <h3 className="font-semibold text-slate-700 mb-4">Admin Actions</h3>
-              <Link href="/admin?tab=clients">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Manage Clients
-                </Button>
-              </Link>
-              <Link href="/admin?tab=users">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Users
-                </Button>
-              </Link>
-              <Link href="/admin?tab=settings">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
+              <h3 className="font-semibold text-slate-700 mb-4">Admin Panel</h3>
+              
+              {/* Main Admin Panel Link */}
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="w-full justify-start bg-slate-50 hover:bg-slate-100 font-medium">
                   <Settings className="h-4 w-4 mr-2" />
-                  System Settings
+                  Admin Panel
                 </Button>
               </Link>
+              
+              {/* Specific Admin Actions */}
+              <div className="space-y-2 mt-4">
+                <p className="text-xs text-slate-500 font-medium px-2">Quick Actions:</p>
+                <Link href="/admin?tab=clients">
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <Building2 className="h-3 w-3 mr-2" />
+                    Manage Clients
+                  </Button>
+                </Link>
+                <Link href="/admin?tab=users">
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <Users className="h-3 w-3 mr-2" />
+                    Manage Users
+                  </Button>
+                </Link>
+                <Link href="/admin?tab=settings">
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <Settings className="h-3 w-3 mr-2" />
+                    System Settings
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
 
