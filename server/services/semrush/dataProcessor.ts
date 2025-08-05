@@ -164,17 +164,27 @@ export class SemrushDataProcessor {
       for (const metricName of metricNames) {
         const values: number[] = [];
         
+        logger.info(`🧮 Calculating average for ${metricName} in ${period}`, {
+          companiesCount: allCompanyMetrics.size,
+          companyIds: Array.from(allCompanyMetrics.keys())
+        });
+        
         for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
           const metric = data.metrics.find((m: InsertMetric) => 
             m.metricName === metricName && m.timePeriod === period
           );
           if (metric && metric.value && typeof metric.value === 'object' && 'value' in metric.value) {
-            values.push(metric.value.value as number);
+            const value = metric.value.value as number;
+            values.push(value);
+            logger.info(`🧮 Found ${metricName} value: ${value} for company ${companyId}`);
+          } else {
+            logger.warn(`🧮 No ${metricName} value found for company ${companyId} in ${period}`);
           }
         }
 
         if (values.length > 0) {
           const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+          logger.info(`🧮 CALCULATED AVERAGE: ${metricName} = ${average} from values [${values.join(', ')}]`);
           avgMetrics.push({
             clientId: null,
             competitorId: null,
@@ -186,6 +196,8 @@ export class SemrushDataProcessor {
             timePeriod: period,
             channel: null
           });
+        } else {
+          logger.warn(`🧮 No values found for ${metricName} in ${period}`);
         }
       }
 
