@@ -525,26 +525,45 @@ export class DatabaseStorage implements IStorage {
     // It always represents the full CD portfolio regardless of industry filters
     // logger.debug('CD_Avg should NEVER be filtered - returning all CD metrics for period');
     
-    // SEMrush-specific period mapping: When dashboard requests 2025-07 data,
-    // check for 2025-06 data since SEMrush only has data through June 2025
-    const semrushAvailablePeriod = period === '2025-07' ? '2025-06' : period;
-    
+    // Enhanced period fallback: Find most recent available month when requested month has no data
     let allMetrics = await db.select().from(metrics)
       .where(and(
         eq(metrics.sourceType, 'CD_Avg'),
-        eq(metrics.timePeriod, semrushAvailablePeriod)
+        eq(metrics.timePeriod, period)
       ));
+    
+    // If no data found for requested period, automatically fall back to most recent available month
+    if (allMetrics.length === 0) {
+      logger.info(`No CD_Avg data found for period ${period}, falling back to most recent available month`);
+      
+      // Get all available CD_Avg periods sorted by most recent first
+      const availablePeriods = await db.selectDistinct({ timePeriod: metrics.timePeriod })
+        .from(metrics)
+        .where(eq(metrics.sourceType, 'CD_Avg'))
+        .orderBy(sql`${metrics.timePeriod} DESC`)
+        .limit(5);
+      
+      if (availablePeriods.length > 0) {
+        const mostRecentPeriod = availablePeriods[0].timePeriod;
+        logger.info(`Using most recent available CD_Avg data from period ${mostRecentPeriod} instead of ${period}`);
+        
+        allMetrics = await db.select().from(metrics)
+          .where(and(
+            eq(metrics.sourceType, 'CD_Avg'),
+            eq(metrics.timePeriod, mostRecentPeriod)
+          ));
+      }
+    }
       
 
     
     // If no metrics found for the requested period, fall back to most recent available portfolio data
     if (allMetrics.length === 0) {
       // First check if there's actual CD_Portfolio data for this specific period
-      // Use SEMrush-available period for portfolio data lookup too
       const periodSpecificPortfolio = await db.select().from(metrics)
         .where(and(
           eq(metrics.sourceType, 'CD_Portfolio'),
-          eq(metrics.timePeriod, semrushAvailablePeriod)
+          eq(metrics.timePeriod, period)
         ));
       
       let portfolioMetrics: Metric[] = [];
@@ -553,7 +572,7 @@ export class DatabaseStorage implements IStorage {
       if (periodSpecificPortfolio.length > 0) {
         // Use period-specific portfolio data
         portfolioMetrics = periodSpecificPortfolio;
-        logger.info(`CD_Avg calculation: Using period-specific CD_Portfolio data for ${semrushAvailablePeriod} (mapped from ${period}) (${portfolioMetrics.length} metrics)`);
+        logger.info(`CD_Avg calculation: Using period-specific CD_Portfolio data for ${period} (${portfolioMetrics.length} metrics)`);
       } else {
         // Fallback: Find the most recent period with CD_Portfolio data
         const recentPortfolioMetrics = await db.select().from(metrics)
