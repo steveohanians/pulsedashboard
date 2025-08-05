@@ -2774,14 +2774,17 @@ export default function AdminPanel() {
                                   <AlertDialogCancel disabled={deleteCdPortfolioCompanyMutation.isPending}>
                                     Cancel
                                   </AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={() => handleDeleteCdPortfolioCompany(company.id)}
+                                  <Button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDeleteCdPortfolioCompany(company.id);
+                                    }}
                                     disabled={deleteCdPortfolioCompanyMutation.isPending}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
                                     {deleteCdPortfolioCompanyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                     {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
-                                  </AlertDialogAction>
+                                  </Button>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -2956,7 +2959,11 @@ export default function AdminPanel() {
                                     </form>
                                   </DialogContent>
                                 </Dialog>
-                                <AlertDialog>
+                                <AlertDialog open={deletingCompanyId === company.id} onOpenChange={(open) => {
+                                  if (!open && !deleteCdPortfolioCompanyMutation.isPending) {
+                                    setDeletingCompanyId(null);
+                                  }
+                                }}>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                       <Trash2 className="h-4 w-4" />
@@ -2970,14 +2977,18 @@ export default function AdminPanel() {
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        onClick={() => deleteCdPortfolioCompanyMutation.mutate(company.id)}
+                                      <AlertDialogCancel disabled={deleteCdPortfolioCompanyMutation.isPending}>Cancel</AlertDialogCancel>
+                                      <Button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handleDeleteCdPortfolioCompany(company.id);
+                                        }}
                                         disabled={deleteCdPortfolioCompanyMutation.isPending}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >
+                                        {deleteCdPortfolioCompanyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                         {deleteCdPortfolioCompanyMutation.isPending ? "Removing..." : "Remove from Portfolio"}
-                                      </AlertDialogAction>
+                                      </Button>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
