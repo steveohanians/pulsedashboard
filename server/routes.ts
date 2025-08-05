@@ -13,6 +13,7 @@ import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { parseMetricValue } from "./utils/metricParser";
 import { performanceCache } from "./cache/performance-cache";
+import { CompetitorIntegration } from "./services/semrush/competitorIntegration";
 
 import { backgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
@@ -53,6 +54,9 @@ function requireAdmin(req: any, res: any, next: any) {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Initialize competitor integration with storage
+  const competitorIntegration = new CompetitorIntegration(storage);
 
   // Disabled per user request
 
@@ -1097,6 +1101,52 @@ export function registerRoutes(app: Express): Server {
       logger.info("Cleared caches after competitor creation", { 
         competitorId: competitor.id, 
         clientId: validatedData.clientId
+      });
+
+      // Enqueue SEMrush historical data integration in background
+      backgroundProcessor.enqueue({
+        id: `COMPETITOR_INTEGRATION_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+        type: 'COMPETITOR_INTEGRATION',
+        data: { competitor },
+        processor: async (job) => {
+          try {
+            logger.info('Starting background SEMrush integration for competitor', { 
+              competitorId: competitor.id,
+              jobId: job.id 
+            });
+
+            const result = await competitorIntegration.processNewCompetitor(competitor);
+            
+            if (result.success) {
+              logger.info('Background competitor SEMrush integration completed', {
+                competitorId: competitor.id,
+                jobId: job.id,
+                periodsProcessed: result.periodsProcessed,
+                metricsStored: result.metricsStored,
+                trafficChannelsStored: result.trafficChannelsStored,
+                deviceDistributionStored: result.deviceDistributionStored
+              });
+
+              // Clear caches again after data integration
+              clearCache();
+              performanceCache.clear();
+              
+            } else {
+              logger.error('Background competitor SEMrush integration failed', {
+                competitorId: competitor.id,
+                jobId: job.id,
+                error: result.error
+              });
+            }
+          } catch (error) {
+            logger.error('Error in background competitor integration', {
+              competitorId: competitor.id,
+              jobId: job.id,
+              error: (error as Error).message,
+              stack: (error as Error).stack
+            });
+          }
+        }
       });
       
       res.status(201).json(competitor);

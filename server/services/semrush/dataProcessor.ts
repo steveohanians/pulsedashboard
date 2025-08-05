@@ -52,6 +52,47 @@ export class SemrushDataProcessor {
   }
 
   /**
+   * Convert SEMrush data to our database metric format for competitors
+   */
+  public processCompetitorData(
+    competitorId: string, 
+    historicalData: Map<string, SemrushMetricData>
+  ): ProcessedMetricData {
+    logger.info('Processing SEMrush data for competitor', { 
+      competitorId, 
+      periodsCount: historicalData.size 
+    });
+
+    const metrics: InsertMetric[] = [];
+    const trafficChannelMetrics: InsertMetric[] = [];
+    const deviceDistributionMetrics: InsertMetric[] = [];
+
+    for (const [period, data] of Array.from(historicalData.entries())) {
+      // Process main metrics for competitor
+      this.processCompetitorMainMetrics(competitorId, period, data, metrics);
+      
+      // Process traffic channels for competitor
+      this.processCompetitorTrafficChannels(competitorId, period, data.trafficChannels, trafficChannelMetrics);
+      
+      // Process device distribution for competitor
+      this.processCompetitorDeviceDistribution(competitorId, period, data.deviceDistribution, deviceDistributionMetrics);
+    }
+
+    logger.info('Completed SEMrush competitor data processing', {
+      competitorId,
+      mainMetrics: metrics.length,
+      trafficChannelMetrics: trafficChannelMetrics.length,
+      deviceDistributionMetrics: deviceDistributionMetrics.length
+    });
+
+    return {
+      metrics,
+      trafficChannelMetrics,
+      deviceDistributionMetrics
+    };
+  }
+
+  /**
    * Process main analytics metrics
    */
   private processMainMetrics(
@@ -134,6 +175,99 @@ export class SemrushDataProcessor {
             source: 'semrush'
           },
           sourceType: 'CD_Portfolio',
+          timePeriod: period,
+          channel: device.device
+        });
+      }
+    }
+  }
+
+  /**
+   * Process main analytics metrics for competitors
+   */
+  private processCompetitorMainMetrics(
+    competitorId: string,
+    period: string,
+    data: SemrushMetricData,
+    metrics: InsertMetric[]
+  ): void {
+    const mainMetrics = [
+      { name: 'Bounce Rate', value: data.bounceRate },
+      { name: 'Session Duration', value: data.sessionDuration },
+      { name: 'Pages per Session', value: data.pagesPerSession },
+      { name: 'Sessions per User', value: data.sessionsPerUser }
+    ];
+
+    for (const metric of mainMetrics) {
+      if (metric.value > 0) { // Only store non-zero values
+        metrics.push({
+          clientId: null,
+          competitorId: competitorId,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
+          metricName: metric.name,
+          value: { value: metric.value, source: 'semrush' },
+          sourceType: 'Competitor',
+          timePeriod: period,
+          channel: null
+        });
+      }
+    }
+  }
+
+  /**
+   * Process traffic channel data for competitors
+   */
+  private processCompetitorTrafficChannels(
+    competitorId: string,
+    period: string,
+    channels: SemrushMetricData['trafficChannels'],
+    trafficChannelMetrics: InsertMetric[]
+  ): void {
+    for (const channel of channels) {
+      if (channel.percentage > 0) {
+        trafficChannelMetrics.push({
+          clientId: null,
+          competitorId: competitorId,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
+          metricName: 'Traffic Channels',
+          value: { 
+            percentage: channel.percentage,
+            sessions: channel.sessions,
+            source: 'semrush'
+          },
+          sourceType: 'Competitor',
+          timePeriod: period,
+          channel: channel.channel
+        });
+      }
+    }
+  }
+
+  /**
+   * Process device distribution data for competitors
+   */
+  private processCompetitorDeviceDistribution(
+    competitorId: string,
+    period: string,
+    devices: SemrushMetricData['deviceDistribution'],
+    deviceDistributionMetrics: InsertMetric[]
+  ): void {
+    for (const device of devices) {
+      if (device.percentage > 0) {
+        deviceDistributionMetrics.push({
+          clientId: null,
+          competitorId: competitorId,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
+          metricName: 'Device Distribution',
+          value: {
+            percentage: device.percentage,
+            sessions: device.sessions,
+            source: 'semrush'
+          },
+          sourceType: 'Competitor',
           timePeriod: period,
           channel: device.device
         });
