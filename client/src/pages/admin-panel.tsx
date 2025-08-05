@@ -2051,7 +2051,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Loading State */}
-                {benchmarkCompaniesLoading ? (
+                {benchmarkLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading benchmark companies...</span>
@@ -2567,7 +2567,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Loading State */}
-                {cdPortfolioCompaniesLoading ? (
+                {cdPortfolioLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading portfolio companies...</span>
