@@ -1,6 +1,6 @@
 // Database query optimization utilities
 import { storage } from "../storage";
-import { parseMetricValue } from "./metricParser";
+import { parseMetricValue, parseMetricPercentage } from "./metricParser";
 import logger from "./logger";
 
 // Cache for frequently accessed data
@@ -461,27 +461,23 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // 🎯 ENHANCED CD_AVG JSON PROCESSING WITH CONSOLE.ERROR FOR VISIBILITY
-        if (m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels') {
-          console.error('🚛 CD_AVG PROCESSING ENTRY:', { value: m.value, type: typeof m.value, channel: m.channel });
+        // 🎯 USE CORRECT PARSER: parseMetricPercentage for Traffic Channels, parseMetricValue for others
+        if (m.metricName === 'Traffic Channels') {
+          console.error('🚛 TRAFFIC CHANNEL PROCESSING:', { 
+            sourceType: m.sourceType, 
+            value: m.value, 
+            type: typeof m.value, 
+            channel: m.channel 
+          });
           
-          if (typeof m.value === 'string' && m.value.trim().startsWith('{')) {
-            try {
-              const parsed = JSON.parse(m.value);
-              console.error('🚛 CD_AVG JSON PARSED:', parsed, 'for channel:', m.channel);
-              finalValue = Number(parsed.percentage) || 0;
-              console.error('🚛 CD_AVG PERCENTAGE EXTRACTED:', finalValue);
-            } catch (e) {
-              console.error('🚛 CD_AVG JSON PARSE ERROR:', (e as Error).message);
-              finalValue = 0;
-            }
-          } else if (typeof m.value === 'number') {
-            finalValue = m.value;
-            console.error('🚛 CD_AVG NUMERIC VALUE:', finalValue);
-          } else {
-            console.error('🚛 CD_AVG UNEXPECTED FORMAT:', m.value);
-            finalValue = 0;
-          }
+          const percentageResult = parseMetricPercentage(m.value);
+          finalValue = percentageResult ? percentageResult.percentage : 0;
+          
+          console.error('🚛 PERCENTAGE RESULT:', { 
+            percentageResult, 
+            finalValue, 
+            channel: m.channel 
+          });
         } else {
           // Regular processing for other source types
           finalValue = parseMetricValue(m.value);
