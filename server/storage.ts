@@ -16,7 +16,7 @@ import {
   type GA4PropertyAccess, type InsertGA4PropertyAccess
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ne, isNull, inArray, sql, like } from "drizzle-orm";
+import { eq, and, or, ne, isNull, inArray, sql, like, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -866,12 +866,38 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
     
-    return await db.select().from(metrics).where(
+    // First try exact period match
+    let competitorMetrics = await db.select().from(metrics).where(
       and(
         inArray(metrics.competitorId, competitorIds),
         eq(metrics.timePeriod, timePeriod)
       )
     );
+    
+    // If no data found for exact period, fall back to most recent available period
+    if (competitorMetrics.length === 0) {
+      // Get the most recent period with competitor data
+      const recentPeriods = await db.select({ timePeriod: metrics.timePeriod })
+        .from(metrics)
+        .where(inArray(metrics.competitorId, competitorIds))
+        .groupBy(metrics.timePeriod)
+        .orderBy(desc(metrics.timePeriod))
+        .limit(1);
+      
+      if (recentPeriods.length > 0) {
+        const fallbackPeriod = recentPeriods[0].timePeriod;
+        console.log(`🔄 Competitor fallback: requested ${timePeriod}, using ${fallbackPeriod}`);
+        
+        competitorMetrics = await db.select().from(metrics).where(
+          and(
+            inArray(metrics.competitorId, competitorIds),
+            eq(metrics.timePeriod, fallbackPeriod)
+          )
+        );
+      }
+    }
+    
+    return competitorMetrics;
   }
 
   // Benchmarks
