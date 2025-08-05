@@ -1617,7 +1617,7 @@ export default function Dashboard() {
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseFloat(competitorMetric.value) : 42.3
+                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : 42.3
                             };
                           })}
                         />
@@ -1639,7 +1639,7 @@ export default function Dashboard() {
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseFloat(competitorMetric.value) : 3.2
+                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : 3.2
                             };
                           })}
                         />
@@ -1673,7 +1673,7 @@ export default function Dashboard() {
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseFloat(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
+                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
                             };
                           })}
                         />
@@ -1689,23 +1689,43 @@ export default function Dashboard() {
                             return result;
                           })()}
                           competitors={competitors.map((comp: any) => {
-                            const deviceData = processDeviceDistributionData();
-                            // Generate device data for this competitor
-                            const seed = comp.id.length + comp.domain.length;
-                            const desktopBase = 50;
-                            const mobileBase = 40;
-                            const tabletBase = 10;
+                            // Find actual device distribution data for this competitor
+                            const competitorDeviceMetrics = metrics.filter((m: any) => 
+                              m.competitorId === comp.id && m.metricName === 'Device Distribution'
+                            );
                             
-                            const desktopVariance = (seed % 20) - 10;
-                            const mobileVariance = (seed % 16) - 8;
+                            const deviceDistribution = { Desktop: 50, Mobile: 50 }; // Default fallback
                             
-                            let desktop = Math.max(30, Math.min(70, desktopBase + desktopVariance));
-                            let mobile = 100 - desktop; // Mobile includes tablet traffic
+                            if (competitorDeviceMetrics.length > 0) {
+                              // Parse competitor device data - reset to 0 first
+                              let desktop = 0;
+                              let mobile = 0;
+                              
+                              competitorDeviceMetrics.forEach(metric => {
+                                if (metric.channel === 'Desktop') {
+                                  const parsed = parseMetricValue(metric.value);
+                                  desktop = parsed;
+                                } else if (metric.channel === 'Mobile') {
+                                  const parsed = parseMetricValue(metric.value);
+                                  mobile = parsed;
+                                }
+                              });
+                              
+                              // Use parsed data if available
+                              if (desktop > 0 || mobile > 0) {
+                                // Normalize to 100% if needed
+                                const total = desktop + mobile;
+                                if (total > 0) {
+                                  deviceDistribution.Desktop = (desktop / total) * 100;
+                                  deviceDistribution.Mobile = (mobile / total) * 100;
+                                }
+                              }
+                            }
                             
                             return {
                               id: comp.id,
                               label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: { Desktop: desktop, Mobile: mobile }
+                              value: deviceDistribution
                             };
                           })}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
