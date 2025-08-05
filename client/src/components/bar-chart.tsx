@@ -458,14 +458,16 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
             />
           )}
           
-          {/* Clear Digital Clients Average bars - FIXED to use solid fill instead of dashed outline */}
+          {/* Clear Digital Clients Average bars - dashed outline with no bottom border */}
           {visibleBars[`${companyName} Clients Avg`] && (
             <Bar 
               dataKey={`${companyName} Clients Avg`} 
-              fill={colors[`${companyName} Clients Avg`]}
-              stroke="transparent"
-              strokeWidth={1}
+              fill="none"
+              stroke={colors[`${companyName} Clients Avg`]}
+              strokeWidth={2}
+              strokeDasharray="5,5"
               radius={[2, 2, 0, 0]}
+              shape={(props: any) => <DashedBar {...props} stroke={colors[`${companyName} Clients Avg`]} strokeDasharray="5,5" hideBottomBorder={true} />}
               isAnimationActive={isInitialRender}
             />
           )}
