@@ -1,5 +1,20 @@
+import { useState } from "react";
+import { Info } from "lucide-react";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
@@ -11,16 +26,41 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* Disclaimer */}
-        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 lg:p-6">
-          <h3 className="text-xs sm:text-sm font-semibold text-gray-800 mb-2 sm:mb-3">Disclaimer</h3>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            The metrics and rankings presented herein are compiled from multiple third-party sources. 
-            These figures are provided "as-is" for general benchmarking purposes and are not guaranteed 
-            to be complete, reliable, or error‐free. {import.meta.env.VITE_COMPANY_NAME || "Clear Digital"} and its data providers make no 
-            warranties—express or implied—regarding the accuracy, timeliness, or suitability of this 
-            information. Users should verify critical insights against their own analytics before making decisions.
-          </p>
+        {/* Disclaimer Drawer Trigger */}
+        <div className="text-center">
+          <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <DrawerTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs text-gray-500 hover:text-gray-700 p-2"
+              >
+                <Info className="h-3 w-3 mr-1" />
+                View Disclaimer
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="text-left">
+                <DrawerTitle className="text-sm font-semibold text-gray-800">
+                  Disclaimer
+                </DrawerTitle>
+                <DrawerDescription className="text-xs text-gray-600 leading-relaxed">
+                  The metrics and rankings presented herein are compiled from multiple third-party sources. 
+                  These figures are provided "as-is" for general benchmarking purposes and are not guaranteed 
+                  to be complete, reliable, or error‐free. {import.meta.env.VITE_COMPANY_NAME || "Clear Digital"} and its data providers make no 
+                  warranties—express or implied—regarding the accuracy, timeliness, or suitability of this 
+                  information. Users should verify critical insights against their own analytics before making decisions.
+                </DrawerDescription>
+              </DrawerHeader>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button variant="outline" size="sm">
+                    Close
+                  </Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
     </footer>
