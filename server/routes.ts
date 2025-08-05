@@ -1080,19 +1080,29 @@ export function registerRoutes(app: Express): Server {
   // Competitors management
   app.post("/api/competitors", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertCompetitorSchema.parse(req.body);
-      
-      // Verify user has access to this client
-      if (!req.user || (req.user.clientId !== validatedData.clientId && req.user.role !== "Admin")) {
+      // Verify user has access to this client before validation
+      const tempData = insertCompetitorSchema.parse(req.body);
+      if (!req.user || (req.user.clientId !== tempData.clientId && req.user.role !== "Admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const competitor = await storage.createCompetitor(validatedData);
-      logger.info("Created competitor successfully", { 
-        competitorId: competitor.id, 
-        domain: competitor.domain,
-        clientId: validatedData.clientId 
-      });
+      // Use enhanced global creation utility for comprehensive workflow orchestration  
+      const { createCompetitorEnhanced } = await import('./utils/companyCreationUtils');
+      const result = await createCompetitorEnhanced(
+        req.body,
+        req.user,
+        storage,
+        insertCompetitorSchema
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.error,
+          validationErrors: result.validationErrors 
+        });
+      }
+      
+      const competitor = result.company!;
 
       // Clear both cache systems to ensure new competitor appears immediately
       clearCache(); // Clear ALL query optimizer cache
@@ -1100,56 +1110,12 @@ export function registerRoutes(app: Express): Server {
       
       logger.info("Cleared caches after competitor creation", { 
         competitorId: competitor.id, 
-        clientId: validatedData.clientId
+        clientId: competitor.clientId
       });
 
-      // Enqueue SEMrush historical data integration in background
-      backgroundProcessor.enqueue({
-        id: `COMPETITOR_INTEGRATION_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
-        type: 'COMPETITOR_INTEGRATION',
-        data: { competitor },
-        processor: async (job) => {
-          try {
-            logger.info('Starting background SEMrush integration for competitor', { 
-              competitorId: competitor.id,
-              jobId: job.id 
-            });
-
-            const result = await competitorIntegration.processNewCompetitor(competitor);
-            
-            if (result.success) {
-              logger.info('Background competitor SEMrush integration completed', {
-                competitorId: competitor.id,
-                jobId: job.id,
-                periodsProcessed: result.periodsProcessed,
-                metricsStored: result.metricsStored,
-                trafficChannelsStored: result.trafficChannelsStored,
-                deviceDistributionStored: result.deviceDistributionStored
-              });
-
-              // Clear caches again after data integration
-              clearCache();
-              performanceCache.clear();
-              
-            } else {
-              logger.error('Background competitor SEMrush integration failed', {
-                competitorId: competitor.id,
-                jobId: job.id,
-                error: result.error
-              });
-            }
-          } catch (error) {
-            logger.error('Error in background competitor integration', {
-              competitorId: competitor.id,
-              jobId: job.id,
-              error: (error as Error).message,
-              stack: (error as Error).stack
-            });
-          }
-        }
-      });
-      
+      // Enhanced creation utility already handled SEMrush integration in background
       res.status(201).json(competitor);
+
     } catch (error) {
       logger.error("Error creating competitor", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(400).json({ message: "Invalid data" });
@@ -1338,45 +1304,23 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/admin/clients", requireAdmin, async (req, res) => {
     try {
-      // Extract service account ID for GA4 setup (if provided)
-      const { serviceAccountId, ...clientData } = req.body;
-      const validatedData = insertClientSchema.parse(clientData);
+      // Use enhanced global creation utility for comprehensive workflow orchestration
+      const { createClientEnhanced } = await import('./utils/companyCreationUtils');
+      const result = await createClientEnhanced(
+        req.body,
+        req.user!,
+        storage,
+        insertClientSchema
+      );
       
-      // Validate against filter_options table for data integrity
-      const { FilterValidator } = await import("./utils/filterValidation");
-      const validator = new FilterValidator(storage);
-      const filterValidation = await validator.validateEntity({
-        businessSize: validatedData.businessSize,
-        industryVertical: validatedData.industryVertical
-      });
-      
-      if (!filterValidation.isValid) {
-        return res.status(400).json({ message: filterValidation.error });
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.error,
+          validationErrors: result.validationErrors 
+        });
       }
       
-      const client = await storage.createClient(validatedData);
-      
-      // If both GA4 property ID and service account ID are provided, create property access
-      if (validatedData.ga4PropertyId && serviceAccountId) {
-        try {
-          await storage.createGA4PropertyAccess({
-            clientId: client.id,
-            propertyId: validatedData.ga4PropertyId,
-            serviceAccountId: serviceAccountId,
-          });
-          logger.info("Created GA4 property access for new client", { 
-            clientId: client.id, 
-            propertyId: validatedData.ga4PropertyId,
-            serviceAccountId: serviceAccountId
-          });
-        } catch (ga4Error) {
-          logger.warn("Failed to create GA4 property access for new client", { 
-            clientId: client.id, 
-            error: (ga4Error as Error).message 
-          });
-          // Don't fail the client creation if GA4 setup fails
-        }
-      }
+      const client = result.company!;
       
       res.status(201).json(client);
     } catch (error) {
@@ -1462,84 +1406,26 @@ export function registerRoutes(app: Express): Server {
 
   app.post('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertCdPortfolioCompanySchema.parse(req.body);
+      // Use enhanced global creation utility for comprehensive workflow orchestration
+      const { createPortfolioCompanyEnhanced } = await import('./utils/companyCreationUtils');
+      const result = await createPortfolioCompanyEnhanced(
+        req.body,
+        req.user!,
+        storage,
+        insertCdPortfolioCompanySchema
+      );
       
-      // Validate against filter_options table for data integrity
-      const { FilterValidator } = await import("./utils/filterValidation");
-      const validator = new FilterValidator(storage);
-      const filterValidation = await validator.validateEntity({
-        businessSize: validatedData.businessSize,
-        industryVertical: validatedData.industryVertical
-      });
-      
-      if (!filterValidation.isValid) {
-        return res.status(400).json({ message: filterValidation.error });
-      }
-      
-      const newCompany = await storage.createCdPortfolioCompany(validatedData);
-      
-      logger.info("Created CD portfolio company", { 
-        companyId: newCompany.id,
-        companyName: newCompany.name, 
-        admin: req.user?.id 
-      });
-
-      // SEMRUSH INTEGRATION: Automatically fetch 15 months of historical data
-      try {
-        logger.info("🚀 Starting SEMrush integration for new portfolio company", { 
-          companyId: newCompany.id,
-          companyName: newCompany.name,
-          websiteUrl: newCompany.websiteUrl,
-          semrushApiKeyPresent: !!process.env.SEMRUSH_API_KEY
-        });
-
-        const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.ts');
-        const integration = new PortfolioIntegration(storage);
-        
-        // Process SEMrush data in background (non-blocking)
-        integration.processNewPortfolioCompany(newCompany).then((result) => {
-          if (result.success) {
-            logger.info("✅ SEMrush integration completed successfully", {
-              companyId: newCompany.id,
-              companyName: newCompany.name,
-              periodsProcessed: result.periodsProcessed,
-              metricsStored: result.metricsStored,
-              trafficChannelsStored: result.trafficChannelsStored,
-              deviceDistributionStored: result.deviceDistributionStored,
-              averagesUpdated: result.averagesUpdated,
-              totalDataPoints: (result.metricsStored || 0) + (result.trafficChannelsStored || 0) + (result.deviceDistributionStored || 0)
-            });
-          } else {
-            logger.error("❌ SEMrush integration failed", {
-              companyId: newCompany.id,
-              companyName: newCompany.name,
-              error: result.error,
-              apiKeyPresent: !!process.env.SEMRUSH_API_KEY
-            });
-          }
-        }).catch((error) => {
-          logger.error("💥 SEMrush integration error", {
-            companyId: newCompany.id,
-            companyName: newCompany.name,
-            error: (error as Error).message,
-            stack: (error as Error).stack
-          });
-        });
-
-        logger.info("🔄 SEMrush integration started in background", { 
-          companyId: newCompany.id,
-          estimatedCompletionTime: "30-60 seconds",
-          dataToFetch: "15 months of historical data (6 metrics per month)"
-        });
-
-      } catch (error) {
-        logger.error("🚨 Failed to start SEMrush integration", {
-          companyId: newCompany.id,
-          companyName: newCompany.name,
-          error: (error as Error).message,
-          apiKeyPresent: !!process.env.SEMRUSH_API_KEY
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.error,
+          validationErrors: result.validationErrors 
         });
       }
+      
+      const newCompany = result.company!
+      
+      // Enhanced creation utility already handled logging and SEMrush integration
+      // All workflows executed or started in background by global utility
       
       res.status(201).json(newCompany);
     } catch (error) {
@@ -2244,24 +2130,23 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertBenchmarkCompanySchema.parse(req.body);
+      // Use enhanced global creation utility for comprehensive validation
+      const { createBenchmarkCompanyEnhanced } = await import('./utils/companyCreationUtils');
+      const result = await createBenchmarkCompanyEnhanced(
+        req.body,
+        req.user!,
+        storage,
+        insertBenchmarkCompanySchema
+      );
       
-      // Validate against filter_options table for data integrity
-      const { FilterValidator } = await import("./utils/filterValidation");
-      const validator = new FilterValidator(storage);
-      const filterValidation = await validator.validateEntity({
-        businessSize: validatedData.businessSize,
-        industryVertical: validatedData.industryVertical
-      });
-      
-      if (!filterValidation.isValid) {
-        return res.status(400).json({ message: filterValidation.error });
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.error,
+          validationErrors: result.validationErrors 
+        });
       }
       
-      const company = await storage.createBenchmarkCompany(validatedData);
-      
-      // Benchmark company created successfully - no additional data generation needed
-      logger.info("Created benchmark company", { companyId: company.id });
+      const company = result.company!;
       
       res.status(201).json(company);
     } catch (error) {
