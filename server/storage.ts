@@ -492,7 +492,7 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    console.error('🔍 QUERYING CD_AVG METRICS:', { period, filters });
+
     // Debug logging disabled for performance
     // logger.debug(`getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
     
@@ -510,20 +510,7 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.timePeriod, semrushAvailablePeriod)
       ));
       
-    console.error('🔍 RAW CD_AVG METRICS FROM DB:', {
-      period: semrushAvailablePeriod,
-      count: allMetrics.length,
-      trafficChannelSample: allMetrics
-        .filter(m => m.metricName === 'Traffic Channels')
-        .slice(0, 2)
-        .map(m => ({
-          metricName: m.metricName,
-          value: m.value,
-          valueType: typeof m.value,
-          channel: m.channel,
-          timePeriod: m.timePeriod
-        }))
-    });
+
     
     // If no metrics found for the requested period, fall back to most recent available portfolio data
     if (allMetrics.length === 0) {

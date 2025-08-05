@@ -308,19 +308,11 @@ export async function getDashboardDataOptimized(
               // 🎯 CRITICAL FIX: Apply JSON parsing for CD_Avg traffic channels in grouped periods
               let processedValue = metric.value;
               if (metric.metricName === 'Traffic Channels' && metric.sourceType === 'CD_Avg') {
-                console.error('🚛 GROUPED PERIODS - CD_AVG TRAFFIC CHANNEL:', {
-                  value: metric.value,
-                  type: typeof metric.value,
-                  channel: metric.channel
-                });
-                
                 if (typeof metric.value === 'string' && metric.value.includes('{')) {
                   try {
                     const parsed = JSON.parse(metric.value);
                     processedValue = Number(parsed.percentage) || 0;
-                    console.error('🚛 GROUPED PERIODS - EXTRACTED PERCENTAGE:', processedValue);
                   } catch (e) {
-                    console.error('🚛 GROUPED PERIODS - JSON PARSE ERROR:', (e as Error).message);
                     processedValue = 0;
                   }
                 }
@@ -399,33 +391,13 @@ function processMetricsData(
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
   
-  // 🎯 AGGRESSIVE DEBUGGING - CHECK CD_AVG BEFORE PROCESSING
-  const cdAvgTrafficChannels = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
-  console.error('🚛 PROCESS METRICS DATA - CD_AVG TRAFFIC CHANNELS:', {
-    count: cdAvgTrafficChannels.length,
-    samples: cdAvgTrafficChannels.slice(0, 2).map(m => ({
-      value: m.value,
-      type: typeof m.value,
-      channel: m.channel
-    }))
-  });
+
   
 
   
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
-    // 🎯 AGGRESSIVE CD_AVG DEBUGGING - ENTRY POINT
-    const cdAvgTrafficChannels = metrics.filter(m => m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels');
-    console.error('🚛 PROCESS TRAFFIC ENTRY:', { 
-      totalMetrics: metrics.length, 
-      cdAvgTrafficChannels: cdAvgTrafficChannels.length,
-      firstCdAvg: cdAvgTrafficChannels[0] ? {
-        value: cdAvgTrafficChannels[0].value,
-        type: typeof cdAvgTrafficChannels[0].value,
-        channel: cdAvgTrafficChannels[0].channel,
-        hasChannel: !!cdAvgTrafficChannels[0].channel
-      } : 'NONE'
-    });
+
     
     const result: any[] = [];
     
@@ -447,15 +419,7 @@ function processMetricsData(
     }
     
     metrics.forEach(m => {
-      // 🎯 DEBUG: Check what CD_Avg metrics have channels
-      if (m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels') {
-        console.error('🚛 CD_AVG METRIC CHECK:', {
-          hasChannel: !!m.channel,
-          channel: m.channel,
-          value: m.value,
-          willProcess: !!m.channel
-        });
-      }
+
       
       if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel) {
         // Individual channel record format (authentic data)
@@ -486,7 +450,7 @@ function processMetricsData(
           try {
             const channelData = JSON.parse(rawValue);
             if (Array.isArray(channelData)) {
-              logger.debug('🚛 QUERY OPTIMIZER - Parsing GA4 JSON:', {
+              logger.debug('QUERY OPTIMIZER - Parsing GA4 JSON:', {
                 sourceType: m.sourceType,
                 timePeriod: m.timePeriod,
                 channelCount: channelData.length,
