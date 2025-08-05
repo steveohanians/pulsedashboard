@@ -110,7 +110,9 @@ export function registerRoutes(app: Express): Server {
 
   // Dashboard endpoint with performance caching
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
+    console.error('🔵 DASHBOARD ROUTE HIT - CLIENT: ' + req.params.clientId);
     try {
+      console.error('🔵 INSIDE TRY BLOCK');
       const { clientId } = req.params;
       let { 
         timePeriod = "Last Month", 
@@ -126,9 +128,9 @@ export function registerRoutes(app: Express): Server {
         industryVertical as string
       );
       
-      // FORCE CACHE BYPASS: Clear performance cache before checking
+      // FORCE CACHE BYPASS: Clear performance cache before checking  
       performanceCache.clear();
-      console.log('🟢 PERFORMANCE CACHE CLEARED IN ROUTES');
+      console.error('🟢 PERFORMANCE CACHE CLEARED - TESTING CD_AVG JSON FIX');
       
       const cachedResult = performanceCache.get(cacheKey);
       if (cachedResult) {

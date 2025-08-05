@@ -91,11 +91,10 @@ export async function getDashboardDataOptimized(
   industryVertical: string,
   timePeriod?: string
 ) {
-  console.log('🔴 DASHBOARD FUNCTION CALLED - CLIENT:', client.id);
+  logger.info('🔴 DASHBOARD FUNCTION CALLED - CLIENT: ' + client.id);
   
   // TEMPORARY: Clear query cache to force fresh CD_Avg traffic channel processing
   clearCache();
-  console.log('🚛 QUERY CACHE CLEARED - Forcing fresh CD_Avg traffic channel processing');
   logger.info('🚛 QUERY CACHE CLEARED - Forcing fresh CD_Avg traffic channel processing');
 
   const cacheKey = `dashboard-${client.id}-${periodsToQuery.join(',')}-${businessSize}-${industryVertical}`;
@@ -383,6 +382,7 @@ function processMetricsData(
   
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
+    console.error('🔧 PROCESSING TRAFFIC CHANNEL DATA - ENTRY:', metrics.length);
     const result: any[] = [];
     
     // Debug traffic channel input data
@@ -407,43 +407,29 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // Special handling for CD_Avg traffic channels which are stored as JSON objects
-        if (m.sourceType === 'CD_Avg' && typeof m.value === 'string') {
-          logger.info('🚛 PROCESSING CD_AVG TRAFFIC CHANNEL:', {
-            sourceType: m.sourceType,
-            channel: m.channel,
-            valueType: typeof m.value,
-            value: m.value.substring(0, 100)
-          });
-          try {
-            const jsonData = JSON.parse(m.value);
-            finalValue = jsonData.percentage || jsonData.value || jsonData.sessions;
-            logger.info('🚛 CD_AVG PARSING SUCCESS:', {
-              sourceType: m.sourceType,
-              channel: m.channel,
-              originalValue: m.value,
-              parsedValue: finalValue,
-              jsonData: jsonData
-            });
-          } catch (e) {
-            logger.error('🚛 CD_AVG PARSING FAILED:', {
-              sourceType: m.sourceType,
-              channel: m.channel,
-              value: m.value,
-              error: (e as Error).message
-            });
-            finalValue = parseMetricValue(m.value);
+        // COMPREHENSIVE FIX: CD_Avg traffic channels are JSON format {"percentage": 61.6}
+        if (m.sourceType === 'CD_Avg' && m.metricName === 'Traffic Channels') {
+          console.log('🚛 PROCESSING CD_AVG:', { value: m.value, type: typeof m.value, channel: m.channel });
+          
+          if (typeof m.value === 'string' && m.value.trim().startsWith('{')) {
+            try {
+              const parsed = JSON.parse(m.value);
+              console.log('🚛 PARSED JSON:', parsed);
+              finalValue = Number(parsed.percentage) || 0;
+              console.log('🚛 EXTRACTED PERCENTAGE:', finalValue, 'for channel:', m.channel);
+            } catch (e) {
+              console.log('🚛 JSON PARSE ERROR:', e.message);
+              finalValue = 0;
+            }
+          } else if (typeof m.value === 'number') {
+            finalValue = m.value;
+            console.log('🚛 NUMERIC VALUE:', finalValue);
+          } else {
+            console.log('🚛 UNEXPECTED FORMAT:', m.value);
+            finalValue = 0;
           }
         } else {
           // Regular processing for other source types
-          if (m.sourceType === 'CD_Avg') {
-            logger.info('🚛 CD_AVG NON-STRING VALUE:', {
-              sourceType: m.sourceType,
-              channel: m.channel,
-              valueType: typeof m.value,
-              value: m.value
-            });
-          }
           finalValue = parseMetricValue(m.value);
         }
         
