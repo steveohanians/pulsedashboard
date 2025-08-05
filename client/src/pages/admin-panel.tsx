@@ -514,18 +514,19 @@ export default function AdminPanel() {
       
       // Show immediate success message
       toast({
-        title: "Company added to portfolio",
-        description: "SEMrush integration started. Fetching historical data and calculating portfolio averages...",
+        title: "Company added - data syncing",
+        description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
+        duration: 4000,
       });
       
       // Show detailed integration status after a brief delay
       setTimeout(() => {
         toast({
-          title: "SEMrush Integration Running",
-          description: "🔄 Fetching 15 months of historical data. Dashboard will update automatically when complete - no refresh needed.",
-          duration: 6000,
+          title: "📊 Data sync in progress",
+          description: "Fetching 15 months of historical data. Dashboard will refresh when complete.",
+          duration: 8000,
         });
-      }, 1500);
+      }, 2000);
       
       // Start polling for completion status instead of hardcoded timeout
       startPollingForIntegrationCompletion(response.id);

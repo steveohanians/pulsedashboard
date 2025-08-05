@@ -55,6 +55,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Complete GA4 Data Sync Package**: Production-ready single-command GA4 data synchronization clearing existing data and fetching 15 months with precise logic.
 - **Comprehensive Color System Overhaul**: Fixed all color-related CSS issues using CSS variables; updated chart components for consistency.
 - **Critical Single-Company Portfolio Bug Fix**: Resolved major CD_Avg fallback logic issue where synthetic portfolio averages were generated from single-company data, causing incorrect 49.7% bounce rates to appear. Fixed by adding portfolio company count validation - fallback only runs with 2+ active companies, maintaining authentic data integrity and proper business logic (August 2025).
+- **Portfolio Addition Toast Timing Fix**: Corrected misleading toast notifications that claimed "charts updated" immediately when SEMrush background integration actually takes 30-60 seconds. Updated messages to clearly indicate data syncing status and realistic timing expectations (August 2025).
 - **Complete SEMrush Integration Package**: Automated SEMrush integration fetches 15 months of historical data for CD Portfolio companies, including domain extraction, intelligent data processing, portfolio average calculations, and data isolation.
 - **Unified 2-Device Model Implementation**: Standardized device distribution across GA4 and SEMrush to Desktop + Mobile.
 - **Authentic SEMrush Historical Data Integration**: Fetches authentic monthly historical data using SEMrush Analytics API v3, providing real monthly variations for bounce rates, session durations, and engagement metrics.
@@ -76,6 +77,16 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Critical Data Integrity Issue Resolution**: Identified and resolved major data corruption where 1,266 orphaned CD_Portfolio metrics existed without proper portfolio company linkage, causing incorrect CD average calculations. Fixed authentication routing issues causing "/login" redirects. Cleaned orphaned data and established proper data recalculation workflow to ensure authentic portfolio averages (August 2025).
 - **Portfolio Company Deletion Bug Fix**: Fixed critical bug in deletion logic where portfolio company metrics were not being removed when companies were deleted, causing orphaned records to accumulate. Updated `deleteCdPortfolioCompany` method to properly delete specific company's CD_Portfolio metrics before recalculating averages. Removed refresh button from dashboard header per user request (August 2025).
 - **Complete Metrics Schema Overhaul**: Fixed fundamental schema design flaw where portfolio metrics couldn't properly link to their source companies. Added `cd_portfolio_company_id` and `benchmark_company_id` fields to metrics table, enabling proper three-way linking to portfolio companies, competitor companies, and benchmark companies. Updated SEMrush data processor to use correct linking fields. All 188 existing portfolio metrics properly linked to source companies, eliminating orphaned data issues (August 2025).
+
+## Portfolio Flow Improvements (Queued)
+
+The following enhancements to the portfolio addition process are identified for future implementation:
+
+1. **Background Job Status Tracking**: Add real-time status monitoring for SEMrush integration jobs with admin-visible progress indicators
+2. **Domain Validation**: Implement robust URL validation before attempting SEMrush lookups to prevent integration failures on malformed URLs  
+3. **Transaction Wrapping**: Add database transaction protection around company creation and initial data fetch to prevent "zombie" companies
+4. **Rate Limit Handling**: Implement retry logic and queuing for SEMrush API rate limits when adding multiple companies simultaneously
+5. **Portfolio Average Mutex**: Add locking mechanism around portfolio average calculations to prevent race conditions during concurrent company additions
 
 ## External Dependencies
 
