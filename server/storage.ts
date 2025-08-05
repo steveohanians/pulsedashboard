@@ -1082,21 +1082,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Delete only CD_Avg metrics (keep CD_Portfolio source data for recalculation)
+   * Delete both CD_Portfolio and CD_Avg metrics for complete portfolio cleanup
    */
   private async deleteAllPortfolioMetrics(): Promise<void> {
-    logger.info('Deleting CD_Avg metrics only (preserving CD_Portfolio source data)');
+    logger.info('Deleting all portfolio metrics (CD_Portfolio source data + CD_Avg calculated averages)');
     
-    // Only delete CD_Avg metrics - these need recalculation
-    // Keep CD_Portfolio metrics - these contain the source data from remaining companies
+    // Delete both CD_Portfolio and CD_Avg metrics for complete cleanup
+    const cdPortfolioDeleted = await db
+      .delete(metrics)
+      .where(eq(metrics.sourceType, 'CD_Portfolio' as any))
+      .returning({ id: metrics.id });
+
     const cdAvgDeleted = await db
       .delete(metrics)
       .where(eq(metrics.sourceType, 'CD_Avg' as any))
       .returning({ id: metrics.id });
     
-    logger.info('CD_Avg metrics deletion completed', {
+    logger.info('Complete portfolio metrics deletion completed', {
+      cdPortfolioDeleted: cdPortfolioDeleted.length,
       cdAvgDeleted: cdAvgDeleted.length,
-      note: 'CD_Portfolio source data preserved for recalculation'
+      note: 'Complete portfolio data cleanup performed'
     });
   }
 
