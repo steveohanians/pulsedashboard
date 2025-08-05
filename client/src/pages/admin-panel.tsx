@@ -3584,11 +3584,19 @@ export default function AdminPanel() {
                                     
                                     const description = labels.length > 0 ? labels.join(' • ') : 'General';
                                     
+                                    // Format creation date for debugging duplicates
+                                    const createdDate = metric.createdAt ? new Date(metric.createdAt).toLocaleDateString() : 'Unknown';
+                                    const createdTime = metric.createdAt ? new Date(metric.createdAt).toLocaleTimeString() : 'Unknown';
+                                    
                                     return (
                                       <div key={index} className="bg-white rounded p-2 border">
                                         <div className="font-medium text-blue-600 mb-1">{description}</div>
                                         <div className="text-lg font-semibold">{value}</div>
-                                        {metric.id && <div className="text-xs text-gray-400 mt-1">ID: {metric.id.slice(0, 8)}...</div>}
+                                        <div className="text-xs text-gray-400 mt-1">
+                                          <div>Stored: {createdDate}</div>
+                                          <div>Time: {createdTime}</div>
+                                          {metric.id && <div>ID: {metric.id.slice(0, 8)}...</div>}
+                                        </div>
                                       </div>
                                     )
                                   })}

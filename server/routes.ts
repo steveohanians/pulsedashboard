@@ -1740,9 +1740,11 @@ export function registerRoutes(app: Express): Server {
         }
         
         acc[metricKey][timePeriod].push({
+          id: metric.id,
           value: metric.value,
           channel: metric.channel,
           deviceType: metric.deviceType || metric.channel,
+          sourceType: metric.sourceType,
           createdAt: metric.createdAt
         });
         
