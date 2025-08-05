@@ -72,6 +72,7 @@ export class SemrushDataProcessor {
         metrics.push({
           clientId: null, // CD Portfolio companies don't have clientId
           competitorId: null,
+          cdPortfolioCompanyId: companyId,
           metricName: metric.name,
           value: { value: metric.value, source: 'semrush' },
           sourceType: 'CD_Portfolio',
@@ -96,6 +97,7 @@ export class SemrushDataProcessor {
         trafficChannelMetrics.push({
           clientId: null,
           competitorId: null,
+          cdPortfolioCompanyId: companyId,
           metricName: 'Traffic Channels',
           value: { 
             percentage: channel.percentage,
@@ -124,6 +126,7 @@ export class SemrushDataProcessor {
         deviceDistributionMetrics.push({
           clientId: null,
           competitorId: null,
+          cdPortfolioCompanyId: companyId,
           metricName: 'Device Distribution',
           value: {
             percentage: device.percentage,
