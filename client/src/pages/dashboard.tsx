@@ -483,7 +483,8 @@ export default function Dashboard() {
 
     // Helper function to aggregate device data from various formats
     const aggregateDeviceData = (sourceMetrics: any[]) => {
-      const deviceMap = new Map();
+      const deviceSums = new Map();
+      const deviceCounts = new Map();
       
       sourceMetrics.forEach(metric => {
         // Handle individual device records (competitors/averages format)
@@ -491,10 +492,12 @@ export default function Dashboard() {
           const deviceName = metric.channel;
           const value = parseFloat(metric.value);
           
-          if (deviceMap.has(deviceName)) {
-            deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+          if (deviceSums.has(deviceName)) {
+            deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
+            deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
           } else {
-            deviceMap.set(deviceName, value);
+            deviceSums.set(deviceName, value);
+            deviceCounts.set(deviceName, 1);
           }
         } else if (Array.isArray(metric.value)) {
           // GA4 array format - already parsed by backend
@@ -503,10 +506,12 @@ export default function Dashboard() {
             const value = parseFloat(device.percentage || device.value || device.sessions);
             
             if (deviceName && !isNaN(value)) {
-              if (deviceMap.has(deviceName)) {
-                deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+              if (deviceSums.has(deviceName)) {
+                deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
+                deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
               } else {
-                deviceMap.set(deviceName, value);
+                deviceSums.set(deviceName, value);
+                deviceCounts.set(deviceName, 1);
               }
             }
           });
@@ -520,10 +525,12 @@ export default function Dashboard() {
                 const value = parseFloat(device.percentage || device.value || device.sessions);
                 
                 if (deviceName && !isNaN(value)) {
-                  if (deviceMap.has(deviceName)) {
-                    deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+                  if (deviceSums.has(deviceName)) {
+                    deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
+                    deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
                   } else {
-                    deviceMap.set(deviceName, value);
+                    deviceSums.set(deviceName, value);
+                    deviceCounts.set(deviceName, 1);
                   }
                 }
               });
@@ -537,13 +544,22 @@ export default function Dashboard() {
           const value = parseFloat(metric.value);
           
           if (deviceName && !isNaN(value)) {
-            if (deviceMap.has(deviceName)) {
-              deviceMap.set(deviceName, deviceMap.get(deviceName) + value);
+            if (deviceSums.has(deviceName)) {
+              deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
+              deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
             } else {
-              deviceMap.set(deviceName, value);
+              deviceSums.set(deviceName, value);
+              deviceCounts.set(deviceName, 1);
             }
           }
         }
+      });
+
+      // Calculate averages from sums and counts
+      const deviceMap = new Map();
+      Array.from(deviceSums.entries()).forEach(([deviceName, sum]) => {
+        const count = deviceCounts.get(deviceName) || 1;
+        deviceMap.set(deviceName, sum / count);
       });
 
       // Convert to array format expected by chart with normalized device names
