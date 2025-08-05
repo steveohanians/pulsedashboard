@@ -11,9 +11,9 @@ export const APP_CONFIG = {
   COMPANY_NAME: process.env.COMPANY_NAME || "Clear Digital",
   COMPANY_LEGAL_NAME: process.env.COMPANY_LEGAL_NAME || "Clear Digital, Inc.",
   
-  // Application Features
-  ENABLE_SAMPLE_DATA: process.env.NODE_ENV === "development" || process.env.ENABLE_SAMPLE_DATA === "true",
-  AUTO_GENERATE_SAMPLE_DATA: process.env.AUTO_GENERATE_SAMPLE_DATA === "true",
+  // DISABLED: All sample data generation permanently disabled to ensure authentic data only
+  ENABLE_SAMPLE_DATA: false,
+  AUTO_GENERATE_SAMPLE_DATA: false,
   
   // Metric Ranges (can be overridden via environment)
   METRICS: {

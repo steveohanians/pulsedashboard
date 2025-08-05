@@ -176,11 +176,20 @@ export class PortfolioIntegration {
 
       // Step 4: Generate historical periods for averages
       const periods = this.generateHistoricalPeriods();
+      logger.info('Generated historical periods for portfolio averages', { 
+        periods: periods.slice(0, 3).concat(['...', periods[periods.length-1]]), 
+        totalPeriods: periods.length 
+      });
 
-      // Step 5: Calculate new averages
+      // Step 5: Calculate new averages with error handling
       const averageMetrics = semrushDataProcessor.calculatePortfolioAverages(allCompanyMetrics, periods);
+      
+      if (!averageMetrics || averageMetrics.metrics.length === 0) {
+        logger.error('No portfolio averages calculated - check company data quality');
+        throw new Error('Failed to calculate portfolio averages from company data');
+      }
 
-      // Step 6: Store new averages
+      // Step 6: Store new averages with validation
       await this.storePortfolioAverages(averageMetrics);
 
       logger.info('Successfully updated CD Portfolio averages', {
@@ -233,38 +242,83 @@ export class PortfolioIntegration {
   }
 
   /**
-   * Store portfolio average metrics
+   * Store portfolio average metrics with robust error handling
    */
   private async storePortfolioAverages(averageMetrics: any): Promise<void> {
-    logger.info('Storing portfolio average metrics');
+    logger.info('Storing portfolio average metrics', {
+      mainMetrics: averageMetrics.metrics?.length || 0,
+      trafficChannels: averageMetrics.trafficChannelMetrics?.length || 0,
+      deviceDistribution: averageMetrics.deviceDistributionMetrics?.length || 0
+    });
 
-    // Store average main metrics
-    for (const metric of averageMetrics.metrics) {
-      await this.storage.createMetric(metric);
+    let storedCount = 0;
+
+    // Store average main metrics with error handling
+    if (averageMetrics.metrics && averageMetrics.metrics.length > 0) {
+      for (const metric of averageMetrics.metrics) {
+        try {
+          await this.storage.createMetric(metric);
+          storedCount++;
+        } catch (error) {
+          logger.error('Failed to store portfolio average metric', { 
+            metric: metric.metricName, 
+            period: metric.timePeriod,
+            error: (error as Error).message 
+          });
+          throw error;
+        }
+      }
     }
 
     // Store average traffic channel metrics
-    for (const metric of averageMetrics.trafficChannelMetrics) {
-      await this.storage.createMetric(metric);
+    if (averageMetrics.trafficChannelMetrics && averageMetrics.trafficChannelMetrics.length > 0) {
+      for (const metric of averageMetrics.trafficChannelMetrics) {
+        try {
+          await this.storage.createMetric(metric);
+          storedCount++;
+        } catch (error) {
+          logger.error('Failed to store traffic channel average', { 
+            channel: metric.channel,
+            period: metric.timePeriod,
+            error: (error as Error).message 
+          });
+        }
+      }
     }
 
     // Store average device distribution metrics
-    for (const metric of averageMetrics.deviceDistributionMetrics) {
-      await this.storage.createMetric(metric);
+    if (averageMetrics.deviceDistributionMetrics && averageMetrics.deviceDistributionMetrics.length > 0) {
+      for (const metric of averageMetrics.deviceDistributionMetrics) {
+        try {
+          await this.storage.createMetric(metric);
+          storedCount++;
+        } catch (error) {
+          logger.error('Failed to store device distribution average', { 
+            device: metric.channel,
+            period: metric.timePeriod,
+            error: (error as Error).message 
+          });
+        }
+      }
     }
 
-    logger.info('Successfully stored portfolio averages');
+    if (storedCount === 0) {
+      throw new Error('No portfolio averages were successfully stored');
+    }
+
+    logger.info('Successfully stored portfolio averages', { totalStored: storedCount });
   }
 
   /**
-   * Generate 15 months of historical periods
+   * Generate 15 months of historical periods INCLUDING current month
+   * This ensures portfolio averages are calculated for all periods where we have data
    */
   private generateHistoricalPeriods(): string[] {
     const periods: string[] = [];
     const now = new Date();
     
-    // Start from last completed month
-    let currentDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    // Start from CURRENT month (not last completed month) to include July 2025
+    let currentDate = new Date(now.getFullYear(), now.getMonth(), 1);
     
     for (let i = 0; i < 15; i++) {
       const year = currentDate.getFullYear();

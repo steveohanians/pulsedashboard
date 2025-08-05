@@ -178,8 +178,9 @@ export async function generateTemporalVariation(
     }
   }
   
-  // Fallback to synthetic variation
-  return generateTemporalVariationFallback(baseValue, dates, metricName, seed);
+  // REMOVED: No fallback to synthetic data - maintain data authenticity
+  logger.warn(`No authentic data found for ${metricName}, returning empty array`);
+  return [];
 }
 
 /**
@@ -191,53 +192,13 @@ export function generateTemporalVariationSync(
   metricName: string,
   seed: string = 'default'
 ): number[] {
-  return generateTemporalVariationFallback(baseValue, dates, metricName, seed);
+  // REMOVED: No synthetic data generation - return empty array for authentic data only
+  console.warn(`No authentic temporal data available for ${metricName}`);
+  return [];
 }
 
-/**
- * Fallback temporal variation generator (when GA4 data unavailable)
- * Simplified version of the original synthetic generator
- */
-function generateTemporalVariationFallback(
-  baseValue: number, 
-  dates: string[], 
-  metricName: string,
-  seed: string = 'default'
-): number[] {
-  const variations: number[] = [];
-  let seededRandom = createSeededRandom(seed);
-  
-  const variationRange = 0.10; // 10% variation as fallback
-  
-  dates.forEach((date, index) => {
-    const randomFactor = (seededRandom() - 0.5) * 2;
-    let dailyVariation = baseValue * (1 + randomFactor * variationRange);
-    
-    dailyVariation = Math.max(dailyVariation, baseValue * 0.8);
-    dailyVariation = Math.min(dailyVariation, baseValue * 1.2);
-    
-    variations.push(Math.round(dailyVariation * 100) / 100);
-  });
-  
-  return variations;
-}
-
-/**
- * Create seeded random number generator for deterministic variations
- */
-function createSeededRandom(seed: string): () => number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    const char = seed.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  return function() {
-    hash = ((hash * 1664525) + 1013904223) % Math.pow(2, 32);
-    return Math.abs(hash) / Math.pow(2, 32);
-  };
-}
+// REMOVED: All fallback data generators eliminated to maintain data authenticity
+// System now shows empty states instead of synthetic data when authentic data unavailable
 
 /**
  * Chart visibility state management hook pattern
@@ -340,7 +301,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
       }
     } else if (metric.value && Array.isArray(metric.value)) {
       // GA4 data as direct array (new format)
-      metric.value.forEach(channelData => {
+      metric.value.forEach((channelData: any) => {
         // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
         if (channelData.channel && channelData.percentage !== undefined) {
           const channelName = channelData.channel;
