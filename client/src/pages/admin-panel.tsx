@@ -188,6 +188,8 @@ export default function AdminPanel() {
   const [editingBusinessSize, setEditingBusinessSize] = useState<string>("");
   const [editingIndustryVertical, setEditingIndustryVertical] = useState<string>("");
   const [editingCdIndustryVertical, setEditingCdIndustryVertical] = useState<string>("");
+  const [integratingCompany, setIntegratingCompany] = useState<string | null>(null);
+  const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
 
   // Extract tab from URL
   useEffect(() => {
@@ -628,6 +630,9 @@ export default function AdminPanel() {
       
       console.log("🔄 Cache invalidated after portfolio company deletion");
       
+      // Reset deleting state to close modal
+      setDeletingCompanyId(null);
+      
       toast({
         title: "Company removed from portfolio",
         description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically. Navigate to dashboard to see updated numbers.",
@@ -635,6 +640,9 @@ export default function AdminPanel() {
       });
     },
     onError: (error: Error) => {
+      // Reset deleting state on error
+      setDeletingCompanyId(null);
+      
       toast({
         title: "Failed to remove company",
         description: error.message,
@@ -745,6 +753,7 @@ export default function AdminPanel() {
   };
 
   const handleDeleteCdPortfolioCompany = (id: string) => {
+    setDeletingCompanyId(id);
     deleteCdPortfolioCompanyMutation.mutate(id);
   };
 
@@ -2744,7 +2753,11 @@ export default function AdminPanel() {
                                 </form>
                               </DialogContent>
                             </Dialog>
-                            <AlertDialog>
+                            <AlertDialog open={deletingCompanyId === company.id} onOpenChange={(open) => {
+                              if (!open && !deleteCdPortfolioCompanyMutation.isPending) {
+                                setDeletingCompanyId(null);
+                              }
+                            }}>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                   <Trash2 className="h-4 w-4" />
@@ -2758,12 +2771,15 @@ export default function AdminPanel() {
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel disabled={deleteCdPortfolioCompanyMutation.isPending}>
+                                    Cancel
+                                  </AlertDialogCancel>
                                   <AlertDialogAction 
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     onClick={() => handleDeleteCdPortfolioCompany(company.id)}
                                     disabled={deleteCdPortfolioCompanyMutation.isPending}
                                   >
+                                    {deleteCdPortfolioCompanyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                     {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
