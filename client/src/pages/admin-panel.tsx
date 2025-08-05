@@ -574,21 +574,10 @@ export default function AdminPanel() {
             // Comprehensive cache invalidation for seamless refresh
             queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
             
-            // Invalidate all dashboard queries regardless of parameters
-            queryClient.invalidateQueries({ 
-              predicate: (query) => {
-                const key = query.queryKey[0] as string;
-                return key?.includes('/api/dashboard/') || key?.includes('/api/filters');
-              }
-            });
+            // Force complete cache clearing for all dashboard and filter queries
+            queryClient.clear();
             
-            // Force remove and invalidate specific dashboard cache entries
-            queryClient.removeQueries({ 
-              predicate: (query) => {
-                const key = query.queryKey[0] as string;
-                return key?.includes('/api/dashboard/');
-              }
-            });
+            console.log("🔄 Cache cleared after portfolio integration completion");
             
             toast({
               title: "Portfolio Integration Complete",
@@ -634,21 +623,10 @@ export default function AdminPanel() {
       // Comprehensive cache invalidation for immediate refresh
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
       
-      // Invalidate all dashboard queries regardless of parameters
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.includes('/api/dashboard/') || key?.includes('/api/filters');
-        }
-      });
+      // Force complete cache clearing for all dashboard and filter queries
+      queryClient.clear();
       
-      // Force remove and invalidate specific dashboard cache entries
-      queryClient.removeQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.includes('/api/dashboard/');
-        }
-      });
+      console.log("🔄 Cache cleared after portfolio company deletion");
       
       toast({
         title: "Company removed from portfolio",

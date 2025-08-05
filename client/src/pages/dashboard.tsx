@@ -48,6 +48,15 @@ const getChannelColor = (channelName: string): string => {
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   
+  // Add effect to log when dashboard component mounts/updates
+  useEffect(() => {
+    console.log("🏠 Dashboard component mounted/updated", { 
+      userId: user?.id, 
+      clientId: user?.clientId,
+      timestamp: new Date().toISOString()
+    });
+  }, [user?.id, user?.clientId]);
+  
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();
   const [timePeriod, setTimePeriod] = useState("Last Month");
@@ -123,9 +132,19 @@ export default function Dashboard() {
     enabled: !!user?.clientId,
     staleTime: 0, // Force fresh data on each request
     refetchOnMount: 'always', // Always refetch when component mounts
+    gcTime: 0, // Don't cache results
+    refetchOnReconnect: true, // Refetch when reconnecting
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
-  const { data: dashboardData, isLoading } = dashboardQuery;
+  const { data: dashboardData, isLoading, refetch: refetchDashboard } = dashboardQuery;
+  
+  // Manual refresh function for immediate data update
+  const handleManualRefresh = async () => {
+    console.log("🔄 Manual refresh triggered");
+    queryClient.clear();
+    await refetchDashboard();
+  };
 
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: ["/api/filters", businessSize, industryVertical],
@@ -1085,6 +1104,27 @@ export default function Dashboard() {
               )}
             </Button>
 
+            {/* Refresh Data Button */}
+            <Button
+              onClick={handleManualRefresh}
+              variant="outline"
+              size="sm"
+              className="pdf-hide hover:bg-blue-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-blue-200 text-blue-600"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Updating...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Refresh Data</span>
+                </div>
+              )}
+            </Button>
+
             {/* Debug: Clear Insights Button */}
             <Button
               variant="outline"
@@ -1169,6 +1209,26 @@ export default function Dashboard() {
                   </li>
                 ))}
               </ul>
+
+              {/* Refresh Data Link */}
+              <div className="mt-6 pt-4 border-t border-slate-200">
+                <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Actions</h3>
+                <button
+                  onClick={() => {
+                    handleManualRefresh();
+                    setMobileMenuOpen(false);
+                  }}
+                  disabled={isLoading}
+                  className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-blue-50 border border-blue-200 mb-3"
+                >
+                  <span className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      {isLoading ? "Updating..." : "Refresh Data"}
+                    </span>
+                  </span>
+                </button>
+              </div>
 
               {/* Admin Panel Link */}
               {user?.role === "Admin" && (
