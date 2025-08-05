@@ -69,6 +69,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **CD_Avg Traffic Channel Parser Fix**: Updated `queryOptimizer.ts` to use `parseMetricPercentage()` for traffic channels, ensuring correct display of authentic portfolio averages.
 - **Traffic Channel Aggregation Fix**: Resolved percentage inflation bug where multi-period data showed 550% Direct instead of 65%. Fixed `aggregateChannelData` function to average percentages across time periods instead of summing them, ensuring realistic traffic channel display for "Last Quarter" and "Last Year" periods.
 - **Time Period Mismatch Resolution**: Fixed critical CD_Avg device distribution 0/0 display issue caused by time period mismatch between frontend requests for July 2025 data and SEMrush API availability through June 2025. Implemented intelligent fallback logic in `getFilteredCdAvgMetrics` that automatically uses the most recent available authentic month when requested month has no data, maintaining data integrity while ensuring proper dashboard functionality.
+- **Device Distribution Response Structure Fix**: Resolved missing `deviceDistribution` key in dashboard API response by adding proper device metrics processing in `getDashboardDataOptimized` function. Enhanced data extraction to handle multiple field names (`deviceType`, `channel`, `value`, `valuePreview`) and created frontend-compatible structure with `client` and `cdAvg` properties. Added comprehensive debug logging to verify data processing (Client: Desktop 89.5%, Mobile 10.5%).
 
 ## External Dependencies
 

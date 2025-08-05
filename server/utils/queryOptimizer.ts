@@ -449,12 +449,56 @@ export async function getDashboardDataOptimized(
 
 
 
+  // Process device distribution metrics into frontend-expected structure
+  const deviceDistribution = {
+    client: {} as any,
+    cdAvg: {} as any
+  };
+
+  // Group device metrics by source type
+  deviceDistributionMetrics.forEach(metric => {
+    // Try multiple field names for device type
+    const deviceType = metric.deviceType || metric.channel || metric.metricSubtype;
+    
+    // Try multiple field names for value and handle different formats
+    let value = null;
+    if (metric.valuePreview !== undefined) {
+      value = parseFloat(String(metric.valuePreview).replace('%', ''));
+    } else if (metric.value !== undefined) {
+      value = parseFloat(String(metric.value).replace('%', ''));
+    }
+    
+    // Debug each metric to understand the structure
+    console.log('🔍 DEVICE METRIC DEBUG:', {
+      sourceType: metric.sourceType,
+      deviceType: deviceType,
+      valuePreview: metric.valuePreview,
+      value: metric.value,
+      parsedValue: value,
+      allFields: Object.keys(metric)
+    });
+    
+    if (metric.sourceType === 'Client' && deviceType && !isNaN(value)) {
+      deviceDistribution.client[deviceType] = value;
+    } else if (metric.sourceType === 'CD_Avg' && deviceType && !isNaN(value)) {
+      deviceDistribution.cdAvg[deviceType] = value;
+    }
+  });
+
+  // Debug logging for device distribution structure
+  console.log('🔍 DEVICE DEBUG - Processed deviceDistribution:', {
+    client: deviceDistribution.client,
+    cdAvg: deviceDistribution.cdAvg,
+    rawMetricsCount: deviceDistributionMetrics.length
+  });
+
   const result = {
     client,
     competitors,
     insights: [], // Load insights asynchronously
     trafficChannelMetrics, // Add separate traffic channel data for stacked bar chart
     deviceDistributionMetrics, // Add separate device distribution data for donut chart
+    deviceDistribution, // Add processed device distribution for frontend charts
     // For multi-period queries OR "Last Month" (daily data), structure as time series
     ...(shouldCreateTimeSeriesData ? {
       isTimeSeries: true,
