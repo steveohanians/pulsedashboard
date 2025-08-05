@@ -253,11 +253,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCompetitor(id: string): Promise<void> {
-    // First delete all metrics associated with this competitor
-    await db.delete(metrics).where(eq(metrics.competitorId, id));
-    
-    // Then delete the competitor using consolidated method
-    await this.competitorRepo.delete(id);
+    // Use enhanced global deletion utility for comprehensive cleanup
+    const { deleteCompetitorEnhanced } = await import('./utils/companyDeletionUtils');
+    await deleteCompetitorEnhanced(id, this);
   }
 
 
@@ -277,7 +275,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBenchmarkCompany(id: string): Promise<void> {
-    await this.benchmarkCompanyRepo.delete(id);
+    // Use enhanced global deletion utility for comprehensive cleanup
+    const { deleteBenchmarkCompanyEnhanced } = await import('./utils/companyDeletionUtils');
+    await deleteBenchmarkCompanyEnhanced(id, this);
   }
 
   // CD Portfolio Companies
@@ -295,6 +295,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCdPortfolioCompany(id: string): Promise<void> {
+    // Use enhanced global deletion utility for comprehensive cleanup
+    const { deletePortfolioCompanyEnhanced } = await import('./utils/companyDeletionUtils');
+    await deletePortfolioCompanyEnhanced(id, this);
+    return; // Skip original logic below, now handled by global utility
+    
+    // ORIGINAL LOGIC PRESERVED BELOW FOR REFERENCE (now replaced by global utility)
+    /*
     logger.info('Starting complete portfolio company deletion', { companyId: id });
     
     try {
@@ -371,6 +378,7 @@ export class DatabaseStorage implements IStorage {
       });
       throw error;
     }
+    */ // End of original logic comment block
   }
 
   // Get filtered CD Portfolio companies
@@ -501,6 +509,8 @@ export class DatabaseStorage implements IStorage {
           timePeriod: period,
           channel: null,
           competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
           createdAt: new Date()
         });
         
@@ -665,6 +675,8 @@ export class DatabaseStorage implements IStorage {
             timePeriod: period,
             clientId: null,
             competitorId: null,
+            cdPortfolioCompanyId: null,
+            benchmarkCompanyId: null,
             channel: null,
             createdAt: new Date()
           };
@@ -736,6 +748,8 @@ export class DatabaseStorage implements IStorage {
             timePeriod: period,
             clientId: null,
             competitorId: null,
+            cdPortfolioCompanyId: null,
+            benchmarkCompanyId: null,
             channel: null,
             createdAt: new Date()
           });
