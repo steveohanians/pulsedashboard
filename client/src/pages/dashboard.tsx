@@ -1167,6 +1167,27 @@ export default function Dashboard() {
                   </li>
                 ))}
               </ul>
+
+              {/* Admin Panel Link */}
+              {user?.role === "Admin" && (
+                <div className="mt-6 pt-4 border-t border-slate-200">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Admin</h3>
+                  <Link href="/admin">
+                    <button
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200"
+                    >
+                      <span className="flex items-center justify-between">
+                        <span className="flex items-center">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Admin Panel
+                        </span>
+                        <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-all duration-200" />
+                      </span>
+                    </button>
+                  </Link>
+                </div>
+              )}
             </div>
           </nav>
         </div>
