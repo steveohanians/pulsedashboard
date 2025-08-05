@@ -143,8 +143,9 @@ export class PortfolioIntegration {
 
   /**
    * Recalculate and update CD Portfolio averages across all companies
+   * Made public to support portfolio company deletion operations
    */
-  private async updatePortfolioAverages(): Promise<void> {
+  public async updatePortfolioAverages(): Promise<void> {
     logger.info('Updating CD Portfolio averages');
 
     try {

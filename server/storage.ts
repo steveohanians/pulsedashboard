@@ -294,7 +294,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCdPortfolioCompany(id: string): Promise<void> {
-    await this.cdPortfolioCompanyRepo.delete(id);
+    logger.info('Starting complete portfolio company deletion', { companyId: id });
+    
+    try {
+      // Step 1: Get company info for logging before deletion
+      const company = await db
+        .select()
+        .from(cdPortfolioCompanies)
+        .where(eq(cdPortfolioCompanies.id, id))
+        .limit(1);
+      
+      const companyName = company[0]?.name || 'Unknown';
+      logger.info('Deleting portfolio company', { companyId: id, companyName });
+
+      // Step 2: Delete the company record first
+      await this.cdPortfolioCompanyRepo.delete(id);
+      logger.info('Company record deleted', { companyId: id });
+
+      // Step 3: Delete ALL existing CD_Portfolio and CD_Avg metrics
+      // Since individual company metrics aren't tracked, we delete all and recalculate
+      await this.deleteAllPortfolioMetrics();
+      logger.info('All portfolio metrics cleared for recalculation');
+
+      // Step 4: Recalculate portfolio averages from remaining active companies
+      await this.recalculatePortfolioAverages();
+      logger.info('Portfolio averages recalculated from remaining companies');
+
+      // Step 5: Clear all performance caches to ensure fresh data
+      await this.clearPortfolioCaches();
+      logger.info('Performance caches cleared');
+
+      logger.info('Complete portfolio company deletion finished', { 
+        companyId: id, 
+        companyName 
+      });
+      
+    } catch (error) {
+      logger.error('Failed to complete portfolio company deletion', {
+        companyId: id,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      throw error;
+    }
   }
 
   // Get filtered CD Portfolio companies
@@ -840,14 +882,102 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(metrics)
-      .where(eq(metrics.sourceType, sourceType))
+      .where(eq(metrics.sourceType, sourceType as any))
       .orderBy(metrics.timePeriod, metrics.metricName);
   }
 
   async deleteMetricsBySourceType(sourceType: string): Promise<void> {
     await db
       .delete(metrics)
-      .where(eq(metrics.sourceType, sourceType));
+      .where(eq(metrics.sourceType, sourceType as any));
+  }
+
+  /**
+   * Delete all CD_Portfolio and CD_Avg metrics for clean recalculation
+   */
+  private async deleteAllPortfolioMetrics(): Promise<void> {
+    logger.info('Deleting all CD_Portfolio and CD_Avg metrics');
+    
+    // Delete CD_Portfolio metrics
+    const cdPortfolioDeleted = await db
+      .delete(metrics)
+      .where(eq(metrics.sourceType, 'CD_Portfolio' as any))
+      .returning({ id: metrics.id });
+    
+    // Delete CD_Avg metrics  
+    const cdAvgDeleted = await db
+      .delete(metrics)
+      .where(eq(metrics.sourceType, 'CD_Avg' as any))
+      .returning({ id: metrics.id });
+    
+    logger.info('Portfolio metrics deletion completed', {
+      cdPortfolioDeleted: cdPortfolioDeleted.length,
+      cdAvgDeleted: cdAvgDeleted.length,
+      totalDeleted: cdPortfolioDeleted.length + cdAvgDeleted.length
+    });
+  }
+
+  /**
+   * Recalculate portfolio averages from all remaining active companies
+   */
+  private async recalculatePortfolioAverages(): Promise<void> {
+    logger.info('Starting portfolio averages recalculation');
+    
+    try {
+      // Get all remaining active portfolio companies
+      const activeCompanies = await this.getCdPortfolioCompanies();
+      
+      if (activeCompanies.length === 0) {
+        logger.info('No active portfolio companies remaining - no averages to calculate');
+        return;
+      }
+
+      logger.info('Recalculating averages for remaining companies', { 
+        activeCompaniesCount: activeCompanies.length,
+        companies: activeCompanies.map(c => ({ id: c.id, name: c.name }))
+      });
+
+      // Import the portfolio integration service
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration');
+      const portfolioService = new PortfolioIntegration(this);
+      
+      // Trigger complete portfolio averages recalculation
+      await portfolioService.updatePortfolioAverages();
+      
+      logger.info('Portfolio averages recalculation completed');
+      
+    } catch (error) {
+      logger.error('Failed to recalculate portfolio averages', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Clear performance caches to ensure fresh data after portfolio changes
+   */
+  private async clearPortfolioCaches(): Promise<void> {
+    logger.info('Clearing performance caches after portfolio deletion');
+    
+    try {
+      // Clear performance cache
+      const { performanceCache } = await import('./cache/performance-cache');
+      performanceCache.clear();
+      
+      // Clear query optimizer cache
+      const { clearCache } = await import('./utils/queryOptimizer');
+      clearCache();
+      
+      logger.info('All performance caches cleared successfully');
+      
+    } catch (error) {
+      logger.error('Failed to clear caches', {
+        error: (error as Error).message
+      });
+      // Don't throw - cache clearing failure shouldn't stop deletion
+    }
   }
 
   async getMetricsByCompanyId(companyId: string): Promise<Metric[]> {
