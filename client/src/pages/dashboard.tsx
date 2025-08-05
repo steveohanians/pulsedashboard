@@ -258,7 +258,8 @@ export default function Dashboard() {
     }
     
     // DEBUG: Check raw metrics for Bounce Rate specifically
-    const bounceRateMetrics = dashboardData.metrics?.filter(m => m.metricName === 'Bounce Rate') || [];
+    const bounceRateMetrics = Array.isArray(dashboardData?.metrics) ? 
+      dashboardData.metrics.filter((m: any) => m.metricName === 'Bounce Rate') : [];
     // Bounce rate metrics processed
     
     // Calculate averages when multiple time periods are involved

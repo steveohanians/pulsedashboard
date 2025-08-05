@@ -285,7 +285,8 @@ export function calculateYAxisDomain(data: any[], clientKey: string, competitors
  * Consolidates channel aggregation logic from dashboard.tsx and time-series-chart.tsx
  */
 export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> {
-  const channelMap = new Map();
+  const channelSums = new Map();
+  const channelCounts = new Map();
   
   sourceMetrics.forEach((metric, index) => {
     // Handle both individual channel records and legacy JSON format
@@ -294,10 +295,12 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
       const channelName = metric.channel;
       const value = parseFloat(metric.value);
       
-      if (channelMap.has(channelName)) {
-        channelMap.set(channelName, channelMap.get(channelName) + value);
+      if (channelSums.has(channelName)) {
+        channelSums.set(channelName, channelSums.get(channelName) + value);
+        channelCounts.set(channelName, channelCounts.get(channelName) + 1);
       } else {
-        channelMap.set(channelName, value);
+        channelSums.set(channelName, value);
+        channelCounts.set(channelName, 1);
       }
     } else if (metric.value && Array.isArray(metric.value)) {
       // GA4 data as direct array (new format)
@@ -307,10 +310,12 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
           const channelName = channelData.channel;
           const value = parseFloat(channelData.percentage);
           
-          if (channelMap.has(channelName)) {
-            channelMap.set(channelName, channelMap.get(channelName) + value);
+          if (channelSums.has(channelName)) {
+            channelSums.set(channelName, channelSums.get(channelName) + value);
+            channelCounts.set(channelName, channelCounts.get(channelName) + 1);
           } else {
-            channelMap.set(channelName, value);
+            channelSums.set(channelName, value);
+            channelCounts.set(channelName, 1);
           }
         }
       });
@@ -325,10 +330,12 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
               const channelName = channelData.channel;
               const value = parseFloat(channelData.percentage);
               
-              if (channelMap.has(channelName)) {
-                channelMap.set(channelName, channelMap.get(channelName) + value);
+              if (channelSums.has(channelName)) {
+                channelSums.set(channelName, channelSums.get(channelName) + value);
+                channelCounts.set(channelName, channelCounts.get(channelName) + 1);
               } else {
-                channelMap.set(channelName, value);
+                channelSums.set(channelName, value);
+                channelCounts.set(channelName, 1);
               }
             }
           });
@@ -338,6 +345,13 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
         logger.warn('Invalid JSON in metric value:', metric.value);
       }
     }
+  });
+  
+  // Calculate averages
+  const channelMap = new Map();
+  Array.from(channelSums.entries()).forEach(([channelName, sum]) => {
+    const count = channelCounts.get(channelName) || 1;
+    channelMap.set(channelName, sum / count);
   });
   
   return channelMap;
