@@ -126,11 +126,15 @@ export function registerRoutes(app: Express): Server {
         industryVertical as string
       );
       
-      // TEMPORARILY DISABLED: const cachedResult = performanceCache.get(cacheKey);
-      // TEMPORARILY DISABLED: if (cachedResult) {
-      // TEMPORARILY DISABLED:   logger.info(`Cache HIT for dashboard: ${cacheKey}`);
-      // TEMPORARILY DISABLED:   return res.json(cachedResult);
-      // TEMPORARILY DISABLED: }
+      // FORCE CACHE BYPASS: Clear performance cache before checking
+      performanceCache.clear();
+      console.log('🟢 PERFORMANCE CACHE CLEARED IN ROUTES');
+      
+      const cachedResult = performanceCache.get(cacheKey);
+      if (cachedResult) {
+        logger.info(`Cache HIT for dashboard: ${cacheKey}`);
+        return res.json(cachedResult);
+      }
       
       logger.info(`Cache MISS for dashboard: ${cacheKey}`);
       
@@ -186,6 +190,8 @@ export function registerRoutes(app: Express): Server {
       };
 
       // GA4 INTEGRATION: Manual refresh only - no automatic fetching on dashboard load
+
+      // Cache clearing moved to getDashboardDataOptimized function
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
       const result = await getDashboardDataOptimized(
