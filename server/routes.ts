@@ -33,11 +33,37 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
-// Middleware to check admin role
+// Middleware to check admin role  
 function requireAdmin(req: any, res: any, next: any) {
-  if (!req.isAuthenticated() || req.user.role !== "Admin") {
+  const authData = {
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user,
+    sessionID: req.sessionID,
+    hasUser: !!req.user,
+    userRole: req.user?.role,
+    cookieCount: req.headers.cookie ? req.headers.cookie.split(';').length : 0
+  };
+  
+  logger.info("🔑 ADMIN AUTH CHECK", authData);
+  
+  if (!req.isAuthenticated()) {
+    logger.warn("❌ AUTH FAILED: Not authenticated", { sessionID: req.sessionID });
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  if (req.user.role !== "Admin") {
+    logger.warn("❌ AUTH FAILED: Not admin role", { 
+      userRole: req.user.role, 
+      userId: req.user.id,
+      sessionID: req.sessionID 
+    });
     return res.status(403).json({ message: "Admin access required" });
   }
+  
+  logger.info("✅ AUTH SUCCESS: Admin authenticated", { 
+    userId: req.user.id, 
+    sessionID: req.sessionID 
+  });
   next();
 }
 
