@@ -30,7 +30,7 @@ export function clearCache(pattern?: string): void {
   if (pattern) {
     // Clear specific cache entries matching pattern
     const keysToDelete = [];
-    for (const [key] of Array.from(queryCache.keys())) {
+    for (const key of Array.from(queryCache.keys())) {
       if (key.includes(pattern)) {
         keysToDelete.push(key);
       }
@@ -378,6 +378,23 @@ function processMetricsData(
   const processTrafficChannelData = (metrics: any[]): any[] => {
     const result: any[] = [];
     
+    // Debug traffic channel input data
+    const trafficChannelInputs = metrics.filter(m => m.metricName === 'Traffic Channels');
+    if (trafficChannelInputs.length > 0) {
+      logger.debug('🚛 QUERY OPTIMIZER - Traffic Channel Processing Input:', {
+        count: trafficChannelInputs.length,
+        sample: trafficChannelInputs.slice(0, 2).map(m => ({
+          metricName: m.metricName,
+          sourceType: m.sourceType,
+          timePeriod: m.timePeriod,
+          valueType: typeof m.value,
+          valueLength: typeof m.value === 'string' ? m.value.length : 'N/A',
+          value: typeof m.value === 'string' ? m.value.substring(0, 100) + '...' : m.value,
+          channel: m.channel
+        }))
+      });
+    }
+    
     metrics.forEach(m => {
       if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && m.channel) {
         // Individual channel record format (authentic data)
@@ -389,33 +406,95 @@ function processMetricsData(
           channel: m.channel,
           competitorId: m.competitorId
         });
-      } else if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && !m.channel && typeof m.value === 'string') {
+      } else if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && !m.channel) {
         // Parse GA4 JSON format: [{"channel": "Direct", "sessions": 4439, "percentage": 64.87...}]
-        try {
-          const channelData = JSON.parse(m.value);
-          if (Array.isArray(channelData)) {
-            channelData.forEach((channel: any) => {
-              result.push({
-                metricName: m.metricName,
-                value: channel.percentage || channel.value || channel.sessions,
+        // DON'T use parseMetricValue for traffic channels - it returns null for JSON!
+        const rawValue = m.value;
+        
+        if (typeof rawValue === 'string') {
+          try {
+            const channelData = JSON.parse(rawValue);
+            if (Array.isArray(channelData)) {
+              logger.debug('🚛 QUERY OPTIMIZER - Parsing GA4 JSON:', {
                 sourceType: m.sourceType,
                 timePeriod: m.timePeriod,
-                channel: channel.channel || channel.name,
-                competitorId: m.competitorId
+                channelCount: channelData.length,
+                sampleChannel: channelData[0]
               });
+              
+              channelData.forEach((channel: any) => {
+                result.push({
+                  metricName: m.metricName,
+                  value: channel.percentage || channel.value || channel.sessions,
+                  sourceType: m.sourceType,
+                  timePeriod: m.timePeriod,
+                  channel: channel.channel || channel.name,
+                  competitorId: m.competitorId
+                });
+              });
+            }
+          } catch (e) {
+            logger.warn('🚛 QUERY OPTIMIZER - Failed to parse traffic channel JSON:', {
+              sourceType: m.sourceType,
+              timePeriod: m.timePeriod,
+              value: rawValue,
+              error: e
+            });
+            // Fallback for invalid JSON - keep original
+            result.push({
+              metricName: m.metricName,
+              value: rawValue,
+              sourceType: m.sourceType,
+              timePeriod: m.timePeriod,
+              channel: m.channel,
+              competitorId: m.competitorId
             });
           }
-        } catch (e) {
-          // Fallback for invalid JSON - keep original
-          result.push({
-            metricName: m.metricName,
-            value: m.value,
+        } else if (Array.isArray(rawValue)) {
+          // Already parsed JSON array
+          logger.debug('🚛 QUERY OPTIMIZER - Processing pre-parsed array:', {
             sourceType: m.sourceType,
             timePeriod: m.timePeriod,
-            channel: m.channel,
-            competitorId: m.competitorId
+            channelCount: rawValue.length
+          });
+          
+          rawValue.forEach((channel: any) => {
+            result.push({
+              metricName: m.metricName,
+              value: channel.percentage || channel.value || channel.sessions,
+              sourceType: m.sourceType,
+              timePeriod: m.timePeriod,
+              channel: channel.channel || channel.name,
+              competitorId: m.competitorId
+            });
+          });
+        } else {
+          logger.warn('🚛 QUERY OPTIMIZER - Unexpected traffic channel format:', {
+            sourceType: m.sourceType,
+            timePeriod: m.timePeriod,
+            valueType: typeof rawValue,
+            value: rawValue
           });
         }
+      } else if (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') {
+        // Traffic channel metric that doesn't match above patterns
+        logger.warn('🚛 QUERY OPTIMIZER - Unhandled traffic channel format:', {
+          sourceType: m.sourceType,
+          timePeriod: m.timePeriod,
+          valueType: typeof m.value,
+          hasChannel: !!m.channel,
+          value: m.value
+        });
+        
+        // Still try to add it as a regular metric
+        result.push({
+          metricName: m.metricName,
+          value: parseMetricValue(m.value),
+          sourceType: m.sourceType,
+          timePeriod: m.timePeriod,
+          channel: m.channel,
+          competitorId: m.competitorId
+        });
       } else {
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = parseMetricValue(m.value);
@@ -438,6 +517,14 @@ function processMetricsData(
   
 
   
+  // Debug input data to processTrafficChannelData
+  logger.debug('🚛 QUERY OPTIMIZER - Input Metrics Summary:', {
+    allMetricsCount: allMetrics.length,
+    clientTrafficChannels: allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client').length,
+    cdAvgTrafficChannels: allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length,
+    sampleClientTrafficChannel: allMetrics.find(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client')
+  });
+
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),

@@ -338,6 +338,16 @@ export default function Dashboard() {
     }
     
     // Debug traffic channel data processing
+    console.log('🚛 TRAFFIC CHANNEL DEBUG:', {
+      trafficMetricsCount: trafficMetrics.length,
+      trafficMetricsSample: trafficMetrics.slice(0, 3),
+      sourceTypes: [...new Set(trafficMetrics.map(m => m.sourceType))],
+      metricNames: [...new Set(trafficMetrics.map(m => m.metricName))],
+      clientMetricsFound: trafficMetrics.filter(m => m.sourceType === 'Client').length,
+      cdAvgMetricsFound: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').length,
+      clientSample: trafficMetrics.filter(m => m.sourceType === 'Client').slice(0, 2),
+      cdAvgSample: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').slice(0, 2)
+    });
     
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
