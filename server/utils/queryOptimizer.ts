@@ -305,9 +305,30 @@ export async function getDashboardDataOptimized(
           // Add CD Average metrics to each grouped period so they appear as flat lines
           Object.keys(groupedPeriods).forEach(periodKey => {
             cdAvgMetrics.forEach(metric => {
+              // 🎯 CRITICAL FIX: Apply JSON parsing for CD_Avg traffic channels in grouped periods
+              let processedValue = metric.value;
+              if (metric.metricName === 'Traffic Channels' && metric.sourceType === 'CD_Avg') {
+                console.error('🚛 GROUPED PERIODS - CD_AVG TRAFFIC CHANNEL:', {
+                  value: metric.value,
+                  type: typeof metric.value,
+                  channel: metric.channel
+                });
+                
+                if (typeof metric.value === 'string' && metric.value.includes('{')) {
+                  try {
+                    const parsed = JSON.parse(metric.value);
+                    processedValue = Number(parsed.percentage) || 0;
+                    console.error('🚛 GROUPED PERIODS - EXTRACTED PERCENTAGE:', processedValue);
+                  } catch (e) {
+                    console.error('🚛 GROUPED PERIODS - JSON PARSE ERROR:', (e as Error).message);
+                    processedValue = 0;
+                  }
+                }
+              }
+              
               groupedPeriods[periodKey].push({
                 metricName: metric.metricName,
-                value: metric.value,
+                value: processedValue, // Use processed value instead of raw
                 sourceType: 'CD_Avg', // Standardize to CD_Avg for chart display
                 timePeriod: periodKey,
                 channel: metric.channel,
@@ -377,6 +398,17 @@ function processMetricsData(
   const allCompetitorMetrics = allCompetitorMetricsArrays.flat();
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
+  
+  // 🎯 AGGRESSIVE DEBUGGING - CHECK CD_AVG BEFORE PROCESSING
+  const cdAvgTrafficChannels = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
+  console.error('🚛 PROCESS METRICS DATA - CD_AVG TRAFFIC CHANNELS:', {
+    count: cdAvgTrafficChannels.length,
+    samples: cdAvgTrafficChannels.slice(0, 2).map(m => ({
+      value: m.value,
+      type: typeof m.value,
+      channel: m.channel
+    }))
+  });
   
 
   
