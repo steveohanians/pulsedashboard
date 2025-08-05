@@ -97,18 +97,27 @@ export async function getDashboardDataOptimized(
   // Prepare filters for industry data
   const filters = { businessSize, industryVertical };
   
-  // For "Last Month" period, also fetch daily GA4 data if available
+  // For "Last Month" period, try daily data first, fallback to monthly data
   if (periodsToQuery.includes('2025-07') || periodsToQuery.includes('2025-06')) {
     const lastMonthPeriod = periodsToQuery.find(p => p === '2025-07' || p === '2025-06');
     if (lastMonthPeriod) {
       try {
+        // First try to get daily metrics
         const dailyMetrics = await storage.getDailyClientMetrics(client.id, lastMonthPeriod);
         if (dailyMetrics.length > 0) {
           // Cache the daily data for charts to use
           setCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`, dailyMetrics, 5 * 60 * 1000);
+        } else {
+          // Fallback: Get monthly metrics for the period
+          console.log(`No daily metrics found for ${lastMonthPeriod}, falling back to monthly metrics`);
+          const monthlyMetrics = await storage.getMetricsByClient(client.id, lastMonthPeriod);
+          if (monthlyMetrics.length > 0) {
+            // Cache monthly data as fallback
+            setCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`, monthlyMetrics, 5 * 60 * 1000);
+          }
         }
       } catch (error) {
-        console.warn('Could not fetch daily metrics:', error);
+        console.warn('Could not fetch daily or monthly metrics:', error);
       }
     }
   }
