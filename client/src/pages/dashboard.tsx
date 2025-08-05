@@ -142,20 +142,17 @@ export default function Dashboard() {
   // Manual refresh function for immediate data update
   const handleManualRefresh = async () => {
     console.log("🔄 Manual refresh triggered");
-    queryClient.clear();
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
     await refetchDashboard();
   };
 
-  // Log data changes for debugging
+  // Simplified logging for better performance
   useEffect(() => {
-    if (dashboardData) {
-      console.log("📊 Dashboard data updated:", {
-        hasMetrics: !!dashboardData.metrics,
-        metricsCount: dashboardData.metrics?.length,
-        timestamp: new Date().toISOString()
-      });
+    if (dashboardData?.metrics) {
+      console.log("📊 Dashboard refreshed:", dashboardData.metrics.length, "metrics");
     }
-  }, [dashboardData]);
+  }, [dashboardData?.metrics]);
 
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: ["/api/filters", businessSize, industryVertical],

@@ -574,12 +574,11 @@ export default function AdminPanel() {
             // Comprehensive cache invalidation for seamless refresh
             queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
             
-            // Force complete cache clearing for all dashboard and filter queries
-            queryClient.clear();
+            // Targeted cache invalidation for better performance
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
             
-            console.log("🔄 Cache cleared after portfolio integration completion");
-            
-            // Integration complete - cache cleared and data will refresh
+            console.log("🔄 Cache invalidated after portfolio integration completion");
             
             toast({
               title: "Portfolio Integration Complete", 
@@ -622,13 +621,12 @@ export default function AdminPanel() {
       await apiRequest("DELETE", `/api/admin/cd-portfolio/${id}`);
     },
     onSuccess: () => {
-      // Comprehensive cache invalidation for immediate refresh
+      // Targeted cache invalidation for faster performance
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
       
-      // Force complete cache clearing for all dashboard and filter queries
-      queryClient.clear();
-      
-      console.log("🔄 Cache cleared after portfolio company deletion");
+      console.log("🔄 Cache invalidated after portfolio company deletion");
       
       toast({
         title: "Company removed from portfolio",
