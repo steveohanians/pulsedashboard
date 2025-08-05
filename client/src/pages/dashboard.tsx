@@ -259,12 +259,7 @@ export default function Dashboard() {
     
     // DEBUG: Check raw metrics for Bounce Rate specifically
     const bounceRateMetrics = dashboardData.metrics?.filter(m => m.metricName === 'Bounce Rate') || [];
-    console.log('🔍 RAW Bounce Rate metrics from API:', bounceRateMetrics.map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      sourceType: m.sourceType,
-      period: m.period
-    })));
+    // Bounce rate metrics processed
     
     // Calculate averages when multiple time periods are involved
     const result: Record<string, Record<string, number>> = {};
@@ -338,16 +333,7 @@ export default function Dashboard() {
     }
     
     // Debug traffic channel data processing
-    console.log('🚛 TRAFFIC CHANNEL DEBUG:', {
-      trafficMetricsCount: trafficMetrics.length,
-      trafficMetricsSample: trafficMetrics.slice(0, 3),
-      sourceTypes: [...new Set(trafficMetrics.map(m => m.sourceType))],
-      metricNames: [...new Set(trafficMetrics.map(m => m.metricName))],
-      clientMetricsFound: trafficMetrics.filter(m => m.sourceType === 'Client').length,
-      cdAvgMetricsFound: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').length,
-      clientSample: trafficMetrics.filter(m => m.sourceType === 'Client').slice(0, 2),
-      cdAvgSample: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').slice(0, 2)
-    });
+    // Traffic channel metrics processed
     
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
@@ -1464,12 +1450,7 @@ export default function Dashboard() {
             
             // DEBUG: Compare Bounce Rate vs Session Duration data flow
             if (metricName === 'Bounce Rate') {
-              console.log(`🔍 BOUNCE RATE Data:`, {
-                metricData,
-                clientData: metricData.Client || 0,
-                cdAvg: metricData.CD_Avg || 0,
-                rawGroupedMetrics: groupedMetrics['Bounce Rate']
-              });
+              // Bounce rate data processed
             }
             
 

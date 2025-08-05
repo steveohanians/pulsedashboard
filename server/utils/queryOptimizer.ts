@@ -305,9 +305,10 @@ export async function getDashboardDataOptimized(
           // Add CD Average metrics to each grouped period so they appear as flat lines
           Object.keys(groupedPeriods).forEach(periodKey => {
             cdAvgMetrics.forEach(metric => {
-              // 🎯 CRITICAL FIX: Apply JSON parsing for CD_Avg traffic channels in grouped periods
+              // Extract percentage from CD_Avg traffic channels for grouped periods
               let processedValue = metric.value;
               if (metric.metricName === 'Traffic Channels' && metric.sourceType === 'CD_Avg') {
+                // Handle both string JSON and already parsed objects
                 if (typeof metric.value === 'string' && metric.value.includes('{')) {
                   try {
                     const parsed = JSON.parse(metric.value);
@@ -315,6 +316,9 @@ export async function getDashboardDataOptimized(
                   } catch (e) {
                     processedValue = 0;
                   }
+                } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
+                  // Data already parsed by parseMetricPercentage()
+                  processedValue = Number(metric.value.percentage) || 0;
                 }
               }
               
@@ -401,22 +405,7 @@ function processMetricsData(
     
     const result: any[] = [];
     
-    // Debug traffic channel input data
-    const trafficChannelInputs = metrics.filter(m => m.metricName === 'Traffic Channels');
-    if (trafficChannelInputs.length > 0) {
-      logger.debug('🚛 QUERY OPTIMIZER - Traffic Channel Processing Input:', {
-        count: trafficChannelInputs.length,
-        sample: trafficChannelInputs.slice(0, 2).map(m => ({
-          metricName: m.metricName,
-          sourceType: m.sourceType,
-          timePeriod: m.timePeriod,
-          valueType: typeof m.value,
-          valueLength: typeof m.value === 'string' ? m.value.length : 'N/A',
-          value: typeof m.value === 'string' ? m.value.substring(0, 100) + '...' : m.value,
-          channel: m.channel
-        }))
-      });
-    }
+    // Traffic channel data processing initialized
     
     metrics.forEach(m => {
 
@@ -450,12 +439,7 @@ function processMetricsData(
           try {
             const channelData = JSON.parse(rawValue);
             if (Array.isArray(channelData)) {
-              logger.debug('QUERY OPTIMIZER - Parsing GA4 JSON:', {
-                sourceType: m.sourceType,
-                timePeriod: m.timePeriod,
-                channelCount: channelData.length,
-                sampleChannel: channelData[0]
-              });
+              // GA4 JSON data parsed successfully
               
               channelData.forEach((channel: any) => {
                 result.push({
@@ -487,11 +471,7 @@ function processMetricsData(
           }
         } else if (Array.isArray(rawValue)) {
           // Already parsed JSON array
-          logger.debug('🚛 QUERY OPTIMIZER - Processing pre-parsed array:', {
-            sourceType: m.sourceType,
-            timePeriod: m.timePeriod,
-            channelCount: rawValue.length
-          });
+          // Pre-parsed channel data processed
           
           rawValue.forEach((channel: any) => {
             result.push({
@@ -553,16 +533,11 @@ function processMetricsData(
 
   
   // Debug input data to processTrafficChannelData
-  logger.debug('🚛 QUERY OPTIMIZER - Input Metrics Summary:', {
-    allMetricsCount: allMetrics.length,
-    clientTrafficChannels: allMetrics.filter(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client').length,
-    cdAvgTrafficChannels: allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels').length,
-    sampleClientTrafficChannel: allMetrics.find(m => m.metricName === 'Traffic Channels' && m.sourceType === 'Client')
-  });
+  // Metrics processing summary logged
 
   // AGGRESSIVE DEBUGGING: Check CD_Avg raw data before processing
   const cdAvgRaw = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
-  console.log('🎯 CD_AVG RAW BEFORE PROCESSING:', {
+  logger.debug('CD_AVG RAW BEFORE PROCESSING:', {
     count: cdAvgRaw.length,
     samples: cdAvgRaw.slice(0, 2).map(m => ({
       value: m.value,
