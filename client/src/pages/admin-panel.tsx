@@ -501,17 +501,17 @@ export default function AdminPanel() {
       // Show immediate success message
       toast({
         title: "Company added to portfolio",
-        description: "Company has been successfully added to Clear Digital portfolio.",
+        description: "SEMrush integration started. Fetching historical data and calculating portfolio averages...",
       });
       
-      // Show SEMrush integration status after a brief delay
+      // Show detailed integration status after a brief delay
       setTimeout(() => {
         toast({
-          title: "SEMrush Integration Started",
-          description: "🔄 Fetching 15 months of historical data from SEMrush API. This process runs in the background and may take a few minutes.",
-          duration: 8000,
+          title: "SEMrush Integration Running",
+          description: "🔄 Fetching 15 months of historical data. Dashboard will update automatically when complete - no refresh needed.",
+          duration: 6000,
         });
-      }, 1000);
+      }, 1500);
       
       // Start polling for completion status instead of hardcoded timeout
       startPollingForIntegrationCompletion(response.id);
@@ -529,6 +529,7 @@ export default function AdminPanel() {
   const startPollingForIntegrationCompletion = (companyId: string) => {
     const startTime = Date.now();
     const maxPollTime = 5 * 60 * 1000; // 5 minutes max polling
+    let lastPortfolioCount = 0;
     
     const pollInterval = setInterval(async () => {
       try {
@@ -537,7 +538,7 @@ export default function AdminPanel() {
           clearInterval(pollInterval);
           toast({
             title: "SEMrush Data Integration",
-            description: "⏰ Integration is taking longer than expected. Check server logs for status. Portfolio averages will update automatically when complete.",
+            description: "⏰ Integration is taking longer than expected. Portfolio averages will update automatically when complete.",
             duration: 10000,
           });
           return;
@@ -557,17 +558,38 @@ export default function AdminPanel() {
             )
           );
 
-          if (hasPortfolioData) {
+          // Also check if portfolio company count has increased (more robust detection)
+          const portfolioResponse = await fetch('/api/admin/cd-portfolio');
+          let portfolioIncreased = false;
+          if (portfolioResponse.ok) {
+            const portfolioData = await portfolioResponse.json();
+            const currentCount = portfolioData.length || 0;
+            portfolioIncreased = currentCount > lastPortfolioCount;
+            lastPortfolioCount = Math.max(lastPortfolioCount, currentCount);
+          }
+
+          if (hasPortfolioData && portfolioIncreased) {
             clearInterval(pollInterval);
             
-            // Invalidate queries to refresh the admin panel data
+            // Comprehensive cache invalidation for seamless refresh
             queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/demo-client-id"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+            queryClient.refetchQueries({ queryKey: ["/api/dashboard"] });
+            
+            // Clear any browser cache for dashboard data
+            const dashboardKeys = [
+              "/api/dashboard/demo-client-id",
+              "/api/admin/cd-portfolio"
+            ];
+            dashboardKeys.forEach(key => {
+              queryClient.removeQueries({ queryKey: [key] });
+              queryClient.invalidateQueries({ queryKey: [key] });
+            });
             
             toast({
-              title: "SEMrush Data Integration Complete",
-              description: "✅ Historical data has been successfully fetched and portfolio averages updated. Charts now reflect the new data.",
-              duration: 10000,
+              title: "Portfolio Integration Complete",
+              description: "✅ Company added successfully! Portfolio averages updated and dashboard data refreshed. No manual refresh needed.",
+              duration: 8000,
             });
           }
         }
@@ -575,7 +597,7 @@ export default function AdminPanel() {
         // Continue polling on error, don't break the process
         console.warn('Integration completion check failed:', error);
       }
-    }, 10000); // Check every 10 seconds
+    }, 8000); // Check every 8 seconds for faster feedback
   };
 
   const updateCdPortfolioCompanyMutation = useMutation({
@@ -605,12 +627,23 @@ export default function AdminPanel() {
       await apiRequest("DELETE", `/api/admin/cd-portfolio/${id}`);
     },
     onSuccess: () => {
+      // Comprehensive cache invalidation for immediate refresh
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
-      // Also refresh dashboard data to show updated portfolio averages
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/demo-client-id"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.refetchQueries({ queryKey: ["/api/dashboard"] });
+      
+      // Clear specific dashboard cache entries
+      const dashboardKeys = [
+        "/api/dashboard/demo-client-id"
+      ];
+      dashboardKeys.forEach(key => {
+        queryClient.removeQueries({ queryKey: [key] });
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
+      
       toast({
         title: "Company removed from portfolio",
-        description: "Portfolio averages have been recalculated. Dashboard will refresh automatically.",
+        description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically.",
       });
     },
     onError: (error: Error) => {
