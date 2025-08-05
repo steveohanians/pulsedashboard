@@ -67,6 +67,7 @@ Pulse Dashboard™ employs a modern full-stack architecture, ensuring a clear se
 - **Restored Dashed Outline CD_Avg Bars**: Reverted CD_Avg bars to dashed outline style for visual distinction.
 - **SEMrush Traffic Channel Solution**: Integrated SEMrush traffic channel data from the Summary endpoint, including proper column extraction and percentage calculation, and implemented SEMrush-specific date mapping.
 - **CD_Avg Traffic Channel Parser Fix**: Updated `queryOptimizer.ts` to use `parseMetricPercentage()` for traffic channels, ensuring correct display of authentic portfolio averages.
+- **Traffic Channel Aggregation Fix**: Resolved percentage inflation bug where multi-period data showed 550% Direct instead of 65%. Fixed `aggregateChannelData` function to average percentages across time periods instead of summing them, ensuring realistic traffic channel display for "Last Quarter" and "Last Year" periods.
 
 ## External Dependencies
 
