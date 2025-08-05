@@ -122,6 +122,7 @@ export const metrics = pgTable("metrics", {
   clientId: varchar("client_id").references(() => clients.id),
   competitorId: varchar("competitor_id").references(() => competitors.id),
   cdPortfolioCompanyId: varchar("cd_portfolio_company_id").references(() => cdPortfolioCompanies.id),
+  benchmarkCompanyId: varchar("benchmark_company_id").references(() => benchmarkCompanies.id),
   metricName: text("metric_name").notNull(),
   value: jsonb("value").notNull(), // Changed to jsonb to support complex data structures
   sourceType: sourceTypeEnum("source_type").notNull(),
