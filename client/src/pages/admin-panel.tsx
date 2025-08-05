@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -200,35 +200,35 @@ export default function AdminPanel() {
     }
   }, [location]);
 
-  const { data: clients } = useQuery<any[]>({
+  const { data: clients, isLoading: clientsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/clients"],
     enabled: user?.role === "Admin",
   });
 
-  const { data: benchmarkCompanies } = useQuery<any[]>({
+  const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/benchmark-companies"],
     enabled: user?.role === "Admin",
   });
 
-  const { data: users } = useQuery<any[]>({
+  const { data: users, isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
     enabled: user?.role === "Admin",
   });
 
   // Query for CD portfolio companies (independent from clients)
-  const { data: cdPortfolioCompanies } = useQuery<any[]>({
+  const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/cd-portfolio"],
     enabled: user?.role === "Admin",
   });
 
   // Query for filter options to populate dropdowns dynamically
-  const { data: filterOptions } = useQuery<any[]>({
+  const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/filter-options"],
     enabled: user?.role === "Admin",
   });
 
   // Query for metric prompts
-  const { data: metricPrompts } = useQuery<any[]>({
+  const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/metric-prompts"],
     enabled: user?.role === "Admin",
   });
@@ -1221,9 +1221,17 @@ export default function AdminPanel() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                {/* Mobile Card Layout */}
-                <div className="block sm:hidden space-y-3">
-                  {sortedData(users, 'users')?.map((user: any) => (
+                {/* Loading State */}
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="ml-2 text-sm text-slate-600">Loading users...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card Layout */}
+                    <div className="block sm:hidden space-y-3">
+                      {sortedData(users, 'users')?.map((user: any) => (
                     <Card key={user.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1580,7 +1588,9 @@ export default function AdminPanel() {
                       </TableBody>
                     </Table>
                   </div>
-                </div>
+                  </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* Client Management */}
@@ -1595,9 +1605,18 @@ export default function AdminPanel() {
                     Add Client
                   </Button>
                 </div>
-                {/* Mobile Card Layout */}
-                <div className="block sm:hidden space-y-3">
-                  {sortedData(clients, 'clients')?.map((client: any) => (
+                
+                {/* Loading State */}
+                {clientsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="ml-2 text-sm text-slate-600">Loading clients...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card Layout */}
+                    <div className="block sm:hidden space-y-3">
+                      {sortedData(clients, 'clients')?.map((client: any) => (
                     <Card key={client.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1758,8 +1777,10 @@ export default function AdminPanel() {
                       ))}
                     </TableBody>
                   </Table>
+                    </div>
                   </div>
-                </div>
+                  </>
+                )}
 
                 {/* Unified Client Dialog for Add/Edit */}
                 <Dialog open={isDialogOpen && editingItem?.type === 'client'} onOpenChange={(open) => {
@@ -2029,9 +2050,17 @@ export default function AdminPanel() {
                   </Card>
                 </div>
 
-                {/* Mobile Card Layout */}
-                <div className="block sm:hidden space-y-3">
-                  {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
+                {/* Loading State */}
+                {benchmarkCompaniesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="ml-2 text-sm text-slate-600">Loading benchmark companies...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card Layout */}
+                    <div className="block sm:hidden space-y-3">
+                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2384,9 +2413,11 @@ export default function AdminPanel() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </div>
                 </div>
-              </div>
+                </>
+                )}
               </TabsContent>
 
               {/* Clear Digital Portfolio Companies */}
@@ -2535,9 +2566,17 @@ export default function AdminPanel() {
                   </Card>
                 </div>
 
-                {/* Mobile Card Layout */}
-                <div className="block sm:hidden space-y-3">
-                  {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
+                {/* Loading State */}
+                {cdPortfolioCompaniesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="ml-2 text-sm text-slate-600">Loading portfolio companies...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card Layout */}
+                    <div className="block sm:hidden space-y-3">
+                      {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2926,7 +2965,9 @@ export default function AdminPanel() {
                       </Button>
                     </div>
                   )}
-                </div>
+                  </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* Filters Editor */}
@@ -3235,7 +3276,13 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  {metricPrompts && metricPrompts.length > 0 ? (
+                  {/* Loading State */}
+                  {metricPromptsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2 text-sm text-slate-600">Loading metric prompts...</span>
+                    </div>
+                  ) : metricPrompts && metricPrompts.length > 0 ? (
                   <div className="bg-white rounded-lg border">
                     <Table>
                       <TableHeader>
@@ -3360,7 +3407,7 @@ export default function AdminPanel() {
                       Create First Prompt
                     </Button>
                   </div>
-                )}
+                  )}
                 </div>
               </TabsContent>
 
