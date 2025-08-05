@@ -16,7 +16,7 @@ import {
   type GA4PropertyAccess, type InsertGA4PropertyAccess
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, isNull, inArray, sql, like } from "drizzle-orm";
+import { eq, and, or, ne, isNull, inArray, sql, like } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -308,18 +308,42 @@ export class DatabaseStorage implements IStorage {
       const companyName = company[0]?.name || 'Unknown';
       logger.info('Deleting portfolio company', { companyId: id, companyName });
 
-      // Step 2: Delete the company record first
+      // Step 2: Check if this is the last portfolio company
+      const remainingCompanies = await db
+        .select()
+        .from(cdPortfolioCompanies)
+        .where(ne(cdPortfolioCompanies.id, id));
+      
+      const isLastCompany = remainingCompanies.length === 0;
+      logger.info('Portfolio company deletion context', { 
+        companyId: id, 
+        isLastCompany, 
+        remainingCompaniesCount: remainingCompanies.length 
+      });
+
+      // Step 3: Delete the company record
       await this.cdPortfolioCompanyRepo.delete(id);
       logger.info('Company record deleted', { companyId: id });
 
-      // Step 3: Delete only CD_Avg calculated metrics
-      // Preserve CD_Portfolio source data from remaining companies
-      await this.deleteAllPortfolioMetrics();
-      logger.info('CD_Avg calculated metrics cleared for recalculation');
-
-      // Step 4: Recalculate portfolio averages from remaining active companies
-      await this.recalculatePortfolioAverages();
-      logger.info('Portfolio averages recalculated from remaining companies');
+      // Step 4: Delete metrics based on whether this is the last company
+      if (isLastCompany) {
+        // Delete ALL portfolio-related metrics when no companies remain
+        await db.delete(metrics).where(
+          or(
+            eq(metrics.sourceType, 'CD_Portfolio'),
+            eq(metrics.sourceType, 'CD_Avg')
+          )
+        );
+        logger.info('All portfolio metrics deleted (last company)');
+      } else {
+        // Delete only CD_Avg calculated metrics, preserve CD_Portfolio source data
+        await this.deleteAllPortfolioMetrics();
+        logger.info('CD_Avg calculated metrics cleared for recalculation');
+        
+        // Recalculate portfolio averages from remaining companies
+        await this.recalculatePortfolioAverages();
+        logger.info('Portfolio averages recalculated from remaining companies');
+      }
 
       // Step 5: Clear all performance caches to ensure fresh data
       await this.clearPortfolioCaches();
