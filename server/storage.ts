@@ -1257,17 +1257,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMetricsByCompanyId(companyId: string): Promise<Metric[]> {
-    // For CD Portfolio companies, we need to get metrics where the company is linked
-    // Since CD Portfolio metrics don't have a direct company field, we'll get by sourceType
-    // and use tags or other mechanisms to identify company-specific data
+    // Get metrics for a specific CD Portfolio company using the cd_portfolio_company_id field
     return await db
       .select()
       .from(metrics)
       .where(
         and(
           eq(metrics.sourceType, 'CD_Portfolio'),
-          isNull(metrics.clientId), // CD Portfolio metrics don't have clientId
-          isNull(metrics.competitorId) // CD Portfolio metrics don't have competitorId
+          eq(metrics.cdPortfolioCompanyId, companyId) // Filter by specific company ID
         )
       )
       .orderBy(metrics.timePeriod, metrics.metricName);

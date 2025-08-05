@@ -224,8 +224,8 @@ export class PortfolioIntegration {
   private async getCompanyMetrics(companyId: string): Promise<any> {
     logger.info('Getting company metrics', { companyId });
     
-    // Get all CD Portfolio metrics (they don't have companyId, but are associated via sourceType)
-    const allMetrics = await this.storage.getMetricsBySourceType('CD_Portfolio');
+    // Get only metrics for this specific company using the correct company ID filter
+    const allMetrics = await this.storage.getMetricsByCompanyId(companyId);
     
     // Group metrics by type
     const metrics = allMetrics.filter(m => 
