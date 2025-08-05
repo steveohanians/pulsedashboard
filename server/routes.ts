@@ -1541,13 +1541,24 @@ export function registerRoutes(app: Express): Server {
   app.delete('/api/admin/cd-portfolio/:companyId', adminLimiter, requireAdmin, async (req, res) => {
     try {
       const { companyId } = req.params;
+      
+      // Step 1: Delete the company
       await storage.deleteCdPortfolioCompany(companyId);
       
-      logger.info("Deleted CD portfolio company", { 
+      // Step 2: Clear all performance caches (dashboard data depends on portfolio averages)
+      performanceCache.clear();
+      clearCache(); // Clear query optimizer cache
+      
+      // Step 3: Recalculate portfolio averages with remaining companies
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration');
+      const portfolioIntegration = new PortfolioIntegration(storage);
+      await portfolioIntegration.updatePortfolioAverages();
+      
+      logger.info("Deleted CD portfolio company and updated averages", { 
         companyId, 
         admin: req.user?.id 
       });
-      res.json({ message: "Company deleted successfully" });
+      res.json({ message: "Company deleted and portfolio averages updated successfully" });
     } catch (error) {
       logger.error("Failed to delete CD portfolio company", { 
         error: (error as Error).message, 
