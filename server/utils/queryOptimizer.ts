@@ -385,8 +385,8 @@ export async function getDashboardDataOptimized(
         if (Object.keys(groupedPeriods).length > 0) {
           logger.debug(`📊 Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
           // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
-          // Get the CD Average data from the original processed data
-          const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');
+          // Get ONLY authentic CD_Avg data - do not use CD_Portfolio data as fallback
+          const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
           
           // Add CD Average metrics to each grouped period so they appear as flat lines
           Object.keys(groupedPeriods).forEach(periodKey => {
