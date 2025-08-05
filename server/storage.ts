@@ -321,11 +321,7 @@ export class DatabaseStorage implements IStorage {
         remainingCompaniesCount: remainingCompanies.length 
       });
 
-      // Step 3: Delete the company record
-      await this.cdPortfolioCompanyRepo.delete(id);
-      logger.info('Company record deleted', { companyId: id });
-
-      // Step 4: Delete metrics based on whether this is the last company
+      // Step 3: Delete metrics FIRST to avoid foreign key constraint violation
       if (isLastCompany) {
         // Delete ALL portfolio-related metrics when no companies remain
         await db.delete(metrics).where(
@@ -336,11 +332,11 @@ export class DatabaseStorage implements IStorage {
         );
         logger.info('All portfolio metrics deleted (last company)');
       } else {
-        // Delete the specific company's CD_Portfolio metrics first (FIX FOR ORPHANED RECORDS)
+        // Delete the specific company's CD_Portfolio metrics first (FIXED: use correct field)
         await db.delete(metrics).where(
           and(
             eq(metrics.sourceType, 'CD_Portfolio'),
-            eq(metrics.competitorId, id)
+            eq(metrics.cdPortfolioCompanyId, id)
           )
         );
         logger.info('Deleted specific company CD_Portfolio metrics', { companyId: id });
@@ -353,6 +349,10 @@ export class DatabaseStorage implements IStorage {
         await this.recalculatePortfolioAverages();
         logger.info('Portfolio averages recalculated from remaining companies');
       }
+
+      // Step 4: Now safely delete the company record after metrics are gone
+      await this.cdPortfolioCompanyRepo.delete(id);
+      logger.info('Company record deleted', { companyId: id });
 
       // Step 5: Clear all performance caches to ensure fresh data
       await this.clearPortfolioCaches();
