@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import logger from "./logger";
+import { backgroundProcessor } from "./background-processor";
 
 export type CompanyType = 'portfolio' | 'competitor' | 'benchmark' | 'client';
 
@@ -115,23 +116,34 @@ export async function createCompanyWithWorkflows<T>(
       for (const workflow of options.postCreationWorkflows) {
         try {
           if (workflow.isBackground) {
-            // Execute in background without blocking response
-            workflow.handler(company).then((result) => {
-              logger.info(`${workflow.name} completed for ${companyType}`, {
-                companyId: company.id,
-                companyName: getCompanyDisplayName(company),
-                result
-              });
-            }).catch((error) => {
-              logger.error(`${workflow.name} failed for ${companyType}`, {
-                companyId: company.id,
-                companyName: getCompanyDisplayName(company),
-                error: (error as Error).message
-              });
+            // Use proper background processor to avoid response conflicts
+            const jobId = backgroundProcessor.enqueue({
+              id: `${companyType.toUpperCase()}_INTEGRATION_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'COMPETITOR_INTEGRATION',
+              data: { company, companyType, workflowName: workflow.name },
+              processor: async (job) => {
+                try {
+                  const result = await workflow.handler(job.data.company);
+                  logger.info(`${job.data.workflowName} completed for ${job.data.companyType}`, {
+                    companyId: job.data.company.id,
+                    companyName: getCompanyDisplayName(job.data.company),
+                    result
+                  });
+                  return result;
+                } catch (error) {
+                  logger.error(`${job.data.workflowName} failed for ${job.data.companyType}`, {
+                    companyId: job.data.company.id,
+                    companyName: getCompanyDisplayName(job.data.company),
+                    error: (error as Error).message
+                  });
+                  throw error;
+                }
+              }
             });
             
             logger.info(`${workflow.name} started in background for ${companyType}`, {
-              companyId: company.id
+              companyId: company.id,
+              jobId
             });
           } else {
             // Execute synchronously
