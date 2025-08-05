@@ -2548,6 +2548,34 @@ export function registerRoutes(app: Express): Server {
   // Google OAuth routes for GA4 integration
   app.use("/api/oauth/google", googleOAuthRoutes);
 
+  // Portfolio Averaging Fix Route (Admin Only)
+  app.post("/api/admin/fix-portfolio-averages", requireAdmin, async (req, res) => {
+    try {
+      logger.info('🔧 Admin initiated portfolio averages fix', { userId: req.user.id });
+      
+      const { PortfolioAverageFix } = await import('./utils/portfolioAverageFix');
+      
+      // Get a report first
+      await PortfolioAverageFix.getAveragingReport('2025-06');
+      
+      // Run the fix
+      await PortfolioAverageFix.fixAllCdAvgMetrics();
+      
+      logger.info('✅ Portfolio averages fix completed successfully');
+      
+      res.json({
+        message: "Portfolio averages fixed successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('❌ Portfolio averages fix failed', { error: (error as Error).message });
+      res.status(500).json({ 
+        message: "Failed to fix portfolio averages",
+        error: (error as Error).message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
