@@ -58,10 +58,10 @@ export function generateDynamicPeriodMapping(): Record<string, string[]> {
   });
   
   return {
-    "Last Month": [currentPeriod], // Last complete month (July 2025)
+    "Last Month": [lastMonthPeriod], // Last complete month (June 2025 = 2025-06)
     "Last Quarter": currentQuarterPeriods, // Current quarter (up to 3 months, ending with last complete month)
     "Last Year": yearPeriods, // Exactly 12 months ending with last complete month
-    "Custom Date Range": [currentPeriod] // Default to last complete month for custom ranges
+    "Custom Date Range": [lastMonthPeriod] // Default to last complete month for custom ranges
   };
 }
 
