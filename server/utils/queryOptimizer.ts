@@ -393,13 +393,21 @@ export async function getDashboardDataOptimized(
             cdAvgMetrics.forEach(metric => {
               // Extract percentage from CD_Avg traffic channels for grouped periods
               let processedValue = metric.value;
-              if (metric.metricName === 'Traffic Channels' && metric.sourceType === 'CD_Avg') {
+              if ((metric.metricName === 'Traffic Channels' || metric.metricName === 'Device Distribution') && metric.sourceType === 'CD_Avg') {
                 // Handle both string JSON and already parsed objects
                 if (typeof metric.value === 'string' && metric.value.includes('{')) {
                   try {
                     const parsed = JSON.parse(metric.value);
                     processedValue = Number(parsed.percentage) || 0;
+                    console.log('🔍 GROUPED PERIODS JSON PARSE SUCCESS:', {
+                      metricName: metric.metricName,
+                      sourceType: metric.sourceType,
+                      periodKey: periodKey,
+                      parsedPercentage: processedValue,
+                      channel: metric.channel
+                    });
                   } catch (e) {
+                    console.log('🔍 GROUPED PERIODS JSON PARSE ERROR:', e, 'Metric:', metric.metricName, 'Value:', metric.value);
                     processedValue = 0;
                   }
                 } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
@@ -460,9 +468,19 @@ export async function getDashboardDataOptimized(
     // Try multiple field names for device type
     const deviceType = metric.deviceType || metric.channel || metric.metricSubtype;
     
-    // Try multiple field names for value and handle different formats
+    // Handle different value formats - JSON for CD_Avg, simple numbers for Client
     let value = null;
-    if (metric.valuePreview !== undefined) {
+    
+    if (metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')) {
+      // CD_Avg device data is stored as JSON - parse like traffic channels
+      try {
+        const parsed = JSON.parse(metric.value);
+        value = Number(parsed.percentage) || 0;
+      } catch (error) {
+        console.log('🔍 DEVICE JSON PARSE ERROR:', error, 'Raw value:', metric.value);
+        value = null;
+      }
+    } else if (metric.valuePreview !== undefined) {
       value = parseFloat(String(metric.valuePreview).replace('%', ''));
     } else if (metric.value !== undefined) {
       value = parseFloat(String(metric.value).replace('%', ''));
@@ -473,9 +491,10 @@ export async function getDashboardDataOptimized(
       sourceType: metric.sourceType,
       deviceType: deviceType,
       valuePreview: metric.valuePreview,
-      value: metric.value,
+      rawValue: metric.value,
+      timePeriod: metric.timePeriod,
       parsedValue: value,
-      allFields: Object.keys(metric)
+      isJSON: metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')
     });
     
     if (metric.sourceType === 'Client' && deviceType && !isNaN(value)) {
