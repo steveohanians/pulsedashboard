@@ -178,6 +178,8 @@ export class SemrushDataProcessor {
           avgMetrics.push({
             clientId: null,
             competitorId: null,
+            cdPortfolioCompanyId: null,
+            benchmarkCompanyId: null,
             metricName,
             value: { value: average, source: 'cd_portfolio_average' },
             sourceType: 'CD_Avg',
@@ -258,6 +260,8 @@ export class SemrushDataProcessor {
         targetArray.push({
           clientId: null,
           competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
           metricName,
           value: {
             percentage: avgPercentage,
