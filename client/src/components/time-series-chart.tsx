@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
 import { logger } from '@/utils/logger';
@@ -57,18 +57,21 @@ function generateTimeSeriesData(
   if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
     
     // Check if we have time series data for the last month - this would be daily data
-    if (timeSeriesData && periods && periods.length === 1 && periods[0] === '2025-07') {
+    if (timeSeriesData && periods && periods.length === 1) {
       // Use the existing time series generation but for daily data
       return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
     }
     
-    // Fallback to single data point for Last Month using the correct period label
+    // Fallback to single data point for Last Month using dynamic period
     const clientKey = clientUrl || 'democompany.com';
-    // Use the current period which should be July 2025 (2025-07)
-    const currentMonth = generatePeriodLabel('2025-07'); // This will show "Jul 25"
+    // Use the actual period from the query instead of hardcoded
+    const currentPeriod = periods && periods.length > 0 ? periods[0] : '2025-07';
+    const currentMonth = generatePeriodLabel(currentPeriod);
     
-    // Convert CD_Avg from decimal to percentage for Bounce Rate
-    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    // Convert CD_Avg from decimal to percentage for Bounce Rate, handle undefined/null cases
+    const processedCdAvg = (cdAvg !== undefined && cdAvg !== null && !isNaN(cdAvg)) 
+      ? (metricName?.includes('Rate') ? cdAvg * 100 : cdAvg)
+      : 0;
     
 
     
@@ -260,133 +263,249 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
     );
   }
 
+  // Determine if we should use bar chart for single data point visualization
+  const useBars = data.length === 1;
+
   return (
     <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="85%">
-        <LineChart 
-          data={data} 
-          margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-        >
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-        <XAxis 
-          dataKey="date" 
-          fontSize={9} 
-          tick={{ fill: 'hsl(var(--muted-foreground))' }}
-          axisLine={{ stroke: 'hsl(var(--border))' }}
-          interval={0}
-          angle={-45}
-          textAnchor="end"
-          height={60}
-        />
-        <YAxis 
-          fontSize={9}
-          tick={{ fill: 'hsl(var(--muted-foreground))' }}
-          axisLine={{ stroke: 'hsl(var(--border))' }}
-          domain={yAxisDomain}
-          tickFormatter={(value) => {
-            if (metricName === "Pages per Session" || metricName === "Sessions per User") {
-              return value.toFixed(1);
-            }
-            return Math.round(value).toString();
-          }}
-          width={35}
-          type="number"
-        />
-        <Tooltip 
-          content={({ active, payload, label }) => {
-            if (!active || !payload || !label) return null;
-            
-            return (
-              <div style={{
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '6px',
-                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
-                padding: '8px 12px',
-                fontSize: '12px'
-              }}>
-                <div style={{ color: 'hsl(var(--foreground))', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
-                  {label}
-                </div>
-                {payload.map((entry: any, index: number) => (
-                  <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
-                    <div 
-                      style={{ 
-                        width: '8px', 
-                        height: '8px', 
-                        backgroundColor: entry.color, 
-                        marginRight: '6px',
-                        borderRadius: '50%'
-                      }} 
-                    />
-                    <span style={{ 
-                      fontWeight: entry.name === clientKey ? 'bold' : 'normal',
-                      color: entry.name === clientKey ? colors[clientKey] : 'hsl(var(--foreground))'
-                    }}>
-                      {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Pages per Session') ? ' pages' : metricName.includes('Sessions per User') ? ' sessions' : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            );
-          }}
-        />
-
-        
-        {/* Client line (primary pink) */}
-        {visibleLines[clientKey] && (
-          <Line 
-            type="monotone" 
-            dataKey={clientKey} 
-            stroke={colors[clientKey]}
-            strokeWidth={3}
-            dot={{ fill: colors[clientKey], r: 3 }}
-            activeDot={{ r: 5, stroke: colors[clientKey], strokeWidth: 2, fill: 'white' }}
-            animationDuration={isInitialRender ? 800 : 0}
-          />
-        )}
-        
-        {/* Industry Average line */}
-        {visibleLines['Industry Avg'] && (
-          <Line 
-            type="monotone" 
-            dataKey="Industry Avg" 
-            stroke={colors['Industry Avg']}
-            strokeWidth={2}
-            dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
-            strokeDasharray="5 5"
-            animationDuration={isInitialRender ? 800 : 0}
-          />
-        )}
-        
-        {/* Clear Digital Clients Average line */}
-        {visibleLines['Clear Digital Clients Avg'] && (
-          <Line 
-            type="monotone" 
-            dataKey="Clear Digital Clients Avg" 
-            stroke={colors['Clear Digital Clients Avg']}
-            strokeWidth={2}
-            dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
-            strokeDasharray="8 4"
-            animationDuration={isInitialRender ? 800 : 0}
-          />
-        )}
-        
-        {/* Competitor lines */}
-        {competitors.map((competitor, index) => (
-          visibleLines[competitor.label] && (
-            <Line 
-              key={competitor.id}
-              type="monotone" 
-              dataKey={competitor.label} 
-              stroke={competitorColors[index % competitorColors.length]}
-              strokeWidth={2}
-              dot={(props: any) => <DiamondDot {...props} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />}
-              animationDuration={isInitialRender ? 800 : 0}
+        {useBars ? (
+          <BarChart 
+            data={data} 
+            margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="date" 
+              fontSize={9} 
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
-          )
-        ))}
-        </LineChart>
+            <YAxis 
+              fontSize={9}
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={yAxisDomain}
+              tickFormatter={(value) => {
+                if (metricName === "Pages per Session" || metricName === "Sessions per User") {
+                  return value.toFixed(1);
+                }
+                return Math.round(value).toString();
+              }}
+              width={35}
+              type="number"
+            />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (!active || !payload || !label) return null;
+                
+                return (
+                  <div style={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                    padding: '8px 12px',
+                    fontSize: '12px'
+                  }}>
+                    <div style={{ color: 'hsl(var(--foreground))', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                      {label}
+                    </div>
+                    {payload.map((entry: any, index: number) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            backgroundColor: entry.color, 
+                            marginRight: '6px',
+                            borderRadius: '50%'
+                          }} 
+                        />
+                        <span style={{ 
+                          fontWeight: entry.name === clientKey ? 'bold' : 'normal',
+                          color: entry.name === clientKey ? colors[clientKey] : 'hsl(var(--foreground))'
+                        }}>
+                          {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Pages per Session') ? ' pages' : metricName.includes('Sessions per User') ? ' sessions' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+
+            {/* Client bar (primary pink) */}
+            {visibleLines[clientKey] && (
+              <Bar 
+                dataKey={clientKey} 
+                fill={colors[clientKey]}
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Industry Average bar */}
+            {visibleLines['Industry Avg'] && (
+              <Bar 
+                dataKey="Industry Avg" 
+                fill={colors['Industry Avg']}
+                fillOpacity={0.7}
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Clear Digital Clients Average bar */}
+            {visibleLines['Clear Digital Clients Avg'] && (
+              <Bar 
+                dataKey="Clear Digital Clients Avg" 
+                fill={colors['Clear Digital Clients Avg']}
+                fillOpacity={0.8}
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Competitor bars */}
+            {competitors.map((competitor, index) => (
+              visibleLines[competitor.label] && (
+                <Bar 
+                  key={competitor.id}
+                  dataKey={competitor.label} 
+                  fill={competitorColors[index % competitorColors.length]}
+                  fillOpacity={0.6}
+                  animationDuration={isInitialRender ? 800 : 0}
+                />
+              )
+            ))}
+          </BarChart>
+        ) : (
+          <LineChart 
+            data={data} 
+            margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="date" 
+              fontSize={9} 
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis 
+              fontSize={9}
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={yAxisDomain}
+              tickFormatter={(value) => {
+                if (metricName === "Pages per Session" || metricName === "Sessions per User") {
+                  return value.toFixed(1);
+                }
+                return Math.round(value).toString();
+              }}
+              width={35}
+              type="number"
+            />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (!active || !payload || !label) return null;
+                
+                return (
+                  <div style={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+                    padding: '8px 12px',
+                    fontSize: '12px'
+                  }}>
+                    <div style={{ color: 'hsl(var(--foreground))', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
+                      {label}
+                    </div>
+                    {payload.map((entry: any, index: number) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            backgroundColor: entry.color, 
+                            marginRight: '6px',
+                            borderRadius: '50%'
+                          }} 
+                        />
+                        <span style={{ 
+                          fontWeight: entry.name === clientKey ? 'bold' : 'normal',
+                          color: entry.name === clientKey ? colors[clientKey] : 'hsl(var(--foreground))'
+                        }}>
+                          {entry.name}: {Math.round(entry.value * 10) / 10}{metricName.includes('Rate') ? '%' : metricName.includes('Pages per Session') ? ' pages' : metricName.includes('Sessions per User') ? ' sessions' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+
+            {/* Client line (primary pink) */}
+            {visibleLines[clientKey] && (
+              <Line 
+                type="monotone" 
+                dataKey={clientKey} 
+                stroke={colors[clientKey]}
+                strokeWidth={3}
+                dot={{ fill: colors[clientKey], r: 3 }}
+                activeDot={{ r: 5, stroke: colors[clientKey], strokeWidth: 2, fill: 'white' }}
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Industry Average line */}
+            {visibleLines['Industry Avg'] && (
+              <Line 
+                type="monotone" 
+                dataKey="Industry Avg" 
+                stroke={colors['Industry Avg']}
+                strokeWidth={2}
+                dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+                strokeDasharray="5 5"
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Clear Digital Clients Average line */}
+            {visibleLines['Clear Digital Clients Avg'] && (
+              <Line 
+                type="monotone" 
+                dataKey="Clear Digital Clients Avg" 
+                stroke={colors['Clear Digital Clients Avg']}
+                strokeWidth={2}
+                dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
+                strokeDasharray="8 4"
+                animationDuration={isInitialRender ? 800 : 0}
+              />
+            )}
+            
+            {/* Competitor lines */}
+            {competitors.map((competitor, index) => (
+              visibleLines[competitor.label] && (
+                <Line 
+                  key={competitor.id}
+                  type="monotone" 
+                  dataKey={competitor.label} 
+                  stroke={competitorColors[index % competitorColors.length]}
+                  strokeWidth={2}
+                  dot={(props: any) => <DiamondDot {...props} fill={competitorColors[index % competitorColors.length]} stroke={colors[competitorColors[index % competitorColors.length]]} strokeWidth={1} />}
+                  animationDuration={isInitialRender ? 800 : 0}
+                />
+              )
+            ))}
+          </LineChart>
+        )}
       </ResponsiveContainer>
       
       {/* Custom Interactive Legend */}
