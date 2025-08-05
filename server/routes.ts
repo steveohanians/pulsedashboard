@@ -1565,7 +1565,8 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       
       // Get the portfolio company
-      const company = await storage.getCdPortfolioCompany(id);
+      const companies = await storage.getCdPortfolioCompanies();
+      const company = companies.find(c => c.id === id);
       if (!company) {
         return res.status(404).json({ message: "Portfolio company not found" });
       }
@@ -2670,7 +2671,7 @@ export function registerRoutes(app: Express): Server {
   // Portfolio Averaging Fix Route (Admin Only)
   app.post("/api/admin/fix-portfolio-averages", requireAdmin, async (req, res) => {
     try {
-      logger.info('🔧 Admin initiated portfolio averages fix', { userId: req.user.id });
+      logger.info('🔧 Admin initiated portfolio averages fix', { userId: req.user?.id });
       
       const { PortfolioAverageFix } = await import('./utils/portfolioAverageFix');
       

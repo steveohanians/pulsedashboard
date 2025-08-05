@@ -1,6 +1,6 @@
-import logger from '../../utils/logger.ts';
-import { semrushService } from './semrushService.ts';
-import { semrushDataProcessor } from './dataProcessor.ts';
+import logger from '../../utils/logger.js';
+import { semrushService } from './semrushService.js';
+import { semrushDataProcessor } from './dataProcessor.js';
 import type { IStorage } from '../../storage.js';
 import type { Competitor } from '@shared/schema.js';
 
