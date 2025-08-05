@@ -1659,7 +1659,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Company not found" });
       }
       
-      logger.info("Updated CD portfolio company", { 
+      // Trigger portfolio averaging recalculation after company update
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration');
+      const portfolioIntegration = new PortfolioIntegration(storage);
+      await portfolioIntegration.updatePortfolioAverages();
+      
+      logger.info("Updated CD portfolio company and recalculated averages", { 
         companyId, 
         companyName: updatedCompany.name, 
         admin: req.user?.id 
