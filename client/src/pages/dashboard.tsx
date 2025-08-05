@@ -25,6 +25,13 @@ import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.p
 import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
 import { parseMetricValue } from "@/utils/metricParser";
+import { 
+  processCompanyMetrics, 
+  processDeviceDistribution,
+  getMetricFallback,
+  shouldConvertToPercentage,
+  shouldConvertToMinutes 
+} from "@/utils/chartDataProcessor";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 // Performance tracking removed per user request
@@ -1609,16 +1616,13 @@ export default function Dashboard() {
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           timeSeriesData={timeSeriesData}
                           periods={periods}
-                          competitors={competitors.map((comp: any) => {
-                            // Find metric for this competitor
-                            const competitorMetric = metrics.find((m: any) => 
-                              m.competitorId === comp.id && m.metricName === metricName
-                            );
-                            return {
-                              id: comp.id,
-                              label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : 42.3
-                            };
+                          competitors={processCompanyMetrics(competitors, metrics, {
+                            metricName,
+                            displayMode: 'individual',
+                            sourceType: 'Competitor',
+                            fallbackValue: getMetricFallback(metricName),
+                            convertToPercentage: shouldConvertToPercentage(metricName),
+                            convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
                         />
                       ) : metricName === "Session Duration" ? (
@@ -1631,16 +1635,13 @@ export default function Dashboard() {
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           timeSeriesData={timeSeriesData}
                           periods={periods}
-                          competitors={competitors.map((comp: any) => {
-                            // Find metric for this competitor
-                            const competitorMetric = metrics.find((m: any) => 
-                              m.competitorId === comp.id && m.metricName === metricName
-                            );
-                            return {
-                              id: comp.id,
-                              label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : 3.2
-                            };
+                          competitors={processCompanyMetrics(competitors, metrics, {
+                            metricName,
+                            displayMode: 'individual',
+                            sourceType: 'Competitor',
+                            fallbackValue: getMetricFallback(metricName),
+                            convertToPercentage: shouldConvertToPercentage(metricName),
+                            convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
                         />
                       ) : metricName === "Traffic Channels" ? (
@@ -1665,16 +1666,13 @@ export default function Dashboard() {
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           timeSeriesData={timeSeriesData}
                           periods={periods}
-                          competitors={competitors.map((comp: any) => {
-                            // Find metric for this competitor
-                            const competitorMetric = metrics.find((m: any) => 
-                              m.competitorId === comp.id && m.metricName === metricName
-                            );
-                            return {
-                              id: comp.id,
-                              label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: competitorMetric ? parseMetricValue(competitorMetric.value) : (metricName === "Sessions per User" ? 1.6 : 2.8)
-                            };
+                          competitors={processCompanyMetrics(competitors, metrics, {
+                            metricName,
+                            displayMode: 'individual',
+                            sourceType: 'Competitor',
+                            fallbackValue: getMetricFallback(metricName),
+                            convertToPercentage: shouldConvertToPercentage(metricName),
+                            convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
                         />
                       ) : metricName === "Device Distribution" ? (
@@ -1688,46 +1686,7 @@ export default function Dashboard() {
                             });
                             return result;
                           })()}
-                          competitors={competitors.map((comp: any) => {
-                            // Find actual device distribution data for this competitor
-                            const competitorDeviceMetrics = metrics.filter((m: any) => 
-                              m.competitorId === comp.id && m.metricName === 'Device Distribution'
-                            );
-                            
-                            const deviceDistribution = { Desktop: 50, Mobile: 50 }; // Default fallback
-                            
-                            if (competitorDeviceMetrics.length > 0) {
-                              // Parse competitor device data - reset to 0 first
-                              let desktop = 0;
-                              let mobile = 0;
-                              
-                              competitorDeviceMetrics.forEach(metric => {
-                                if (metric.channel === 'Desktop') {
-                                  const parsed = parseMetricValue(metric.value);
-                                  desktop = parsed;
-                                } else if (metric.channel === 'Mobile') {
-                                  const parsed = parseMetricValue(metric.value);
-                                  mobile = parsed;
-                                }
-                              });
-                              
-                              // Use parsed data if available
-                              if (desktop > 0 || mobile > 0) {
-                                // Normalize to 100% if needed
-                                const total = desktop + mobile;
-                                if (total > 0) {
-                                  deviceDistribution.Desktop = (desktop / total) * 100;
-                                  deviceDistribution.Mobile = (mobile / total) * 100;
-                                }
-                              }
-                            }
-                            
-                            return {
-                              id: comp.id,
-                              label: comp.domain.replace('https://', '').replace('http://', ''),
-                              value: deviceDistribution
-                            };
-                          })}
+                          competitors={processDeviceDistribution(competitors, metrics, 'Competitor')}
                           clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
                           clientName={dashboardData?.client?.name}
                           industryAvg={(() => {
