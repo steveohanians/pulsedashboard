@@ -1,6 +1,7 @@
 // Database query optimization utilities
 import { storage } from "../storage";
 import { parseMetricValue } from "./metricParser";
+import logger from "./logger";
 
 // Cache for frequently accessed data
 const queryCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -204,7 +205,11 @@ export async function getDashboardDataOptimized(
       const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
       
       if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
-
+        logger.debug(`📊 Found ${cachedDailyData.length} cached daily metrics for grouping`);
+        
+        // Debug Session Duration in cached data
+        const sessionDurationMetrics = cachedDailyData.filter(m => m.metricName === 'Session Duration');
+        logger.debug(`📊 Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
         
         // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
         const dailyByDate: Record<string, any[]> = {};
@@ -252,9 +257,13 @@ export async function getDashboardDataOptimized(
                 allMetricsInGroup[metricKey] = [];
               }
               const parsedValue = parseMetricValue(metric.value);
-            if (parsedValue !== null) {
-              allMetricsInGroup[metricKey].push(parsedValue);
-            }
+              if (parsedValue !== null) {
+                allMetricsInGroup[metricKey].push(parsedValue);
+                // Debug Session Duration specifically
+                if (metric.metricName === 'Session Duration') {
+                  logger.debug(`📊 Session Duration daily value added: ${parsedValue} from ${dayKey}`);
+                }
+              }
             });
           });
           
@@ -272,11 +281,17 @@ export async function getDashboardDataOptimized(
               channel: null,
               competitorId: null
             });
+            
+            // Debug Session Duration grouping
+            if (metricName === 'Session Duration') {
+              logger.debug(`📊 Session Duration group ${i + 1} average: ${average} from ${values.length} days`);
+            }
           });
         }
         
         // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
+          logger.debug(`📊 Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
           // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
           // Get the CD Average data from the original processed data
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');

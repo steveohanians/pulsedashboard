@@ -48,6 +48,14 @@ function generateTimeSeriesData(
   periods?: string[],
   metricName?: string
 ): Array<Record<string, unknown>> {
+  // Debug Session Duration timeSeriesData processing
+  if (metricName === 'Session Duration' && timeSeriesData && periods) {
+    console.log(`🔍 generateTimeSeriesData for Session Duration: timePeriod=${timePeriod}, periods.length=${periods.length}`, {
+      timeSeriesDataKeys: Object.keys(timeSeriesData),
+      periods: periods
+    });
+  }
+  
   // Only use authentic time-series data - no fallback generation
   if (timeSeriesData && periods && periods.length > 0) {
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
@@ -104,9 +112,23 @@ function generateRealTimeSeriesData(
   
   const clientKey = clientUrl || 'Client';
   
+  // Debug Session Duration specifically
+  if (metricName === 'Session Duration') {
+    console.log(`🔍 generateRealTimeSeriesData called for Session Duration with ${periods.length} periods:`, periods);
+    console.log(`🔍 timeSeriesData keys:`, Object.keys(timeSeriesData));
+  }
+  
   periods.forEach(period => {
     const periodData = timeSeriesData[period] || [];
     const relevantData = periodData.filter(m => m.metricName === metricName);
+    
+    // Debug Session Duration data processing
+    if (metricName === 'Session Duration') {
+      console.log(`🔍 Period ${period}: Found ${periodData.length} total metrics, ${relevantData.length} Session Duration metrics`);
+      if (relevantData.length > 0) {
+        console.log(`🔍 Session Duration data for ${period}:`, relevantData);
+      }
+    }
     
 
     

@@ -17,6 +17,13 @@ interface AreaChartProps {
     label: string;
     value: number;
   }>;
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string | number;
+    sourceType: string;
+    competitorId?: string;
+  }>>;
+  periods?: string[];
 }
 
 // Generate deterministic seeded random number and temporal variation
@@ -37,7 +44,22 @@ interface CompetitorData {
   value: number;
 }
 
-function generateAreaData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: CompetitorData[], clientUrl?: string, metricName?: string): AreaDataPoint[] {
+function generateAreaData(
+  timePeriod: string, 
+  clientData: number, 
+  industryAvg: number, 
+  cdAvg: number, 
+  competitors: CompetitorData[], 
+  clientUrl?: string, 
+  metricName?: string,
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string | number;
+    sourceType: string;
+    competitorId?: string;
+  }>>,
+  periods?: string[]
+): AreaDataPoint[] {
   const data: AreaDataPoint[] = [];
   
   // Determine the date range based on time period
@@ -108,7 +130,47 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
   const clientKey = clientUrl || 'Client';
   
   if (timePeriod === "Last Month") {
-    // Generate temporal variations for each data source
+    // Check if we have authentic timeSeriesData first (from backend daily data grouping)
+    if (timeSeriesData && periods && periods.length > 0) {
+      // Use authentic timeSeriesData for this metric
+      const relevantPeriods = periods.filter(p => timeSeriesData[p]?.some(m => m.metricName === metricName));
+      
+      if (relevantPeriods.length > 0) {
+        // Build authentic data points from timeSeriesData
+        relevantPeriods.forEach((period, index) => {
+          const periodData = timeSeriesData[period] || [];
+          const clientMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'Client');
+          const cdAvgMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'CD_Avg');
+          
+          // Create authentic data point
+          const point: AreaDataPoint = {
+            date: `Period ${index + 1}`,
+            client: Number(clientMetric?.value) || 0,
+            industryAvg: 0, // No synthetic data for industry
+            cdAvg: Number(cdAvgMetric?.value) || 0,
+            [clientKey]: Number(clientMetric?.value) || 0,
+            'Industry Avg': 0,
+            'Clear Digital Clients Avg': Number(cdAvgMetric?.value) || 0,
+          };
+          
+          // Add competitor data
+          competitors.forEach(competitor => {
+            const competitorMetric = periodData.find(m => 
+              m.metricName === metricName && 
+              m.sourceType === 'Competitor' && 
+              m.competitorId === competitor.id
+            );
+            point[competitor.label] = Number(competitorMetric?.value) || 0;
+          });
+          
+          data.push(point);
+        });
+        
+        return data; // Return authentic data, skip synthetic fallback
+      }
+    }
+    
+    // Fallback: Generate temporal variations for each data source (only if no authentic data)
     const safeMetricName = metricName || 'Unknown Metric';
     const clientVariations = generateTemporalVariationSync(clientData, dates, safeMetricName, `client-${safeMetricName}`);
     const industryVariations = generateTemporalVariationSync(industryAvg, dates, safeMetricName, `industry-${safeMetricName}`);
@@ -163,11 +225,11 @@ function generateAreaData(timePeriod: string, clientData: number, industryAvg: n
   return data;
 }
 
-export default function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: AreaChartProps) {
+export default function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: AreaChartProps) {
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
-    generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]
+    generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName, timeSeriesData, periods),
+    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName, timeSeriesData, periods]
   );
 
   const clientKey = clientUrl || 'Client';
