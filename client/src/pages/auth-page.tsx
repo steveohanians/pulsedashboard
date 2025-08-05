@@ -206,7 +206,7 @@ export default function AuthPage() {
         </div>
 
         {/* Right side - Hero */}
-        <div className="lg:flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 sm:p-6 lg:p-12">
+        <div className="lg:flex-1 bg-white flex items-center justify-center p-4 sm:p-6 lg:p-12">
           <div className="max-w-lg text-center w-full">
           <div className="flex justify-center space-x-3 sm:space-x-4 mb-6 lg:mb-8">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
