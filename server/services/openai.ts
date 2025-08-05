@@ -91,32 +91,8 @@ async function generateInsightsWithCustomPrompt(
       }
     }
     
-    // Special handling for Traffic Channels - get actual channel distribution
-    if (metricName === 'Traffic Channels') {
-      try {
-        const getCurrentPeriod = () => {
-          const now = new Date();
-          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        };
-        const currentPeriod = getCurrentPeriod();
-        
-        // Get channel distribution data for client, industry, and CD averages
-        const clientChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'Client');
-        const industryChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'Industry_Avg');
-        const cdChannels = await storage.getMetricsByNameAndPeriod('demo-client-id', 'Traffic Channels', currentPeriod, 'CD_Avg');
-        
-        const formatChannelData = (channels: Array<{ name: string; value: number; percentage: number }>) => {
-          if (!channels.length) return 'No data available';
-          return channels.map(c => `${c.channel}: ${c.value}%`).join(', ');
-        };
-        
-        formattedClientValue = formatChannelData(clientChannels);
-        formattedIndustryAverage = formatChannelData(industryChannels);
-        formattedCdAverage = formatChannelData(cdChannels);
-      } catch (error) {
-        logger.warn('Failed to get traffic channel distribution data', { error: (error as Error).message });
-      }
-    }
+    // Note: Traffic Channels special handling is now done at the API route level
+    // to avoid clientId/clientName parameter issues
     
     // Merge global template with metric-specific prompt
     let processedPrompt = globalTemplate.promptTemplate
@@ -986,11 +962,26 @@ export async function generateMetricSpecificInsights(
   }, 
   clientId: string
 ) {
+  logger.info('🚀 STARTING AI INSIGHT GENERATION', { 
+    metricName, 
+    clientId,
+    hasMetric: !!enrichedData.metric,
+    hasBenchmarks: !!enrichedData.benchmarks,
+    hasClient: !!enrichedData.client
+  });
+
   const { storage } = await import("../storage");
   
   // First try to use custom prompt templates from the admin panel
   try {
     const customPrompt = await storage.getMetricPrompt(metricName);
+    
+    logger.info('🎯 CUSTOM PROMPT LOOKUP', { 
+      metricName, 
+      promptExists: !!customPrompt,
+      isActive: customPrompt?.isActive,
+      promptId: customPrompt?.id
+    });
     
     if (customPrompt && customPrompt.isActive) {
       logger.info('✅ USING CUSTOM PROMPT TEMPLATE', { 
@@ -1003,7 +994,15 @@ export async function generateMetricSpecificInsights(
       const competitorValues = enrichedData.benchmarks?.competitors?.map((c: { value: number }) => c.value) || [];
       const competitorNames = enrichedData.benchmarks?.competitors?.map((c: { name: string }) => c.name) || [];
       
-      return await generateInsightsWithCustomPrompt(
+      logger.info('🎯 CALLING generateInsightsWithCustomPrompt', {
+        metricName,
+        clientValue: enrichedData.metric?.clientValue,
+        cdAverage: enrichedData.benchmarks?.cdPortfolioAverage,
+        industryAverage: enrichedData.benchmarks?.industryAverage,
+        competitorCount: competitorValues.length
+      });
+      
+      const result = await generateInsightsWithCustomPrompt(
         customPrompt,
         metricName,
         enrichedData.metric?.clientValue || 0,
@@ -1015,6 +1014,16 @@ export async function generateMetricSpecificInsights(
         enrichedData.client?.name || 'Current Client',
         competitorNames
       );
+      
+      logger.info('✅ AI INSIGHT GENERATED SUCCESSFULLY', {
+        metricName,
+        hasContext: !!result.context,
+        hasInsight: !!result.insight,
+        hasRecommendation: !!result.recommendation,
+        status: result.status
+      });
+      
+      return result;
     } else {
       logger.warn('❌ NO ACTIVE CUSTOM PROMPT FOUND', { 
         metricName, 
@@ -1023,10 +1032,12 @@ export async function generateMetricSpecificInsights(
       });
     }
   } catch (error) {
-    logger.error("❌ FAILED TO USE CUSTOM PROMPT - FALLING BACK TO HARDCODED", { 
+    logger.error("❌ FAILED TO USE CUSTOM PROMPT", { 
       metricName, 
-      error: (error as Error).message 
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
+    throw error; // Don't use fallback, throw the error
   }
   
   // Use global template for fallback instead of hardcoded prompts

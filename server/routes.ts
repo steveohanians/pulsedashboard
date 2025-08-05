@@ -376,10 +376,66 @@ export function registerRoutes(app: Express): Server {
       
       let clientValue = clientMetricForPeriod ? parseMetricValue(clientMetricForPeriod.value) : (metricData.Client || metricData);
       
-      // Special handling for Traffic Channels - use channel count instead of full object
-      if (metricName === 'Traffic Channels' && typeof clientValue === 'object') {
-        // For Traffic Channels, use the number of channels as clientValue 
-        clientValue = Array.isArray(clientValue) ? clientValue.length : Object.keys(clientValue).length;
+      // Special handling for Traffic Channels - format channel data for AI analysis
+      let trafficChannelFormatting = null;
+      if (metricName === 'Traffic Channels') {
+        try {
+          const getTargetPeriod = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+          };
+          const aiTargetPeriod = getTargetPeriod();
+          
+          // Get channel distribution data for AI analysis
+          const clientChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', aiTargetPeriod, 'Client');
+          const industryChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', aiTargetPeriod, 'Industry_Avg');
+          const cdChannels = await storage.getMetricsByNameAndPeriod(clientId, 'Traffic Channels', aiTargetPeriod, 'CD_Avg');
+          
+          const formatChannelData = (channels: any[]) => {
+            if (!channels.length) return 'No data available';
+            
+            // Handle Client data format (JSON array in value field)
+            if (channels.length === 1 && typeof channels[0].value === 'string' && channels[0].value.startsWith('[')) {
+              try {
+                const channelArray = JSON.parse(channels[0].value.replace(/"/g, '"'));
+                return channelArray.map((c: any) => `${c.channel}: ${c.percentage}%`).join(', ');
+              } catch (e) {
+                logger.warn('Failed to parse client channel data', { error: (e as Error).message });
+                return 'No data available';
+              }
+            }
+            
+            // Handle CD_Avg data format (individual records with channel names)
+            return channels.map(c => {
+              const percentage = typeof c.value === 'object' && c.value && c.value.percentage ? c.value.percentage : c.value;
+              return `${c.channel}: ${percentage}%`;
+            }).join(', ');
+          };
+          
+          trafficChannelFormatting = {
+            client: formatChannelData(clientChannels),
+            industry: formatChannelData(industryChannels),
+            cdAvg: formatChannelData(cdChannels)
+          };
+          
+          // For Traffic Channels, use the number of channels as clientValue 
+          if (typeof clientValue === 'object' && clientValue !== null) {
+            clientValue = Array.isArray(clientValue) ? clientValue.length : Object.keys(clientValue).length;
+          } else if (clientValue === null) {
+            // If no client data found for this period, use 0 as fallback
+            clientValue = 0;
+          }
+          
+          logger.info('Traffic Channels AI data prepared', {
+            clientChannelsCount: clientChannels.length,
+            industryChannelsCount: industryChannels.length,
+            cdChannelsCount: cdChannels.length,
+            formattedClient: trafficChannelFormatting.client,
+            formattedCdAvg: trafficChannelFormatting.cdAvg
+          });
+        } catch (error) {
+          logger.warn('Failed to prepare traffic channel data for AI', { error: (error as Error).message });
+        }
       }
       
       logger.info('🎯 AI CLIENT VALUE DEBUG', { 
@@ -435,14 +491,32 @@ export function registerRoutes(app: Express): Server {
           cdPortfolioAverage: cdPortfolioAverage,
           competitors: competitorData.filter((c: any) => c.value !== null).map((c: any) => ({ name: c.name, value: c.value as number }))
         },
-        context: `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValue} for ${targetPeriod}. Industry average: ${industryAverage}, CD Portfolio average: ${cdPortfolioAverage}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
+        context: trafficChannelFormatting ? 
+          `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) Traffic Channels for ${targetPeriod}: ${trafficChannelFormatting.client}. Industry average: ${trafficChannelFormatting.industry}, CD Portfolio average: ${trafficChannelFormatting.cdAvg}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.` :
+          `Client ${client?.name} (${client?.industryVertical}, ${client?.businessSize}) has a ${metricName} of ${clientValue} for ${targetPeriod}. Industry average: ${industryAverage}, CD Portfolio average: ${cdPortfolioAverage}. Competitors: ${competitorData.length > 0 ? competitorData.map((c: any) => `${c.name}: ${c.value}`).join(', ') : 'No competitor data available'}.`
       };
 
       // Import OpenAI service dynamically
+      logger.info('🚀 IMPORTING OPENAI SERVICE', { metricName, clientId });
+      
       const { generateMetricSpecificInsights } = await import('./services/openai.js');
+      
+      logger.info('🎯 ABOUT TO CALL OPENAI', { 
+        metricName, 
+        clientId,
+        enrichedDataKeys: Object.keys(enrichedData),
+        clientValue: enrichedData.metric?.clientValue,
+        cdAvg: enrichedData.benchmarks?.cdPortfolioAverage
+      });
       
       // Generate metric-specific insights using OpenAI with enriched data
       const insights = await generateMetricSpecificInsights(metricName, enrichedData, clientId);
+      
+      logger.info('✅ OPENAI CALL COMPLETED', { 
+        metricName, 
+        hasInsights: !!insights,
+        insightKeys: insights ? Object.keys(insights) : 'none'
+      });
       
       // Normalize the insights object to handle both MetricAnalysis and fallback formats
       const normalizedInsights = {
