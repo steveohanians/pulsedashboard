@@ -709,44 +709,13 @@ export class DatabaseStorage implements IStorage {
     
 
     
-    // 🎯 CRITICAL FIX: Process JSON values for CD_Avg traffic channels before returning
-    const processedMetrics = allMetrics.map(metric => {
-      // Extract percentage from JSON format for traffic channels
-      if (metric.metricName === 'Traffic Channels' && metric.sourceType === 'CD_Avg') {
-        console.error('🚛 PROCESSING CD_AVG TRAFFIC CHANNEL IN STORAGE:', {
-          channel: metric.channel,
-          value: metric.value,
-          type: typeof metric.value
-        });
-        
-        let processedValue = metric.value;
-        if (typeof metric.value === 'string' && metric.value.includes('{')) {
-          try {
-            const parsed = JSON.parse(metric.value);
-            processedValue = Number(parsed.percentage) || 0;
-            console.error('🚛 EXTRACTED PERCENTAGE IN STORAGE:', processedValue, 'for channel:', metric.channel);
-          } catch (e) {
-            console.error('🚛 JSON PARSE ERROR IN STORAGE:', (e as Error).message);
-            processedValue = 0;
-          }
-        }
-        
-        return {
-          ...metric,
-          value: processedValue
-        };
-      }
-      
-      return metric;
-    });
-    
     // Debug traffic channel data specifically for CD_Avg - disabled for performance
-    // const trafficChannels = processedMetrics.filter(r => r.metricName === 'Traffic Channels');
+    // const trafficChannels = allMetrics.filter(r => r.metricName === 'Traffic Channels');
     // const channelsWithNames = trafficChannels.filter(r => r.channel);
     // logger.debug(`CD_Avg traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
     
-    // logger.debug(`Returning ${processedMetrics.length} unfiltered CD_Avg metrics`);
-    return processedMetrics;
+    // logger.debug(`Returning ${allMetrics.length} unfiltered CD_Avg metrics`);
+    return allMetrics;
   }
 
   // Metrics

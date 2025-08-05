@@ -461,25 +461,11 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // 🎯 USE CORRECT PARSER: parseMetricPercentage for Traffic Channels, parseMetricValue for others
+        // Use correct parser: parseMetricPercentage for Traffic Channels, parseMetricValue for others
         if (m.metricName === 'Traffic Channels') {
-          console.error('🚛 TRAFFIC CHANNEL PROCESSING:', { 
-            sourceType: m.sourceType, 
-            value: m.value, 
-            type: typeof m.value, 
-            channel: m.channel 
-          });
-          
           const percentageResult = parseMetricPercentage(m.value);
           finalValue = percentageResult ? percentageResult.percentage : 0;
-          
-          console.error('🚛 PERCENTAGE RESULT:', { 
-            percentageResult, 
-            finalValue, 
-            channel: m.channel 
-          });
         } else {
-          // Regular processing for other source types
           finalValue = parseMetricValue(m.value);
         }
         
