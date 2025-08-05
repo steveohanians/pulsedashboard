@@ -397,12 +397,17 @@ export function registerRoutes(app: Express): Server {
             // Handle Client data format (JSON array in value field)
             if (channels.length === 1 && typeof channels[0].value === 'string' && channels[0].value.startsWith('[')) {
               try {
-                const channelArray = JSON.parse(channels[0].value.replace(/"/g, '"'));
+                const channelArray = JSON.parse(channels[0].value);
                 return channelArray.map((c: any) => `${c.channel}: ${c.percentage}%`).join(', ');
               } catch (e) {
-                logger.warn('Failed to parse client channel data', { error: (e as Error).message });
+                logger.warn('Failed to parse client channel data', { error: (e as Error).message, rawValue: channels[0].value });
                 return 'No data available';
               }
+            }
+            
+            // Handle Client data format (direct array in value field)
+            if (channels.length === 1 && Array.isArray(channels[0].value)) {
+              return channels[0].value.map((c: any) => `${c.channel}: ${c.percentage}%`).join(', ');
             }
             
             // Handle CD_Avg data format (individual records with channel names)
