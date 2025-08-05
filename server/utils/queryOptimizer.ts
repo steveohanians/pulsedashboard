@@ -436,8 +436,8 @@ export async function getDashboardDataOptimized(
 
   }
 
-  // Generate CD_Avg device distribution data if missing (authentic data integrity)
-  await generateCdAvgDeviceDistributionIfMissing(client.id, periodsToQuery, processedData);
+  // CD_Avg device distribution should come from authentic CD Portfolio company data only
+  // Removed fallback logic to maintain data integrity
 
   // Extract traffic channel and device distribution data separately for chart components
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');

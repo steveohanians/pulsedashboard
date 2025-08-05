@@ -1425,6 +1425,78 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Re-sync SEMrush data for existing CD Portfolio company
+  app.post('/api/admin/cd-portfolio/:id/resync-semrush', adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the portfolio company
+      const company = await storage.getCdPortfolioCompany(id);
+      if (!company) {
+        return res.status(404).json({ message: "Portfolio company not found" });
+      }
+
+      logger.info("Starting SEMrush re-sync for portfolio company", { 
+        companyId: company.id,
+        companyName: company.name,
+        admin: req.user?.id 
+      });
+
+      // Clear existing SEMrush data for this company
+      await storage.deleteMetricsByCompany(company.id, 'CD_Portfolio');
+      
+      // Re-run SEMrush integration with fixed device distribution API calls
+      const { PortfolioIntegration } = await import('./services/semrush/portfolioIntegration.ts');
+      const integration = new PortfolioIntegration(storage);
+      
+      const result = await integration.processNewPortfolioCompany(company);
+      
+      if (result.success) {
+        logger.info("✅ SEMrush re-sync completed successfully", {
+          companyId: company.id,
+          companyName: company.name,
+          periodsProcessed: result.periodsProcessed,
+          metricsStored: result.metricsStored,
+          trafficChannelsStored: result.trafficChannelsStored,
+          deviceDistributionStored: result.deviceDistributionStored,
+          averagesUpdated: result.averagesUpdated,
+          admin: req.user?.id
+        });
+
+        res.json({
+          message: "SEMrush re-sync completed successfully",
+          result: {
+            success: result.success,
+            periodsProcessed: result.periodsProcessed,
+            metricsStored: result.metricsStored,
+            trafficChannelsStored: result.trafficChannelsStored,
+            deviceDistributionStored: result.deviceDistributionStored,
+            averagesUpdated: result.averagesUpdated
+          }
+        });
+      } else {
+        logger.error("❌ SEMrush re-sync failed", {
+          companyId: company.id,
+          companyName: company.name,
+          error: result.error,
+          admin: req.user?.id
+        });
+        res.status(500).json({ 
+          message: "SEMrush re-sync failed", 
+          error: result.error 
+        });
+      }
+      
+    } catch (error) {
+      logger.error("Failed to re-sync SEMrush data", { 
+        error: (error as Error).message,
+        companyId: req.params.id,
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Failed to re-sync SEMrush data" });
+    }
+  });
+
   // TEMPORARY: Test SEMrush integration for existing company
   app.post('/api/admin/cd-portfolio/:id/test-semrush', adminLimiter, requireAdmin, async (req, res) => {
     try {

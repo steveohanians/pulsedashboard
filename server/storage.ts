@@ -72,6 +72,7 @@ export interface IStorage {
   getMetricsBySourceType(sourceType: string): Promise<Metric[]>;
   deleteMetricsBySourceType(sourceType: string): Promise<void>;
   getMetricsByCompanyId(companyId: string): Promise<Metric[]>;
+  deleteMetricsByCompany(companyId: string, sourceType: string): Promise<void>;
   
   // Benchmarks
   getBenchmarks(metricName: string, industryVertical: string, businessSize: string, timePeriod: string): Promise<Benchmark[]>;
@@ -1255,6 +1256,28 @@ export class DatabaseStorage implements IStorage {
   // Clear benchmark metrics (industry and CD avg) for a specific time period
   async clearBenchmarkMetricsByPeriod(timePeriod: string): Promise<void> {
     await db.delete(benchmarks).where(eq(benchmarks.timePeriod, timePeriod));
+  }
+
+  // Delete metrics by company ID and source type (for CD Portfolio company resync)
+  async deleteMetricsByCompany(companyId: string, sourceType: string): Promise<void> {
+    // For CD_Portfolio metrics, we delete based on sourceType since they don't have direct companyId links
+    if (sourceType === 'CD_Portfolio') {
+      await db.delete(metrics).where(
+        and(
+          eq(metrics.sourceType, 'CD_Portfolio' as any),
+          isNull(metrics.clientId),
+          isNull(metrics.competitorId)
+        )
+      );
+    } else {
+      // For other source types, delete by companyId
+      await db.delete(metrics).where(
+        and(
+          eq(metrics.clientId, companyId),
+          eq(metrics.sourceType, sourceType as any)
+        )
+      );
+    }
   }
 
   // Create a benchmark metric (industry avg or CD avg)

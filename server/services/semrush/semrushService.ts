@@ -181,7 +181,7 @@ export class SemrushService {
   }
 
   /**
-   * Fetch device distribution using summary endpoint
+   * Fetch device distribution using summary endpoint with separate API calls for each device type
    */
   private async fetchDeviceDistribution(domain: string, period: string): Promise<SemrushMetricData['deviceDistribution']> {
     try {
@@ -191,54 +191,77 @@ export class SemrushService {
       const [year, month] = period.split('-');
       const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
       
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        targets: domain,
-        export_columns: 'target,desktop_visits,mobile_visits,desktop_share,mobile_share',
-        display_date: displayDate,
-        device_type: 'desktop,mobile'
-      });
+      logger.info('Fetching SEMrush device distribution with separate API calls', { domain, period });
 
-      logger.info('Fetching SEMrush device distribution', { domain, period });
+      // Make separate API calls for each device type (SEMrush requirement)
+      const deviceTypes = ['desktop', 'mobile'];
+      const deviceResults: Array<{ device: string; sessions: number; percentage: number; }> = [];
 
-      const response = await fetch(`${url}?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`SEMrush devices API error: ${response.status}`);
-      }
+      for (const deviceType of deviceTypes) {
+        try {
+          const params = new URLSearchParams({
+            key: this.apiKey,
+            targets: domain,
+            export_columns: 'target,visits',
+            display_date: displayDate,
+            device_type: deviceType
+          });
 
-      const text = await response.text();
-      logger.debug('SEMrush device distribution response', { domain, period, response: text });
+          const response = await fetch(`${url}?${params}`);
+          
+          if (!response.ok) {
+            logger.warn(`SEMrush ${deviceType} API error: ${response.status}`, { domain, period });
+            continue;
+          }
 
-      if (text.includes('ERROR')) {
-        logger.info('SEMrush device distribution not available in current subscription', { domain, period, error: text.trim() });
-        return [];
-      }
+          const text = await response.text();
+          logger.debug(`SEMrush ${deviceType} response`, { domain, period, response: text.substring(0, 200) });
 
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) {
-        logger.warn('No device distribution data returned', { domain, period });
-        return [];
-      }
+          if (text.includes('ERROR')) {
+            logger.info(`SEMrush ${deviceType} not available`, { domain, period, error: text.trim() });
+            continue;
+          }
 
-      // Headers: target,desktop_visits,mobile_visits,desktop_share,mobile_share
-      const data = lines[1].split(';');
-      
-      const devices = [
-        {
-          device: 'Desktop',
-          sessions: parseInt(data[1]) || 0,
-          percentage: (parseFloat(data[3]) || 0) * 100 // Convert decimal to percentage
-        },
-        {
-          device: 'Mobile',
-          sessions: parseInt(data[2]) || 0,
-          percentage: (parseFloat(data[4]) || 0) * 100 // Convert decimal to percentage
+          const lines = text.trim().split('\n');
+          if (lines.length >= 2) {
+            const data = lines[1].split(';');
+            const visits = parseInt(data[1]) || 0;
+            
+            if (visits > 0) {
+              deviceResults.push({
+                device: deviceType === 'desktop' ? 'Desktop' : 'Mobile',
+                sessions: visits,
+                percentage: 0 // Will calculate percentage after collecting all data
+              });
+            }
+          }
+        } catch (deviceError) {
+          logger.error(`Failed to fetch ${deviceType} data`, { 
+            domain, 
+            period, 
+            deviceType,
+            error: (deviceError as Error).message 
+          });
         }
-      ].filter(device => device.sessions > 0); // Only include devices with data
+      }
 
-      logger.info('Parsed SEMrush device distribution', { domain, devicesCount: devices.length });
-      return devices;
+      // Calculate percentages from total sessions
+      const totalSessions = deviceResults.reduce((sum, device) => sum + device.sessions, 0);
+      if (totalSessions > 0) {
+        deviceResults.forEach(device => {
+          device.percentage = (device.sessions / totalSessions) * 100;
+        });
+      }
+
+      logger.info('Parsed SEMrush device distribution', { 
+        domain, 
+        period,
+        devicesCount: deviceResults.length,
+        totalSessions,
+        devices: deviceResults.map(d => `${d.device}: ${d.percentage.toFixed(1)}%`)
+      });
+      
+      return deviceResults;
 
     } catch (error) {
       logger.error('Failed to fetch SEMrush device distribution', { 
