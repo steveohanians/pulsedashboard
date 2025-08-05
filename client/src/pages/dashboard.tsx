@@ -139,13 +139,7 @@ export default function Dashboard() {
   
   const { data: dashboardData, isLoading, refetch: refetchDashboard } = dashboardQuery;
   
-  // Manual refresh function for immediate data update
-  const handleManualRefresh = async () => {
-    console.log("🔄 Manual refresh triggered");
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
-    await refetchDashboard();
-  };
+  // Manual refresh function removed per user request
 
   // Simplified logging for better performance
   useEffect(() => {
@@ -1108,27 +1102,6 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">Export PDF</span>
-                </div>
-              )}
-            </Button>
-
-            {/* Refresh Data Button */}
-            <Button
-              onClick={handleManualRefresh}
-              variant="outline"
-              size="sm"
-              className="pdf-hide hover:bg-blue-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-blue-200 text-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  <span className="hidden sm:inline">Updating...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Refresh Data</span>
                 </div>
               )}
             </Button>
