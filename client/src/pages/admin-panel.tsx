@@ -2734,15 +2734,7 @@ export default function AdminPanel() {
                                       </SelectContent>
                                     </Select>
                                   </div>
-                                  <div>
-                                    <Label htmlFor="description">Description</Label>
-                                    <Textarea 
-                                      id="description"
-                                      name="description" 
-                                      defaultValue={company.description || ""}
-                                      rows={3}
-                                    />
-                                  </div>
+
                                   <div className="flex justify-between">
                                     <Button 
                                       type="button"
@@ -2956,15 +2948,7 @@ export default function AdminPanel() {
                                           </SelectContent>
                                         </Select>
                                       </div>
-                                      <div>
-                                        <Label htmlFor="edit-cd-description">Description</Label>
-                                        <Textarea 
-                                          id="edit-cd-description"
-                                          name="description" 
-                                          defaultValue={editingItem?.description || ""}
-                                          rows={3}
-                                        />
-                                      </div>
+
                                       <div className="flex justify-between">
                                         <Button 
                                           type="button"
@@ -3581,22 +3565,33 @@ export default function AdminPanel() {
                         <div key={metricName} className="border rounded-lg p-4">
                           <h4 className="font-medium text-base mb-3">{metricName}</h4>
                           <div className="space-y-3">
-                            {Object.entries(timePeriods).map(([timePeriod, metrics]: [string, any]) => (
+                            {Object.entries(timePeriods)
+                              .sort(([a], [b]) => b.localeCompare(a)) // Sort periods latest first
+                              .map(([timePeriod, metrics]: [string, any]) => (
                               <div key={timePeriod} className="bg-gray-50 rounded p-3">
                                 <h5 className="font-medium text-sm mb-2">{timePeriod}</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-                                  {(metrics as any[]).map((metric, index) => (
-                                    <div key={index} className="bg-white rounded p-2 border">
-                                      <div><span className="font-medium">Value:</span> {
-                                        typeof metric.value === 'object' && metric.value !== null 
-                                          ? (metric.value.value ?? metric.value.source ?? JSON.stringify(metric.value))
-                                          : metric.value
-                                      }</div>
-                                      {metric.channel && <div><span className="font-medium">Channel:</span> {metric.channel}</div>}
-                                      {metric.deviceType && <div><span className="font-medium">Device:</span> {metric.deviceType}</div>}
-                                      {metric.sourceType && <div><span className="font-medium">Source:</span> {metric.sourceType}</div>}
-                                    </div>
-                                  ))}
+                                  {(metrics as any[]).map((metric, index) => {
+                                    const value = typeof metric.value === 'object' && metric.value !== null 
+                                      ? (metric.value.value ?? metric.value.source ?? JSON.stringify(metric.value))
+                                      : metric.value;
+                                    
+                                    // Create a descriptive label for this metric
+                                    const labels = [];
+                                    if (metric.channel) labels.push(`${metric.channel}`);
+                                    if (metric.deviceType) labels.push(`${metric.deviceType}`);
+                                    if (metric.sourceType) labels.push(`${metric.sourceType}`);
+                                    
+                                    const description = labels.length > 0 ? labels.join(' • ') : 'General';
+                                    
+                                    return (
+                                      <div key={index} className="bg-white rounded p-2 border">
+                                        <div className="font-medium text-blue-600 mb-1">{description}</div>
+                                        <div className="text-lg font-semibold">{value}</div>
+                                        {metric.id && <div className="text-xs text-gray-400 mt-1">ID: {metric.id.slice(0, 8)}...</div>}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               </div>
                             ))}
