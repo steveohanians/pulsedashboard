@@ -121,6 +121,8 @@ export default function Dashboard() {
   const dashboardQuery = useQuery<DashboardData>({
     queryKey: [`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`],
     enabled: !!user?.clientId,
+    staleTime: 0, // Force fresh data on each request
+    refetchOnMount: 'always', // Always refetch when component mounts
   });
   
   const { data: dashboardData, isLoading } = dashboardQuery;

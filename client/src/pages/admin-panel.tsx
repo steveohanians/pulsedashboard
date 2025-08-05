@@ -573,17 +573,21 @@ export default function AdminPanel() {
             
             // Comprehensive cache invalidation for seamless refresh
             queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-            queryClient.refetchQueries({ queryKey: ["/api/dashboard"] });
             
-            // Clear any browser cache for dashboard data
-            const dashboardKeys = [
-              "/api/dashboard/demo-client-id",
-              "/api/admin/cd-portfolio"
-            ];
-            dashboardKeys.forEach(key => {
-              queryClient.removeQueries({ queryKey: [key] });
-              queryClient.invalidateQueries({ queryKey: [key] });
+            // Invalidate all dashboard queries regardless of parameters
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                const key = query.queryKey[0] as string;
+                return key?.includes('/api/dashboard/') || key?.includes('/api/filters');
+              }
+            });
+            
+            // Force remove and invalidate specific dashboard cache entries
+            queryClient.removeQueries({ 
+              predicate: (query) => {
+                const key = query.queryKey[0] as string;
+                return key?.includes('/api/dashboard/');
+              }
             });
             
             toast({
@@ -629,16 +633,21 @@ export default function AdminPanel() {
     onSuccess: () => {
       // Comprehensive cache invalidation for immediate refresh
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.refetchQueries({ queryKey: ["/api/dashboard"] });
       
-      // Clear specific dashboard cache entries
-      const dashboardKeys = [
-        "/api/dashboard/demo-client-id"
-      ];
-      dashboardKeys.forEach(key => {
-        queryClient.removeQueries({ queryKey: [key] });
-        queryClient.invalidateQueries({ queryKey: [key] });
+      // Invalidate all dashboard queries regardless of parameters
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes('/api/dashboard/') || key?.includes('/api/filters');
+        }
+      });
+      
+      // Force remove and invalidate specific dashboard cache entries
+      queryClient.removeQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes('/api/dashboard/');
+        }
       });
       
       toast({
