@@ -190,6 +190,18 @@ export default function AdminPanel() {
   const [editingCdIndustryVertical, setEditingCdIndustryVertical] = useState<string>("");
   const [integratingCompany, setIntegratingCompany] = useState<string | null>(null);
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
+  const [dataViewerOpen, setDataViewerOpen] = useState<boolean>(false);
+  const [viewingCompanyData, setViewingCompanyData] = useState<any>(null);
+
+  // Query for fetching portfolio company data
+  const companyDataQuery = useQuery({
+    queryKey: ['/api/admin/cd-portfolio', viewingCompanyData?.id, 'data'],
+    queryFn: async () => {
+      if (!viewingCompanyData?.id) return null;
+      return await apiRequest('GET', `/api/admin/cd-portfolio/${viewingCompanyData.id}/data`);
+    },
+    enabled: !!viewingCompanyData?.id && dataViewerOpen
+  });
 
   // Extract tab from URL
   useEffect(() => {
@@ -2731,24 +2743,39 @@ export default function AdminPanel() {
                                       rows={3}
                                     />
                                   </div>
-                                  <div className="flex justify-end space-x-2">
+                                  <div className="flex justify-between">
                                     <Button 
                                       type="button"
-                                      variant="outline"
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => {
-                                        setIsDialogOpen(false);
-                                        setEditingItem(null);
-                                        setEditingCdIndustryVertical("");
+                                        setViewingCompanyData(editingItem);
+                                        setDataViewerOpen(true);
                                       }}
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                     >
-                                      Cancel
+                                      <BarChart3 className="h-4 w-4 mr-2" />
+                                      View Data
                                     </Button>
-                                    <Button 
-                                      type="submit"
-                                      disabled={updateCdPortfolioCompanyMutation.isPending}
-                                    >
-                                      {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
-                                    </Button>
+                                    <div className="flex space-x-2">
+                                      <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
+                                          setEditingCdIndustryVertical("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateCdPortfolioCompanyMutation.isPending}
+                                      >
+                                        {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
+                                    </div>
                                   </div>
                                 </form>
                               </DialogContent>
@@ -2938,23 +2965,38 @@ export default function AdminPanel() {
                                           rows={3}
                                         />
                                       </div>
-                                      <div className="flex justify-end space-x-2">
+                                      <div className="flex justify-between">
                                         <Button 
                                           type="button"
-                                          variant="outline"
+                                          variant="ghost"
+                                          size="sm"
                                           onClick={() => {
-                                            setIsDialogOpen(false);
-                                            setEditingItem(null);
+                                            setViewingCompanyData(editingItem);
+                                            setDataViewerOpen(true);
                                           }}
+                                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                         >
-                                          Cancel
+                                          <BarChart3 className="h-4 w-4 mr-2" />
+                                          View Data
                                         </Button>
-                                        <Button 
-                                          type="submit"
-                                          disabled={updateCdPortfolioCompanyMutation.isPending}
-                                        >
-                                          {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
-                                        </Button>
+                                        <div className="flex space-x-2">
+                                          <Button 
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                              setIsDialogOpen(false);
+                                              setEditingItem(null);
+                                            }}
+                                          >
+                                            Cancel
+                                          </Button>
+                                          <Button 
+                                            type="submit"
+                                            disabled={updateCdPortfolioCompanyMutation.isPending}
+                                          >
+                                            {updateCdPortfolioCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                          </Button>
+                                        </div>
                                       </div>
                                     </form>
                                   </DialogContent>
@@ -3474,6 +3516,100 @@ export default function AdminPanel() {
         />
         </div>
       </div>
+
+      {/* Portfolio Company Data Viewer Modal */}
+      <Dialog open={dataViewerOpen} onOpenChange={(open) => {
+        setDataViewerOpen(open);
+        if (!open) {
+          setViewingCompanyData(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Portfolio Company Data{viewingCompanyData?.name ? `: ${viewingCompanyData.name}` : ''}</DialogTitle>
+            <DialogDescription>
+              View all fetched metrics and data for this portfolio company
+            </DialogDescription>
+          </DialogHeader>
+          
+          {companyDataQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              Loading company data...
+            </div>
+          ) : companyDataQuery.error ? (
+            <div className="text-center py-8 text-red-600">
+              <p>Error loading company data</p>
+              <p className="text-sm text-red-500 mt-1">{(companyDataQuery.error as Error).message}</p>
+            </div>
+          ) : companyDataQuery.data ? (
+            <div className="space-y-6">
+              {/* Company Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Company Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Name:</span> {companyDataQuery.data.company.name}
+                    </div>
+                    <div>
+                      <span className="font-medium">Website:</span> {companyDataQuery.data.company.websiteUrl}
+                    </div>
+                    <div>
+                      <span className="font-medium">Industry:</span> {companyDataQuery.data.company.industryVertical}
+                    </div>
+                    <div>
+                      <span className="font-medium">Business Size:</span> {companyDataQuery.data.company.businessSize}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Metrics Data */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Fetched Metrics ({companyDataQuery.data.totalMetrics} total)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(companyDataQuery.data.metrics).length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">No metrics data found for this company.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(companyDataQuery.data.metrics).map(([metricName, timePeriods]: [string, any]) => (
+                        <div key={metricName} className="border rounded-lg p-4">
+                          <h4 className="font-medium text-base mb-3">{metricName}</h4>
+                          <div className="space-y-3">
+                            {Object.entries(timePeriods).map(([timePeriod, metrics]: [string, any]) => (
+                              <div key={timePeriod} className="bg-gray-50 rounded p-3">
+                                <h5 className="font-medium text-sm mb-2">{timePeriod}</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                  {(metrics as any[]).map((metric, index) => (
+                                    <div key={index} className="bg-white rounded p-2 border">
+                                      <div><span className="font-medium">Value:</span> {metric.value}</div>
+                                      {metric.channel && <div><span className="font-medium">Channel:</span> {metric.channel}</div>}
+                                      {metric.deviceType && <div><span className="font-medium">Device:</span> {metric.deviceType}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No data available</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

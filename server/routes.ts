@@ -1709,6 +1709,66 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get CD Portfolio Company Data for Admin Viewing
+  app.get('/api/admin/cd-portfolio/:companyId/data', requireAdmin, async (req, res) => {
+    try {
+      const { companyId } = req.params;
+      console.log(`[${new Date().toISOString()}] INFO: Fetching portfolio company data`, { companyId, admin: req.user?.id });
+      
+      // Get company info
+      const companies = await storage.getCdPortfolioCompanies();
+      const company = companies.find(c => c.id === companyId);
+      
+      if (!company) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+
+      // Get all metrics for this company
+      const metrics = await storage.getMetricsByFilters({
+        sourceType: 'CD_Portfolio',
+        cdPortfolioCompanyId: companyId
+      });
+
+      // Group metrics by type and time period
+      const groupedData = metrics.reduce((acc: any, metric: any) => {
+        const metricKey = metric.metricName;
+        const timePeriod = metric.timePeriod;
+        
+        if (!acc[metricKey]) {
+          acc[metricKey] = {};
+        }
+        
+        if (!acc[metricKey][timePeriod]) {
+          acc[metricKey][timePeriod] = [];
+        }
+        
+        acc[metricKey][timePeriod].push({
+          value: metric.value,
+          channel: metric.channel,
+          deviceType: metric.deviceType || metric.channel,
+          createdAt: metric.createdAt
+        });
+        
+        return acc;
+      }, {});
+
+      res.json({
+        company: {
+          id: company.id,
+          name: company.name,
+          websiteUrl: company.websiteUrl,
+          industryVertical: company.industryVertical,
+          businessSize: company.businessSize
+        },
+        metrics: groupedData,
+        totalMetrics: metrics.length
+      });
+    } catch (error) {
+      console.error('Error fetching portfolio company data:', error);
+      res.status(500).json({ error: 'Failed to fetch company data' });
+    }
+  });
+
   // Admin endpoint to manually trigger portfolio averages recalculation
   app.post('/api/admin/cd-portfolio/recalculate-averages', requireAdmin, async (req, res) => {
     try {
