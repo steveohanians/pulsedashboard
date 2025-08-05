@@ -467,11 +467,22 @@ export default function Dashboard() {
   const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
+    // Debug logging for device data
+    console.log('🔍 DEVICE DEBUG - Raw metrics:', deviceMetrics.length);
+    if (deviceMetrics.length > 0) {
+      console.log('🔍 DEVICE DEBUG - Sample metric:', {
+        sourceType: deviceMetrics[0].sourceType,
+        valueType: typeof deviceMetrics[0].value,
+        valuePreview: deviceMetrics[0].value?.toString?.()?.substring?.(0, 100),
+        isArray: Array.isArray(deviceMetrics[0].value)
+      });
+    }
+    
     // Quick validation that GA4 device data is found
     const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
     const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
     if (ga4DeviceArrayMetric) {
-
+      console.log('✅ Found GA4 device array metric');
     }
     
     const DEVICE_COLORS = {
@@ -515,14 +526,31 @@ export default function Dashboard() {
               }
             }
           });
-        } else if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
-          // GA4 JSON string format - parse and aggregate
+        } else if (typeof metric.value === 'string') {
+          // GA4 JSON string format - handle escaped JSON
           try {
-            const deviceData = JSON.parse(metric.value);
+            // Handle multiple levels of JSON escaping from database
+            let jsonString = metric.value;
+            
+            // Remove outer quotes if present
+            if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
+              jsonString = jsonString.slice(1, -1);
+            }
+            
+            // Unescape JSON
+            jsonString = jsonString.replace(/\\"/g, '"');
+            
+            console.log('🔍 DEVICE PARSE - Attempting to parse:', jsonString.substring(0, 100));
+            
+            const deviceData = JSON.parse(jsonString);
+            console.log('✅ DEVICE PARSE - Success:', deviceData);
+            
             if (Array.isArray(deviceData)) {
               deviceData.forEach((device: any) => {
                 const deviceName = device.device || device.name || device.category;
                 const value = parseFloat(device.percentage || device.value || device.sessions);
+                
+                console.log('📱 DEVICE ITEM:', { deviceName, value, device });
                 
                 if (deviceName && !isNaN(value)) {
                   if (deviceSums.has(deviceName)) {
@@ -536,12 +564,14 @@ export default function Dashboard() {
               });
             }
           } catch (e) {
-            console.warn(`Invalid device JSON data: ${metric.value}`);
+            console.error(`❌ Invalid device JSON data:`, e, metric.value?.substring?.(0, 100));
           }
-        } else {
-          // Handle simple value format
-          const deviceName = metric.channel || 'Other';
+        } else if (metric.channel && metric.value) {
+          // Handle individual device channel records (from backend processing)
+          const deviceName = metric.channel;
           const value = parseFloat(metric.value);
+          
+          console.log('📱 INDIVIDUAL DEVICE RECORD:', { deviceName, value, metric });
           
           if (deviceName && !isNaN(value)) {
             if (deviceSums.has(deviceName)) {
@@ -552,6 +582,8 @@ export default function Dashboard() {
               deviceCounts.set(deviceName, 1);
             }
           }
+        } else {
+          console.warn('🚨 UNKNOWN DEVICE FORMAT:', metric);
         }
       });
 

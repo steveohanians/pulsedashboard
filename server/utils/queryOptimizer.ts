@@ -442,12 +442,17 @@ function processMetricsData(
               // GA4 JSON data parsed successfully
               
               channelData.forEach((channel: any) => {
+                // Handle different property names for traffic channels vs device distribution
+                const channelName = m.metricName === 'Device Distribution' 
+                  ? (channel.device || channel.name || channel.channel)
+                  : (channel.channel || channel.name);
+                
                 result.push({
                   metricName: m.metricName,
                   value: channel.percentage || channel.value || channel.sessions,
                   sourceType: m.sourceType,
                   timePeriod: m.timePeriod,
-                  channel: channel.channel || channel.name,
+                  channel: channelName,
                   competitorId: m.competitorId
                 });
               });
@@ -474,12 +479,17 @@ function processMetricsData(
           // Pre-parsed channel data processed
           
           rawValue.forEach((channel: any) => {
+            // Handle different property names for traffic channels vs device distribution
+            const channelName = m.metricName === 'Device Distribution' 
+              ? (channel.device || channel.name || channel.channel)
+              : (channel.channel || channel.name);
+            
             result.push({
               metricName: m.metricName,
               value: channel.percentage || channel.value || channel.sessions,
               sourceType: m.sourceType,
               timePeriod: m.timePeriod,
-              channel: channel.channel || channel.name,
+              channel: channelName,
               competitorId: m.competitorId
             });
           });
