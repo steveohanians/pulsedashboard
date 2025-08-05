@@ -1218,26 +1218,6 @@ export default function Dashboard() {
                 ))}
               </ul>
 
-              {/* Refresh Data Link */}
-              <div className="mt-6 pt-4 border-t border-slate-200">
-                <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Actions</h3>
-                <button
-                  onClick={() => {
-                    handleManualRefresh();
-                    setMobileMenuOpen(false);
-                  }}
-                  disabled={isLoading}
-                  className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-blue-50 border border-blue-200 mb-3"
-                >
-                  <span className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      {isLoading ? "Updating..." : "Refresh Data"}
-                    </span>
-                  </span>
-                </button>
-              </div>
-
               {/* Admin Panel Link */}
               {user?.role === "Admin" && (
                 <div className="mt-6 pt-4 border-t border-slate-200">
