@@ -506,35 +506,71 @@ export class DatabaseStorage implements IStorage {
     
     // If no metrics found for the requested period, fall back to most recent available portfolio data
     if (allMetrics.length === 0) {
-      // Find the most recent period with CD_Avg data
-      const recentMetrics = await db.select().from(metrics)
-        .where(eq(metrics.sourceType, 'CD_Avg'))
+      // Find the most recent period with CD_Portfolio data (actual company data)
+      const recentPortfolioMetrics = await db.select().from(metrics)
+        .where(eq(metrics.sourceType, 'CD_Portfolio'))
         .orderBy(sql`${metrics.timePeriod} DESC`)
-        .limit(50); // Get recent periods to find the latest data
+        .limit(200); // Get recent periods to find the latest data
       
-      if (recentMetrics.length > 0) {
+      if (recentPortfolioMetrics.length > 0) {
         // Group by time period and pick the most recent one
         const periodGroups: Record<string, Metric[]> = {};
-        recentMetrics.forEach(metric => {
+        recentPortfolioMetrics.forEach(metric => {
           if (!periodGroups[metric.timePeriod]) {
             periodGroups[metric.timePeriod] = [];
           }
           periodGroups[metric.timePeriod].push(metric);
         });
         
-        // Get the most recent period with data
+        // Get the most recent period with portfolio data
         const sortedPeriods = Object.keys(periodGroups).sort().reverse();
         if (sortedPeriods.length > 0) {
           const mostRecentPeriod = sortedPeriods[0];
-          const fallbackMetrics = periodGroups[mostRecentPeriod];
+          const portfolioMetrics = periodGroups[mostRecentPeriod];
           
-          // Create new metrics with the requested period but fallback values
-          allMetrics = fallbackMetrics.map(metric => ({
-            ...metric,
-            timePeriod: period // Override the time period to match the request
-          }));
+          // Calculate fresh averages from portfolio companies' data
+          const avgCalculator: Record<string, { total: number, count: number }> = {};
           
-          logger.info(`CD_Avg fallback: Using ${mostRecentPeriod} data for period ${period} (${allMetrics.length} metrics)`);
+          portfolioMetrics.forEach(metric => {
+            if (!avgCalculator[metric.metricName]) {
+              avgCalculator[metric.metricName] = { total: 0, count: 0 };
+            }
+            
+            // Extract value from JSON structure
+            let value = 0;
+            if (typeof metric.value === 'object' && metric.value && 'value' in metric.value) {
+              value = parseFloat((metric.value as any).value) || 0;
+            } else {
+              value = parseFloat(metric.value as string) || 0;
+            }
+            
+            avgCalculator[metric.metricName].total += value;
+            avgCalculator[metric.metricName].count += 1;
+          });
+          
+          // Create fallback metrics with calculated averages
+          allMetrics = Object.entries(avgCalculator).map(([metricName, calc]) => {
+            const avgValue = calc.count > 0 ? calc.total / calc.count : 0;
+            return {
+              id: `fallback-${metricName}-${period}`,
+              metricName,
+              value: JSON.stringify({ value: avgValue, source: 'cd_portfolio_average' }),
+              sourceType: 'CD_Avg' as any,
+              timePeriod: period,
+              clientId: null,
+              competitorId: null,
+              channel: null,
+              deviceType: null,
+              createdAt: new Date()
+            };
+          });
+          
+          const totalCompanies = Object.values(avgCalculator).reduce((max, calc) => Math.max(max, calc.count), 0);
+          logger.info(`CD_Avg fallback: Calculated fresh averages from ${mostRecentPeriod} portfolio data for period ${period} (${allMetrics.length} metrics from ${totalCompanies} companies)`, {
+            sourceCount: portfolioMetrics.length,
+            avgMetrics: allMetrics.length,
+            sampleAvg: allMetrics[0] ? { name: allMetrics[0].metricName, value: allMetrics[0].value } : null
+          });
         }
       }
     }
