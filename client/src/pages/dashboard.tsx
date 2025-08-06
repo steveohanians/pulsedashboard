@@ -71,10 +71,10 @@ export default function Dashboard() {
 
   // Refresh data function for admin users
   const handleRefreshData = async () => {
-    // Invalidate all dashboard-related queries to force refresh
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+    // Directly refetch the dashboard data
+    await refetchDashboard();
+    
+    // Also refresh filters 
     queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
     
     toast({
