@@ -125,12 +125,25 @@ export function processDeviceDistribution(
         }
       });
       
-      // Use parsed data if available and normalize to 100%
+      // Handle cases where we only have one device type
       if (desktop > 0 || mobile > 0) {
-        const total = desktop + mobile;
-        if (total > 0) {
+        // If we have both values, normalize to 100%
+        if (desktop > 0 && mobile > 0) {
+          const total = desktop + mobile;
           deviceDistribution.Desktop = (desktop / total) * 100;
           deviceDistribution.Mobile = (mobile / total) * 100;
+        } 
+        // If we only have desktop, mobile is the complement
+        else if (desktop > 0 && mobile === 0) {
+          // Assume desktop percentage is already out of 100%
+          deviceDistribution.Desktop = Math.min(desktop, 100);
+          deviceDistribution.Mobile = Math.max(100 - desktop, 0);
+        }
+        // If we only have mobile, desktop is the complement  
+        else if (mobile > 0 && desktop === 0) {
+          // Assume mobile percentage is already out of 100%
+          deviceDistribution.Mobile = Math.min(mobile, 100);
+          deviceDistribution.Desktop = Math.max(100 - mobile, 0);
         }
       }
     }

@@ -516,7 +516,7 @@ export default function Dashboard() {
         value: competitorDeviceMetrics[0].value,
         valueType: typeof competitorDeviceMetrics[0].value,
         competitorId: competitorDeviceMetrics[0].competitorId,
-        timePeriod: competitorDeviceMetrics[0].timePeriod
+        timePeriod: (competitorDeviceMetrics[0] as any).timePeriod
       });
     } else {
       console.log('🚨 NO COMPETITOR DEVICE METRICS FOUND');
@@ -524,7 +524,7 @@ export default function Dashboard() {
       const allCompetitorMetrics = metrics.filter(m => m.sourceType === 'Competitor');
       console.log('🔍 ALL COMPETITOR METRICS:', {
         count: allCompetitorMetrics.length,
-        metricNames: [...new Set(allCompetitorMetrics.map(m => m.metricName))],
+        metricNames: Array.from(new Set(allCompetitorMetrics.map(m => m.metricName))),
         sample: allCompetitorMetrics.length > 0 ? {
           name: allCompetitorMetrics[0].metricName,
           value: allCompetitorMetrics[0].value,
