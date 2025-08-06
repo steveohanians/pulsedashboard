@@ -1761,6 +1761,45 @@ export default function Dashboard() {
                             return result;
                           })()}
                         />
+                      ) : metricName === "Session Duration" ? (
+                        timePeriod === 'Last Quarter' ? (
+                          <TimeSeriesChart 
+                            metricName={metricName}
+                            timePeriod={timePeriod}
+                            clientData={metricData.Client || 0}
+                            industryAvg={metricData.Industry_Avg || 0}
+                            cdAvg={metricData.CD_Avg || 0}
+                            clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                            timeSeriesData={timeSeriesData}
+                            periods={periods}
+                            competitors={processCompanyMetrics(competitors, metrics, {
+                              metricName,
+                              displayMode: 'individual',
+                              sourceType: 'Competitor',
+                              fallbackValue: getMetricFallback(metricName),
+                              convertToPercentage: shouldConvertToPercentage(metricName),
+                              convertToMinutes: shouldConvertToMinutes(metricName)
+                            })}
+                          />
+                        ) : (
+                          <BarChart 
+                            metricName={metricName}
+                            clientData={metricData.Client || 0}
+                            industryAvg={metricData.Industry_Avg || 0}
+                            cdAvg={metricData.CD_Avg || 0}
+                            clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                            clientName={dashboardData?.client?.name}
+                            companyName="Clear Digital"
+                            competitors={processCompanyMetrics(competitors, metrics, {
+                              metricName,
+                              displayMode: 'individual',
+                              sourceType: 'Competitor',
+                              fallbackValue: getMetricFallback(metricName),
+                              convertToPercentage: shouldConvertToPercentage(metricName),
+                              convertToMinutes: shouldConvertToMinutes(metricName)
+                            })}
+                          />
+                        )
                       ) : (
                         <MetricsChart metricName={metricName} data={metricData} />
                       )}
