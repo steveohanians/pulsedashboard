@@ -1,6 +1,8 @@
 // Side navigation component for dashboard
-import { TrendingUp, BarChart3, Users2, Globe, Smartphone, Clock, Settings } from 'lucide-react';
+import { TrendingUp, BarChart3, Users2, Globe, Smartphone, Clock, Settings, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 interface SideNavigationProps {
   activeSection: string;
@@ -48,6 +50,27 @@ export default function SideNavigation({
   userRole,
   className = ""
 }: SideNavigationProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleRefreshData = async () => {
+    // Invalidate all dashboard-related queries to force refresh
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const queryKey = query.queryKey[0]?.toString() || '';
+        return queryKey.includes('/api/dashboard') || queryKey.includes('dashboard');
+      }
+    });
+    
+    // Also refresh filters and other related data
+    queryClient.invalidateQueries({ queryKey: ['/api/filters'] });
+    
+    toast({
+      title: "Dashboard refreshed",
+      description: "All data has been refreshed from the latest sources.",
+      duration: 3000,
+    });
+  };
   return (
     <nav className={`space-y-2 ${className}`}>
       <h3 className="font-semibold text-slate-700 mb-4 text-sm uppercase tracking-wide">
@@ -105,6 +128,21 @@ export default function SideNavigation({
               </div>
             </button>
           </Link>
+          
+          {/* Refresh Data Link */}
+          <button 
+            onClick={handleRefreshData}
+            className="w-full text-left p-3 rounded-lg transition-all duration-200 group text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          >
+            <div className="flex items-start space-x-3">
+              <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0 text-slate-400 group-hover:text-slate-600" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm text-slate-700 group-hover:text-slate-900">
+                  Refresh Data
+                </div>
+              </div>
+            </div>
+          </button>
         </>
       )}
     </nav>
