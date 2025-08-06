@@ -67,29 +67,35 @@ function processTimeSeriesForBar(
 
     dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseMetricValue(cdMetric.value) * 10) / 10 : 0;
     
-    // Add competitor data
+    // Add competitor data with fallback to most recent available period
     competitors.forEach(competitor => {
-      // Debug competitor lookup
-      if (metricName === 'Session Duration') {
-        console.log(`🔍 Looking for competitor: id=${competitor.id}, label=${competitor.label}`);
-        const competitorMetrics = periodData.filter(m => m.sourceType === 'Competitor' && m.metricName === metricName);
-        console.log(`🔍 Available competitor metrics:`, competitorMetrics.map(m => ({id: m.competitorId, value: m.value})));
-      }
-      
-      const competitorMetric = periodData.find(m => 
+      let competitorMetric = periodData.find(m => 
         m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
       );
       
-      let value = competitorMetric ? parseMetricValue(competitorMetric.value) : 0;
-      
-      if (metricName === 'Session Duration') {
-        console.log(`🔍 Found metric for ${competitor.label}: ${competitorMetric ? 'YES' : 'NO'}, value=${value}`);
+      // If no data for current period, look for most recent data across all periods
+      if (!competitorMetric) {
+        for (const fallbackPeriod of periods) {
+          const fallbackPeriodData = timeSeriesData[fallbackPeriod] || [];
+          competitorMetric = fallbackPeriodData.find(m => 
+            m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
+          );
+          if (competitorMetric) break;
+        }
       }
       
-      // Convert Session Duration from seconds to minutes
-      if (metricName === 'Session Duration' && value > 60) {
-        console.log(`🔍 processTimeSeriesForBar converting ${competitor.label}: ${value} seconds to ${value/60} minutes`);
-        value = value / 60;
+      // Final fallback: use the value from competitors array (already converted)
+      let value = 0;
+      if (competitorMetric) {
+        value = parseMetricValue(competitorMetric.value);
+        
+        // Convert Session Duration from seconds to minutes
+        if (metricName === 'Session Duration' && value > 60) {
+          value = value / 60;
+        }
+      } else {
+        // Use the pre-converted value from competitors array as final fallback
+        value = competitor.value;
       }
       
       dataPoint[competitor.label] = Math.round(value * 10) / 10;
@@ -314,16 +320,9 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   const data = useMemo(() => {
     let result;
     
-    // Debug which path is taken
-    if (metricName === 'Session Duration') {
-      console.log(`🔍 PATH DECISION: timeSeriesData=${!!timeSeriesData}, periods=${periods?.length}, timePeriod=${timePeriod}`);
-    }
-    
     if (timeSeriesData && periods && periods.length > 1) {
-      console.log(`🔍 USING processTimeSeriesForBar path`);
       result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
     } else {
-      console.log(`🔍 USING generateBarData path with timePeriod: ${timePeriod}`);
       result = generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
     
