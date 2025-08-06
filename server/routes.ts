@@ -1184,7 +1184,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const competitorId = req.params.id;
       const user = req.user!;
-      const client = await storage.getClient(user.clientId);
+      const client = await storage.getClient(user.clientId!);
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
