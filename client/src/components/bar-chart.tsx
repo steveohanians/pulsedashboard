@@ -190,7 +190,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.id}-${metricName || 'Unknown'}`)
+      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.label}-${metricName || 'Unknown'}`)
     );
     
     dates.forEach((period, index) => {
