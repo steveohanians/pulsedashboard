@@ -222,8 +222,15 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
       competitors.forEach((competitor) => {
         // Convert Session Duration from seconds to minutes, others are already in correct units
         let value = competitor.value;
+        
+        // Debug Session Duration processing
+        if (metricName === 'Session Duration') {
+          console.log(`🔍 BAR CHART ${competitor.label}: value=${value}, converting=${value > 60 ? 'YES' : 'NO'}`);
+        }
+        
         if (metricName === 'Session Duration' && value && value > 60) {
           value = value / 60; // Convert seconds to minutes
+          console.log(`🔍 BAR CHART ${competitor.label}: converted to ${value} minutes`);
         }
         point[competitor.label] = Math.round(value * 10) / 10;
       });
