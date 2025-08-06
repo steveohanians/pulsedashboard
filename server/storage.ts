@@ -876,7 +876,10 @@ export class DatabaseStorage implements IStorage {
     const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
     const competitorIds = clientCompetitors.map(c => c.id);
     
+    console.log(`🔍 COMPETITOR FETCH DEBUG: clientId=${clientId}, timePeriod=${timePeriod}, competitorIds=${competitorIds.length}`);
+    
     if (competitorIds.length === 0) {
+      console.log(`❌ No competitors found for client ${clientId}`);
       return [];
     }
     
@@ -888,6 +891,8 @@ export class DatabaseStorage implements IStorage {
       )
     );
     
+    console.log(`🔍 EXACT PERIOD MATCH: found ${competitorMetrics.length} metrics for period ${timePeriod}`);
+    
     // If no data found for exact period, fall back to most recent available period
     if (competitorMetrics.length === 0) {
       // Get the most recent period with competitor data
@@ -897,6 +902,8 @@ export class DatabaseStorage implements IStorage {
         .groupBy(metrics.timePeriod)
         .orderBy(desc(metrics.timePeriod))
         .limit(1);
+      
+      console.log(`🔍 RECENT PERIODS CHECK: found ${recentPeriods.length} periods`);
       
       if (recentPeriods.length > 0) {
         const fallbackPeriod = recentPeriods[0].timePeriod;
@@ -908,6 +915,8 @@ export class DatabaseStorage implements IStorage {
             eq(metrics.timePeriod, fallbackPeriod)
           )
         );
+        
+        console.log(`🔍 FALLBACK RESULT: found ${competitorMetrics.length} metrics for fallback period ${fallbackPeriod}`);
       }
     }
     

@@ -590,7 +590,7 @@ function processMetricsData(
           sourceType: m.sourceType,
           timePeriod: m.timePeriod,
           channel: m.channel,
-          competitorId: m.competitorId
+          competitorId: m.competitorId || m.competitor_id // Handle both field formats
         });
       } else if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && !m.channel) {
         // Parse GA4 JSON format: [{"channel": "Direct", "sessions": 4439, "percentage": 64.87...}]
@@ -686,7 +686,17 @@ function processMetricsData(
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = parseMetricValue(m.value);
         
-
+        // Debug competitor metrics specifically
+        if (m.sourceType === 'Competitor') {
+          console.log('🔍 COMPETITOR METRIC DEBUG:', {
+            metricName: m.metricName,
+            sourceType: m.sourceType,
+            rawValue: m.value,
+            valueType: typeof m.value,
+            parsedValue: finalValue,
+            competitorId: m.competitorId || m.competitor_id
+          });
+        }
         
         result.push({
           metricName: m.metricName,
@@ -694,7 +704,7 @@ function processMetricsData(
           sourceType: m.sourceType,
           timePeriod: m.timePeriod,
           channel: m.channel,
-          competitorId: m.competitorId
+          competitorId: m.competitorId || m.competitor_id // Handle both field formats
         });
       }
     });
@@ -719,12 +729,37 @@ function processMetricsData(
     }))
   });
 
+  // Debug competitor metrics before processing
+  console.log('🔍 COMPETITOR METRICS DEBUG BEFORE PROCESSING:', {
+    count: allCompetitorMetrics.length,
+    sampleValues: allCompetitorMetrics.slice(0, 3).map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      valueType: typeof m.value,
+      competitorId: m.competitorId || m.competitor_id,
+      timePeriod: m.timePeriod
+    }))
+  });
+  
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
+  
+  // Debug competitor metrics after processing
+  const processedCompetitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
+  console.log('🔍 COMPETITOR METRICS DEBUG AFTER PROCESSING:', {
+    count: processedCompetitorMetrics.length,
+    sampleValues: processedCompetitorMetrics.slice(0, 3).map(m => ({
+      metricName: m.metricName,
+      value: m.value,
+      valueType: typeof m.value,
+      competitorId: m.competitorId,
+      timePeriod: m.timePeriod
+    }))
+  });
   
   return processedData;
 }

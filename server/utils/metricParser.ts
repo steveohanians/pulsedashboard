@@ -24,14 +24,18 @@ export function parseMetricValue(value: any): number | null {
 
   // If it's a string, try to parse as number first
   if (typeof value === 'string') {
-    // Try parsing as JSON first (for CD_Avg metrics)
+    // Try parsing as JSON first (for SEMrush competitor metrics and CD_Avg metrics)
     try {
       const parsed = JSON.parse(value);
       if (typeof parsed === 'object' && parsed !== null && 'value' in parsed) {
-        return typeof parsed.value === 'number' ? parsed.value : parseFloat(parsed.value);
+        const numValue = typeof parsed.value === 'number' ? parsed.value : parseFloat(parsed.value);
+        // Debug successful JSON parsing
+        console.log('✅ JSON PARSE SUCCESS:', { originalValue: value, parsedValue: numValue });
+        return numValue;
       }
-    } catch {
-      // Not JSON, try parsing as plain number
+    } catch (e) {
+      // Log failed JSON parsing attempts
+      console.log('❌ JSON PARSE FAILED:', { value: typeof value === 'string' ? value.substring(0, 100) : value, error: e instanceof Error ? e.message : String(e) });
     }
     
     // Parse as plain number
