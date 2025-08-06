@@ -188,6 +188,8 @@ export function registerRoutes(app: Express): Server {
       // Cache clearing moved to getDashboardDataOptimized function
 
       // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
+      console.error(`🚨 DASHBOARD ROUTE: About to call getDashboardDataOptimized for client ${clientId}, periods:`, periodsToQuery);
+      
       const result = await getDashboardDataOptimized(
         client,
         periodsToQuery,
@@ -195,6 +197,22 @@ export function registerRoutes(app: Express): Server {
         industryVertical as string,
         timePeriod as string
       );
+      
+      console.error(`🚨 DASHBOARD RESULT: Got ${result.metrics?.length || 0} total metrics`);
+      
+      // Debug competitor metrics specifically
+      const competitorMetrics = result.metrics?.filter(m => m.sourceType === 'Competitor') || [];
+      console.error(`🚨 COMPETITOR METRICS IN RESULT: ${competitorMetrics.length} found`);
+      
+      if (competitorMetrics.length > 0) {
+        console.error(`🚨 SAMPLE COMPETITOR METRIC:`, {
+          name: competitorMetrics[0].metricName,
+          value: competitorMetrics[0].value,
+          valueType: typeof competitorMetrics[0].value,
+          timePeriod: competitorMetrics[0].timePeriod,
+          competitorId: competitorMetrics[0].competitorId
+        });
+      }
 
       // 🚀 OPTIMIZATION 4: Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {

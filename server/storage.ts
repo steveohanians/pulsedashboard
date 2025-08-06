@@ -872,94 +872,140 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMetricsByCompetitors(clientId: string, timePeriod: string): Promise<Metric[]> {
-    // Get all competitors for this client, then get their metrics
-    const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
-    const competitorIds = clientCompetitors.map(c => c.id);
+    console.error(`🚨 COMPETITOR FETCH: ${clientId}, ${timePeriod}`);
     
-    console.error(`🚨 COMPETITOR FETCH DEBUG: clientId=${clientId}, timePeriod=${timePeriod}, competitorIds=[${competitorIds.join(',')}]`);
-    
-    if (competitorIds.length === 0) {
-      console.log(`❌ No competitors found for client ${clientId}`);
-      return [];
-    }
-    
-    // First try exact period match - use raw SQL to fix JSONB handling
-    const queryResult = await db.execute(sql`
-      SELECT id, client_id as "clientId", competitor_id as "competitorId", 
-             cd_portfolio_company_id as "cdPortfolioCompanyId", benchmark_company_id as "benchmarkCompanyId",
-             metric_name as "metricName", value, source_type as "sourceType", 
-             time_period as "timePeriod", channel, created_at as "createdAt"
-      FROM metrics 
-      WHERE competitor_id IN (${sql.join(competitorIds.map(id => sql`${id}`), sql`, `)}) 
-        AND time_period = ${timePeriod}
-    `);
-    let competitorMetrics = queryResult.rows as Metric[];
-    
-    console.error('🚨 RAW SQL QUERY DEBUG - Raw result count:', competitorMetrics.length);
-    console.error('🚨 COMPETITOR IDS QUERIED:', competitorIds);
-    console.error('🚨 TIME PERIOD QUERIED:', timePeriod);
-    
-    // Test direct query with known competitor ID
-    const testQuery = await db.select().from(metrics).where(
-      eq(metrics.competitorId, '49f12e3d-8a51-4d6f-85de-a84cf53db2e0')
-    );
-    console.error('🚨 DIRECT COMPETITOR TEST:', testQuery.length, 'metrics found for known competitor ID');
-    
-    // Debug Drizzle query result directly
-    if (competitorMetrics.length > 0) {
-      console.error('🚨 DRIZZLE RESULT DEBUG:', {
-        count: competitorMetrics.length,
-        sample: {
-          metricName: competitorMetrics[0].metricName,
-          value: competitorMetrics[0].value,
-          valueType: typeof competitorMetrics[0].value,
-          valueIsNull: competitorMetrics[0].value === null,
-          valueStringified: JSON.stringify(competitorMetrics[0].value),
-          directValueAccess: competitorMetrics[0].value?.value,
-          hasValueProperty: competitorMetrics[0].value && 'value' in competitorMetrics[0].value
-        }
-      });
-    }
-    
-    console.log(`🔍 EXACT PERIOD MATCH: found ${competitorMetrics.length} metrics for period ${timePeriod}`);
-    
-    // If no data found for exact period, fall back to most recent available period
-    if (competitorMetrics.length === 0) {
-      // Get the most recent period with competitor data
-      const recentPeriods = await db.select({ timePeriod: metrics.timePeriod })
-        .from(metrics)
-        .where(inArray(metrics.competitorId, competitorIds))
-        .groupBy(metrics.timePeriod)
-        .orderBy(desc(metrics.timePeriod))
-        .limit(1);
+    try {
+      // Get competitors for this client
+      const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
+      const competitorIds = clientCompetitors.map(c => c.id);
       
-      console.log(`🔍 RECENT PERIODS CHECK: found ${recentPeriods.length} periods`);
+      if (competitorIds.length === 0) {
+        console.error(`🚨 NO COMPETITORS FOUND for client ${clientId}`);
+        return [];
+      }
       
-      if (recentPeriods.length > 0) {
-        const fallbackPeriod = recentPeriods[0].timePeriod;
-        console.log(`🔄 Competitor fallback: requested ${timePeriod}, using ${fallbackPeriod}`);
-        
-        const fallbackResult = await db.execute(sql`
-          SELECT id, client_id as "clientId", competitor_id as "competitorId", 
-                 cd_portfolio_company_id as "cdPortfolioCompanyId", benchmark_company_id as "benchmarkCompanyId",
-                 metric_name as "metricName", value, source_type as "sourceType", 
-                 time_period as "timePeriod", channel, created_at as "createdAt"
-          FROM metrics 
-          WHERE competitor_id IN (${sql.join(competitorIds.map(id => sql`${id}`), sql`, `)}) 
-            AND time_period = ${fallbackPeriod}
-        `);
-        competitorMetrics = fallbackResult.rows as Metric[];
-        
-        console.log(`🔍 FALLBACK RESULT: found ${competitorMetrics.length} metrics for fallback period ${fallbackPeriod}`);
-        
-        // Debug competitor JSONB values  
-        if (competitorMetrics.length > 0) {
-          console.error('JSONB VALUE CHECK:', competitorMetrics[0].value, 'Type:', typeof competitorMetrics[0].value);
+      console.error(`🚨 FOUND ${competitorIds.length} COMPETITORS: [${competitorIds.join(',')}]`);
+      
+      // Try exact period first, then fallback to most recent
+      let targetPeriod = timePeriod;
+      let rawMetrics = await db.select().from(metrics).where(
+        and(
+          inArray(metrics.competitorId, competitorIds),
+          eq(metrics.timePeriod, targetPeriod)
+        )
+      );
+      
+      // If no data for requested period, find most recent period with data
+      if (rawMetrics.length === 0) {
+        const recentPeriods = await db.select({ timePeriod: metrics.timePeriod })
+          .from(metrics)
+          .where(inArray(metrics.competitorId, competitorIds))
+          .groupBy(metrics.timePeriod)
+          .orderBy(desc(metrics.timePeriod))
+          .limit(1);
+          
+        if (recentPeriods.length > 0) {
+          targetPeriod = recentPeriods[0].timePeriod;
+          console.error(`🚨 FALLBACK: Using period ${targetPeriod} instead of ${timePeriod}`);
+          
+          rawMetrics = await db.select().from(metrics).where(
+            and(
+              inArray(metrics.competitorId, competitorIds),
+              eq(metrics.timePeriod, targetPeriod)
+            )
+          );
         }
       }
+      
+      console.error(`🚨 RAW METRICS: Found ${rawMetrics.length} metrics for period ${targetPeriod}`);
+      
+      // Fix JSONB values: Drizzle returns null for JSONB, need to handle this
+      const processedMetrics = rawMetrics.map(metric => {
+        let processedValue = metric.value;
+        
+        // If Drizzle returned null but we know there's JSONB data, query directly
+        if (processedValue === null) {
+          console.error(`🚨 NULL VALUE DETECTED for ${metric.metricName}, using raw SQL`);
+          // This will be handled by the raw SQL fallback below
+        }
+        
+        return {
+          ...metric,
+          value: processedValue
+        };
+      });
+      
+      // Debug all processed metrics first
+      console.error(`🔍 CHECKING ${processedMetrics.length} PROCESSED METRICS FOR NULL VALUES`);
+      processedMetrics.forEach((m, i) => {
+        if (i < 3 || m.value === null) { // Show first 3 + any null values
+          console.error(`🔍 METRIC ${i + 1}:`, {
+            name: m.metricName,
+            channel: m.channel,
+            value: m.value,
+            valueType: typeof m.value,
+            isNull: m.value === null
+          });
+        }
+      });
+      
+      // For any null values, use direct SQL to get correct JSONB data
+      const nullValueMetrics = processedMetrics.filter(m => m.value === null);
+      console.error(`🚨 FOUND ${nullValueMetrics.length} NULL VALUES out of ${processedMetrics.length} total metrics`);
+      
+      if (nullValueMetrics.length > 0) {
+        console.error(`🚨 FIXING ${nullValueMetrics.length} NULL VALUES with direct SQL`);
+        
+        const pg = require('pg');
+        const pool = new pg.Pool({
+          connectionString: process.env.DATABASE_URL
+        });
+        
+        // Get ALL competitor metrics for this period (not just those with null values)
+        const sqlQuery = `
+          SELECT m.id, m.value, m.metric_name, m.channel
+          FROM metrics m 
+          JOIN competitors c ON m.competitor_id = c.id 
+          WHERE c.client_id = $1 AND m.time_period = $2
+        `;
+        
+        const sqlResult = await pool.query(sqlQuery, [clientId, targetPeriod]);
+        console.error(`🚨 SQL RESCUE: Retrieved ${sqlResult.rows.length} total competitor metrics`);
+        
+        if (sqlResult.rows.length > 0) {
+          console.error(`🚨 SQL SAMPLE:`, {
+            id: sqlResult.rows[0].id,
+            metric: sqlResult.rows[0].metric_name,
+            channel: sqlResult.rows[0].channel,
+            value: sqlResult.rows[0].value,
+            valueType: typeof sqlResult.rows[0].value
+          });
+        }
+        
+        // Create map of all SQL results
+        const sqlMap = new Map(sqlResult.rows.map(row => [row.id, row.value]));
+        
+        // Update ALL metrics (not just null ones) with SQL values to ensure JSONB consistency
+        processedMetrics.forEach(metric => {
+          if (sqlMap.has(metric.id)) {
+            const sqlValue = sqlMap.get(metric.id);
+            if (sqlValue !== metric.value) {
+              console.error(`🚨 UPDATING: ${metric.metricName} from ${metric.value} to`, sqlValue);
+              metric.value = sqlValue;
+            }
+          }
+        });
+        
+        await pool.end();
+      }
+      
+      console.error(`🚨 FINAL: Returning ${processedMetrics.length} competitor metrics`);
+      return processedMetrics;
+      
+    } catch (error) {
+      console.error(`🚨 ERROR in getMetricsByCompetitors:`, error);
+      return [];
     }
-    
-    return competitorMetrics;
   }
 
   // Benchmarks

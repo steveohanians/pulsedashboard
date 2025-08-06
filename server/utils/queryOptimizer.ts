@@ -255,7 +255,12 @@ export async function getDashboardDataOptimized(
     dataPromise = Promise.all([
       Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
       storage.getCompetitorsByClient(client.id),
-      Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(client.id, p))),
+      Promise.all(periodsToQuery.map(async p => {
+        console.error(`🚨 CALLING getMetricsByCompetitors for period: ${p}`);
+        const result = await storage.getMetricsByCompetitors(client.id, p);
+        console.error(`🚨 getMetricsByCompetitors returned: ${result.length} metrics for period ${p}`);
+        return result;
+      })),
       Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
       Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
     ]);
@@ -569,11 +574,11 @@ function processMetricsData(
         // Individual channel record format (authentic data)
         let finalValue;
         
-        // Use correct parser: parseMetricPercentage for both Traffic Channels and Device Distribution CD_Avg data
-        if (m.metricName === 'Traffic Channels' || (m.metricName === 'Device Distribution' && m.sourceType === 'CD_Avg')) {
+        // Use correct parser: parseMetricPercentage for both Traffic Channels and ALL Device Distribution data
+        if (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') {
           const percentageResult = parseMetricPercentage(m.value);
           finalValue = percentageResult ? percentageResult.percentage : 0;
-          console.log('🔍 PARSE SUCCESS - Device Distribution CD_Avg:', {
+          console.log('🔍 PARSE SUCCESS - Device Distribution:', {
             metricName: m.metricName,
             sourceType: m.sourceType,
             channel: m.channel,

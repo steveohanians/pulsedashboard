@@ -497,14 +497,39 @@ export default function Dashboard() {
   const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
-    // Debug logging for device data
-    console.log('🔍 DEVICE DEBUG - Raw metrics:', deviceMetrics.length);
-    if (deviceMetrics.length > 0) {
-      console.log('🔍 DEVICE DEBUG - Sample metric:', {
-        sourceType: deviceMetrics[0].sourceType,
-        valueType: typeof deviceMetrics[0].value,
-        valuePreview: deviceMetrics[0].value?.toString?.()?.substring?.(0, 100),
-        isArray: Array.isArray(deviceMetrics[0].value)
+    // Comprehensive device debugging
+    console.log('🔍 DEVICE DEBUG - Total metrics:', deviceMetrics.length);
+    console.log('🔍 DEVICE DEBUG - By source type:', {
+      Client: deviceMetrics.filter(m => m.sourceType === 'Client').length,
+      Competitor: deviceMetrics.filter(m => m.sourceType === 'Competitor').length,
+      CD_Avg: deviceMetrics.filter(m => m.sourceType === 'CD_Avg').length
+    });
+    
+    // Debug competitor device metrics specifically
+    const competitorDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Competitor');
+    console.log('🔍 COMPETITOR DEVICE METRICS:', competitorDeviceMetrics.length);
+    
+    if (competitorDeviceMetrics.length > 0) {
+      console.log('🔍 COMPETITOR DEVICE SAMPLE:', {
+        metric: competitorDeviceMetrics[0].metricName,
+        channel: competitorDeviceMetrics[0].channel,
+        value: competitorDeviceMetrics[0].value,
+        valueType: typeof competitorDeviceMetrics[0].value,
+        competitorId: competitorDeviceMetrics[0].competitorId,
+        timePeriod: competitorDeviceMetrics[0].timePeriod
+      });
+    } else {
+      console.log('🚨 NO COMPETITOR DEVICE METRICS FOUND');
+      // Check what competitor metrics exist
+      const allCompetitorMetrics = metrics.filter(m => m.sourceType === 'Competitor');
+      console.log('🔍 ALL COMPETITOR METRICS:', {
+        count: allCompetitorMetrics.length,
+        metricNames: [...new Set(allCompetitorMetrics.map(m => m.metricName))],
+        sample: allCompetitorMetrics.length > 0 ? {
+          name: allCompetitorMetrics[0].metricName,
+          value: allCompetitorMetrics[0].value,
+          channel: allCompetitorMetrics[0].channel
+        } : null
       });
     }
     
