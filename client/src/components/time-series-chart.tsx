@@ -177,17 +177,27 @@ function generateRealTimeSeriesData(
       if (competitorData) {
         let value = parseMetricValue(competitorData.value);
         
+        // Debug Session Duration processing
+        if (metricName === 'Session Duration') {
+          console.log(`🔍 ${period} ${competitor.label}: Found competitorData, value=${value} (converting to minutes)`);
+        }
+        
         // Apply same conversions as current period
         if (metricName === 'Bounce Rate') {
           value = value * 100; // Convert to percentage
-        } else if (metricName === 'Session Duration') {
-          value = value / 60; // Convert to minutes  
+        } else if (metricName === 'Session Duration' && value > 60) {
+          value = value / 60; // Convert seconds to minutes
         }
         
         dataPoint[competitor.label] = Math.round(value * 10) / 10;
       } else {
         // Use the competitor value we have instead of defaulting to 0
         let value = competitor.value;
+        
+        // Debug Session Duration fallback processing
+        if (metricName === 'Session Duration') {
+          console.log(`🔍 ${period} ${competitor.label}: Using fallback, value=${value} (converting to minutes)`);
+        }
         
         // Convert Session Duration from seconds to minutes if needed
         if (metricName === 'Session Duration' && value && value > 60) {
