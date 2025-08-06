@@ -209,7 +209,39 @@ export function registerRoutes(app: Express): Server {
       (result as any).timestamp = Date.now();
       (result as any).dataFreshness = 'live';
       
-      return res.json(result);
+      // JSON serialization safety check to prevent malformed responses
+      try {
+        console.error('🚨 TESTING JSON SERIALIZATION...');
+        const testSerialized = JSON.stringify(result);
+        console.error('✅ JSON SERIALIZATION SUCCESS');
+        return res.json(result);
+      } catch (serializationError) {
+        console.error('🚨 JSON SERIALIZATION FAILED:', (serializationError as Error).message);
+        logger.error("JSON serialization error in dashboard response", { 
+          error: (serializationError as Error).message,
+          resultKeys: Object.keys(result),
+          metricsCount: result.metrics?.length || 0
+        });
+        
+        // Create a safe fallback response
+        const safeResult = {
+          client: result.client,
+          competitors: result.competitors || [],
+          insights: result.insights || [],
+          metrics: result.metrics?.map((m: any) => ({
+            metricName: m.metricName,
+            value: typeof m.value === 'number' ? m.value : parseFloat(m.value) || 0,
+            sourceType: m.sourceType,
+            timePeriod: m.timePeriod,
+            channel: m.channel,
+            competitorId: typeof m.competitorId === 'string' ? m.competitorId : undefined
+          })) || [],
+          timestamp: Date.now(),
+          dataFreshness: 'live'
+        };
+        
+        return res.json(safeResult);
+      }
 
 
     } catch (error) {

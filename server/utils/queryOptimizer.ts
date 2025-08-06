@@ -500,9 +500,9 @@ export async function getDashboardDataOptimized(
       isJSON: metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')
     });
     
-    if (metric.sourceType === 'Client' && deviceType && !isNaN(value)) {
+    if (metric.sourceType === 'Client' && deviceType && value !== null && !isNaN(value)) {
       deviceDistribution.client[deviceType] = value;
-    } else if (metric.sourceType === 'CD_Avg' && deviceType && !isNaN(value)) {
+    } else if (metric.sourceType === 'CD_Avg' && deviceType && value !== null && !isNaN(value)) {
       deviceDistribution.cdAvg[deviceType] = value;
     }
   });
@@ -688,11 +688,12 @@ function processMetricsData(
         
         // Debug competitor metrics specifically
         if (m.sourceType === 'Competitor') {
-          console.log('🔍 COMPETITOR METRIC DEBUG:', {
+          console.log('🔍 COMPETITOR METRIC DEBUG IN PROCESSING:', {
             metricName: m.metricName,
             sourceType: m.sourceType,
             rawValue: m.value,
             valueType: typeof m.value,
+            valueString: typeof m.value === 'string' ? m.value.substring(0, 100) : 'not-string',
             parsedValue: finalValue,
             competitorId: m.competitorId || m.competitor_id
           });
@@ -730,12 +731,15 @@ function processMetricsData(
   });
 
   // Debug competitor metrics before processing
-  console.log('🔍 COMPETITOR METRICS DEBUG BEFORE PROCESSING:', {
-    count: allCompetitorMetrics.length,
-    sampleValues: allCompetitorMetrics.slice(0, 3).map(m => ({
+  console.error('🚨 COMPETITOR METRICS PIPELINE DEBUG:', {
+    rawCompetitorCount: allCompetitorMetrics.length,
+    periodsQueried: periodsToQuery,
+    competitorSample: allCompetitorMetrics.slice(0, 3).map(m => ({
       metricName: m.metricName,
       value: m.value,
       valueType: typeof m.value,
+      valueIsNull: m.value === null,
+      hasValueProp: m.value && typeof m.value === 'object' && 'value' in m.value,
       competitorId: m.competitorId || m.competitor_id,
       timePeriod: m.timePeriod
     }))

@@ -876,20 +876,50 @@ export class DatabaseStorage implements IStorage {
     const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
     const competitorIds = clientCompetitors.map(c => c.id);
     
-    console.log(`🔍 COMPETITOR FETCH DEBUG: clientId=${clientId}, timePeriod=${timePeriod}, competitorIds=${competitorIds.length}`);
+    console.error(`🚨 COMPETITOR FETCH DEBUG: clientId=${clientId}, timePeriod=${timePeriod}, competitorIds=[${competitorIds.join(',')}]`);
     
     if (competitorIds.length === 0) {
       console.log(`❌ No competitors found for client ${clientId}`);
       return [];
     }
     
-    // First try exact period match
-    let competitorMetrics = await db.select().from(metrics).where(
-      and(
-        inArray(metrics.competitorId, competitorIds),
-        eq(metrics.timePeriod, timePeriod)
-      )
+    // First try exact period match - use raw SQL to fix JSONB handling
+    const queryResult = await db.execute(sql`
+      SELECT id, client_id as "clientId", competitor_id as "competitorId", 
+             cd_portfolio_company_id as "cdPortfolioCompanyId", benchmark_company_id as "benchmarkCompanyId",
+             metric_name as "metricName", value, source_type as "sourceType", 
+             time_period as "timePeriod", channel, created_at as "createdAt"
+      FROM metrics 
+      WHERE competitor_id IN (${sql.join(competitorIds.map(id => sql`${id}`), sql`, `)}) 
+        AND time_period = ${timePeriod}
+    `);
+    let competitorMetrics = queryResult.rows as Metric[];
+    
+    console.error('🚨 RAW SQL QUERY DEBUG - Raw result count:', competitorMetrics.length);
+    console.error('🚨 COMPETITOR IDS QUERIED:', competitorIds);
+    console.error('🚨 TIME PERIOD QUERIED:', timePeriod);
+    
+    // Test direct query with known competitor ID
+    const testQuery = await db.select().from(metrics).where(
+      eq(metrics.competitorId, '49f12e3d-8a51-4d6f-85de-a84cf53db2e0')
     );
+    console.error('🚨 DIRECT COMPETITOR TEST:', testQuery.length, 'metrics found for known competitor ID');
+    
+    // Debug Drizzle query result directly
+    if (competitorMetrics.length > 0) {
+      console.error('🚨 DRIZZLE RESULT DEBUG:', {
+        count: competitorMetrics.length,
+        sample: {
+          metricName: competitorMetrics[0].metricName,
+          value: competitorMetrics[0].value,
+          valueType: typeof competitorMetrics[0].value,
+          valueIsNull: competitorMetrics[0].value === null,
+          valueStringified: JSON.stringify(competitorMetrics[0].value),
+          directValueAccess: competitorMetrics[0].value?.value,
+          hasValueProperty: competitorMetrics[0].value && 'value' in competitorMetrics[0].value
+        }
+      });
+    }
     
     console.log(`🔍 EXACT PERIOD MATCH: found ${competitorMetrics.length} metrics for period ${timePeriod}`);
     
@@ -909,14 +939,23 @@ export class DatabaseStorage implements IStorage {
         const fallbackPeriod = recentPeriods[0].timePeriod;
         console.log(`🔄 Competitor fallback: requested ${timePeriod}, using ${fallbackPeriod}`);
         
-        competitorMetrics = await db.select().from(metrics).where(
-          and(
-            inArray(metrics.competitorId, competitorIds),
-            eq(metrics.timePeriod, fallbackPeriod)
-          )
-        );
+        const fallbackResult = await db.execute(sql`
+          SELECT id, client_id as "clientId", competitor_id as "competitorId", 
+                 cd_portfolio_company_id as "cdPortfolioCompanyId", benchmark_company_id as "benchmarkCompanyId",
+                 metric_name as "metricName", value, source_type as "sourceType", 
+                 time_period as "timePeriod", channel, created_at as "createdAt"
+          FROM metrics 
+          WHERE competitor_id IN (${sql.join(competitorIds.map(id => sql`${id}`), sql`, `)}) 
+            AND time_period = ${fallbackPeriod}
+        `);
+        competitorMetrics = fallbackResult.rows as Metric[];
         
         console.log(`🔍 FALLBACK RESULT: found ${competitorMetrics.length} metrics for fallback period ${fallbackPeriod}`);
+        
+        // Debug competitor JSONB values  
+        if (competitorMetrics.length > 0) {
+          console.error('JSONB VALUE CHECK:', competitorMetrics[0].value, 'Type:', typeof competitorMetrics[0].value);
+        }
       }
     }
     
