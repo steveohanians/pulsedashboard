@@ -218,10 +218,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     const competitorVariations = competitors.map((competitor, index) => {
       const baseValue = competitor.value || clientData;
       const seed = `comp-${competitor.label}-${metricName || 'Unknown'}`;
-      console.log(`🔍 TEMPORAL VARIATION INPUT: ${competitor.label} = ${baseValue}, seed = ${seed}`);
-      const variation = generateTemporalVariationSync(baseValue, dates, metricName || 'Unknown', seed);
-      console.log(`🔍 TEMPORAL VARIATION OUTPUT: ${competitor.label} = [${variation.slice(0, 3).join(', ')}...]`);
-      return variation;
+      return generateTemporalVariationSync(baseValue, dates, metricName || 'Unknown', seed);
     });
     
     dates.forEach((period, index) => {
@@ -232,19 +229,9 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
         [`${companyName} Clients Avg`]: Math.round(cdVariations[index] * 10) / 10,
       };
 
-      // Add competitor data with temporal variations
+      // Add competitor data with temporal variations (already converted by processCompanyMetrics)
       competitors.forEach((competitor, compIndex) => {
-        let value = competitorVariations[compIndex][index];
-        
-        // Debug and convert Session Duration for temporal variations
-        if (metricName === 'Session Duration') {
-          console.log(`🔍 BAR CHART TEMPORAL ${competitor.label}: value=${value}, converting=${value > 60 ? 'YES' : 'NO'}`);
-          if (value > 60) {
-            value = value / 60; // Convert seconds to minutes
-            console.log(`🔍 BAR CHART TEMPORAL ${competitor.label}: converted to ${value} minutes`);
-          }
-        }
-        
+        const value = competitorVariations[compIndex][index];
         point[competitor.label] = Math.round(value * 10) / 10;
       });
 
@@ -260,14 +247,9 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
         [`${companyName} Clients Avg`]: Math.round(cdAvg * 10) / 10,
       };
 
-      // Add competitor data with actual values
+      // Add competitor data with actual values (already converted by processCompanyMetrics)
       competitors.forEach((competitor) => {
-        // Convert Session Duration from seconds to minutes, others are already in correct units
-        let value = competitor.value;
-        
-        if (metricName === 'Session Duration' && value && value > 60) {
-          value = value / 60; // Convert seconds to minutes
-        }
+        const value = competitor.value;
         point[competitor.label] = Math.round(value * 10) / 10;
       });
 
