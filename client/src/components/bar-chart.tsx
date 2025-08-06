@@ -293,12 +293,17 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   // Use real time-series data if available, otherwise generate fallback data
   const data = useMemo(() => {
     let result;
+    
+    // Debug which path is taken
+    if (metricName === 'Session Duration') {
+      console.log(`🔍 PATH DECISION: timeSeriesData=${!!timeSeriesData}, periods=${periods?.length}, timePeriod=${timePeriod}`);
+    }
+    
     if (timeSeriesData && periods && periods.length > 1) {
-      // Debug: Using processTimeSeriesForBar with periods: ${periods.join(', ')}
+      console.log(`🔍 USING processTimeSeriesForBar path`);
       result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
-      // Debug: processTimeSeriesForBar completed with ${result.length} data points
     } else {
-      // Debug: Using generateBarData fallback with timePeriod: ${timePeriod}
+      console.log(`🔍 USING generateBarData path with timePeriod: ${timePeriod}`);
       result = generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
     
