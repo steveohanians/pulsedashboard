@@ -72,15 +72,10 @@ export default function Dashboard() {
   // Refresh data function for admin users
   const handleRefreshData = async () => {
     // Invalidate all dashboard-related queries to force refresh
-    queryClient.invalidateQueries({ 
-      predicate: (query) => {
-        const queryKey = query.queryKey[0]?.toString() || '';
-        return queryKey.includes('/api/dashboard') || queryKey.includes('dashboard');
-      }
-    });
-    
-    // Also refresh filters and other related data
-    queryClient.invalidateQueries({ queryKey: ['/api/filters'] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
     
     toast({
       title: "Dashboard refreshed",
