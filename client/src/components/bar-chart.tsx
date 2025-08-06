@@ -72,7 +72,16 @@ function processTimeSeriesForBar(
       const competitorMetric = periodData.find(m => 
         m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
       );
-      dataPoint[competitor.label] = competitorMetric ? Math.round(parseMetricValue(competitorMetric.value) * 10) / 10 : 0;
+      
+      let value = competitorMetric ? parseMetricValue(competitorMetric.value) : 0;
+      
+      // Convert Session Duration from seconds to minutes
+      if (metricName === 'Session Duration' && value > 60) {
+        console.log(`🔍 processTimeSeriesForBar converting ${competitor.label}: ${value} seconds to ${value/60} minutes`);
+        value = value / 60;
+      }
+      
+      dataPoint[competitor.label] = Math.round(value * 10) / 10;
     });
     
     data.push(dataPoint);
