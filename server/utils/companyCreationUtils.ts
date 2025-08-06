@@ -328,7 +328,7 @@ export async function createCompetitorEnhanced(
     requiresFilterValidation: false, // Competitors don't have businessSize/industryVertical
     postCreationWorkflows: [{
       name: 'SEMrush Competitor Integration',
-      isBackground: true,
+      isBackground: false,  // Changed to synchronous for immediate historical data
       handler: async (competitor) => {
         const { CompetitorIntegration } = await import('../services/semrush/competitorIntegration');
         const integration = new CompetitorIntegration(storage);

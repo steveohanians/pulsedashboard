@@ -1608,6 +1608,77 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Re-sync SEMrush data for existing competitor
+  app.post('/api/admin/competitors/:id/resync-semrush', adminLimiter, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the competitor
+      const competitor = await storage.getCompetitor(id);
+      if (!competitor) {
+        return res.status(404).json({ message: "Competitor not found" });
+      }
+
+      logger.info("Starting SEMrush re-sync for competitor", { 
+        competitorId: competitor.id,
+        competitorLabel: competitor.label,
+        domain: competitor.domain,
+        admin: req.user?.id 
+      });
+
+      // Clear existing SEMrush data for this competitor
+      await storage.deleteMetricsByCompany(competitor.id, 'Competitor');
+      
+      // Re-run SEMrush integration
+      const { CompetitorIntegration } = await import('./services/semrush/competitorIntegration.js');
+      const integration = new CompetitorIntegration(storage);
+      
+      const result = await integration.processNewCompetitor(competitor);
+      
+      if (result.success) {
+        logger.info("✅ Competitor SEMrush re-sync completed successfully", {
+          competitorId: competitor.id,
+          competitorLabel: competitor.label,
+          periodsProcessed: result.periodsProcessed,
+          metricsStored: result.metricsStored,
+          trafficChannelsStored: result.trafficChannelsStored,
+          deviceDistributionStored: result.deviceDistributionStored,
+          admin: req.user?.id
+        });
+
+        res.json({
+          message: "Competitor SEMrush re-sync completed successfully",
+          result: {
+            success: result.success,
+            periodsProcessed: result.periodsProcessed,
+            metricsStored: result.metricsStored,
+            trafficChannelsStored: result.trafficChannelsStored,
+            deviceDistributionStored: result.deviceDistributionStored
+          }
+        });
+      } else {
+        logger.error("❌ Competitor SEMrush re-sync failed", {
+          competitorId: competitor.id,
+          competitorLabel: competitor.label,
+          error: result.error,
+          admin: req.user?.id
+        });
+        res.status(500).json({ 
+          message: "Competitor SEMrush re-sync failed", 
+          error: result.error 
+        });
+      }
+      
+    } catch (error) {
+      logger.error("Failed to re-sync competitor SEMrush data", { 
+        error: (error as Error).message,
+        competitorId: req.params.id,
+        admin: req.user?.id 
+      });
+      res.status(500).json({ message: "Failed to re-sync competitor SEMrush data" });
+    }
+  });
+
   app.put('/api/admin/cd-portfolio/:companyId', adminLimiter, requireAdmin, async (req, res) => {
     try {
       const { companyId } = req.params;
