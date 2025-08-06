@@ -200,63 +200,100 @@ export class GlobalCompanyValidator {
         companyType
       });
 
-      // Test SEMrush API connectivity with timeout
+      // Test SEMrush API connectivity with timeout and retry logic
       const startTime = Date.now();
-      const HEALTH_CHECK_TIMEOUT = 15000; // 15 seconds
+      const HEALTH_CHECK_TIMEOUT = 30000; // 30 seconds (increased from 15)
+      const MAX_RETRIES = 2; // Allow one retry
       
-      try {
-        // Wrap the health check in a timeout promise
-        const healthCheckPromise = semrushService.fetchHistoricalData(normalizedDomain);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT);
-        });
-        
-        // Race between the health check and timeout
-        const testData = await Promise.race([healthCheckPromise, timeoutPromise]) as Map<string, any>;
-        const responseTime = Date.now() - startTime;
-        
-        logger.info('SEMrush API health check completed', {
-          domain: normalizedDomain,
-          companyType,
-          responseTime,
-          periodsReturned: testData.size,
-          hasData: testData.size > 0
-        });
+      let lastError: any = null;
+      
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          logger.info('SEMrush health check attempt', {
+            domain: normalizedDomain,
+            attempt,
+            maxRetries: MAX_RETRIES
+          });
 
-        if (testData.size === 0) {
+          // Wrap the health check in a timeout promise
+          const healthCheckPromise = semrushService.fetchHistoricalData(normalizedDomain);
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT);
+          });
+          
+          // Race between the health check and timeout
+          const testData = await Promise.race([healthCheckPromise, timeoutPromise]) as Map<string, any>;
+          const responseTime = Date.now() - startTime;
+        
+          logger.info('SEMrush API health check completed', {
+            domain: normalizedDomain,
+            companyType,
+            attempt,
+            responseTime,
+            periodsReturned: testData.size,
+            hasData: testData.size > 0
+          });
+
+          if (testData.size === 0) {
+            return {
+              isValid: false,
+              error: `No SEMrush data available for "${normalizedDomain}". This domain may not have sufficient traffic or may not be tracked by SEMrush.`,
+              apiHealthStatus: 'no_data'
+            };
+          }
+
           return {
-            isValid: false,
-            error: `No SEMrush data available for "${normalizedDomain}". This domain may not have sufficient traffic or may not be tracked by SEMrush.`,
-            apiHealthStatus: 'no_data'
+            isValid: true,
+            apiHealthStatus: 'healthy'
           };
+
+        } catch (attemptError: any) {
+          const responseTime = Date.now() - startTime;
+          lastError = attemptError;
+          
+          logger.warn('SEMrush health check attempt failed', {
+            domain: normalizedDomain,
+            companyType,
+            attempt,
+            responseTime,
+            error: attemptError.message,
+            errorType: attemptError.name || 'Unknown',
+            willRetry: attempt < MAX_RETRIES
+          });
+
+          // If this was the last attempt, handle the error
+          if (attempt === MAX_RETRIES) {
+            break; // Exit the retry loop
+          }
+
+          // Add a small delay before retry to allow for network recovery
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
+      }
 
-        return {
-          isValid: true,
-          apiHealthStatus: 'healthy'
-        };
-
-      } catch (apiError: any) {
+      // Handle the final error after all retries exhausted
+      if (lastError) {
         const responseTime = Date.now() - startTime;
-        
-        logger.warn('SEMrush API health check failed', {
+
+        logger.error('SEMrush API health check failed after all retries', {
           domain: normalizedDomain,
           companyType,
+          totalAttempts: MAX_RETRIES,
           responseTime,
-          error: apiError.message,
-          errorType: apiError.name || 'Unknown'
+          error: lastError.message,
+          errorType: lastError.name || 'Unknown'
         });
 
         // Handle specific API error types
-        if (apiError.message?.includes('timeout') || responseTime > 30000) {
+        if (lastError.message?.includes('timeout') || responseTime > 60000) {
           return {
             isValid: false,
-            error: 'SEMrush API is experiencing delays. Please try again in a few minutes.',
+            error: 'SEMrush API is experiencing delays. The domain validation timed out after multiple attempts. Please try again in a few minutes.',
             apiHealthStatus: 'timeout'
           };
         }
 
-        if (apiError.message?.includes('rate limit') || apiError.message?.includes('quota')) {
+        if (lastError.message?.includes('rate limit') || lastError.message?.includes('quota')) {
           return {
             isValid: false,
             error: 'SEMrush API rate limit reached. Please try again later.',
@@ -264,7 +301,7 @@ export class GlobalCompanyValidator {
           };
         }
 
-        if (apiError.message?.includes('unauthorized') || apiError.message?.includes('authentication')) {
+        if (lastError.message?.includes('unauthorized') || lastError.message?.includes('authentication')) {
           return {
             isValid: false,
             error: 'SEMrush API authentication issue. Please contact support.',
@@ -275,10 +312,17 @@ export class GlobalCompanyValidator {
         // Generic API error
         return {
           isValid: false,
-          error: `Unable to connect to SEMrush for domain "${normalizedDomain}". Please verify the domain and try again.`,
+          error: `Unable to connect to SEMrush for domain "${normalizedDomain}" after ${MAX_RETRIES} attempts. Please verify the domain and try again.`,
           apiHealthStatus: 'api_error'
         };
       }
+
+      // Fallback in case no error was captured (should not happen, but required for TypeScript)
+      return {
+        isValid: false,
+        error: 'Unexpected error during SEMrush validation. Please try again.',
+        apiHealthStatus: 'unexpected_error'
+      };
 
     } catch (error) {
       logger.error('Unexpected error during SEMrush API health check', {
