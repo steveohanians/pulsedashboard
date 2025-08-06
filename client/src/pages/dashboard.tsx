@@ -152,6 +152,21 @@ export default function Dashboard() {
   useEffect(() => {
     if (dashboardData?.metrics) {
       console.log("📊 Dashboard refreshed:", dashboardData.metrics.length, "metrics");
+      
+      // Debug Session Duration in time series (quarterly) view
+      if (dashboardData.metrics.length > 100) { // Multi-period data
+        const sessionDurationCompetitors = dashboardData.metrics.filter(m => 
+          m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
+        );
+        console.log("🔍 QUARTERLY SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
+        if (sessionDurationCompetitors.length > 0) {
+          console.log("🔍 QUARTERLY SESSION DURATION SAMPLES:", sessionDurationCompetitors.map(m => ({
+            value: m.value,
+            timePeriod: (m as any).timePeriod,
+            competitorId: m.competitorId
+          })));
+        }
+      }
     }
   }, [dashboardData?.metrics]);
 
