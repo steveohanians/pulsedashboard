@@ -69,11 +69,22 @@ function processTimeSeriesForBar(
     
     // Add competitor data
     competitors.forEach(competitor => {
+      // Debug competitor lookup
+      if (metricName === 'Session Duration') {
+        console.log(`🔍 Looking for competitor: id=${competitor.id}, label=${competitor.label}`);
+        const competitorMetrics = periodData.filter(m => m.sourceType === 'Competitor' && m.metricName === metricName);
+        console.log(`🔍 Available competitor metrics:`, competitorMetrics.map(m => ({id: m.competitorId, value: m.value})));
+      }
+      
       const competitorMetric = periodData.find(m => 
         m.sourceType === 'Competitor' && m.competitorId === competitor.id && m.metricName === metricName
       );
       
       let value = competitorMetric ? parseMetricValue(competitorMetric.value) : 0;
+      
+      if (metricName === 'Session Duration') {
+        console.log(`🔍 Found metric for ${competitor.label}: ${competitorMetric ? 'YES' : 'NO'}, value=${value}`);
+      }
       
       // Convert Session Duration from seconds to minutes
       if (metricName === 'Session Duration' && value > 60) {
