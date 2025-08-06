@@ -28,7 +28,10 @@ export class CompetitorValidator {
           attemptedDomain: domain,
           normalizedDomain,
           existingCompetitorId: duplicateCompetitor.id,
-          existingDomain: duplicateCompetitor.domain
+          existingDomain: duplicateCompetitor.domain,
+          existingCompetitorLabel: duplicateCompetitor.label,
+          existingCompetitorName: duplicateCompetitor.name,
+          fullCompetitorData: duplicateCompetitor
         });
         
         return {
@@ -162,11 +165,19 @@ export class CompetitorValidator {
     // Step 2: Check for duplicates
     const duplicateCheck = await this.checkForDuplicateDomain(clientId, domain);
     if (duplicateCheck.isDuplicate) {
-      const existingLabel = duplicateCheck.existingCompetitor?.label || 'Unknown';
-      const existingDomain = this.normalizeDomain(duplicateCheck.existingCompetitor?.domain || domainValidation.normalizedDomain!);
+      const existingCompetitor = duplicateCheck.existingCompetitor;
+      const existingLabel = existingCompetitor?.label || existingCompetitor?.name || 'Unknown Competitor';
+      const existingDomain = this.normalizeDomain(existingCompetitor?.domain || domainValidation.normalizedDomain!);
+      
+      logger.info('Generating duplicate error message', {
+        existingLabel,
+        existingDomain,
+        existingCompetitor
+      });
+      
       return {
         isValid: false,
-        error: `Competitor "${existingLabel}" (${existingDomain}) already exists. Each domain can only be added once per client.`
+        error: `This domain is already being tracked as competitor "${existingLabel}". Each domain can only be added once.`
       };
     }
 
