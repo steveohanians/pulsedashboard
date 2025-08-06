@@ -99,7 +99,7 @@ export default function Dashboard() {
     // Close mobile menu after refresh
     setMobileMenuOpen(false);
   };
-  const [timePeriod, setTimePeriod] = useState("Year");  // Changed to Year to show historical competitor data
+  const [timePeriod, setTimePeriod] = useState("Last Month");  // Default to Last Month
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
@@ -1445,7 +1445,9 @@ export default function Dashboard() {
                   <SelectValue>{timePeriod || "Select time period"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {filtersData?.timePeriods?.map((period: string) => (
+                  {filtersData?.timePeriods?.filter((period: string) => 
+                    period !== "Year" // Remove the unwanted "Year" option
+                  ).map((period: string) => (
                     <SelectItem key={period} value={period}>{period}</SelectItem>
                   ))}
                 </SelectContent>
