@@ -66,6 +66,15 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
           duration: 8000,
         });
       }, 2000);
+      
+      // Show completion toast when sync is finished (since sync is now synchronous)
+      setTimeout(() => {
+        toast({
+          title: "✅ Competitor data sync complete",
+          description: "15 months of historical data successfully loaded. Charts are now updated with competitor benchmarks.",
+          duration: 6000,
+        });
+      }, 5000);
     },
     onError: (error: Error) => {
       console.error("Competitor creation error:", error);
