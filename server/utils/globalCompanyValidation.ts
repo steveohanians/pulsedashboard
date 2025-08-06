@@ -2,7 +2,7 @@ import { IStorage } from "../storage";
 import logger from "../utils/logger";
 import { semrushService } from "../services/semrush/semrushService";
 
-export type CompanyType = 'competitor' | 'portfolio' | 'benchmark';
+export type CompanyType = 'competitor' | 'portfolio' | 'benchmark' | 'client';
 
 /**
  * Global company validation utilities for all company types
@@ -183,6 +183,14 @@ export class GlobalCompanyValidator {
     error?: string;
     apiHealthStatus?: string;
   }> {
+    // Skip SEMrush validation for clients (they don't need SEMrush data)
+    if (companyType === 'client') {
+      return {
+        isValid: true,
+        apiHealthStatus: 'skipped'
+      };
+    }
+
     try {
       const normalizedDomain = this.normalizeDomain(domain);
       
@@ -409,6 +417,8 @@ export class GlobalCompanyValidator {
         return 'Portfolio company';
       case 'benchmark':
         return 'Benchmark company';
+      case 'client':
+        return 'Client';
       default:
         return 'Company';
     }

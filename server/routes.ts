@@ -1168,7 +1168,14 @@ export function registerRoutes(app: Express): Server {
 
     } catch (error) {
       logger.error("Error creating competitor", { error: (error as Error).message, stack: (error as Error).stack });
-      res.status(400).json({ message: "Invalid data" });
+      
+      // Return user-friendly error message while avoiding internal details
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        res.status(400).json({ message: errorMessage });
+      } else {
+        res.status(500).json({ message: "Failed to create competitor. Please try again." });
+      }
     }
   });
 
@@ -1375,7 +1382,14 @@ export function registerRoutes(app: Express): Server {
       res.status(201).json(client);
     } catch (error) {
       logger.error("Client creation error", { error: (error as Error).message });
-      res.status(400).json({ message: "Invalid data" });
+      
+      // Return user-friendly error message while avoiding internal details
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        res.status(400).json({ message: errorMessage });
+      } else {
+        res.status(500).json({ message: "Failed to create client. Please try again." });
+      }
     }
   });
 
@@ -2272,7 +2286,14 @@ export function registerRoutes(app: Express): Server {
       res.status(201).json(company);
     } catch (error) {
       logger.error("Error creating benchmark company", { error: (error as Error).message, stack: (error as Error).stack });
-      res.status(400).json({ message: "Invalid data" });
+      
+      // Return user-friendly error message while avoiding internal details
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        res.status(400).json({ message: errorMessage });
+      } else {
+        res.status(500).json({ message: "Failed to create benchmark company. Please try again." });
+      }
     }
   });
 
@@ -2448,7 +2469,15 @@ export function registerRoutes(app: Express): Server {
       const metric = await storage.createMetric(validatedData);
       res.status(201).json(metric);
     } catch (error) {
-      res.status(400).json({ message: "Invalid data" });
+      logger.error("Error creating metric", { error: (error as Error).message });
+      
+      // Return user-friendly error message while avoiding internal details
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        res.status(400).json({ message: errorMessage });
+      } else {
+        res.status(500).json({ message: "Failed to create metric. Please try again." });
+      }
     }
   });
 
@@ -2458,7 +2487,15 @@ export function registerRoutes(app: Express): Server {
       const benchmark = await storage.createBenchmark(validatedData);
       res.status(201).json(benchmark);
     } catch (error) {
-      res.status(400).json({ message: "Invalid data" });
+      logger.error("Error creating benchmark", { error: (error as Error).message });
+      
+      // Return user-friendly error message while avoiding internal details
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        res.status(400).json({ message: errorMessage });
+      } else {
+        res.status(500).json({ message: "Failed to create benchmark. Please try again." });
+      }
     }
   });
 

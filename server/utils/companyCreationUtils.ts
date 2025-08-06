@@ -96,7 +96,7 @@ export async function createCompanyWithWorkflows<T>(
       // Update the validated data with normalized domain if available
       if (domainValidationResult.normalizedDomain) {
         const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
-        validatedData[domainField] = domainValidationResult.normalizedDomain;
+        (validatedData as any)[domainField] = domainValidationResult.normalizedDomain;
       }
     }
 
@@ -283,8 +283,8 @@ async function performDomainValidation(
 ): Promise<{ isValid: boolean; error?: string; normalizedDomain?: string }> {
   // Determine the domain field based on company type
   const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
-  const domain = validatedData[domainField];
-  const label = validatedData.label || validatedData.name;
+  const domain = (validatedData as any)[domainField]; // Safe cast since we control the field names
+  const label = (validatedData as any).label || (validatedData as any).name;
 
   if (!domain) {
     return { isValid: true }; // No domain to validate
