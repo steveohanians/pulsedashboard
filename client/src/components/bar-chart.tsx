@@ -265,14 +265,8 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
         // Convert Session Duration from seconds to minutes, others are already in correct units
         let value = competitor.value;
         
-        // Debug Session Duration processing
-        if (metricName === 'Session Duration') {
-          console.log(`🔍 BAR CHART ${competitor.label}: value=${value}, converting=${value > 60 ? 'YES' : 'NO'}`);
-        }
-        
         if (metricName === 'Session Duration' && value && value > 60) {
           value = value / 60; // Convert seconds to minutes
-          console.log(`🔍 BAR CHART ${competitor.label}: converted to ${value} minutes`);
         }
         point[competitor.label] = Math.round(value * 10) / 10;
       });
@@ -288,16 +282,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
   
-  // Debug Session Duration input data
-  if (metricName === 'Session Duration') {
-    console.log(`🔍 METRIC BAR CHART RECEIVED:`, {
-      metricName,
-      timePeriod,
-      clientData,
-      competitors: competitors?.map(c => ({ label: c.label, value: c.value })),
-      competitorCount: competitors?.length || 0
-    });
-  }
+
 
   
   // Check if we have any valid data
@@ -326,14 +311,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
       result = generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
     
-    // Debug Session Duration final chart data
-    if (metricName === 'Session Duration') {
-      console.log(`🔍 FINAL CHART DATA:`, { 
-        dataLength: result.length,
-        firstDataPoint: result[0],
-        competitorKeys: Object.keys(result[0] || {}).filter(key => key !== 'period' && !['Client', 'Industry Avg', 'Clear Digital Clients Avg'].includes(key))
-      });
-    }
+
     
     return result;
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
@@ -437,9 +415,8 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               if (metricName.includes('Rate')) {
                 return `${Math.round(value * 10) / 10}%`;
               } else if (metricName.includes('Session Duration')) {
-                // Convert seconds to minutes for display
-                const minutes = Math.round((value / 60) * 10) / 10;
-                return `${minutes}min`;
+                // Data is already in minutes, just format for display
+                return `${Math.round(value * 10) / 10}min`;
               }
               return `${Math.round(value * 10) / 10}`;
             }}
@@ -484,7 +461,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                               metricName.includes('Rate') 
                                 ? `${Math.round(entry.value * 10) / 10}%`
                                 : metricName.includes('Session Duration')
-                                  ? `${Math.round((entry.value / 60) * 10) / 10} min`
+                                  ? `${Math.round(entry.value * 10) / 10} min`
                                   : `${Math.round(entry.value * 10) / 10}`
                             }
                           </strong>
@@ -493,7 +470,7 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
                             metricName.includes('Rate') 
                               ? `${Math.round(entry.value * 10) / 10}%`
                               : metricName.includes('Session Duration')
-                                ? `${Math.round((entry.value / 60) * 10) / 10} min`
+                                ? `${Math.round(entry.value * 10) / 10} min`
                                 : `${Math.round(entry.value * 10) / 10}`
                           }`
                         )}
