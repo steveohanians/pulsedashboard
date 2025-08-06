@@ -1782,14 +1782,13 @@ export default function Dashboard() {
                             })}
                           />
                         ) : (
-                          <BarChart 
+                          <MetricBarChart 
                             metricName={metricName}
+                            timePeriod={timePeriod}
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
                             clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                            clientName={dashboardData?.client?.name}
-                            companyName="Clear Digital"
                             competitors={processCompanyMetrics(competitors, metrics, {
                               metricName,
                               displayMode: 'individual',

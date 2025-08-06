@@ -203,7 +203,18 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 
       // Add competitor data with temporal variations
       competitors.forEach((competitor, compIndex) => {
-        point[competitor.label] = Math.round(competitorVariations[compIndex][index] * 10) / 10;
+        let value = competitorVariations[compIndex][index];
+        
+        // Debug and convert Session Duration for temporal variations
+        if (metricName === 'Session Duration') {
+          console.log(`🔍 BAR CHART TEMPORAL ${competitor.label}: value=${value}, converting=${value > 60 ? 'YES' : 'NO'}`);
+          if (value > 60) {
+            value = value / 60; // Convert seconds to minutes
+            console.log(`🔍 BAR CHART TEMPORAL ${competitor.label}: converted to ${value} minutes`);
+          }
+        }
+        
+        point[competitor.label] = Math.round(value * 10) / 10;
       });
 
       data.push(point);
