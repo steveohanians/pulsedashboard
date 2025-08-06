@@ -162,9 +162,11 @@ export class CompetitorValidator {
     // Step 2: Check for duplicates
     const duplicateCheck = await this.checkForDuplicateDomain(clientId, domain);
     if (duplicateCheck.isDuplicate) {
+      const existingLabel = duplicateCheck.existingCompetitor?.label || 'Unknown';
+      const existingDomain = this.normalizeDomain(duplicateCheck.existingCompetitor?.domain || domainValidation.normalizedDomain!);
       return {
         isValid: false,
-        error: `Competitor "${duplicateCheck.existingCompetitor?.label || domainValidation.normalizedDomain}" already exists for this domain. Each domain can only be added once per client.`
+        error: `Competitor "${existingLabel}" (${existingDomain}) already exists. Each domain can only be added once per client.`
       };
     }
 
