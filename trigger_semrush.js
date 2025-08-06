@@ -1,45 +1,30 @@
-// Manually trigger SEMrush integration for existing Cohesity company
-import { drizzleDb as db } from './server/db/connection.ts';
-import { Storage } from './server/storage.ts';
-import { PortfolioIntegration } from './server/services/semrush/portfolioIntegration.ts';
-
-async function triggerSEMrushIntegration() {
-  console.log('🚀 Starting manual SEMrush integration for Cohesity...');
-  
+// Direct trigger of SEMrush integration for focuslabs.agency
+async function triggerSemrushIntegration() {
   try {
-    const storage = new Storage();
-    const portfolioIntegration = new PortfolioIntegration(storage);
+    console.log('Triggering SEMrush integration for focuslabs.agency...');
     
-    // Get the current Cohesity company
-    const companies = await storage.getCdPortfolioCompanies();
-    const cohesity = companies.find(c => c.name === 'Cohesity');
+    // Make direct API call to trigger sync
+    const response = await fetch('http://localhost:5000/api/admin/competitors/81885850-6dab-495d-a724-8858fde4e716/resync-semrush', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'internal-script'
+      }
+    });
     
-    if (!cohesity) {
-      console.error('❌ Cohesity company not found');
-      return;
-    }
+    const result = await response.text();
+    console.log('Response status:', response.status);
+    console.log('Response:', result);
     
-    console.log(`📊 Found Cohesity company: ${cohesity.id}`);
-    console.log(`🌐 Website URL: ${cohesity.websiteUrl}`);
-    
-    // Trigger SEMrush integration
-    const result = await portfolioIntegration.processNewPortfolioCompany(cohesity);
-    
-    if (result.success) {
-      console.log('✅ SEMrush integration completed successfully!');
-      console.log(`📈 Metrics stored: ${result.metricsStored}`);
-      console.log(`📊 Traffic channels: ${result.trafficChannelsStored}`);
-      console.log(`📱 Device distribution: ${result.deviceDistributionStored}`);
-      console.log(`🎯 Averages updated: ${result.averagesUpdated}`);
+    if (response.status === 200) {
+      console.log('✅ SEMrush integration triggered successfully');
     } else {
-      console.error('❌ SEMrush integration failed:', result.error);
+      console.log('❌ Failed to trigger integration:', result);
     }
     
   } catch (error) {
-    console.error('💥 Error running SEMrush integration:', error.message);
+    console.error('❌ Script error:', error.message);
   }
-  
-  process.exit(0);
 }
 
-triggerSEMrushIntegration();
+triggerSemrushIntegration();

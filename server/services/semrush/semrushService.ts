@@ -120,7 +120,7 @@ export class SemrushService {
       const totalVisits = parseFloat(data[1]) || 0; // Total visits for percentage calculation
       
       // Extract traffic channel data from Summary endpoint
-      const trafficChannels = [];
+      const trafficChannels: Array<{channel: string; sessions: number; percentage: number}> = [];
       if (totalVisits > 0) {
         const channelData = [
           { name: 'Direct', visits: parseFloat(data[6]) || 0 },

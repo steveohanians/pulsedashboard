@@ -157,9 +157,26 @@ export async function createCompanyWithWorkflows<T>(
         } catch (workflowError) {
           logger.error(`${workflow.name} failed for ${companyType}`, {
             companyId: company.id,
-            error: (workflowError as Error).message
+            error: (workflowError as Error).message,
+            stack: (workflowError as Error).stack
           });
           workflowResults[workflow.name] = { error: (workflowError as Error).message };
+          
+          // For critical integrations like SEMrush, fail the entire creation
+          if (workflow.name === 'SEMrush Competitor Integration') {
+            logger.error(`Critical SEMrush integration failed - failing competitor creation`, {
+              companyId: company.id,
+              error: (workflowError as Error).message
+            });
+            
+            // Clean up the created competitor
+            await deleteCreatedCompany(companyType, company.id, storage);
+            
+            return {
+              success: false,
+              error: `SEMrush integration failed: ${(workflowError as Error).message}`
+            };
+          }
         }
       }
     }
