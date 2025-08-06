@@ -208,15 +208,20 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   const clientKey = clientUrl || 'Client';
   
   if (timePeriod === "Last Month") {
+    // Convert Session Duration base values from seconds to minutes before generating variations
+    const processedClientData = metricName === 'Session Duration' ? clientData / 60 : clientData;
+    const processedIndustryAvg = metricName === 'Session Duration' ? industryAvg / 60 : industryAvg;
+    const processedCdAvg = metricName === 'Session Duration' ? cdAvg / 60 : cdAvg;
+    
     // Generate temporal variations for each data source
-    const clientVariations = generateTemporalVariationSync(clientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
-    const industryVariations = generateTemporalVariationSync(industryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
-    const cdVariations = generateTemporalVariationSync(cdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
+    const clientVariations = generateTemporalVariationSync(processedClientData, dates, metricName || 'Unknown', `client-${metricName || 'Unknown'}`);
+    const industryVariations = generateTemporalVariationSync(processedIndustryAvg, dates, metricName || 'Unknown', `industry-${metricName || 'Unknown'}`);
+    const cdVariations = generateTemporalVariationSync(processedCdAvg, dates, metricName || 'Unknown', `cd-${metricName || 'Unknown'}`);
 
     
-    // Generate competitor variations
+    // Generate competitor variations (already converted by processCompanyMetrics)
     const competitorVariations = competitors.map((competitor, index) => {
-      const baseValue = competitor.value || clientData;
+      const baseValue = competitor.value || processedClientData;
       const seed = `comp-${competitor.label}-${metricName || 'Unknown'}`;
       return generateTemporalVariationSync(baseValue, dates, metricName || 'Unknown', seed);
     });
@@ -240,11 +245,16 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   } else {
     // For other time periods, use static values (existing behavior)
     dates.forEach((period, index) => {
+      // Convert Session Duration client and CD avg data from seconds to minutes
+      const processedClientData = metricName === 'Session Duration' ? clientData / 60 : clientData;
+      const processedIndustryAvg = metricName === 'Session Duration' ? industryAvg / 60 : industryAvg;
+      const processedCdAvg = metricName === 'Session Duration' ? cdAvg / 60 : cdAvg;
+      
       const point: Record<string, unknown> = {
         period,
-        [clientKey]: Math.round(clientData * 10) / 10,
-        'Industry Avg': Math.round(industryAvg * 10) / 10,
-        [`${companyName} Clients Avg`]: Math.round(cdAvg * 10) / 10,
+        [clientKey]: Math.round(processedClientData * 10) / 10,
+        'Industry Avg': Math.round(processedIndustryAvg * 10) / 10,
+        [`${companyName} Clients Avg`]: Math.round(processedCdAvg * 10) / 10,
       };
 
       // Add competitor data with actual values (already converted by processCompanyMetrics)
