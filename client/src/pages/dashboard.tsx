@@ -326,7 +326,14 @@ export default function Dashboard() {
         counts[metric.metricName][metric.sourceType] = 0;
       }
       
-      const value = parseMetricValue(metric.value);
+      let value = parseMetricValue(metric.value);
+      
+      // Convert Session Duration from seconds to minutes for all source types
+      if (metric.metricName === 'Session Duration' && value > 60) {
+        console.log(`🔍 GROUPED METRICS ${metric.sourceType}: converting ${value} seconds to minutes`);
+        value = value / 60;
+      }
+      
       result[metric.metricName][metric.sourceType] += value;
       counts[metric.metricName][metric.sourceType] += 1;
     }
