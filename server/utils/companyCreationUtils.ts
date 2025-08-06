@@ -329,7 +329,7 @@ export async function createPortfolioCompanyEnhanced(
 }
 
 /**
- * Enhanced competitor creation
+ * Enhanced competitor creation with comprehensive validation
  */
 export async function createCompetitorEnhanced(
   requestBody: any,
@@ -337,6 +337,51 @@ export async function createCompetitorEnhanced(
   storage: any,
   insertSchema: z.ZodSchema
 ): Promise<CreationResult> {
+  // Phase 1: Pre-creation validation using CompetitorValidator
+  try {
+    const { CompetitorValidator } = await import('./competitorValidation');
+    const validator = new CompetitorValidator(storage);
+    
+    const validationResult = await validator.validateCompetitorCreation(
+      requestBody.clientId,
+      requestBody.domain,
+      requestBody.label
+    );
+    
+    if (!validationResult.isValid) {
+      logger.warn('Competitor pre-creation validation failed', {
+        clientId: requestBody.clientId,
+        domain: requestBody.domain,
+        error: validationResult.error
+      });
+      
+      return {
+        success: false,
+        error: validationResult.error
+      };
+    }
+    
+    // Use normalized domain for creation
+    if (validationResult.normalizedDomain) {
+      requestBody.domain = validationResult.normalizedDomain;
+    }
+    
+    logger.info('Competitor pre-creation validation passed', {
+      clientId: requestBody.clientId,
+      originalDomain: requestBody.domain,
+      normalizedDomain: validationResult.normalizedDomain
+    });
+    
+  } catch (validationError) {
+    logger.error('Error during competitor pre-creation validation', {
+      error: (validationError as Error).message,
+      clientId: requestBody.clientId,
+      domain: requestBody.domain
+    });
+    
+    // Continue with creation if validation check fails (graceful degradation)
+  }
+
   return await createCompanyWithWorkflows({
     companyType: 'competitor',
     validationSchema: insertSchema,
