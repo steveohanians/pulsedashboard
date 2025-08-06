@@ -528,11 +528,8 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
               <Bar 
                 key={competitor.id}
                 dataKey={competitor.label} 
-                fill="none"
-                stroke={competitorColors[index % competitorColors.length]}
-                strokeWidth={2}
+                fill={competitorColors[index % competitorColors.length]}
                 radius={[2, 2, 0, 0]}
-                shape={(props: any) => <DashedBar {...props} stroke={competitorColors[index % competitorColors.length]} strokeDasharray="none" hideBottomBorder={true} />}
                 isAnimationActive={isInitialRender}
               />
             )
