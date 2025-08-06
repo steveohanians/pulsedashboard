@@ -96,15 +96,19 @@ export class SemrushService {
       const response = await fetch(`${url}?${params}`);
       
       if (!response.ok) {
-        throw new Error(`SEMrush API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        const errorMessage = `SEMrush API error: ${response.status} ${response.statusText} - ${errorText}`;
+        logger.error('SEMrush API HTTP error', { domain, period, status: response.status, error: errorText });
+        throw new Error(errorMessage);
       }
 
       const text = await response.text();
       logger.debug('SEMrush main metrics response', { domain, period, response: text });
 
       if (text.includes('ERROR')) {
-        logger.warn('SEMrush API returned error', { domain, period, error: text });
-        return {};
+        const errorMessage = `SEMrush API returned error for ${domain}: ${text}`;
+        logger.error('SEMrush API data error', { domain, period, error: text });
+        throw new Error(errorMessage);
       }
 
       // Parse CSV-like response from SEMrush v3 API

@@ -81,6 +81,9 @@ export class CompetitorIntegration {
         error: result.error,
         stack: (error as Error).stack
       });
+      
+      // Re-throw the error so competitor creation fails completely
+      throw error;
     }
 
     return result;
