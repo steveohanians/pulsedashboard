@@ -477,7 +477,7 @@ export async function createCompetitorEnhanced(
     requestBody,
     requestUser,
     requiresFilterValidation: false, // Competitors don't have businessSize/industryVertical
-    requiresDomainValidation: false, // Competitors use their own pre-validation
+    requiresDomainValidation: false, // Already validated above in pre-creation check
     postCreationWorkflows: [{
       name: 'SEMrush Competitor Integration',
       isBackground: false,  // Changed to synchronous for immediate historical data

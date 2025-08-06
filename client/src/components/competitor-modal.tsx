@@ -51,30 +51,12 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       setDomain("");
       setLabel("");
       
-      // Show immediate success message
+      // Single success message since backend validation and sync is now synchronous
       toast({
-        title: "Competitor validated and added",
-        description: "SEMrush data verified and integration started. Charts will update when complete.",
-        duration: 4000,
+        title: "Competitor successfully added",
+        description: "Domain validated, SEMrush data integrated, and 15 months of historical data loaded. Charts updated with new benchmarks.",
+        duration: 6000,
       });
-      
-      // Show detailed integration status after a brief delay
-      setTimeout(() => {
-        toast({
-          title: "📊 Competitor data sync in progress",
-          description: "Fetching 15 months of historical data. Dashboard will refresh when complete.",
-          duration: 8000,
-        });
-      }, 2000);
-      
-      // Show completion toast when sync is finished (since sync is now synchronous)
-      setTimeout(() => {
-        toast({
-          title: "✅ Competitor data sync complete",
-          description: "15 months of historical data successfully loaded. Charts are now updated with competitor benchmarks.",
-          duration: 6000,
-        });
-      }, 5000);
     },
     onError: (error: Error) => {
       console.error("Competitor creation error:", error);
@@ -133,22 +115,19 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       return;
     }
 
-    // Validate URL format
-    const urlPattern = /^https:\/\/.+\..+/;
-    const fullDomain = domain.startsWith('https://') ? domain : `https://${domain}`;
-    
-    if (!urlPattern.test(fullDomain)) {
+    // Basic validation - let backend handle domain normalization
+    if (!label.trim()) {
       toast({
-        title: "Invalid URL",
-        description: "Please enter a valid URL starting with https://",
+        title: "Label required",
+        description: "Please enter a name for this competitor.",
         variant: "destructive",
       });
       return;
     }
 
     addCompetitorMutation.mutate({
-      domain: fullDomain,
-      label: label.trim() || new URL(fullDomain).hostname,
+      domain: domain.trim(), // Send raw domain, backend will normalize
+      label: label.trim(),
       clientId,
     });
   };
@@ -173,12 +152,20 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
             <div className="mb-6 p-4 bg-slate-50 rounded-lg">
               <h3 className="font-medium text-slate-900 mb-4">Add New Competitor</h3>
               <div className="flex gap-4">
-                <Input
-                  placeholder="Enter competitor URL (e.g., https://competitor.com)"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  className="flex-1"
-                />
+                <div className="space-y-2 flex-1">
+                  <Input
+                    placeholder="Enter competitor domain (e.g., competitor.com)"
+                    value={domain}
+                    onChange={(e) => setDomain(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Enter competitor name (e.g., Main Competitor)"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
                 <Button
                   onClick={handleAddCompetitor}
                   disabled={!domain.trim() || addCompetitorMutation.isPending}
