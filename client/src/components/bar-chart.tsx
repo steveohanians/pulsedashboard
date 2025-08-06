@@ -257,6 +257,16 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
   
+  // Debug Session Duration input data
+  if (metricName === 'Session Duration') {
+    console.log(`🔍 METRIC BAR CHART RECEIVED:`, {
+      metricName,
+      timePeriod,
+      clientData,
+      competitors: competitors?.map(c => ({ label: c.label, value: c.value })),
+      competitorCount: competitors?.length || 0
+    });
+  }
 
   
   // Check if we have any valid data
