@@ -15,6 +15,7 @@ export interface CompanyCreationOptions<T = any> {
   requestBody: any;
   requestUser?: { id: string };
   requiresFilterValidation?: boolean;
+  requiresDomainValidation?: boolean;
   postCreationWorkflows?: Array<{
     name: string;
     handler: (company: any) => Promise<any>;
@@ -74,6 +75,28 @@ export async function createCompanyWithWorkflows<T>(
           success: false,
           error: filterValidationResult.error
         };
+      }
+    }
+
+    // Step 2.5: Domain validation (for companies with domain/websiteUrl)
+    if (options.requiresDomainValidation) {
+      const domainValidationResult = await performDomainValidation(
+        validatedData, 
+        storage, 
+        companyType,
+        requestBody.clientId
+      );
+      if (!domainValidationResult.isValid) {
+        return {
+          success: false,
+          error: domainValidationResult.error
+        };
+      }
+      
+      // Update the validated data with normalized domain if available
+      if (domainValidationResult.normalizedDomain) {
+        const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
+        validatedData[domainField] = domainValidationResult.normalizedDomain;
       }
     }
 
@@ -249,6 +272,71 @@ async function performFilterValidation(
 }
 
 /**
+ * Perform domain validation for companies with domain/websiteUrl fields
+ * Phases 1 & 2: Domain format, duplicates, and SEMrush health check
+ */
+async function performDomainValidation(
+  validatedData: any, 
+  storage: any, 
+  companyType: CompanyType,
+  clientId?: string
+): Promise<{ isValid: boolean; error?: string; normalizedDomain?: string }> {
+  // Determine the domain field based on company type
+  const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
+  const domain = validatedData[domainField];
+  const label = validatedData.label || validatedData.name;
+
+  if (!domain) {
+    return { isValid: true }; // No domain to validate
+  }
+
+  try {
+    const { GlobalCompanyValidator } = await import("./globalCompanyValidation");
+    const validator = new GlobalCompanyValidator(storage);
+    
+    // Use demo-client-id as fallback for global validation
+    const effectiveClientId = clientId || 'demo-client-id';
+    
+    const domainValidation = await validator.validateCompanyCreation(
+      effectiveClientId, 
+      domain, 
+      label, 
+      companyType
+    );
+    
+    if (!domainValidation.isValid) {
+      logger.warn(`${companyType} creation - domain validation failed`, {
+        companyType,
+        domain,
+        label,
+        clientId: effectiveClientId,
+        error: domainValidation.error
+      });
+      return { isValid: false, error: domainValidation.error };
+    }
+    
+    logger.info(`${companyType} creation - domain validation passed`, {
+      companyType,
+      domain,
+      normalizedDomain: domainValidation.normalizedDomain,
+      clientId: effectiveClientId
+    });
+    
+    return { 
+      isValid: true, 
+      normalizedDomain: domainValidation.normalizedDomain 
+    };
+  } catch (error) {
+    logger.error(`Domain validation error for ${companyType}`, {
+      domain,
+      companyType,
+      error: (error as Error).message
+    });
+    return { isValid: false, error: "Domain validation failed" };
+  }
+}
+
+/**
  * Create company record using appropriate storage method
  */
 async function createCompanyRecord(companyType: CompanyType, validatedData: any, storage: any): Promise<any> {
@@ -316,6 +404,7 @@ export async function createPortfolioCompanyEnhanced(
     requestBody,
     requestUser,
     requiresFilterValidation: true,
+    requiresDomainValidation: true,
     postCreationWorkflows: [{
       name: 'SEMrush Integration',
       isBackground: true,
@@ -388,6 +477,7 @@ export async function createCompetitorEnhanced(
     requestBody,
     requestUser,
     requiresFilterValidation: false, // Competitors don't have businessSize/industryVertical
+    requiresDomainValidation: false, // Competitors use their own pre-validation
     postCreationWorkflows: [{
       name: 'SEMrush Competitor Integration',
       isBackground: false,  // Changed to synchronous for immediate historical data
@@ -414,7 +504,8 @@ export async function createBenchmarkCompanyEnhanced(
     validationSchema: insertSchema,
     requestBody,
     requestUser,
-    requiresFilterValidation: true
+    requiresFilterValidation: true,
+    requiresDomainValidation: true
     // No post-creation workflows for benchmark companies
   }, storage);
 }
