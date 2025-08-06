@@ -189,9 +189,14 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 
     
     // Generate competitor variations
-    const competitorVariations = competitors.map((competitor, index) => 
-      generateTemporalVariationSync(competitor.value || clientData, dates, metricName || 'Unknown', `comp-${competitor.label}-${metricName || 'Unknown'}`)
-    );
+    const competitorVariations = competitors.map((competitor, index) => {
+      const baseValue = competitor.value || clientData;
+      const seed = `comp-${competitor.label}-${metricName || 'Unknown'}`;
+      console.log(`🔍 TEMPORAL VARIATION INPUT: ${competitor.label} = ${baseValue}, seed = ${seed}`);
+      const variation = generateTemporalVariationSync(baseValue, dates, metricName || 'Unknown', seed);
+      console.log(`🔍 TEMPORAL VARIATION OUTPUT: ${competitor.label} = [${variation.slice(0, 3).join(', ')}...]`);
+      return variation;
+    });
     
     dates.forEach((period, index) => {
       const point: Record<string, unknown> = {
