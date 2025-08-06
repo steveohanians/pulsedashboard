@@ -220,11 +220,8 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 
       // Add competitor data with actual values
       competitors.forEach((competitor) => {
-        // For Session Duration, convert seconds to minutes if needed
-        let value = competitor.value;
-        if (metricName === 'Session Duration' && value && value > 60) {
-          value = value / 60; // Convert seconds to minutes
-        }
+        // Use competitor values as-is (they're already in correct units)
+        const value = competitor.value;
         point[competitor.label] = Math.round(value * 10) / 10;
       });
 
