@@ -53,8 +53,8 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       
       // Show immediate success message
       toast({
-        title: "Competitor added - data syncing",
-        description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
+        title: "Competitor validated and added",
+        description: "SEMrush data verified and integration started. Charts will update when complete.",
         duration: 4000,
       });
       
@@ -181,15 +181,20 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
                 />
                 <Button
                   onClick={handleAddCompetitor}
-                  disabled={addCompetitorMutation.isPending}
+                  disabled={!domain.trim() || addCompetitorMutation.isPending}
                   className={addCompetitorMutation.isPending ? 'cursor-not-allowed' : ''}
                 >
                   {addCompetitorMutation.isPending ? (
-                    <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      Validating...
+                    </>
                   ) : (
-                    <Plus className="h-4 w-4 mr-2" />
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Competitor
+                    </>
                   )}
-                  Add
                 </Button>
               </div>
             </div>
