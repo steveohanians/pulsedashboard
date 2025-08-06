@@ -99,7 +99,7 @@ export default function Dashboard() {
     // Close mobile menu after refresh
     setMobileMenuOpen(false);
   };
-  const [timePeriod, setTimePeriod] = useState("Last Month");
+  const [timePeriod, setTimePeriod] = useState("Year");  // Changed to Year to show historical competitor data
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
