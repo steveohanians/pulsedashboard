@@ -187,8 +187,13 @@ function generateRealTimeSeriesData(
         dataPoint[competitor.label] = Math.round(value * 10) / 10;
       } else {
         // Use the competitor value we have instead of defaulting to 0
-        const value = competitor.value;
-        // Competitor values are already in correct units (minutes for Session Duration, percentage for rates)
+        let value = competitor.value;
+        
+        // Convert Session Duration from seconds to minutes if needed
+        if (metricName === 'Session Duration' && value && value > 60) {
+          value = value / 60; // Convert seconds to minutes
+        }
+        
         dataPoint[competitor.label] = Math.round(value * 10) / 10;
       }
     });
