@@ -287,14 +287,26 @@ export default function MetricBarChart({ metricName, timePeriod, clientData, ind
   
   // Use real time-series data if available, otherwise generate fallback data
   const data = useMemo(() => {
+    let result;
     if (timeSeriesData && periods && periods.length > 1) {
       // Debug: Using processTimeSeriesForBar with periods: ${periods.join(', ')}
-    const result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
-    // Debug: processTimeSeriesForBar completed with ${result.length} data points
-    return result;
+      result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+      // Debug: processTimeSeriesForBar completed with ${result.length} data points
+    } else {
+      // Debug: Using generateBarData fallback with timePeriod: ${timePeriod}
+      result = generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
-    // Debug: Using generateBarData fallback with timePeriod: ${timePeriod}
-    return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
+    
+    // Debug Session Duration final chart data
+    if (metricName === 'Session Duration') {
+      console.log(`🔍 FINAL CHART DATA:`, { 
+        dataLength: result.length,
+        firstDataPoint: result[0],
+        competitorKeys: Object.keys(result[0] || {}).filter(key => key !== 'period' && !['Client', 'Industry Avg', 'Clear Digital Clients Avg'].includes(key))
+      });
+    }
+    
+    return result;
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 
   // Define colors for each bar series (with dynamic company name)
