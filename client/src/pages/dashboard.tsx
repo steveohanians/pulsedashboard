@@ -153,19 +153,24 @@ export default function Dashboard() {
     if (dashboardData?.metrics) {
       console.log("📊 Dashboard refreshed:", dashboardData.metrics.length, "metrics");
       
-      // Debug Session Duration in time series (quarterly) view
-      if (dashboardData.metrics.length > 100) { // Multi-period data
-        const sessionDurationCompetitors = dashboardData.metrics.filter(m => 
-          m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
-        );
-        console.log("🔍 QUARTERLY SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
-        if (sessionDurationCompetitors.length > 0) {
-          console.log("🔍 QUARTERLY SESSION DURATION SAMPLES:", sessionDurationCompetitors.map(m => ({
-            value: m.value,
-            timePeriod: (m as any).timePeriod,
-            competitorId: m.competitorId
-          })));
-        }
+      // Debug Session Duration competitor data in both views
+      const sessionDurationCompetitors = dashboardData.metrics.filter(m => 
+        m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
+      );
+      console.log("🔍 SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
+      if (sessionDurationCompetitors.length > 0) {
+        console.log("🔍 SESSION DURATION SAMPLES:", sessionDurationCompetitors.map(m => ({
+          value: m.value,
+          timePeriod: (m as any).timePeriod,
+          competitorId: m.competitorId
+        })));
+      } else {
+        console.log("🚨 NO SESSION DURATION COMPETITOR DATA - checking all metrics...");
+        const allCompetitorMetrics = dashboardData.metrics.filter(m => m.sourceType === 'Competitor');
+        console.log("🔍 ALL COMPETITOR METRICS:", {
+          count: allCompetitorMetrics.length,
+          metricNames: Array.from(new Set(allCompetitorMetrics.map(m => m.metricName)))
+        });
       }
     }
   }, [dashboardData?.metrics]);

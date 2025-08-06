@@ -32,12 +32,27 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }
 
-  // Optimize bar chart data points
-  const chartDataPoints = Object.entries(data).map(([key, value]) => ({
-    name: key,
-    value: Math.round(value * 10) / 10,
-    fill: COLORS[key as keyof typeof COLORS] || 'hsl(var(--color-default))'
-  }));
+  // Optimize bar chart data points with Session Duration conversion
+  const chartDataPoints = Object.entries(data).map(([key, value]) => {
+    let processedValue = value;
+    
+    // Debug Session Duration processing
+    if (metricName === 'Session Duration') {
+      console.log(`🔍 METRICS CHART ${key}: raw value=${value}, converting=${value > 60 ? 'YES' : 'NO'}`);
+    }
+    
+    // Convert Session Duration from seconds to minutes for competitor data
+    if (metricName === 'Session Duration' && value > 60) {
+      processedValue = value / 60;
+      console.log(`🔍 METRICS CHART ${key}: converted to ${processedValue} minutes`);
+    }
+    
+    return {
+      name: key,
+      value: Math.round(processedValue * 10) / 10,
+      fill: COLORS[key as keyof typeof COLORS] || 'hsl(var(--color-default))'
+    };
+  });
   
   const optimizedData = ChartOptimizer.optimizeDataPoints(chartDataPoints);
 
