@@ -59,13 +59,21 @@ function processTimeSeriesForBar(
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
     
-    // Debug: Period ${period}, Metric ${metricName} - Client: ${clientMetric?.value}, Industry: ${industryMetric?.value}, CD: ${cdMetric?.value}
+    // Convert Session Duration from seconds to minutes for client and CD avg data
+    let clientValue = clientMetric ? parseMetricValue(clientMetric.value) : 0;
+    let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : 0;
+    let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : 0;
     
-    dataPoint[clientKey] = clientMetric ? Math.round(parseMetricValue(clientMetric.value) * 10) / 10 : 0;
-    dataPoint['Industry Avg'] = industryMetric ? Math.round(parseMetricValue(industryMetric.value) * 10) / 10 : 0;
+    if (metricName === 'Session Duration') {
+      clientValue = clientValue / 60;
+      industryValue = industryValue / 60;
+      cdValue = cdValue / 60;
+    }
+    
+    dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
+    dataPoint['Industry Avg'] = Math.round(industryValue * 10) / 10;
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
-
-    dataPoint[`${companyName} Clients Avg`] = cdMetric ? Math.round(parseMetricValue(cdMetric.value) * 10) / 10 : 0;
+    dataPoint[`${companyName} Clients Avg`] = Math.round(cdValue * 10) / 10;
     
     // Add competitor data with fallback to most recent available period
     competitors.forEach(competitor => {
