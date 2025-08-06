@@ -31,7 +31,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       const response = await apiRequest("POST", "/api/competitors", data);
       return response; // apiRequest already parses JSON
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       // Invalidate all dashboard-related queries
       queryClient.invalidateQueries({ 
         predicate: (query) => {
@@ -50,10 +50,22 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       
       setDomain("");
       setLabel("");
+      
+      // Show immediate success message
       toast({
-        title: "Competitor added",
-        description: "The competitor has been successfully added with complete historical data.",
+        title: "Competitor added - data syncing",
+        description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
+        duration: 4000,
       });
+      
+      // Show detailed integration status after a brief delay
+      setTimeout(() => {
+        toast({
+          title: "📊 Competitor data sync in progress",
+          description: "Fetching 15 months of historical data. Dashboard will refresh when complete.",
+          duration: 8000,
+        });
+      }, 2000);
     },
     onError: (error: Error) => {
       console.error("Competitor creation error:", error);
@@ -87,8 +99,9 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
       
       toast({
-        title: "Competitor removed",
-        description: "The competitor has been successfully removed.",
+        title: "Competitor removed from analysis",
+        description: "✅ All competitor metrics deleted and charts refreshed automatically. Navigate to dashboard to see updated benchmarks.",
+        duration: 10000,
       });
     },
     onError: (error: Error) => {
