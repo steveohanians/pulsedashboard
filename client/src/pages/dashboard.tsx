@@ -1352,6 +1352,17 @@ export default function Dashboard() {
                       </button>
                     </Link>
                   </li>
+                  <li key="refresh-data">
+                    <button 
+                      onClick={handleRefreshData}
+                      className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RefreshCw className="h-3 w-3 text-slate-400" />
+                        <span>Refresh Data</span>
+                      </div>
+                    </button>
+                  </li>
                 </>
               )}
             </ul>
