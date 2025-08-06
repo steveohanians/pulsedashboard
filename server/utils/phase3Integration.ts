@@ -58,16 +58,25 @@ export class Phase3RouteIntegration {
         }
       }
 
-      // Step 3: Perform the update (simulate since storage doesn't have updateCompetitor)
-      // In a real implementation, this would call storage.updateCompetitor(competitorId, updateData)
-      logger.info('Competitor update validation passed - would update in storage', {
+      // Step 3: Perform the actual update using storage method
+      const updatedCompetitor = await this.storage.updateCompetitor(competitorId, updateData);
+      
+      if (!updatedCompetitor) {
+        return {
+          success: false,
+          error: 'Failed to update competitor in database'
+        };
+      }
+
+      logger.info('Competitor update validation passed and stored', {
         competitorId,
-        updateData
+        updateData,
+        updatedCompetitor: updatedCompetitor.label
       });
 
       return {
         success: true,
-        competitor: { ...currentCompetitor, ...updateData },
+        competitor: updatedCompetitor,
         warnings: ['Update validation completed successfully']
       };
 

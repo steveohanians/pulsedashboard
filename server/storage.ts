@@ -45,8 +45,10 @@ export interface IStorage {
   deleteClient(id: string): Promise<void>;
   
   // Competitors
+  getCompetitor(id: string): Promise<Competitor | undefined>;
   getCompetitorsByClient(clientId: string): Promise<Competitor[]>;
   createCompetitor(competitor: InsertCompetitor): Promise<Competitor>;
+  updateCompetitor(id: string, competitor: Partial<InsertCompetitor>): Promise<Competitor | undefined>;
   deleteCompetitor(id: string): Promise<void>;
   
   // Benchmark Companies
@@ -250,6 +252,10 @@ export class DatabaseStorage implements IStorage {
   // Competitors - consolidated using DatabaseRepository
   async createCompetitor(insertCompetitor: InsertCompetitor): Promise<Competitor> {
     return await this.competitorRepo.create(insertCompetitor);
+  }
+
+  async updateCompetitor(id: string, updateCompetitor: Partial<InsertCompetitor>): Promise<Competitor | undefined> {
+    return await this.competitorRepo.update(id, updateCompetitor);
   }
 
   async deleteCompetitor(id: string): Promise<void> {

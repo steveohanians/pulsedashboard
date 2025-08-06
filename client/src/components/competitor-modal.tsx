@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Plus, Trash2, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ValidationWarnings from "@/components/ui/validation-warnings";
 
 interface CompetitorModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface CompetitorModalProps {
 export default function CompetitorModal({ isOpen, onClose, competitors, clientId }: CompetitorModalProps) {
   const [domain, setDomain] = useState("");
   const [label, setLabel] = useState("");
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,6 +34,14 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       return response; // apiRequest already parses JSON
     },
     onSuccess: (response) => {
+      // Clear any existing validation warnings
+      setValidationWarnings([]);
+      
+      // Handle validation warnings if present
+      if (response.warnings && response.warnings.length > 0) {
+        setValidationWarnings(response.warnings);
+      }
+      
       // Invalidate all dashboard-related queries
       queryClient.invalidateQueries({ 
         predicate: (query) => {
@@ -58,8 +68,19 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
         duration: 6000,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       console.error("Competitor creation error:", error);
+      
+      // Clear previous warnings and show error-based warnings if available
+      setValidationWarnings([]);
+      
+      // Extract validation warnings from error if present
+      if (error.response?.data?.warnings) {
+        setValidationWarnings(error.response.data.warnings);
+      } else if (error.response?.data?.validationErrors) {
+        setValidationWarnings(error.response.data.validationErrors);
+      }
+      
       toast({
         title: "Failed to add competitor",
         description: error.message || "An unexpected error occurred",
@@ -133,11 +154,19 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
   };
 
   const handleDeleteCompetitor = (competitorId: string) => {
+    // Clear validation warnings when deleting
+    setValidationWarnings([]);
     deleteCompetitorMutation.mutate(competitorId);
   };
 
+  // Clear warnings when modal closes
+  const handleClose = () => {
+    setValidationWarnings([]);
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Manage Competitors</DialogTitle>
@@ -184,6 +213,17 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
                   )}
                 </Button>
               </div>
+              
+              {/* Validation Warnings Display */}
+              {validationWarnings.length > 0 && (
+                <div className="mt-4">
+                  <ValidationWarnings 
+                    warnings={validationWarnings} 
+                    className="space-y-2"
+                    showTitle={false}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -246,7 +286,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
         </div>
 
         <div className="flex justify-end space-x-4 pt-4 border-t border-slate-200">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Close
           </Button>
         </div>
