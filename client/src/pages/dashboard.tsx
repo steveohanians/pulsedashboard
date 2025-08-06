@@ -1600,9 +1600,10 @@ export default function Dashboard() {
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
-            // DEBUG: Compare Bounce Rate vs Session Duration data flow
-            if (metricName === 'Bounce Rate') {
-              // Bounce rate data processed
+            // DEBUG: Session Duration metricData content
+            if (metricName === 'Session Duration') {
+              console.log(`🔍 SESSION DURATION metricData:`, metricData);
+              console.log(`🔍 Available source types:`, Object.keys(metricData));
             }
             
 
