@@ -1179,6 +1179,65 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add competitor update route with Phase 3 validation
+  app.put("/api/competitors/:id", requireAuth, async (req, res) => {
+    try {
+      const competitorId = req.params.id;
+      const user = req.user!;
+      const client = await storage.getClient(user.clientId);
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Verify that this competitor belongs to the user's client
+      const competitors = await storage.getCompetitorsByClient(client.id);
+      const competitor = competitors.find(c => c.id === competitorId);
+      
+      if (!competitor) {
+        return res.status(404).json({ message: "Competitor not found or access denied" });
+      }
+      
+      // Use Phase 3 validation for competitor updates
+      const { Phase3RouteIntegration } = await import("./utils/phase3Integration");
+      const phase3Integration = new Phase3RouteIntegration(storage);
+      
+      const result = await phase3Integration.handleCompetitorUpdate(
+        competitorId,
+        req.body,
+        client.id
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      // Clear caches to ensure UI updates
+      clearCache();
+      performanceCache.clear();
+      
+      logger.info("Competitor updated with Phase 3 validation", {
+        competitorId,
+        clientId: client.id,
+        updateFields: Object.keys(req.body),
+        warnings: result.warnings?.length || 0
+      });
+      
+      res.json({
+        competitor: result.competitor,
+        warnings: result.warnings
+      });
+      
+    } catch (error) {
+      logger.error("Error updating competitor", {
+        error: (error as Error).message,
+        competitorId: req.params.id,
+        userId: req.user?.id
+      });
+      res.status(500).json({ message: "Failed to update competitor" });
+    }
+  });
+
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -1698,30 +1757,20 @@ export function registerRoutes(app: Express): Server {
       const { companyId } = req.params;
       const validatedData = insertCdPortfolioCompanySchema.partial().parse(req.body);
       
-      // Validate filter options if they are being updated
-      if (validatedData.businessSize || validatedData.industryVertical) {
-        const { FilterValidator } = await import("./utils/filterValidation");
-        const validator = new FilterValidator(storage);
-        
-        // Get current company data to fill in missing fields for validation
-        const allCompanies = await storage.getCdPortfolioCompanies();
-        const currentCompany = allCompanies.find(c => c.id === companyId);
-        if (!currentCompany) {
-          return res.status(404).json({ message: "Company not found" });
-        }
-        
-        const dataToValidate = {
-          businessSize: validatedData.businessSize || currentCompany.businessSize,
-          industryVertical: validatedData.industryVertical || currentCompany.industryVertical
-        };
-        
-        const filterValidation = await validator.validateEntity(dataToValidate);
-        if (!filterValidation.isValid) {
-          return res.status(400).json({ message: filterValidation.error });
-        }
+      // Use Phase 3 comprehensive validation for portfolio company updates
+      const { Phase3RouteIntegration } = await import("./utils/phase3Integration");
+      const phase3Integration = new Phase3RouteIntegration(storage);
+      
+      const result = await phase3Integration.handlePortfolioCompanyUpdate(
+        companyId,
+        validatedData
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
       }
       
-      const updatedCompany = await storage.updateCdPortfolioCompany(companyId, validatedData);
+      const updatedCompany = result.company;
       
       if (!updatedCompany) {
         logger.warn("CD portfolio company not found for update", { 
@@ -1736,12 +1785,17 @@ export function registerRoutes(app: Express): Server {
       const portfolioIntegration = new PortfolioIntegration(storage);
       await portfolioIntegration.updatePortfolioAverages();
       
-      logger.info("Updated CD portfolio company and recalculated averages", { 
+      logger.info("Updated CD portfolio company with Phase 3 validation", { 
         companyId, 
         companyName: updatedCompany.name, 
-        admin: req.user?.id 
+        admin: req.user?.id,
+        warnings: result.warnings?.length || 0
       });
-      res.json(updatedCompany);
+      
+      res.json({
+        company: updatedCompany,
+        warnings: result.warnings
+      });
     } catch (error) {
       if ((error as any).name === 'ZodError') {
         logger.warn("Invalid CD portfolio company update data", { 
@@ -2301,34 +2355,30 @@ export function registerRoutes(app: Express): Server {
     try {
       const { id } = req.params;
       
-      // Validate filter options if they are being updated
-      if (req.body.businessSize || req.body.industryVertical) {
-        const { FilterValidator } = await import("./utils/filterValidation");
-        const validator = new FilterValidator(storage);
-        
-        // Get current company data to fill in missing fields for validation
-        const allCompanies = await storage.getBenchmarkCompanies();
-        const currentCompany = allCompanies.find(c => c.id === id);
-        if (!currentCompany) {
-          return res.status(404).json({ message: "Company not found" });
-        }
-        
-        const dataToValidate = {
-          businessSize: req.body.businessSize || currentCompany.businessSize,
-          industryVertical: req.body.industryVertical || currentCompany.industryVertical
-        };
-        
-        const filterValidation = await validator.validateEntity(dataToValidate);
-        if (!filterValidation.isValid) {
-          return res.status(400).json({ message: filterValidation.error });
-        }
+      // Use Phase 3 validation with diversity checks for benchmark companies
+      const { Phase3RouteIntegration } = await import("./utils/phase3Integration");
+      const phase3Integration = new Phase3RouteIntegration(storage);
+      
+      const result = await phase3Integration.handleBenchmarkCompanyUpdate(
+        id,
+        req.body
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
       }
       
-      const company = await storage.updateBenchmarkCompany(id, req.body);
-      if (!company) {
-        return res.status(404).json({ message: "Company not found" });
-      }
-      res.json(company);
+      logger.info("Updated benchmark company with Phase 3 validation", {
+        companyId: id,
+        companyName: result.company?.name,
+        admin: req.user?.id,
+        warnings: result.warnings?.length || 0
+      });
+      
+      res.json({
+        company: result.company,
+        warnings: result.warnings
+      });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }

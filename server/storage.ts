@@ -983,7 +983,7 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Create map of all SQL results
-        const sqlMap = new Map(sqlResult.rows.map(row => [row.id, row.value]));
+        const sqlMap = new Map(sqlResult.rows.map((row: any) => [row.id, row.value]));
         
         // Update ALL metrics (not just null ones) with SQL values to ensure JSONB consistency
         processedMetrics.forEach(metric => {
