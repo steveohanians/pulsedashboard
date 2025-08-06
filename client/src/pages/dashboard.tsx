@@ -1646,7 +1646,7 @@ export default function Dashboard() {
                       <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
                         {metricData.Client ? (
                           metricName.includes("Session Duration") 
-                            ? `${Math.round((metricData.Client / 60) * 10) / 10} min`
+                            ? `${Math.round(metricData.Client * 10) / 10} min`
                             : `${Math.round(metricData.Client * 10) / 10}${metricName.includes("Rate") ? "%" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}`
                         ) : "N/A"}
                       </span>
