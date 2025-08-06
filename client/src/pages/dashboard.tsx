@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles } from "lucide-react";
+import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import MetricsChart from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
 import SessionDurationAreaChart from "@/components/area-chart";
@@ -54,6 +55,7 @@ const getChannelColor = (channelName: string): string => {
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const { toast } = useToast();
   
   // Add effect to log when dashboard component mounts/updates
   useEffect(() => {
@@ -66,6 +68,29 @@ export default function Dashboard() {
   
   // No timer needed here - it starts with server
   const queryClient = useQueryClient();
+
+  // Refresh data function for admin users
+  const handleRefreshData = async () => {
+    // Invalidate all dashboard-related queries to force refresh
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const queryKey = query.queryKey[0]?.toString() || '';
+        return queryKey.includes('/api/dashboard') || queryKey.includes('dashboard');
+      }
+    });
+    
+    // Also refresh filters and other related data
+    queryClient.invalidateQueries({ queryKey: ['/api/filters'] });
+    
+    toast({
+      title: "Dashboard refreshed",
+      description: "All data has been refreshed from the latest sources.",
+      duration: 3000,
+    });
+    
+    // Close mobile menu after refresh
+    setMobileMenuOpen(false);
+  };
   const [timePeriod, setTimePeriod] = useState("Last Month");
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
@@ -1254,20 +1279,35 @@ export default function Dashboard() {
               {user?.role === "Admin" && (
                 <div className="mt-6 pt-4 border-t border-slate-200">
                   <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Admin</h3>
-                  <Link href="/admin">
+                  <div className="space-y-2">
+                    <Link href="/admin">
+                      <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200"
+                      >
+                        <span className="flex items-center justify-between">
+                          <span className="flex items-center">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Admin Panel
+                          </span>
+                          <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-all duration-200" />
+                        </span>
+                      </button>
+                    </Link>
+                    
+                    {/* Refresh Data Button */}
                     <button
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={handleRefreshData}
                       className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200"
                     >
                       <span className="flex items-center justify-between">
                         <span className="flex items-center">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Admin Panel
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Refresh Data
                         </span>
-                        <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-all duration-200" />
                       </span>
                     </button>
-                  </Link>
+                  </div>
                 </div>
               )}
             </div>
