@@ -88,7 +88,16 @@ function generateTimeSeriesData(
       [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       'Industry Avg': 0, // No synthetic data
       'Clear Digital Clients Avg': Number(processedCdAvg).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
-      ...competitors.reduce((acc, comp) => ({ ...acc, [comp.label]: 0 }), {})
+      ...competitors.reduce((acc, comp) => {
+        // Use actual competitor values instead of hardcoding to 0
+        let value = comp.value;
+        // Apply same conversion logic as other metrics
+        if (metricName?.includes('Rate')) {
+          value = value * 100; // Convert decimal to percentage for rates
+        }
+        const formattedValue = Number(value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0);
+        return { ...acc, [comp.label]: formattedValue };
+      }, {})
     }];
   }
   
