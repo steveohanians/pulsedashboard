@@ -71,17 +71,30 @@ export default function Dashboard() {
 
   // Refresh data function for admin users
   const handleRefreshData = async () => {
-    // Directly refetch the dashboard data
-    await refetchDashboard();
+    setIsRefreshing(true);
     
-    // Also refresh filters 
-    queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
-    
-    toast({
-      title: "Dashboard refreshed",
-      description: "All data has been refreshed from the latest sources.",
-      duration: 3000,
-    });
+    try {
+      // Directly refetch the dashboard data
+      await refetchDashboard();
+      
+      // Also refresh filters 
+      queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
+      
+      toast({
+        title: "Dashboard refreshed",
+        description: "All data has been refreshed from the latest sources.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not refresh dashboard data. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
     
     // Close mobile menu after refresh
     setMobileMenuOpen(false);
@@ -100,6 +113,7 @@ export default function Dashboard() {
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
   const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get the actual data period (one month before current) 
   const getDataPeriodDisplay = () => {
@@ -1038,7 +1052,7 @@ export default function Dashboard() {
   // Performance tracking removed per user request
 
 
-  if (isLoading) {
+  if (isLoading || isRefreshing) {
     return (
       <div className="min-h-screen bg-slate-50">
         {/* Header Skeleton */}
