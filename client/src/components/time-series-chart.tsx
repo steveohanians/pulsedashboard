@@ -83,18 +83,14 @@ function generateTimeSeriesData(
     
 
     
-    return [{
+    const result = [{
       date: currentMonth,
       [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       'Industry Avg': 0, // No synthetic data
       'Clear Digital Clients Avg': Number(processedCdAvg).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       ...competitors.reduce((acc, comp) => {
-        // Use actual competitor values instead of hardcoding to 0
+        // Use actual competitor values - they're already properly converted
         let value = comp.value;
-        // Apply same conversion logic as other metrics
-        if (metricName?.includes('Rate')) {
-          value = value * 100; // Convert decimal to percentage for rates
-        }
         const formattedValue = Number(value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0);
         return { ...acc, [comp.label]: formattedValue };
       }, {})
@@ -190,7 +186,15 @@ function generateRealTimeSeriesData(
         
         dataPoint[competitor.label] = Math.round(value * 10) / 10;
       } else {
-        dataPoint[competitor.label] = 0; // No data for this period
+        // Use the competitor value we have instead of defaulting to 0
+        let value = competitor.value;
+        
+        // Apply same conversions - rates are already converted to percentage
+        if (metricName === 'Session Duration') {
+          value = value / 60; // Convert to minutes if needed
+        }
+        
+        dataPoint[competitor.label] = Math.round(value * 10) / 10;
       }
     });
     
@@ -207,10 +211,9 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
   
 
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
-  const data = useMemo(() => 
-    generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName),
-    [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]
-  );
+  const data = useMemo(() => {
+    return generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName);
+  }, [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]);
 
   // Check data validity AFTER all hooks
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
