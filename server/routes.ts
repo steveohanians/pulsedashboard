@@ -363,15 +363,15 @@ export function registerRoutes(app: Express): Server {
       const { clientId } = req.params;
       const { timePeriod = "Last Month" } = req.query;
       
-      // Check cache first
-      const cacheKey = `insights:${clientId}:${timePeriod}`;
+      // Check cache first (no timePeriod since we load all insights for client)
+      const cacheKey = `insights:${clientId}`;
       const cached = performanceCache.get(cacheKey);
       if (cached) {
         return res.json({ insights: cached });
       }
       
-      // Load insights from database
-      const insights = await storage.getAIInsights(clientId, timePeriod as string);
+      // Load insights from database (all insights for client, not filtered by timePeriod)
+      const insights = await storage.getAIInsightsByClient(clientId);
       
       // Cache for future requests
       performanceCache.set(cacheKey, insights, 10 * 60 * 1000); // 10 minutes
