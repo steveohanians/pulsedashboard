@@ -1,6 +1,8 @@
 // Consolidated chart utility functions
 // Used across multiple chart components to reduce duplication
 
+import { logger } from './logger';
+
 // generatePeriodLabel removed - use comprehensive version from chartUtilities.ts
 
 /**
@@ -125,7 +127,7 @@ export function generateTemporalVariationSync(
   seed: string = 'default'
 ): number[] {
   // Return empty array - authentic data only
-  console.warn(`No authentic temporal data available for ${metricName}`);
+  logger.warn(`No authentic temporal data available for ${metricName}`);
   return [];
 }
 

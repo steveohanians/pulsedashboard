@@ -1,26 +1,7 @@
 // Helper utilities for chart data processing
 // This file contains supporting utilities for chart data manipulation
 
-/**
- * Constants for chart colors and configurations
- */
-export const CHART_COLORS = {
-  TRAFFIC_CHANNELS: {
-    'Organic Search': 'hsl(var(--color-competitor-1))',
-    'Direct': 'hsl(var(--color-client))', 
-    'Social Media': 'hsl(var(--color-competitor-1))',
-    'Paid Search': 'hsl(var(--chart-3))',
-    'Email': 'hsl(var(--chart-5))',
-    'Referral': 'hsl(var(--chart-4))',
-    'Other': 'hsl(var(--color-device-other))'
-  },
-  DEVICES: {
-    'Desktop': 'hsl(var(--color-device-desktop))',
-    'Mobile': 'hsl(var(--color-device-mobile))',
-    'Tablet': 'hsl(var(--color-device-tablet))',
-    'Other': 'hsl(var(--color-device-other))'
-  }
-} as const;
+// Chart colors available from @/constants/chart-colors
 
 /**
  * Helper function to safely parse JSON values

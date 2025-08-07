@@ -132,7 +132,7 @@ export async function fetchStoredDailyMetrics(
     const response = await fetch(`/api/metrics/daily/${clientId}/${period}/${encodeURIComponent(metricName)}`);
     
     if (!response.ok) {
-      console.debug(`No stored daily data found for ${metricName}, falling back to synthetic`);
+      logger.debug(`No stored daily data found for ${metricName}, falling back to synthetic`);
       return [];
     }
     
@@ -144,7 +144,7 @@ export async function fetchStoredDailyMetrics(
     return [];
     
   } catch (error) {
-    console.error('Error fetching stored daily metrics:', error);
+    logger.error('Error fetching stored daily metrics:', error);
     return [];
   }
 }
@@ -186,7 +186,7 @@ export function generateTemporalVariationSync(
   seed: string = 'default'
 ): number[] {
   // REMOVED: No synthetic data generation - return empty array for authentic data only
-  console.warn(`No authentic temporal data available for ${metricName}`);
+  logger.warn(`No authentic temporal data available for ${metricName}`);
   return [];
 }
 

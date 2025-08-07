@@ -1,6 +1,8 @@
 // Unified performance monitoring utilities
 // Consolidates timing, measurement, and monitoring functionality
 
+import { logger } from './logger';
+
 /**
  * General purpose performance monitoring with metrics tracking
  */
@@ -21,7 +23,7 @@ class PerformanceMonitor {
     
     // Log slow operations for optimization
     if (duration > 1000) {
-      console.warn(`🐌 Slow operation: ${label} took ${duration}ms`);
+      logger.warn(`🐌 Slow operation: ${label} took ${duration}ms`);
     }
     
     return duration;
@@ -104,7 +106,7 @@ class BrowserPerformanceTimer {
           if (entry.entryType === 'paint') {
             if (entry.name === 'first-contentful-paint') {
               this.firstContentfulPaint = entry.startTime;
-              console.log(`🎨 [PERF] First Contentful Paint: ${entry.startTime.toFixed(0)}ms`);
+              logger.info(`🎨 [PERF] First Contentful Paint: ${entry.startTime.toFixed(0)}ms`);
             }
           }
           
@@ -117,7 +119,7 @@ class BrowserPerformanceTimer {
       try {
         this.observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
       } catch (e) {
-        console.warn('Performance observer not fully supported');
+        logger.warn('Performance observer not fully supported');
       }
     }
   }
