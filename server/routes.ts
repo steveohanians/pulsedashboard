@@ -12,6 +12,97 @@ import logger from "./utils/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { parseMetricValue } from "./utils/metricParser";
+
+/**
+ * Enhanced parser for distribution metrics (Device Distribution, Traffic Channels)
+ * Handles complex JSON arrays by extracting primary metrics for AI analysis
+ */
+function parseDistributionMetricValue(value: any, metricName: string): number | null {
+  // Special handling for Device Distribution
+  if (metricName === 'Device Distribution') {
+    try {
+      let parsedArray;
+      
+      // Handle double-encoded JSON string
+      if (typeof value === 'string') {
+        parsedArray = JSON.parse(value);
+      } else {
+        parsedArray = value;
+      }
+      
+      if (Array.isArray(parsedArray)) {
+        // Return desktop percentage as the primary metric for AI insights
+        const desktopData = parsedArray.find(item => 
+          item.device === 'Desktop' || item.channel === 'Desktop'
+        );
+        if (desktopData && typeof desktopData.percentage === 'number') {
+          logger.info('🔥 ROUTE: Device Distribution desktop percentage extracted for AI', {
+            desktopPercentage: desktopData.percentage,
+            fullData: parsedArray,
+            source: 'Metric-specific insight route'
+          });
+          return desktopData.percentage;
+        }
+      }
+    } catch (error) {
+      logger.error('🔥 ROUTE: Failed to parse Device Distribution data for AI insights', {
+        value: typeof value === 'string' ? value.substring(0, 100) : value,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+    return null;
+  }
+
+  // Special handling for Traffic Channels
+  if (metricName === 'Traffic Channels') {
+    try {
+      let parsedArray;
+      
+      // Handle double-encoded JSON string
+      if (typeof value === 'string') {
+        parsedArray = JSON.parse(value);
+      } else {
+        parsedArray = value;
+      }
+      
+      if (Array.isArray(parsedArray)) {
+        // Return organic search percentage as primary metric for AI insights
+        const organicData = parsedArray.find(item => 
+          item.channel === 'Organic Search' || 
+          item.channel === 'organic' ||
+          item.source === 'organic'
+        );
+        if (organicData && typeof organicData.percentage === 'number') {
+          logger.info('🔥 ROUTE: Traffic Channels organic percentage extracted for AI', {
+            organicPercentage: organicData.percentage,
+            fullData: parsedArray,
+            source: 'Metric-specific insight route'
+          });
+          return organicData.percentage;
+        }
+        
+        // Fallback: return the first channel's percentage
+        if (parsedArray.length > 0 && parsedArray[0].percentage) {
+          logger.info('🔥 ROUTE: Traffic Channels fallback to first channel for AI', {
+            firstChannelPercentage: parsedArray[0].percentage,
+            channel: parsedArray[0].channel || parsedArray[0].source,
+            source: 'Metric-specific insight route'
+          });
+          return parsedArray[0].percentage;
+        }
+      }
+    } catch (error) {
+      logger.error('🔥 ROUTE: Failed to parse Traffic Channels data for AI insights', {
+        value: typeof value === 'string' ? value.substring(0, 100) : value,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+    return null;
+  }
+  
+  // Use standard parsing for other metrics
+  return parseMetricValue(value);
+}
 import { performanceCache } from "./cache/performance-cache";
 import { CompetitorIntegration } from "./services/semrush/competitorIntegration";
 
@@ -414,7 +505,7 @@ export function registerRoutes(app: Express): Server {
         );
         return {
           name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
-          value: competitorMetric ? parseMetricValue(competitorMetric.value) : null
+          value: competitorMetric ? parseDistributionMetricValue(competitorMetric.value, metricName) : null
         };
       }).filter((c: any) => c.value !== null);
       
@@ -433,7 +524,8 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'Client' // Client data is stored with sourceType 'Client'
       );
       
-      let clientValue = clientMetricForPeriod ? parseMetricValue(clientMetricForPeriod.value) : (metricData.Client || metricData);
+      // Enhanced parsing for distribution metrics (Device Distribution, Traffic Channels)  
+      let clientValue = clientMetricForPeriod ? parseDistributionMetricValue(clientMetricForPeriod.value, metricName) : (metricData.Client || metricData);
       
       // Special handling for Traffic Channels - format channel data for AI analysis
       let trafficChannelFormatting = null;
