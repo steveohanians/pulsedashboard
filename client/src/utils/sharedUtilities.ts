@@ -115,6 +115,31 @@ export function formatCompanyLabel(company: any, sourceType: 'Portfolio' | 'Comp
 }
 
 /**
+ * General utilities moved from chartDataHelpers.ts for consolidation
+ */
+
+/**
+ * Helper function to safely parse JSON values
+ */
+export function safeParseJSON(value: string): unknown[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Clean domain names for display (remove protocols and www)
+ */
+export function cleanDomainName(domain: string): string {
+  return domain
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '');
+}
+
+/**
  * Debounce utility
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
