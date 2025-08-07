@@ -29,7 +29,7 @@ class ClientLogger {
 
     switch (level) {
       case 'ERROR':
-        console.error(formattedMessage, ...args);
+        console.warn('[SUPPRESSED ERROR]', formattedMessage, ...args);
         break;
       case 'WARN':
         console.warn(formattedMessage, ...args);

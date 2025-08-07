@@ -302,7 +302,7 @@ export default function AIInsights({
         description: "Context saved and insights regenerating...",
       });
     } catch (error) {
-      console.error("[AIInsights] Error saving context:", error);
+      console.warn("[AIInsights] Error saving context:", error);
       toast({
         title: "Error",
         description: "Failed to save context",

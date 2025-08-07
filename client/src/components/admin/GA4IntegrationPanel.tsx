@@ -106,7 +106,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         // Refresh property access data to show updated info
         refetchPropertyAccess();
       } catch (error) {
-        console.error("Failed to save property ID change:", error);
+        console.warn("Failed to save property ID change:", error);
       }
     }
   };
@@ -143,7 +143,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         }, 1000);
       }
     } catch (error) {
-      console.error("Connection test failed:", error);
+      console.warn("Connection test failed:", error);
       setHasTestedConnection(true); // Show status even on error
     } finally {
       setIsTestingConnection(false);
@@ -208,7 +208,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                 // Refresh property access data to show updated info
                 refetchPropertyAccess();
               } catch (error) {
-                console.error("Failed to save service account change:", error);
+                console.warn("Failed to save service account change:", error);
               }
             }
           }}>

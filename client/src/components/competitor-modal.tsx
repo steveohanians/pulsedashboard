@@ -69,7 +69,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
     },
     onError: (error: any) => {
-      console.error("Competitor creation error:", error);
+      console.warn("Competitor creation error:", error);
       
       // Clear previous warnings and show error-based warnings if available
       setValidationWarnings([]);

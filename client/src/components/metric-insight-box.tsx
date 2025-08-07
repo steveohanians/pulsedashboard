@@ -59,7 +59,7 @@ const insightsStorage = {
           return null;
         }
         // Log error but don't throw to prevent unhandled rejections
-        logger.error(`Failed to fetch insights: ${response.status} ${response.statusText}`);
+        logger.warn(`Failed to fetch insights: ${response.status} ${response.statusText}`);
         return null;
       }
       
@@ -94,7 +94,7 @@ const insightsStorage = {
         if (error.name === 'AbortError') {
           logger.warn('Insights fetch request timed out', { clientId, metricName });
         } else {
-          logger.error('Failed to load insights from database', { 
+          logger.warn('Failed to load insights from database', { 
             error: error.message, 
             clientId, 
             metricName 
@@ -234,7 +234,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onError: (error) => {
       // Log error but don't throw to prevent runtime error modal
-      logger.error('Failed to generate insight', { 
+      logger.warn('Failed to generate insight', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         clientId,
         metricName
@@ -272,7 +272,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     },
     onError: (error) => {
       // Log error and attempt fallback to regular regeneration
-      logger.error('Failed to generate insight with context', { 
+      logger.warn('Failed to generate insight with context', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         clientId,
         metricName
@@ -282,7 +282,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       try {
         generateInsightMutation.mutate();
       } catch (fallbackError) {
-        logger.error('Fallback insight generation also failed', {
+        logger.warn('Fallback insight generation also failed', {
           error: fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error',
           clientId,
           metricName
