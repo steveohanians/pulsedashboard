@@ -524,11 +524,31 @@ export function registerRoutes(app: Express): Server {
       
       // Build competitor data for this metric with actual names
       const competitorData = competitors.map((comp: any) => {
-        const competitorMetric = clientMetrics.find((m: any) => 
+        const competitorMetrics = clientMetrics.filter((m: any) => 
           m.competitorId === comp.id && 
           m.metricName === metricName && 
           m.timePeriod === targetPeriod
         );
+        
+        if (competitorMetrics.length === 0) {
+          return { name: comp.name || comp.domain.replace('https://', '').replace('http://', ''), value: null };
+        }
+        
+        // For Traffic Channels, build full channel breakdown for meaningful competitor comparison
+        if (metricName === 'Traffic Channels') {
+          const channelBreakdown = competitorMetrics.map((m: any) => ({
+            channel: m.channel,
+            percentage: parseDistributionMetricValue(m.value, metricName)
+          })).filter(c => c.percentage !== null);
+          
+          return {
+            name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
+            value: channelBreakdown.length > 0 ? channelBreakdown : null
+          };
+        }
+        
+        // For other metrics, use standard parsing
+        const competitorMetric = competitorMetrics[0];
         return {
           name: comp.name || comp.domain.replace('https://', '').replace('http://', ''),
           value: competitorMetric ? parseDistributionMetricValue(competitorMetric.value, metricName) : null
@@ -600,12 +620,13 @@ export function registerRoutes(app: Express): Server {
             cdAvg: formatChannelData(cdChannels)
           };
           
-          // For Traffic Channels, use the number of channels as clientValue 
+          // For Traffic Channels, use the formatted channel data as clientValue for meaningful AI analysis
           if (typeof clientValue === 'object' && clientValue !== null) {
-            clientValue = Array.isArray(clientValue) ? clientValue.length : Object.keys(clientValue).length;
+            // Keep the array format so OpenAI gets the actual channel breakdown
+            clientValue = Array.isArray(clientValue) ? clientValue : [clientValue];
           } else if (clientValue === null) {
-            // If no client data found for this period, use 0 as fallback
-            clientValue = 0;
+            // If no client data found for this period, use empty array
+            clientValue = [];
           }
           
           logger.info('Traffic Channels AI data prepared', {
@@ -636,14 +657,43 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'Industry_Avg'
       );
       
-      const cdMetricForPeriod = clientMetrics.find((m: any) => 
+      // For Traffic Channels, get all CD_Avg channel data for comprehensive analysis
+      let cdMetricForPeriod;
+      let cdPortfolioAverage;
+      
+      if (metricName === 'Traffic Channels') {
+        const cdChannelMetrics = clientMetrics.filter((m: any) => 
+          m.metricName === metricName && 
+          m.timePeriod === targetPeriod &&
+          m.sourceType === 'CD_Avg'
+        );
+        
+        if (cdChannelMetrics.length > 0) {
+          // Build channel breakdown for CD portfolio for meaningful comparison
+          const cdChannelBreakdown = cdChannelMetrics.map((m: any) => ({
+            channel: m.channel,
+            percentage: parseDistributionMetricValue(m.value, metricName)
+          })).filter(c => c.percentage !== null);
+          
+          cdPortfolioAverage = cdChannelBreakdown.length > 0 ? cdChannelBreakdown : metricData.CD_Avg;
+        } else {
+          cdPortfolioAverage = metricData.CD_Avg;
+        }
+      } else {
+        cdMetricForPeriod = clientMetrics.find((m: any) => 
+          m.metricName === metricName && 
+          m.timePeriod === targetPeriod &&
+          m.sourceType === 'CD_Avg'
+        );
+        cdPortfolioAverage = cdMetricForPeriod ? parseDistributionMetricValue(cdMetricForPeriod.value, metricName) : metricData.CD_Avg;
+      }
+      
+      const industryMetricForPeriod = clientMetrics.find((m: any) => 
         m.metricName === metricName && 
         m.timePeriod === targetPeriod &&
-        m.sourceType === 'CD_Avg'
+        m.sourceType === 'Industry_Avg'
       );
-      
       const industryAverage = industryMetricForPeriod ? parseDistributionMetricValue(industryMetricForPeriod.value, metricName) : metricData.Industry_Avg;
-      const cdPortfolioAverage = cdMetricForPeriod ? parseDistributionMetricValue(cdMetricForPeriod.value, metricName) : metricData.CD_Avg;
       
       logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
         metricName, 

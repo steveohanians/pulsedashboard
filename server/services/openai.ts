@@ -76,6 +76,17 @@ async function generateInsightsWithCustomPrompt(
     let formattedCompetitorsText = competitorsText;
     let metricDisplayName = metricName;
     
+    // Special handling for CD portfolio average in Traffic Channels
+    if (metricName === 'Traffic Channels' && Array.isArray(cdAverage)) {
+      formattedCdAverage = cdAverage.map((channel: any) => 
+        `${channel.channel}: ${channel.percentage}%`
+      ).join(', ');
+      logger.info('🔥 OPENAI: CD Portfolio Traffic Channels formatted for AI prompt', {
+        originalData: cdAverage,
+        formattedValue: formattedCdAverage
+      });
+    }
+    
     // Special handling for Device Distribution
     if (metricName === 'Device Distribution' && Array.isArray(clientValue)) {
       formattedClientValue = clientValue.map((device: any) => 
