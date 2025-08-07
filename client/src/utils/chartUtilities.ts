@@ -1,18 +1,11 @@
 // Consolidated chart utilities to eliminate duplicate functions across chart components
 // This eliminates seededRandom, generatePeriodLabel, and data generation patterns
 
-import { seededRandom as sharedSeededRandom } from '@shared/seededRandom';
+import { seededRandom, seededRandomRange, seededVariance } from '@shared/seededRandom';
 import { logger } from '@/utils/logger';
 
-/**
- * Seeded random number generator for consistent chart data
- * Consolidates duplicate functions from bar-chart.tsx and area-chart.tsx
- */
-export function seededRandom(seed: number): number {
-  // Use the Math.sin approach for frontend compatibility (matches existing pattern)
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+// Re-export shared seeded random functions for chart utilities
+export { seededRandom, seededRandomRange, seededVariance };
 
 /**
  * Generate period label from YYYY-MM format

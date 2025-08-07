@@ -81,7 +81,7 @@ async function generateInsightsWithCustomPrompt(
       formattedCdAverage = cdAverage.map((channel: any) => 
         `${channel.channel}: ${channel.percentage}%`
       ).join(', ');
-      logger.info('🔥 OPENAI: CD Portfolio Traffic Channels formatted for AI prompt', {
+      logger.info('CD Portfolio Traffic Channels formatted for AI prompt', {
         originalData: cdAverage,
         formattedValue: formattedCdAverage
       });
@@ -92,7 +92,7 @@ async function generateInsightsWithCustomPrompt(
       formattedClientValue = clientValue.map((device: any) => 
         `${device.device}: ${device.percentage}% (${device.sessions} sessions)`
       ).join(', ');
-      logger.info('🔥 OPENAI: Device Distribution formatted for AI prompt', {
+      logger.info('Device Distribution formatted for AI prompt', {
         originalData: clientValue,
         formattedValue: formattedClientValue
       });
@@ -102,7 +102,7 @@ async function generateInsightsWithCustomPrompt(
       formattedClientValue = clientValue.map((channel: any) => 
         `${channel.channel}: ${channel.percentage}%`
       ).join(', ');
-      logger.info('🔥 OPENAI: Traffic Channels formatted for AI prompt', {
+      logger.info('Traffic Channels formatted for AI prompt', {
         originalData: clientValue,
         formattedValue: formattedClientValue
       });
@@ -205,7 +205,7 @@ CRITICAL FORMATTING REQUIREMENTS:
       ? result.status 
       : calculatedStatus;
     
-    logger.info('✅ Regular Insights Status Determination', {
+    logger.info('Regular insights status determination', {
       metricName,
       clientValue,
       industryAverage,
@@ -259,9 +259,8 @@ export async function generateMetricInsights(
     throw new Error(error);
   }
   
-  logger.info('✅ USING CUSTOM PROMPT TEMPLATE (NO FALLBACKS)', { 
+  logger.info('Using custom prompt template (no fallbacks)', { 
     metricName, 
-    promptId: customPrompt.id,
     isActive: customPrompt.isActive
   });
   
@@ -378,9 +377,8 @@ DASHBOARD OVERVIEW:
 
 KEY METRICS SUMMARY:
 ${context.metrics.map((m: { metricName: string; clientValue: number | null; industryAverage: number | null; cdAverage: number | null }) => `
-- ${m.metricName}: ${m.clientValue || 'N/A'} (${m.trendDirection} ${m.percentageChange ? Math.abs(m.percentageChange).toFixed(1) + '%' : ''} vs. last period)
+- ${m.metricName}: ${m.clientValue || 'N/A'}
   vs. CD Avg: ${m.cdAverage || 'N/A'} | Industry: ${m.industryAverage || 'N/A'}
-  Competitors: ${m.competitorValues.length > 0 ? m.competitorValues.join(', ') : 'None'}
 `).join('')}
 
 OPTIMIZATION PRIORITIES:
@@ -438,7 +436,7 @@ Focus on strategic direction and business impact across all digital marketing ch
   } catch (error) {
     logger.error("Error generating comprehensive insights", { 
       error: (error as Error).message,
-      clientId: context.client.id,
+      clientName: context.client.name,
       period: context.period 
     });
     
@@ -575,9 +573,8 @@ export async function generateMetricSpecificInsightsWithContext(
     const customPrompt = await storage.getMetricPrompt(metricName);
     
     if (customPrompt && customPrompt.isActive) {
-      logger.info('✅ USING CUSTOM PROMPT TEMPLATE WITH USER CONTEXT', { 
+      logger.info('Using custom prompt template with user context', { 
         metricName, 
-        promptId: customPrompt.id,
         hasUserContext: !!userContext
       });
       
@@ -588,7 +585,7 @@ export async function generateMetricSpecificInsightsWithContext(
       return await generateInsightsWithCustomPromptAndContext(
         customPrompt,
         metricName,
-        enrichedData.metric.clientValue,
+        enrichedData.metric.clientValue || 0,
         competitorValues,
         competitorNames,
         enrichedData.benchmarks?.industryAverage,
@@ -679,9 +676,8 @@ async function generateInsightsWithCustomPromptAndContext(
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
     
-    logger.info('✅ Generated insights with custom prompt and user context', { 
+    logger.info('Generated insights with custom prompt and user context', { 
       metricName,
-      promptId: customPrompt.id,
       hasUserContext: !!userContext,
       responseFields: Object.keys(result)
     });
@@ -709,7 +705,7 @@ async function generateInsightsWithCustomPromptAndContext(
             const extractedTexts = extractText(parsed);
             // Join with proper spacing and preserve formatting
             const result = extractedTexts.join(' ').trim();
-            logger.info('✅ Parsed JSON content', { originalLength: value.length, parsedLength: result.length });
+            logger.info('Parsed JSON content', { originalLength: value.length, parsedLength: result.length });
             return result;
           }
           return String(parsed);
@@ -775,7 +771,7 @@ async function generateInsightsWithCustomPromptAndContext(
       ? result.status 
       : calculatedStatus;
     
-    logger.info('✅ Status Determination Debug', {
+    logger.info('Status determination debug', {
       metricName,
       clientValue,
       industryAverage,
@@ -797,7 +793,7 @@ async function generateInsightsWithCustomPromptAndContext(
     logger.error("Error generating insights with custom prompt and context", { 
       error: (error as Error).message,
       metricName,
-      promptId: customPrompt.id
+      hasCustomPrompt: true
     });
     throw error;
   }
@@ -1064,9 +1060,8 @@ export async function generateMetricSpecificInsights(
     });
     
     if (customPrompt && customPrompt.isActive) {
-      logger.info('✅ USING CUSTOM PROMPT TEMPLATE', { 
+      logger.info('Using custom prompt template', { 
         metricName, 
-        promptId: customPrompt.id,
         promptPreview: customPrompt.promptTemplate.substring(0, 150) + '...'
       });
       
