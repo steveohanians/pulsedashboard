@@ -15,10 +15,10 @@ import { parseMetricValue } from "./utils/metricParser";
 
 /**
  * Enhanced parser for distribution metrics (Device Distribution, Traffic Channels)
- * Handles complex JSON arrays by extracting primary metrics for AI analysis
+ * Returns full distribution data for comprehensive AI analysis
  */
-function parseDistributionMetricValue(value: any, metricName: string): number | null {
-  // Special handling for Device Distribution
+function parseDistributionMetricValue(value: any, metricName: string): any {
+  // Special handling for Device Distribution - return full distribution
   if (metricName === 'Device Distribution') {
     try {
       let parsedArray;
@@ -31,18 +31,12 @@ function parseDistributionMetricValue(value: any, metricName: string): number | 
       }
       
       if (Array.isArray(parsedArray)) {
-        // Return desktop percentage as the primary metric for AI insights
-        const desktopData = parsedArray.find(item => 
-          item.device === 'Desktop' || item.channel === 'Desktop'
-        );
-        if (desktopData && typeof desktopData.percentage === 'number') {
-          logger.info('🔥 ROUTE: Device Distribution desktop percentage extracted for AI', {
-            desktopPercentage: desktopData.percentage,
-            fullData: parsedArray,
-            source: 'Metric-specific insight route'
-          });
-          return desktopData.percentage;
-        }
+        logger.info('🔥 ROUTE: Device Distribution full data provided for AI', {
+          deviceBreakdown: parsedArray,
+          deviceCount: parsedArray.length,
+          source: 'Metric-specific insight route'
+        });
+        return parsedArray; // Return full array for comprehensive AI analysis
       }
     } catch (error) {
       logger.error('🔥 ROUTE: Failed to parse Device Distribution data for AI insights', {
@@ -53,7 +47,7 @@ function parseDistributionMetricValue(value: any, metricName: string): number | 
     return null;
   }
 
-  // Special handling for Traffic Channels
+  // Special handling for Traffic Channels - return full distribution
   if (metricName === 'Traffic Channels') {
     try {
       let parsedArray;
@@ -66,30 +60,12 @@ function parseDistributionMetricValue(value: any, metricName: string): number | 
       }
       
       if (Array.isArray(parsedArray)) {
-        // Return organic search percentage as primary metric for AI insights
-        const organicData = parsedArray.find(item => 
-          item.channel === 'Organic Search' || 
-          item.channel === 'organic' ||
-          item.source === 'organic'
-        );
-        if (organicData && typeof organicData.percentage === 'number') {
-          logger.info('🔥 ROUTE: Traffic Channels organic percentage extracted for AI', {
-            organicPercentage: organicData.percentage,
-            fullData: parsedArray,
-            source: 'Metric-specific insight route'
-          });
-          return organicData.percentage;
-        }
-        
-        // Fallback: return the first channel's percentage
-        if (parsedArray.length > 0 && parsedArray[0].percentage) {
-          logger.info('🔥 ROUTE: Traffic Channels fallback to first channel for AI', {
-            firstChannelPercentage: parsedArray[0].percentage,
-            channel: parsedArray[0].channel || parsedArray[0].source,
-            source: 'Metric-specific insight route'
-          });
-          return parsedArray[0].percentage;
-        }
+        logger.info('🔥 ROUTE: Traffic Channels full data provided for AI', {
+          channelBreakdown: parsedArray,
+          channelCount: parsedArray.length,
+          source: 'Metric-specific insight route'
+        });
+        return parsedArray; // Return full array for comprehensive AI analysis
       }
     } catch (error) {
       logger.error('🔥 ROUTE: Failed to parse Traffic Channels data for AI insights', {

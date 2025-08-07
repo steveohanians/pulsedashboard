@@ -34,10 +34,10 @@ interface MetricAnalysis {
 async function generateInsightsWithCustomPrompt(
   customPrompt: MetricPrompt,
   metricName: string,
-  clientValue: number,
+  clientValue: any, // Changed to handle both numbers and distribution arrays
   cdAverage: number,
   industryAverage: number,
-  competitorValues: number[],
+  competitorValues: any[], // Changed to handle both numbers and distribution arrays
   industryVertical: string,
   businessSize: string,
   clientName: string,
@@ -57,16 +57,48 @@ async function generateInsightsWithCustomPrompt(
     const competitorsText = competitorValues.length > 0 
       ? competitorValues.map((val, idx) => {
           const name = competitorNames?.[idx] || `Competitor ${idx + 1}`;
+          // Handle distribution data for competitors
+          if (metricName === 'Device Distribution' && Array.isArray(val)) {
+            const formatted = val.map((d: any) => `${d.device}: ${d.percentage}%`).join(', ');
+            return `${name}: ${formatted}`;
+          } else if (metricName === 'Traffic Channels' && Array.isArray(val)) {
+            const formatted = val.map((c: any) => `${c.channel}: ${c.percentage}%`).join(', ');
+            return `${name}: ${formatted}`;
+          }
           return `${name}: ${val}`;
-        }).join(', ')
+        }).join('; ')
       : 'No competitor data available';
 
-    // Handle special formatting for Session Duration
-    let formattedClientValue = clientValue.toString();
+    // Handle special formatting for different metric types
+    let formattedClientValue: string;
     let formattedCdAverage = cdAverage.toString();
     let formattedIndustryAverage = industryAverage.toString();
     let formattedCompetitorsText = competitorsText;
     let metricDisplayName = metricName;
+    
+    // Special handling for Device Distribution
+    if (metricName === 'Device Distribution' && Array.isArray(clientValue)) {
+      formattedClientValue = clientValue.map((device: any) => 
+        `${device.device}: ${device.percentage}% (${device.sessions} sessions)`
+      ).join(', ');
+      logger.info('🔥 OPENAI: Device Distribution formatted for AI prompt', {
+        originalData: clientValue,
+        formattedValue: formattedClientValue
+      });
+    }
+    // Special handling for Traffic Channels
+    else if (metricName === 'Traffic Channels' && Array.isArray(clientValue)) {
+      formattedClientValue = clientValue.map((channel: any) => 
+        `${channel.channel}: ${channel.percentage}%`
+      ).join(', ');
+      logger.info('🔥 OPENAI: Traffic Channels formatted for AI prompt', {
+        originalData: clientValue,
+        formattedValue: formattedClientValue
+      });
+    }
+    else {
+      formattedClientValue = clientValue.toString();
+    }
     
     if (metricName === 'Session Duration') {
       const clientMinutes = Math.floor(clientValue / 60);
@@ -415,16 +447,53 @@ Focus on strategic direction and business impact across all digital marketing ch
  */
 function determineMetricStatus(
   metricName: string,
-  clientValue: number,
+  clientValue: any, // Changed to handle both numbers and arrays
   industryAverage?: number,
   cdPortfolioAverage?: number,
-  competitorValues?: number[]
+  competitorValues?: any[]
 ): string {
   // Handle special cases for distribution metrics (Traffic Channels, Device Distribution)
-  // These metrics don't have single client values and should be handled differently
-  if (metricName === 'Traffic Channels' || metricName === 'Device Distribution') {
-    // For distribution metrics, if we have data to analyze, default to warning for neutral stance
-    return 'warning';
+  if (metricName === 'Device Distribution' && Array.isArray(clientValue)) {
+    // For Device Distribution, analyze based on desktop vs mobile balance
+    const desktopData = clientValue.find((d: any) => d.device === 'Desktop');
+    const mobileData = clientValue.find((d: any) => d.device === 'Mobile');
+    
+    if (desktopData && desktopData.percentage) {
+      const desktopPercentage = desktopData.percentage;
+      // Good desktop engagement: 60-90% desktop usage
+      // Strong desktop dominance: >90% (could indicate mobile optimization issues)
+      // Balanced usage: 50-70% desktop
+      if (desktopPercentage >= 70 && desktopPercentage <= 90) {
+        return 'success'; // Good desktop engagement
+      } else if (desktopPercentage >= 50) {
+        return 'warning'; // Balanced but could optimize
+      } else {
+        return 'needs_improvement'; // Mobile-heavy, may need desktop optimization
+      }
+    }
+    return 'warning'; // Default if data structure is unexpected
+  }
+  
+  if (metricName === 'Traffic Channels' && Array.isArray(clientValue)) {
+    // For Traffic Channels, analyze based on organic search percentage
+    const organicData = clientValue.find((c: any) => 
+      c.channel === 'Organic Search' || c.channel === 'organic'
+    );
+    
+    if (organicData && organicData.percentage) {
+      const organicPercentage = organicData.percentage;
+      // Good organic performance: >40% organic traffic
+      // Excellent: >60% organic traffic
+      // Needs improvement: <25% organic traffic
+      if (organicPercentage >= 60) {
+        return 'success';
+      } else if (organicPercentage >= 40) {
+        return 'warning';
+      } else {
+        return 'needs_improvement';
+      }
+    }
+    return 'warning'; // Default if no organic data found
   }
   
   // Handle case where client value is null/undefined/0
