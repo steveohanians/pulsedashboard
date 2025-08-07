@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import MetricsChart from "@/components/metrics-chart";
+import { MetricsChart } from "@/components/metrics-chart";
 import TimeSeriesChart from "@/components/time-series-chart";
 import SessionDurationAreaChart from "@/components/area-chart";
 import MetricBarChart from "@/components/bar-chart";
@@ -21,7 +21,7 @@ import AIInsights from "@/components/ai-insights";
 import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
 import MetricInsightBox from "@/components/metric-insight-box";
 import CompetitorModal from "@/components/competitor-modal";
-import Footer from "@/components/Footer";
+import { Footer } from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/utils/chartUtils";
 import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";

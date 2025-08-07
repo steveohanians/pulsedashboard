@@ -8,7 +8,16 @@ interface OptimizedChartProps {
   height?: number;
 }
 
-// Memoized chart component to prevent unnecessary re-renders
+/**
+ * Performance-optimized line chart component that uses React.memo and useMemo
+ * to prevent unnecessary re-renders. Includes reduced animation duration and
+ * memoized configuration for better performance in dashboard environments.
+ * 
+ * @param data - Array of data points for the chart
+ * @param dataKey - Key name for accessing values in data objects
+ * @param color - Color string for the line stroke
+ * @param height - Optional height in pixels (default: 200)
+ */
 const OptimizedChart = memo(({ data, dataKey, color, height = 200 }: OptimizedChartProps) => {
   // Memoize chart configuration
   const chartConfig = useMemo(() => ({

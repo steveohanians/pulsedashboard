@@ -1,6 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
+/**
+ * Loading skeleton component that displays placeholder elements
+ * while dashboard data is being fetched. Provides visual feedback
+ * with shimmer animations to improve perceived performance.
+ */
 export function DashboardSkeleton() {
   return (
     <div className="p-6 space-y-6">

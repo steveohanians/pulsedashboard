@@ -12,7 +12,16 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
-export default function Footer() {
+// Environment-based configuration constants
+const COMPANY_LEGAL_NAME = import.meta.env.VITE_COMPANY_LEGAL_NAME || "Clear Digital, Inc.";
+const COMPANY_NAME = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
+
+/**
+ * Application footer component that displays copyright information
+ * and provides access to legal disclaimer through a drawer overlay.
+ * Supports white-label configuration via environment variables.
+ */
+export function Footer() {
   const currentYear = new Date().getFullYear();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -22,7 +31,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center mb-4 sm:mb-6">
           <p className="text-xs sm:text-sm text-gray-600">
-            © {currentYear} {import.meta.env.VITE_COMPANY_LEGAL_NAME || "Clear Digital, Inc."}. All rights reserved.
+            © {currentYear} {COMPANY_LEGAL_NAME}. All rights reserved.
           </p>
         </div>
 
@@ -47,7 +56,7 @@ export default function Footer() {
                 <DrawerDescription className="text-xs text-gray-600 leading-relaxed">
                   The metrics and rankings presented herein are compiled from multiple third-party sources. 
                   These figures are provided "as-is" for general benchmarking purposes and are not guaranteed 
-                  to be complete, reliable, or error‐free. {import.meta.env.VITE_COMPANY_NAME || "Clear Digital"} and its data providers make no 
+                  to be complete, reliable, or error‐free. {COMPANY_NAME} and its data providers make no 
                   warranties—express or implied—regarding the accuracy, timeliness, or suitability of this 
                   information. Users should verify critical insights against their own analytics before making decisions.
                 </DrawerDescription>

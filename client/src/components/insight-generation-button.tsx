@@ -11,7 +11,16 @@ interface InsightGenerationButtonProps {
   onInsightsGenerated?: () => void;
 }
 
-export default function InsightGenerationButton({ 
+/**
+ * Button component that triggers AI insight generation for a specific client.
+ * Handles the mutation state, loading indicators, and success notifications.
+ * Automatically invalidates related queries after successful generation.
+ * 
+ * @param clientId - ID of the client to generate insights for
+ * @param period - Optional period filter for insight generation
+ * @param onInsightsGenerated - Optional callback executed after successful generation
+ */
+export function InsightGenerationButton({ 
   clientId, 
   period, 
   onInsightsGenerated 

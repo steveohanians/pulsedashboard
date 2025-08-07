@@ -6,7 +6,15 @@ interface MetricsChartProps {
   data: Record<string, number>;
 }
 
-export default function MetricsChart({ metricName, data }: MetricsChartProps) {
+/**
+ * Metrics chart component that renders bar charts for performance metrics.
+ * Handles special cases for traffic and device distribution data by showing
+ * authentic data placeholders instead of fallback synthetic data.
+ * 
+ * @param metricName - Name of the metric being displayed
+ * @param data - Record of data source names to numeric values
+ */
+export function MetricsChart({ metricName, data }: MetricsChartProps) {
   const isTrafficOrDevice = metricName.includes('Traffic') || metricName.includes('Device');
   
   if (isTrafficOrDevice) {
