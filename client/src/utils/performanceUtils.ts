@@ -1,7 +1,7 @@
 // Unified performance monitoring utilities
 // Consolidates timing, measurement, and monitoring functionality
 
-import { logger } from './logger';
+import { logger } from '@/utils/logger';
 
 /**
  * General purpose performance monitoring with metrics tracking

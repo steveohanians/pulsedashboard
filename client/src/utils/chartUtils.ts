@@ -1,7 +1,7 @@
 // Consolidated chart utility functions
 // Used across multiple chart components to reduce duplication
 
-import { logger } from './logger';
+import { logger } from '@/utils/logger';
 
 /**
  * Common tooltip content style for consistent chart tooltips

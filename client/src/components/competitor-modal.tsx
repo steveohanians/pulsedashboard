@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Plus, Trash2, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 import ValidationWarnings from "@/components/ui/validation-warnings";
 
 interface CompetitorModalProps {
@@ -69,7 +70,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
     },
     onError: (error: any) => {
-      console.warn("Competitor creation error:", error);
+      logger.warn("Competitor creation error:", error);
       
       // Clear previous warnings and show error-based warnings if available
       setValidationWarnings([]);
@@ -117,7 +118,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
       });
     },
     onError: (error: Error) => {
-      console.error("Competitor deletion error:", error);
+      logger.error("Competitor deletion error:", error);
       toast({
         title: "Failed to remove competitor",
         description: error.message || "An unexpected error occurred",

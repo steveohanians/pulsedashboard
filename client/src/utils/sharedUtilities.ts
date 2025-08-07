@@ -70,20 +70,6 @@ export const storageUtils = {
 };
 
 /**
- * Unused utilities cleaned up - consolidation into chart-specific utils complete
- */
-// Removed unused numberUtils - formatting consolidated in chartUtils.ts
-
-// Removed unused arrayUtils - not used by any components
-
-// Removed unused dateUtils - not used by any components
-
-/**
- * URL utilities
- */
-// Removed unused urlUtils - not used by any components
-
-/**
  * Company utility functions
  */
 

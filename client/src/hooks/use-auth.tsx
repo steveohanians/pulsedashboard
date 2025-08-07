@@ -7,6 +7,7 @@ import {
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -48,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       // Log error for debugging but don't throw to prevent runtime error modal  
-      console.warn('Login mutation error:', error);
+      logger.warn('Login mutation error:', error);
       toast({
         title: "Login failed",
         description: error.message,

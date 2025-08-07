@@ -3,9 +3,9 @@
  * Consolidates proven fetching, parsing, fallback, and conversion logic
  */
 
-import { parseMetricValue } from './metricParser';
-import { convertMetricValue, getMetricFallback, shouldConvertToPercentage, shouldConvertToMinutes } from './chartUtils';
-import { getCompanyId, formatCompanyLabel } from './sharedUtilities';
+import { parseMetricValue } from '@/utils/metricParser';
+import { convertMetricValue, getMetricFallback, shouldConvertToPercentage, shouldConvertToMinutes } from '@/utils/chartUtils';
+import { getCompanyId, formatCompanyLabel } from '@/utils/sharedUtilities';
 
 export interface CompanyMetricData {
   id: string;

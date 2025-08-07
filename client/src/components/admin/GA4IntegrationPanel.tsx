@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertCircle, RefreshCw, ExternalLink, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { logger } from "@/utils/logger";
 
 interface GA4IntegrationPanelProps {
   clientId: string | null;
@@ -208,7 +209,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
                 // Refresh property access data to show updated info
                 refetchPropertyAccess();
               } catch (error) {
-                console.warn("Failed to save service account change:", error);
+                logger.warn("Failed to save service account change:", error);
               }
             }
           }}>
