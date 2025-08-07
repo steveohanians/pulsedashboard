@@ -233,7 +233,12 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      // Failed to generate insight - error handled by UI
+      // Log error but don't throw to prevent runtime error modal
+      logger.error('Failed to generate insight', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        clientId,
+        metricName
+      });
     }
   });
 
@@ -266,8 +271,23 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      // Fallback to regular regeneration if context generation fails
-      generateInsightMutation.mutate();
+      // Log error and attempt fallback to regular regeneration
+      logger.error('Failed to generate insight with context', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        clientId,
+        metricName
+      });
+      
+      // Attempt fallback to regular regeneration, but catch any errors
+      try {
+        generateInsightMutation.mutate();
+      } catch (fallbackError) {
+        logger.error('Fallback insight generation also failed', {
+          error: fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error',
+          clientId,
+          metricName
+        });
+      }
     }
   });
 

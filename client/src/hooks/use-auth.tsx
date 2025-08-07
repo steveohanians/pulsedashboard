@@ -47,11 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      // Log error for debugging but don't throw to prevent runtime error modal  
+      console.error('Login mutation error:', error);
       toast({
         title: "Login failed",
         description: error.message,
         variant: "destructive",
       });
+      // Prevent unhandled promise rejection by not re-throwing
     },
   });
 
