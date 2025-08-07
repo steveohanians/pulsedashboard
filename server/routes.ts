@@ -116,7 +116,27 @@ import adminGA4Route from "./routes/adminGA4Route";
 import ga4AdminRoutes from "./routes/ga4-admin";
 
 // Middleware to check authentication
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuth(req: any, res: any, next: any) {
+  // Development mode: auto-authenticate admin user if no one is logged in
+  if (!req.isAuthenticated() && process.env.NODE_ENV === 'development') {
+    try {
+      const adminUser = await storage.getUser('admin-user-id');
+      if (adminUser) {
+        req.login(adminUser, (err: any) => {
+          if (err) {
+            logger.warn('Development auto-login failed in requireAuth', { error: err.message });
+            return res.status(401).json({ message: "Authentication required" });
+          }
+          logger.info('Development auto-login successful in requireAuth', { userId: adminUser.id });
+          return next();
+        });
+        return;
+      }
+    } catch (error) {
+      logger.warn('Failed to auto-authenticate in requireAuth', { error: (error as Error).message });
+    }
+  }
+  
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Authentication required" });
   }

@@ -113,7 +113,27 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
+    // Development mode: auto-authenticate admin user if no one is logged in
+    if (!req.isAuthenticated() && process.env.NODE_ENV === 'development') {
+      try {
+        const adminUser = await storage.getUser('admin-user-id');
+        if (adminUser) {
+          req.login(adminUser, (err) => {
+            if (err) {
+              logger.warn('Development auto-login failed', { error: err.message });
+              return res.sendStatus(401);
+            }
+            logger.info('Development auto-login successful', { userId: adminUser.id });
+            return res.json(adminUser);
+          });
+          return;
+        }
+      } catch (error) {
+        logger.warn('Failed to auto-authenticate in development', { error: (error as Error).message });
+      }
+    }
+    
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });

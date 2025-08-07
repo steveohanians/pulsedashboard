@@ -516,7 +516,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                 dataKey="Industry Avg" 
                 stroke={colors['Industry Avg']}
                 strokeWidth={2}
-                dot={(props: any) => <DiamondDot {...props} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />}
+                dot={(props: any) => {
+                  const { cx, cy, key, ...restProps } = props;
+                  return <DiamondDot cx={cx} cy={cy} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />;
+                }}
                 strokeDasharray="5 5"
                 animationDuration={isInitialRender ? 800 : 0}
               />
@@ -529,7 +532,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                 dataKey="Clear Digital Clients Avg" 
                 stroke={colors['Clear Digital Clients Avg']}
                 strokeWidth={2}
-                dot={(props: any) => <DiamondDot {...props} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />}
+                dot={(props: any) => {
+                  const { cx, cy, key, ...restProps } = props;
+                  return <DiamondDot cx={cx} cy={cy} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />;
+                }}
                 strokeDasharray="8 4"
                 animationDuration={isInitialRender ? 800 : 0}
               />
@@ -544,7 +550,10 @@ export default function TimeSeriesChart({ metricName, timePeriod, clientData, in
                   dataKey={competitor.label} 
                   stroke={competitorColors[index % competitorColors.length]}
                   strokeWidth={2}
-                  dot={(props: any) => <DiamondDot {...props} fill={competitorColors[index % competitorColors.length]} stroke={colors[competitorColors[index % competitorColors.length]]} strokeWidth={1} />}
+                  dot={(props: any) => {
+                    const { cx, cy, key, ...restProps } = props;
+                    return <DiamondDot cx={cx} cy={cy} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />;
+                  }}
                   animationDuration={isInitialRender ? 800 : 0}
                 />
               )
