@@ -384,7 +384,7 @@ export default function Dashboard() {
   const processTrafficChannelData = () => {
 
     
-    let trafficMetrics = [];
+    let trafficMetrics: any[] = [];
     
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
@@ -397,8 +397,39 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
-      trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-      // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
+      let rawTrafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+      console.warn('🔍 FALLBACK TO REGULAR METRICS:', { 
+        foundCount: rawTrafficMetrics.length,
+        totalMetrics: metrics.length,
+        allMetricNames: Array.from(new Set(metrics.map(m => m.metricName))),
+        trafficChannelSample: rawTrafficMetrics[0] 
+      });
+      
+      // If we have JSON-formatted Traffic Channels data, parse it into individual channel records
+      trafficMetrics = [];
+      rawTrafficMetrics.forEach(metric => {
+        if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
+          try {
+            const channelData = JSON.parse(metric.value);
+            if (Array.isArray(channelData)) {
+              channelData.forEach(channel => {
+                trafficMetrics.push({
+                  ...metric,
+                  channel: channel.channel,
+                  value: channel.percentage,
+                  sessions: channel.sessions
+                });
+              });
+              console.warn('✅ PARSED TRAFFIC CHANNELS JSON:', channelData.length, 'channels');
+            }
+          } catch (e: any) {
+            console.warn('❌ FAILED TO PARSE TRAFFIC CHANNELS JSON:', e.message);
+            trafficMetrics.push(metric);
+          }
+        } else {
+          trafficMetrics.push(metric);
+        }
+      });
     }
     
     // Debug logging disabled for performance
@@ -460,6 +491,20 @@ export default function Dashboard() {
     } else {
       console.warn('❌ No client traffic metrics found! Available metrics:', 
         trafficMetrics.map(m => ({ sourceType: m.sourceType, metricName: m.metricName })));
+      console.warn('🔍 DEBUG - All metrics sample:', metrics.slice(0, 3).map(m => ({ 
+        sourceType: m.sourceType, 
+        metricName: m.metricName,
+        hasValue: !!m.value 
+      })));
+      console.warn('🔍 DEBUG - Traffic Channels specific:', 
+        metrics.filter(m => m.metricName === 'Traffic Channels').map(m => ({ 
+          sourceType: m.sourceType, 
+          metricName: m.metricName,
+          valueType: typeof m.value,
+          valuePreview: typeof m.value === 'string' ? m.value.slice(0, 100) : m.value
+        })));
+      console.warn('🔍 DEBUG - All unique metric names:', Array.from(new Set(metrics.map(m => m.metricName))));
+      console.warn('🔍 DEBUG - Dashboard data keys:', dashboardData ? Object.keys(dashboardData) : 'no dashboardData');
     }
 
     // CD Average data

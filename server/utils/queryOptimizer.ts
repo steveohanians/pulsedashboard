@@ -371,6 +371,18 @@ function processMetricsData(
   const allFilteredIndustryMetrics = allFilteredIndustryMetricsArrays.flat();
   const allFilteredCdAvgMetrics = allFilteredCdAvgMetricsArrays.flat();
   
+  console.error('🔍 RAW METRICS DEBUG:', {
+    totalMetrics: allMetrics.length,
+    trafficChannelCount: allMetrics.filter(m => m.metricName === 'Traffic Channels').length,
+    deviceDistributionCount: allMetrics.filter(m => m.metricName === 'Device Distribution').length,
+    sampleTrafficChannels: allMetrics.filter(m => m.metricName === 'Traffic Channels').slice(0, 2).map(m => ({
+      sourceType: m.sourceType,
+      hasChannel: !!m.channel,
+      valueType: typeof m.value,
+      valueLength: typeof m.value === 'string' ? m.value.length : 'not string'
+    }))
+  });
+  
   // Helper function to process traffic channel data
   const processTrafficChannelData = (metrics: any[]): any[] => {
     const result: any[] = [];
@@ -401,12 +413,16 @@ function processMetricsData(
         
         if (typeof rawValue === 'string') {
           try {
+            console.error('🔍 PARSING TRAFFIC CHANNEL JSON:', { rawValue, metricName: m.metricName, sourceType: m.sourceType });
             const channelData = JSON.parse(rawValue);
+            console.error('✅ JSON PARSED SUCCESSFULLY:', { channelData, isArray: Array.isArray(channelData) });
             if (Array.isArray(channelData)) {
               channelData.forEach((channel: any) => {
                 const channelName = m.metricName === 'Device Distribution' 
                   ? (channel.device || channel.name || channel.channel)
                   : (channel.channel || channel.name);
+                
+                console.error('📊 CREATING CHANNEL RECORD:', { channelName, percentage: channel.percentage, metricName: m.metricName });
                 
                 result.push({
                   metricName: m.metricName,
@@ -417,8 +433,10 @@ function processMetricsData(
                   competitorId: m.competitorId
                 });
               });
+              console.error('✅ PROCESSED ALL CHANNELS FOR:', m.metricName, 'Total channels:', channelData.length);
             }
           } catch (e) {
+            console.error('❌ JSON PARSING FAILED:', { error: e.message, rawValue });
             logger.warn('Failed to parse traffic channel JSON:', { error: e.message, rawValue });
             result.push({
               metricName: m.metricName,
