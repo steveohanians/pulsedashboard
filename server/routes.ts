@@ -459,35 +459,33 @@ export function registerRoutes(app: Express): Server {
       const periodMapping = generateDynamicPeriodMapping();
       let targetPeriod = periodMapping["Last Month"][0]; // This is July 2025 (2025-07)
       
-      // For distribution metrics, check if competitor data exists for the target period
+      // Check if competitor data exists for the target period across ALL metrics
       // If not, use the most recent period where competitor data is available
-      if (metricName === 'Device Distribution' || metricName === 'Traffic Channels') {
-        const competitors = await storage.getCompetitorsByClient(clientId);
-        if (competitors.length > 0) {
-          // Check if any competitor has data for the target period
-          const initialClientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
-          const hasCompetitorData = initialClientMetrics.some((m: any) => 
-            m.competitorId && m.metricName === metricName && m.timePeriod === targetPeriod
-          );
-          
-          if (!hasCompetitorData) {
-            // Find the most recent period with competitor data for this metric
-            const availablePeriods = ['2025-06', '2025-05', '2025-04', '2025-03', '2025-02', '2025-01'];
-            for (const period of availablePeriods) {
-              const periodMetrics = await storage.getMetricsByClient(clientId, period);
-              const hasPeriodCompetitorData = periodMetrics.some((m: any) => 
-                m.competitorId && m.metricName === metricName && m.timePeriod === period
-              );
-              
-              if (hasPeriodCompetitorData) {
-                targetPeriod = period;
-                logger.info('🔄 AI INSIGHTS: Adjusted period to find competitor data', {
-                  originalPeriod: periodMapping["Last Month"][0],
-                  adjustedPeriod: targetPeriod,
-                  reason: `No competitor data found for ${metricName} in ${periodMapping["Last Month"][0]}, using most recent available period`
-                });
-                break;
-              }
+      if (competitors.length > 0) {
+        // Check if any competitor has data for the target period for this specific metric
+        const initialClientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
+        const hasCompetitorData = initialClientMetrics.some((m: any) => 
+          m.competitorId && m.metricName === metricName && m.timePeriod === targetPeriod
+        );
+        
+        if (!hasCompetitorData) {
+          // Find the most recent period with competitor data for this metric
+          const availablePeriods = ['2025-06', '2025-05', '2025-04', '2025-03', '2025-02', '2025-01'];
+          for (const period of availablePeriods) {
+            const periodMetrics = await storage.getMetricsByClient(clientId, period);
+            const hasPeriodCompetitorData = periodMetrics.some((m: any) => 
+              m.competitorId && m.metricName === metricName && m.timePeriod === period
+            );
+            
+            if (hasPeriodCompetitorData) {
+              targetPeriod = period;
+              logger.info('🔄 AI INSIGHTS: Adjusted period to find competitor data', {
+                originalPeriod: periodMapping["Last Month"][0],
+                adjustedPeriod: targetPeriod,
+                metricName: metricName,
+                reason: `No competitor data found for ${metricName} in ${periodMapping["Last Month"][0]}, using most recent available period`
+              });
+              break;
             }
           }
         }
