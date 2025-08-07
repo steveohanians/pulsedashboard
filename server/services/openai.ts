@@ -585,14 +585,14 @@ export async function generateMetricSpecificInsightsWithContext(
       return await generateInsightsWithCustomPromptAndContext(
         customPrompt,
         metricName,
-        enrichedData.metric.clientValue || 0,
+        enrichedData.metric?.clientValue || 0,
         competitorValues,
         competitorNames,
-        enrichedData.benchmarks?.industryAverage,
-        enrichedData.benchmarks?.cdPortfolioAverage,
-        enrichedData.client?.name,
-        enrichedData.client?.industry,
-        enrichedData.client?.businessSize,
+        enrichedData.benchmarks?.industryAverage || 0,
+        enrichedData.benchmarks?.cdPortfolioAverage || 0,
+        enrichedData.client?.name || 'Client',
+        enrichedData.client?.industry || 'General',
+        enrichedData.client?.businessSize || 'Medium',
         userContext
       );
     }
@@ -1069,7 +1069,7 @@ export async function generateMetricSpecificInsights(
       const competitorValues = enrichedData.benchmarks?.competitors?.map((c: { value: number }) => c.value) || [];
       const competitorNames = enrichedData.benchmarks?.competitors?.map((c: { name: string }) => c.name) || [];
       
-      logger.info('🎯 CALLING generateInsightsWithCustomPrompt', {
+      logger.info('Calling generateInsightsWithCustomPrompt', {
         metricName,
         clientValue: enrichedData.metric?.clientValue,
         cdAverage: enrichedData.benchmarks?.cdPortfolioAverage,
@@ -1090,7 +1090,7 @@ export async function generateMetricSpecificInsights(
         competitorNames
       );
       
-      logger.info('✅ AI INSIGHT GENERATED SUCCESSFULLY', {
+      logger.info('AI insight generated successfully', {
         metricName,
         hasContext: !!result.context,
         hasInsight: !!result.insight,

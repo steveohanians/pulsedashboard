@@ -306,7 +306,7 @@ export async function getDashboardDataOptimized(
         
         // Debug Session Duration in cached data
         const sessionDurationMetrics = cachedDailyData.filter(m => m.metricName === 'Session Duration');
-        logger.debug(`📊 Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
+        logger.debug(`Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
         
         // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
         const dailyByDate: Record<string, any[]> = {};
@@ -358,7 +358,7 @@ export async function getDashboardDataOptimized(
                 allMetricsInGroup[metricKey].push(parsedValue);
                 // Debug Session Duration specifically
                 if (metric.metricName === 'Session Duration') {
-                  logger.debug(`📊 Session Duration daily value added: ${parsedValue} from ${dayKey}`);
+                  logger.debug(`Session Duration daily value added: ${parsedValue} from ${dayKey}`);
                 }
               }
             });
@@ -381,14 +381,14 @@ export async function getDashboardDataOptimized(
             
             // Debug Session Duration grouping
             if (metricName === 'Session Duration') {
-              logger.debug(`📊 Session Duration group ${i + 1} average: ${average} from ${values.length} days`);
+              logger.debug(`Session Duration group ${i + 1} average: ${average} from ${values.length} days`);
             }
           });
         }
         
         // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
-          logger.debug(`📊 Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
+          logger.debug(`Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
           // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
           // Get ONLY authentic CD_Avg data - do not use CD_Portfolio data as fallback
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
@@ -492,7 +492,7 @@ export async function getDashboardDataOptimized(
     }
     
     // Debug each metric to understand the structure
-    console.log('🔍 DEVICE METRIC DEBUG:', {
+    console.log('Device metric debug:', {
       sourceType: metric.sourceType,
       deviceType: deviceType,
       valuePreview: metric.valuePreview,

@@ -13,7 +13,7 @@ interface OptimizedDashboardProps {
 }
 
 const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryVertical }: OptimizedDashboardProps) => {
-  console.log('🚨 DASHBOARD COMPONENT RENDER:', { clientId, timePeriod });
+
   
   // Memoize query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => [
@@ -27,7 +27,7 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
 
   // Load all AI insights once at dashboard level to prevent rate limiting
-  console.log('🚨 ABOUT TO EXECUTE INSIGHTS QUERY FOR:', clientId);
+
   const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
     queryKey: [`/api/insights/${clientId}`],
     enabled: !!clientId,
@@ -36,7 +36,7 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     retry: 1 // Reduce retries to prevent spam
   });
   
-  console.log('🔍 INSIGHTS QUERY EXECUTED - Status:', { 
+  console.log('Insights query executed - Status:', { 
     loading: insightsLoading, 
     hasData: !!insightsData, 
     error: insightsError,
@@ -45,7 +45,7 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
   
   // Always log insights debug to see what's happening
-  console.log('🚨 DASHBOARD INSIGHTS DEBUG (ALWAYS):', {
+  console.log('Dashboard insights debug:', {
     loading: insightsLoading,
     error: insightsError,
     hasData: !!insightsData,

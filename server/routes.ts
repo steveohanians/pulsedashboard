@@ -318,12 +318,12 @@ export function registerRoutes(app: Express): Server {
       
       // JSON serialization safety check to prevent malformed responses
       try {
-        console.error('🚨 TESTING JSON SERIALIZATION...');
+        console.error('Testing JSON serialization...');
         const testSerialized = JSON.stringify(result);
-        console.error('✅ JSON SERIALIZATION SUCCESS');
+        console.error('JSON serialization test passed');
         return res.json(result);
       } catch (serializationError) {
-        console.error('🚨 JSON SERIALIZATION FAILED:', (serializationError as Error).message);
+        console.error('JSON serialization failed:', (serializationError as Error).message);
         logger.error("JSON serialization error in dashboard response", { 
           error: (serializationError as Error).message,
           resultKeys: Object.keys(result),
@@ -555,7 +555,7 @@ export function registerRoutes(app: Express): Server {
         };
       }).filter((c: any) => c.value !== null);
       
-      logger.info('🎯 AI COMPETITOR VALUES DEBUG', { 
+      logger.info('AI competitor values debug', { 
         metricName, 
         targetPeriod,
         competitorCount: competitorData.length,
@@ -634,7 +634,7 @@ export function registerRoutes(app: Express): Server {
         }
       }
       
-      logger.info('🎯 AI CLIENT VALUE DEBUG', { 
+      logger.info('AI client value debug', { 
         metricName, 
         targetPeriod,
         clientValueFromDB: clientMetricForPeriod?.value,
@@ -682,7 +682,7 @@ export function registerRoutes(app: Express): Server {
         cdPortfolioAverage = cdMetricForPeriod ? parseDistributionMetricValue(cdMetricForPeriod.value, metricName) : metricData.CD_Avg;
       }
       
-      logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
+      logger.info('AI benchmark values debug', { 
         metricName, 
         targetPeriod,
         industryAvgFromDB: industryMetricForPeriod?.value,
@@ -1005,7 +1005,7 @@ export function registerRoutes(app: Express): Server {
           return value !== null ? sum + value : sum;
         }, 0) / cdMetricsForPeriod.length : null;
 
-      logger.info('🎯 AI CONTEXT VALUES DEBUG', {
+      logger.info('AI context values debug', {
         metricName,
         targetPeriod,
         clientValueFromDB,

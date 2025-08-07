@@ -148,7 +148,6 @@ export default function AIInsights({
 
   // Reset typing states when content changes or isTyping changes
   useEffect(() => {
-    console.log('[AIInsights] Effect triggered - isTyping:', isTyping);
     if (isTyping) {
       // For typing mode, reset all states to start typing sequence
       setContextComplete(false);
@@ -353,7 +352,6 @@ export default function AIInsights({
                   text={context} 
                   speed={5}
                   onComplete={() => {
-                    console.log('[AIInsights] Context typing complete');
                     setContextComplete(true);
                     setShowInsight(true);
                   }}
@@ -379,7 +377,6 @@ export default function AIInsights({
                   text={insight} 
                   speed={5}
                   onComplete={() => {
-                    console.log('[AIInsights] Insight typing complete');
                     setInsightComplete(true);
                     setShowRecommendation(true);
                   }}
@@ -405,7 +402,6 @@ export default function AIInsights({
                   text={recommendation} 
                   speed={5}
                   onComplete={() => {
-                    console.log('[AIInsights] Recommendation typing complete');
                     setRecommendationComplete(true);
                   }}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
@@ -418,7 +414,7 @@ export default function AIInsights({
             {/* Timestamp and Action Buttons - Only show after recommendation is complete */}
             {(() => {
               const shouldShowButtons = !isTyping || recommendationComplete;
-              console.log(`🔘 [${metricName || 'Unknown'}] Button visibility check:`, {
+              console.log(`Button visibility check for ${metricName || 'Unknown'}:`, {
                 isTyping,
                 recommendationComplete,
                 shouldShowButtons,
