@@ -163,9 +163,9 @@ export class InsightDataAggregator {
         }
       });
 
-      // Calculate trend
-      const currentClientValue = currentData.Client ? parseMetricValue(currentData.Client) : null;
-      const previousClientValue = previousData.Client ? parseMetricValue(previousData.Client) : null;
+      // Calculate trend - with special handling for Device Distribution
+      const currentClientValue = currentData.Client ? this.parseClientValue(currentData.Client, metricName) : null;
+      const previousClientValue = previousData.Client ? this.parseClientValue(previousData.Client, metricName) : null;
       
       const { trendDirection, percentageChange } = this.calculateTrend(
         currentClientValue,
@@ -189,6 +189,46 @@ export class InsightDataAggregator {
   }
 
   /**
+   * Parse client value with special handling for distribution metrics
+   */
+  private parseClientValue(value: any, metricName: string): number | null {
+    // Special handling for Device Distribution
+    if (metricName === 'Device Distribution') {
+      try {
+        let parsedArray;
+        
+        // Handle double-encoded JSON string
+        if (typeof value === 'string') {
+          parsedArray = JSON.parse(value);
+        } else {
+          parsedArray = value;
+        }
+        
+        if (Array.isArray(parsedArray)) {
+          // Return desktop percentage as the primary metric for AI insights
+          const desktopData = parsedArray.find(item => item.device === 'Desktop');
+          if (desktopData && typeof desktopData.percentage === 'number') {
+            logger.info('Device Distribution desktop percentage extracted for AI', {
+              desktopPercentage: desktopData.percentage,
+              fullData: parsedArray
+            });
+            return desktopData.percentage;
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to parse Device Distribution data for AI insights', {
+          value: typeof value === 'string' ? value.substring(0, 100) : value,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return null;
+    }
+    
+    // Use standard parsing for other metrics
+    return parseMetricValue(value);
+  }
+
+  /**
    * Group metrics by name and source type
    */
   private groupMetricsByName(metrics: Metric[]): Record<string, Record<string, number | string>> {
@@ -196,7 +236,7 @@ export class InsightDataAggregator {
       if (!acc[metric.metricName]) {
         acc[metric.metricName] = {};
       }
-      acc[metric.metricName][metric.sourceType] = metric.value;
+      acc[metric.metricName][metric.sourceType] = metric.value as number | string;
       return acc;
     }, {});
   }
