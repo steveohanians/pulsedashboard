@@ -42,6 +42,14 @@ const insightsStorage = {
           logger.warn('Authentication required for loading insights');
           return null;
         }
+        
+        // Handle rate limiting gracefully
+        if (response.status === 429) {
+          const errorText = await response.text().catch(() => 'Rate limit exceeded');
+          logger.warn('Rate limit hit during insight loading', { clientId, metricName, error: errorText });
+          return null; // Return null instead of throwing to prevent cascading failures
+        }
+        
         throw new Error(`Failed to fetch insights: ${response.statusText}`);
       }
       
@@ -71,7 +79,14 @@ const insightsStorage = {
       
       return null;
     } catch (error) {
-      logger.error('Failed to load insights from database', { error: (error as Error).message, clientId, metricName });
+      // Enhanced error handling with circuit breaker awareness
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('Too Many Requests') || errorMessage.includes('429')) {
+        logger.warn('Rate limit circuit breaker - stopping individual API calls', { clientId, metricName });
+        return null; // Graceful degradation instead of error logging spam
+      }
+      
+      logger.error('Failed to load insights from database', { error: errorMessage, clientId, metricName });
       return null;
     }
   },
@@ -96,9 +111,11 @@ interface MetricInsightBoxProps {
   };
   onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
   preloadedInsight?: any; // Pre-loaded insight to prevent API calls
+  isRateLimited?: boolean; // Circuit breaker state from parent
+  batchGenerating?: boolean; // Batch generation in progress
 }
 
-export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
+export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight, isRateLimited = false, batchGenerating = false }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<StoredInsight['data'] & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
@@ -135,6 +152,15 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           onStatusChange(preloadedInsight.status);
         }
         return;
+      }
+
+      // Check for circuit breaker conditions before making any API calls
+      if (isRateLimited || batchGenerating) {
+        console.log(`🔒 [${metricName}] Circuit breaker active - no individual API calls allowed`, {
+          isRateLimited,
+          batchGenerating
+        });
+        return; // Don't make any API calls when rate limited or batch generating
       }
 
       console.log(`⚠️ [${metricName}] No preloaded insight - falling back to API call`);

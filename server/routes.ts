@@ -2704,9 +2704,223 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Rate limiting and circuit breaker state
+  const rateLimitState = new Map<string, { 
+    isBlocked: boolean; 
+    blockedUntil: number; 
+    failureCount: number 
+  }>();
+
+  const checkRateLimit = (clientId: string): boolean => {
+    const state = rateLimitState.get(clientId);
+    if (!state) return false;
+    
+    if (state.isBlocked && Date.now() < state.blockedUntil) {
+      return true; // Still blocked
+    }
+    
+    if (state.isBlocked && Date.now() >= state.blockedUntil) {
+      // Unblock and reset
+      rateLimitState.set(clientId, { isBlocked: false, blockedUntil: 0, failureCount: 0 });
+      return false;
+    }
+    
+    return false;
+  };
+
+  const triggerRateLimit = (clientId: string): void => {
+    const state = rateLimitState.get(clientId) || { isBlocked: false, blockedUntil: 0, failureCount: 0 };
+    state.failureCount++;
+    
+    // Progressive backoff: 30s, 60s, 120s
+    const backoffTime = Math.min(30000 * Math.pow(2, state.failureCount - 1), 120000);
+    state.isBlocked = true;
+    state.blockedUntil = Date.now() + backoffTime;
+    
+    rateLimitState.set(clientId, state);
+    logger.warn(`Rate limit circuit breaker activated for ${clientId}`, {
+      backoffTime: backoffTime / 1000,
+      failureCount: state.failureCount
+    });
+  };
+
+  // Batch generation endpoint for all metrics
+  app.post("/api/insights/generate-batch", async (req, res) => {
+    try {
+      const { clientId, timePeriod } = req.body;
+      
+      // Check circuit breaker
+      if (checkRateLimit(clientId)) {
+        const state = rateLimitState.get(clientId);
+        const remainingTime = Math.ceil((state!.blockedUntil - Date.now()) / 1000);
+        return res.status(429).json({ 
+          message: "Rate limit circuit breaker active", 
+          retryAfter: remainingTime,
+          type: "circuit_breaker"
+        });
+      }
+      
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      logger.info(`Batch generating insights for ${clientId}`, { timePeriod });
+
+      const metrics = await storage.getMetricsByClient(clientId, timePeriod);
+      
+      // Group metrics by name and calculate averages
+      interface MetricGroup {
+        client: number | null;
+        cdAvg: number | null;
+        industry: number | null;
+        competitors: number[];
+      }
+
+      const metricGroups: Record<string, MetricGroup> = {};
+      metrics.forEach(metric => {
+        if (!metricGroups[metric.metricName]) {
+          metricGroups[metric.metricName] = {
+            client: null,
+            cdAvg: null,
+            industry: null,
+            competitors: []
+          };
+        }
+        
+        switch (metric.sourceType) {
+          case "Client":
+            metricGroups[metric.metricName].client = parseMetricValue(metric.value);
+            break;
+          case "CD_Avg":
+            metricGroups[metric.metricName].cdAvg = parseMetricValue(metric.value);
+            break;
+          case "Industry":
+            metricGroups[metric.metricName].industry = parseMetricValue(metric.value);
+            break;
+          case "Competitor":
+            metricGroups[metric.metricName].competitors.push(parseMetricValue(metric.value) || 0);
+            break;
+        }
+      });
+
+      // Generate insights for all metrics with 1-second delays to prevent rate limiting
+      const insights = [];
+      const metricNames = Object.keys(metricGroups);
+      
+      for (let i = 0; i < metricNames.length; i++) {
+        const metricName = metricNames[i];
+        const data = metricGroups[metricName];
+        
+        if (data.client !== null && data.cdAvg !== null) {
+          try {
+            // Add delay between API calls to prevent rate limiting
+            if (i > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            const analysis = await generateMetricInsights(
+              metricName,
+              data.client,
+              data.cdAvg,
+              data.industry || data.cdAvg, // Fallback to CD_Avg if no industry data
+              data.competitors,
+              client.industryVertical,
+              client.businessSize
+            );
+
+            const insight = await storage.createAIInsight({
+              clientId,
+              metricName,
+              timePeriod,
+              contextText: analysis.context,
+              insightText: analysis.insight,
+              recommendationText: analysis.recommendation
+            });
+            
+            insights.push(insight);
+            logger.info(`Generated insight for ${metricName}`, { clientId });
+          } catch (error) {
+            logger.error("Failed to generate insight for metric", { 
+              metricName, 
+              error: (error as Error).message 
+            });
+            
+            // Check if this is a rate limit error
+            if ((error as Error).message.includes('rate limit') || 
+                (error as Error).message.includes('429') ||
+                (error as Error).message.includes('Too Many Requests')) {
+              triggerRateLimit(clientId);
+              return res.status(429).json({ 
+                message: "Rate limit reached during batch generation",
+                generatedCount: insights.length,
+                totalRequested: metricNames.length,
+                partialResults: insights,
+                type: "openai_rate_limit"
+              });
+            }
+            
+            // Continue with other metrics instead of failing the entire request
+            insights.push({
+              metricName,
+              error: `Failed to generate insight: ${(error as Error).message}`,
+              clientId,
+              timePeriod
+            });
+          }
+        } else {
+          logger.warn(`Insufficient data for ${metricName}`, { 
+            hasClient: data.client !== null,
+            hasCdAvg: data.cdAvg !== null,
+            hasIndustry: data.industry !== null,
+            competitorCount: data.competitors.length
+          });
+          
+          insights.push({
+            metricName,
+            error: `Insufficient data - missing client or CD average values`,
+            clientId,
+            timePeriod
+          });
+        }
+      }
+
+      // Reset circuit breaker on successful completion
+      rateLimitState.delete(clientId);
+      
+      logger.info(`Batch generation completed for ${clientId}`, {
+        totalGenerated: insights.filter(i => !('error' in i)).length,
+        totalRequested: metricNames.length,
+        timePeriod
+      });
+
+      res.json({ 
+        insights,
+        batchComplete: true,
+        totalGenerated: insights.filter(i => !('error' in i)).length,
+        totalRequested: metricNames.length
+      });
+    } catch (error) {
+      logger.error("Error in batch insight generation", { error: (error as Error).message, stack: (error as Error).stack });
+      res.status(500).json({ message: "Internal server error during batch generation" });
+    }
+  });
+
+  // Keep original single-metric generation for backwards compatibility
   app.post("/api/insights/generate", async (req, res) => {
     try {
       const { clientId, timePeriod } = req.body;
+      
+      // Check circuit breaker
+      if (checkRateLimit(clientId)) {
+        const state = rateLimitState.get(clientId);
+        const remainingTime = Math.ceil((state!.blockedUntil - Date.now()) / 1000);
+        return res.status(429).json({ 
+          message: "Rate limit circuit breaker active", 
+          retryAfter: remainingTime,
+          type: "circuit_breaker"
+        });
+      }
       
       const client = await storage.getClient(clientId);
       if (!client) {
@@ -2780,6 +2994,18 @@ export function registerRoutes(app: Express): Server {
               metricName, 
               error: (error as Error).message 
             });
+            
+            // Check if this is a rate limit error
+            if ((error as Error).message.includes('rate limit') || 
+                (error as Error).message.includes('429') ||
+                (error as Error).message.includes('Too Many Requests')) {
+              triggerRateLimit(clientId);
+              return res.status(429).json({ 
+                message: "Rate limit reached", 
+                type: "openai_rate_limit"
+              });
+            }
+            
             // Continue with other metrics instead of failing the entire request
             insights.push({
               metricName,
