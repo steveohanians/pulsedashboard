@@ -66,7 +66,7 @@ async function generateCdAvgDeviceDistribution(clientId: string, periodsToQuery:
         const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
         
         deviceMetrics.forEach(metric => {
-          const deviceType = metric.channel || metric.deviceType || 'Unknown';
+          const deviceType = metric.channel || 'Unknown';
           const parsedValue = parseMetricValue(metric.value);
           
           if (parsedValue !== null && deviceType !== 'Unknown') {
@@ -124,8 +124,8 @@ export async function getFiltersOptimized() {
   const clients = await storage.getClients();
   const businessSizeOrder = ["Startup", "Small Business", "Medium Business", "Large Business", "Enterprise"];
   
-  const availableBusinessSizes = [...new Set(clients.map(c => c.businessSize).filter(Boolean))];
-  const availableIndustryVerticals = [...new Set(clients.map(c => c.industryVertical).filter(Boolean))];
+  const availableBusinessSizes = Array.from(new Set(clients.map(c => c.businessSize).filter(Boolean)));
+  const availableIndustryVerticals = Array.from(new Set(clients.map(c => c.industryVertical).filter(Boolean)));
   
   const sortedBusinessSizes = businessSizeOrder.filter(size => availableBusinessSizes.includes(size));
   const unknownBusinessSizes = availableBusinessSizes.filter(size => !businessSizeOrder.includes(size)).sort();
@@ -152,7 +152,10 @@ export async function getDashboardMetricsOptimized(clientId: string, filters: an
   if (cached) return cached;
   
   const client = await storage.getClient(clientId);
-  if (!client) throw new Error('Client not found');
+  if (!client) {
+    logger.error('Client not found in queryOptimizer', { clientId });
+    throw new Error('Client not found');
+  }
   
   const periodsToQuery = generateTimePeriodsWithOffsets(filters.timePeriod, filters.customStartDate, filters.customEndDate);
   const shouldCreateTimeSeriesData = filters.timePeriod === 'Custom Date Range' || periodsToQuery.length > 1 || filters.timePeriod === 'Last Month';
@@ -199,7 +202,7 @@ export async function getDashboardMetricsOptimized(clientId: string, filters: an
           const dailyByDate: Record<string, any[]> = {};
           
           dailyMetrics.forEach(metric => {
-            const dateKey = `${lastMonthPeriod}-daily-${metric.date || 'unknown'}`;
+            const dateKey = `${lastMonthPeriod}-daily-${(metric as any).date || 'unknown'}`;
             if (!dailyByDate[dateKey]) {
               dailyByDate[dateKey] = [];
             }
@@ -267,7 +270,7 @@ export async function getDashboardMetricsOptimized(clientId: string, filters: an
                       try {
                         const parsed = JSON.parse(metric.value);
                         processedValue = Number(parsed.percentage) || 0;
-                      } catch (e) {
+                      } catch (e: any) {
                         processedValue = 0;
                       }
                     } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
@@ -290,7 +293,7 @@ export async function getDashboardMetricsOptimized(clientId: string, filters: an
             }
             
             timeSeriesData = groupedPeriods;
-            periodsToQuery = Object.keys(groupedPeriods).sort();
+            // periodsToQuery = Object.keys(groupedPeriods).sort();
           }
         }
       }

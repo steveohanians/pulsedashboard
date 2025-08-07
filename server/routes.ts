@@ -280,17 +280,20 @@ export function registerRoutes(app: Express): Server {
       console.error(`🚨 DASHBOARD ROUTE: About to call getDashboardDataOptimized for client ${clientId}, periods:`, periodsToQuery);
       
       const result = await getDashboardDataOptimized(
-        client,
-        periodsToQuery,
-        businessSize as string,
-        industryVertical as string,
-        timePeriod as string
+        clientId,
+        {
+          businessSize: businessSize as string,
+          industryVertical: industryVertical as string,
+          timePeriod: timePeriod as string,
+          customStartDate: req.query.customStartDate as string,
+          customEndDate: req.query.customEndDate as string
+        }
       );
       
       console.error(`🚨 DASHBOARD RESULT: Got ${result.metrics?.length || 0} total metrics`);
       
       // Debug competitor metrics specifically
-      const competitorMetrics = result.metrics?.filter(m => m.sourceType === 'Competitor') || [];
+      const competitorMetrics = result.metrics?.filter((m: any) => m.sourceType === 'Competitor') || [];
       console.error(`🚨 COMPETITOR METRICS IN RESULT: ${competitorMetrics.length} found`);
       
       if (competitorMetrics.length > 0) {
