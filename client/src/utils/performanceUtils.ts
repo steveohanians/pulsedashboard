@@ -1,0 +1,155 @@
+// Unified performance monitoring utilities
+// Consolidates timing, measurement, and monitoring functionality
+
+/**
+ * General purpose performance monitoring with metrics tracking
+ */
+class PerformanceMonitor {
+  private metrics: Map<string, number> = new Map();
+  private startTime: number = Date.now();
+
+  markStart(label: string): void {
+    this.metrics.set(`${label}_start`, Date.now());
+  }
+
+  markEnd(label: string): number {
+    const startTime = this.metrics.get(`${label}_start`);
+    if (!startTime) return 0;
+    
+    const duration = Date.now() - startTime;
+    this.metrics.set(`${label}_duration`, duration);
+    
+    // Log slow operations for optimization
+    if (duration > 1000) {
+      console.warn(`🐌 Slow operation: ${label} took ${duration}ms`);
+    }
+    
+    return duration;
+  }
+
+  getMetrics(): Record<string, number> {
+    const result: Record<string, number> = {};
+    this.metrics.forEach((value, key) => {
+      if (key.endsWith('_duration')) {
+        result[key.replace('_duration', '')] = value;
+      }
+    });
+    return result;
+  }
+
+  getTotalTime(): number {
+    return Date.now() - this.startTime;
+  }
+}
+
+/**
+ * Render completion timing with DOM element verification
+ */
+class RenderTimer {
+  private startTime: number = 0;
+  private endTime: number = 0;
+
+  start() {
+    this.startTime = Date.now();
+  }
+
+  markComplete() {
+    this.endTime = Date.now();
+    const totalTime = this.endTime - this.startTime;
+    
+    // Verify content is rendered
+    const rechartWrappers = document.querySelectorAll('[data-testid="recharts-wrapper"]');
+    const metricElements = document.querySelectorAll('[id^="metric-"]');
+    const chartContainers = document.querySelectorAll('.recharts-wrapper');
+    const hasContent = rechartWrappers.length > 0 || chartContainers.length > 0;
+    const hasMetrics = metricElements.length > 0;
+    
+    // Store results for retrieval
+    localStorage.setItem('lastRenderTime', totalTime.toString());
+    localStorage.setItem('lastRenderDetails', JSON.stringify({
+      time: totalTime,
+      hasCharts: hasContent,
+      hasMetrics: hasMetrics,
+      timestamp: Date.now()
+    }));
+    
+    return totalTime;
+  }
+
+  getLastRenderTime(): number | null {
+    const time = localStorage.getItem('lastRenderTime');
+    return time ? parseFloat(time) : null;
+  }
+}
+
+/**
+ * Browser performance API integration for detailed metrics
+ */
+class BrowserPerformanceTimer {
+  private navigationStart: number = 0;
+  private firstContentfulPaint: number = 0;
+  private largestContentfulPaint: number = 0;
+  private dashboardComplete: number = 0;
+  private observer: PerformanceObserver | null = null;
+
+  constructor() {
+    this.setupPerformanceObserver();
+    this.measureNavigationStart();
+  }
+
+  private setupPerformanceObserver() {
+    if ('PerformanceObserver' in window) {
+      this.observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.entryType === 'paint') {
+            if (entry.name === 'first-contentful-paint') {
+              this.firstContentfulPaint = entry.startTime;
+              console.log(`🎨 [PERF] First Contentful Paint: ${entry.startTime.toFixed(0)}ms`);
+            }
+          }
+          
+          if (entry.entryType === 'largest-contentful-paint') {
+            this.largestContentfulPaint = entry.startTime;
+          }
+        }
+      });
+      
+      try {
+        this.observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
+      } catch (e) {
+        console.warn('Performance observer not fully supported');
+      }
+    }
+  }
+
+  private measureNavigationStart() {
+    if (performance.timing) {
+      this.navigationStart = performance.timing.navigationStart;
+    } else {
+      this.navigationStart = Date.now();
+    }
+  }
+
+  markDashboardComplete() {
+    this.dashboardComplete = Date.now();
+    const totalTime = this.dashboardComplete - this.navigationStart;
+    return totalTime;
+  }
+
+  getPerformanceMetrics() {
+    return {
+      navigationStart: this.navigationStart,
+      firstContentfulPaint: this.firstContentfulPaint,
+      largestContentfulPaint: this.largestContentfulPaint,
+      dashboardComplete: this.dashboardComplete
+    };
+  }
+}
+
+// Export singleton instances for consistent usage
+export const performanceMonitor = new PerformanceMonitor();
+export const renderTimer = new RenderTimer();
+export const browserPerformanceTimer = new BrowserPerformanceTimer();
+
+// Export classes for custom instantiation if needed
+export { PerformanceMonitor, RenderTimer, BrowserPerformanceTimer };

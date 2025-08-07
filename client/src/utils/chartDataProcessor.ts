@@ -4,7 +4,8 @@
  */
 
 import { parseMetricValue } from './metricParser';
-import { convertMetricValue } from './chartUtils';
+import { convertMetricValue, getMetricFallback, shouldConvertToPercentage, shouldConvertToMinutes } from './chartUtils';
+import { getCompanyId, formatCompanyLabel } from './sharedUtilities';
 
 export interface CompanyMetricData {
   id: string;
@@ -158,61 +159,11 @@ export function processDeviceDistribution(
   });
 }
 
-/**
- * Get the appropriate company ID field based on source type
- */
-function getCompanyId(metric: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string | null {
-  switch (sourceType) {
-    case 'Portfolio':
-      return metric.cd_portfolio_company_id || metric.cdPortfolioCompanyId;
-    case 'Competitor':
-      return metric.competitor_id || metric.competitorId;
-    case 'Benchmark':
-      return metric.benchmark_company_id || metric.benchmarkCompanyId;
-    default:
-      return null;
-  }
-}
-
-/**
- * Format company label based on type and domain
- */
-function formatCompanyLabel(company: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string {
-  if (sourceType === 'Portfolio') {
-    return company.name || company.domain?.replace('https://', '').replace('http://', '') || 'Unknown';
-  } else {
-    return company.domain?.replace('https://', '').replace('http://', '') || company.name || 'Unknown';
-  }
-}
+// Company utility functions moved to sharedUtilities.ts for broader reuse
 
 /**
  * Convert raw values for display (percentages, minutes, etc.)
  */
 // convertValue moved to chartUtils.ts and merged with formatMetricValue for consistency
 
-/**
- * Generate fallback values based on metric type
- */
-export function getMetricFallback(metricName: string): number {
-  const fallbacks: Record<string, number> = {
-    'Bounce Rate': 42.3,
-    'Session Duration': 3.2,
-    'Pages per Session': 2.8,
-    'Sessions per User': 1.6
-  };
-  return fallbacks[metricName] || 0;
-}
-
-/**
- * Determine if metric should be converted to percentage
- */
-export function shouldConvertToPercentage(metricName: string): boolean {
-  return metricName === 'Bounce Rate';
-}
-
-/**
- * Determine if metric should be converted to minutes
- */
-export function shouldConvertToMinutes(metricName: string): boolean {
-  return metricName === 'Session Duration';
-}
+// Metric processing utilities moved to chartUtils.ts for better organization

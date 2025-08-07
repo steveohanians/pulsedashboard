@@ -24,16 +24,18 @@ import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/constants/chart-colors";
-import { deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
+import { deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataHelpers";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
 import { parseMetricValue } from "@/utils/metricParser";
 import { 
   processCompanyMetrics, 
-  processDeviceDistribution,
+  processDeviceDistribution
+} from "@/utils/chartDataProcessor";
+import { 
   getMetricFallback,
   shouldConvertToPercentage,
   shouldConvertToMinutes 
-} from "@/utils/chartDataProcessor";
+} from "@/utils/chartUtils";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 

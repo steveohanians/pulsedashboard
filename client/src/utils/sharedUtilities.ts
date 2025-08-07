@@ -84,6 +84,37 @@ export const storageUtils = {
 // Removed unused urlUtils - not used by any components
 
 /**
+ * Company utility functions
+ */
+
+/**
+ * Get the appropriate company ID field based on source type
+ */
+export function getCompanyId(metric: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string | null {
+  switch (sourceType) {
+    case 'Portfolio':
+      return metric.cd_portfolio_company_id || metric.cdPortfolioCompanyId;
+    case 'Competitor':
+      return metric.competitor_id || metric.competitorId;
+    case 'Benchmark':
+      return metric.benchmark_company_id || metric.benchmarkCompanyId;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Format company label based on type and domain
+ */
+export function formatCompanyLabel(company: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string {
+  if (sourceType === 'Portfolio') {
+    return company.name || company.domain?.replace('https://', '').replace('http://', '') || 'Unknown';
+  } else {
+    return company.domain?.replace('https://', '').replace('http://', '') || company.name || 'Unknown';
+  }
+}
+
+/**
  * Debounce utility
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(

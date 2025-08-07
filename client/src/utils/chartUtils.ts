@@ -76,6 +76,33 @@ export function convertMetricValue(
 }
 
 /**
+ * Generate fallback values based on metric type (moved from chartDataProcessor.ts)
+ */
+export function getMetricFallback(metricName: string): number {
+  const fallbacks: Record<string, number> = {
+    'Bounce Rate': 42.3,
+    'Session Duration': 3.2,
+    'Pages per Session': 2.8,
+    'Sessions per User': 1.6
+  };
+  return fallbacks[metricName] || 0;
+}
+
+/**
+ * Determine if metric should be converted to percentage (moved from chartDataProcessor.ts)
+ */
+export function shouldConvertToPercentage(metricName: string): boolean {
+  return metricName === 'Bounce Rate';
+}
+
+/**
+ * Determine if metric should be converted to minutes (moved from chartDataProcessor.ts)
+ */
+export function shouldConvertToMinutes(metricName: string): boolean {
+  return metricName === 'Session Duration';
+}
+
+/**
  * Generate deterministic seeded random number for consistent chart variations
  */
 export function seededRandom(seed: string): number {

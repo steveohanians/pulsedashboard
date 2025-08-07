@@ -1,5 +1,5 @@
-// Utility functions for processing chart data
-// This file consolidates data processing logic for better maintainability
+// Helper utilities for chart data processing
+// This file contains supporting utilities for chart data manipulation
 
 /**
  * Constants for chart colors and configurations
