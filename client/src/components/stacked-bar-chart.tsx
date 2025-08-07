@@ -1,23 +1,38 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 
+/** Data structure for each bar in the stacked chart */
 interface StackedBarData {
+  /** Source type identifier (Client, Competitor, CD_Avg) */
   sourceType: string;
+  /** Display label for the bar */
   label: string;
+  /** Channel data segments for stacking */
   channels: {
+    /** Channel name (Organic Search, Direct, etc.) */
     name: string;
+    /** Absolute value for the channel */
     value: number;
+    /** Percentage of total for proportional display */
     percentage: number;
+    /** Color for visual differentiation */
     color: string;
   }[];
 }
 
 interface StackedBarChartProps {
+  /** Array of bar data for stacked visualization */
   data: StackedBarData[];
+  /** Chart title displayed in header */
   title: string;
+  /** Optional description text below title */
   description?: string;
 }
 
+/** 
+ * Predefined color scheme for traffic channels using CSS custom properties.
+ * Ensures consistent visual identity across all chart instances.
+ */
 const CHANNEL_COLORS = {
   'Organic Search': 'hsl(var(--color-channel-organic))',
   'Direct': 'hsl(var(--color-channel-direct))',
@@ -28,6 +43,23 @@ const CHANNEL_COLORS = {
   'Other': 'hsl(var(--color-channel-other))',
 };
 
+/**
+ * Interactive stacked bar chart component for traffic channel distribution visualization.
+ * Displays comparative data across multiple sources (Client, Competitors, Portfolio Average)
+ * with hover interactions, color-coded segments, and responsive empty state handling.
+ * 
+ * Features:
+ * - Interactive hover states with detailed tooltips
+ * - Responsive percentage-based bar segments
+ * - Consistent traffic channel color theming
+ * - Graceful empty state handling with informative messages
+ * - Card-based layout with header and description support
+ * - Accessible click and keyboard interactions
+ * 
+ * @param data - Array of stacked bar data with channels and percentages
+ * @param title - Chart title displayed in the card header
+ * @param description - Optional descriptive text below the title
+ */
 export function StackedBarChart({ data, title, description }: StackedBarChartProps) {
   
   const [hoveredSegment, setHoveredSegment] = useState<{

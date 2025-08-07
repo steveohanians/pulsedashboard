@@ -1,4 +1,3 @@
-// Side navigation component for dashboard
 import { TrendingUp, BarChart3, Users2, Globe, Smartphone, Clock, Settings, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +10,7 @@ interface SideNavigationProps {
   className?: string;
 }
 
+/** Navigation items configuration with icons for dashboard metrics sections */
 const navigationItems = [
   { 
     id: "Bounce Rate", 
@@ -44,7 +44,17 @@ const navigationItems = [
   }
 ];
 
-export default function SideNavigation({
+/**
+ * Desktop side navigation component for dashboard with metric section links.
+ * Provides persistent navigation with active state indication, admin panel access,
+ * and data refresh functionality. Features smooth hover transitions and icon-based design.
+ * 
+ * @param activeSection - Currently active dashboard section for highlighting
+ * @param onSectionClick - Function to handle metric section navigation
+ * @param userRole - User role for conditional admin panel access
+ * @param className - Additional CSS classes for styling customization
+ */
+export function SideNavigation({
   activeSection,
   onSectionClick,
   userRole,

@@ -8,16 +8,43 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+/** Global prompt template data structure from server */
 interface GlobalPromptTemplate {
+  /** Unique template identifier */
   id: string;
+  /** Template display name */
   name: string;
+  /** AI prompt template content */
   promptTemplate: string;
+  /** Whether template is currently active */
   isActive: boolean;
+  /** Optional template description */
   description?: string;
+  /** Template creation timestamp */
   createdAt: string;
+  /** Last update timestamp */
   updatedAt: string;
 }
 
+/**
+ * Administrative form component for managing global AI prompt templates.
+ * Provides interface for editing AI prompt templates with real-time validation,
+ * optimistic updates, and comprehensive error handling. Features automatic 
+ * data fetching, form state synchronization, and visual feedback for all operations.
+ * 
+ * Key features:
+ * - Real-time template fetching with TanStack Query
+ * - Optimistic updates with error rollback
+ * - Form validation and state management
+ * - Visual feedback for save operations (idle/saving/success/error)
+ * - Automatic cache invalidation on updates
+ * - Error handling with user-friendly messages
+ * - Read-only template name display
+ * - Large textarea for prompt template editing
+ * 
+ * Used in admin panel for centralized AI prompt management across the platform.
+ * Template changes affect all AI-generated insights and responses system-wide.
+ */
 export function GlobalPromptTemplateForm() {
   const [formData, setFormData] = useState({
     name: "", // Read-only, populated from server

@@ -14,7 +14,20 @@ interface GaugeChartProps {
   }>;
 }
 
-export default function MetricGaugeChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: GaugeChartProps) {
+/**
+ * Gauge chart component that displays performance metrics as a semi-circular speedometer.
+ * Uses a pie chart with colored performance zones (excellent, good, poor) and a needle
+ * indicator showing the client's position relative to industry benchmarks.
+ * 
+ * @param metricName - Name of the metric being displayed (affects performance zone calculation)
+ * @param timePeriod - Time period for the metric data
+ * @param clientData - Client's metric value to display on the gauge
+ * @param industryAvg - Industry average for comparison context
+ * @param cdAvg - Clear Digital portfolio average for comparison
+ * @param clientUrl - Optional client URL identifier (defaults to 'Client')
+ * @param competitors - Array of competitor data for additional context
+ */
+export function MetricGaugeChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: GaugeChartProps) {
   const clientKey = clientUrl || 'Client';
   
   // Calculate gauge ranges (assuming bounce rate where lower is better)

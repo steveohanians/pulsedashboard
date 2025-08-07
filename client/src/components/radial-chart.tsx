@@ -15,7 +15,20 @@ interface RadialChartProps {
   }>;
 }
 
-export default function MetricRadialChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: RadialChartProps) {
+/**
+ * Radial (donut) chart component that displays performance metrics as comparative
+ * segments around a circular chart. Shows client data alongside industry averages,
+ * CD portfolio average, and competitor values with interactive highlighting.
+ * 
+ * @param metricName - Name of the metric being displayed
+ * @param timePeriod - Time period for the metric data
+ * @param clientData - Client's metric value to display in the chart
+ * @param industryAvg - Industry average for comparative analysis
+ * @param cdAvg - Clear Digital portfolio average for benchmarking
+ * @param clientUrl - Optional client URL identifier (defaults to 'Client')
+ * @param competitors - Array of competitor data with labels and values
+ */
+export function MetricRadialChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors }: RadialChartProps) {
   const clientKey = clientUrl || 'Client';
   
   // Prepare data for donut chart

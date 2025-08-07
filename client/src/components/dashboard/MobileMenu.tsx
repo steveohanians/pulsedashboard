@@ -1,4 +1,3 @@
-// Mobile menu component for dashboard navigation
 import { useState } from 'react';
 import { Menu, X, LogOut, Settings, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ interface MobileMenuProps {
   onSectionClick: (section: string) => void;
 }
 
+/** Navigation items for dashboard metrics sections */
 const navigationItems = [
   { id: "Bounce Rate", label: "Bounce Rate" },
   { id: "Session Duration", label: "Session Duration" },
@@ -23,7 +23,20 @@ const navigationItems = [
   { id: "Device Distribution", label: "Device Distribution" }
 ];
 
-export default function MobileMenu({
+/**
+ * Mobile navigation menu component for dashboard with collapsible design.
+ * Provides metric section navigation, admin panel access (role-based), and logout functionality.
+ * Features overlay background, slide-in animation, and automatic closing on section selection.
+ * 
+ * @param isOpen - Whether the mobile menu is currently open
+ * @param onToggle - Function to toggle menu open/closed state
+ * @param onClose - Function to explicitly close the menu
+ * @param userRole - Current user's role for conditional admin access
+ * @param onLogout - Function to handle user logout
+ * @param activeSection - Currently active dashboard section identifier
+ * @param onSectionClick - Function to handle section selection clicks
+ */
+export function MobileMenu({
   isOpen,
   onToggle,
   onClose,

@@ -19,7 +19,7 @@ interface TypewriterTextProps {
  * Creates a typewriter effect for text with markdown bold support
  * Supports **bold** syntax and animated cursor
  */
-export default function TypewriterText({ text, speed = 15, onComplete, className }: TypewriterTextProps) {
+export function TypewriterText({ text, speed = 15, onComplete, className }: TypewriterTextProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
 

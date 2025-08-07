@@ -5,21 +5,53 @@ import { Sparkles, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { InsightGenerationButton } from './insight-generation-button';
 
 interface ComprehensiveInsightsDisplayProps {
+  /** Client identifier for insights fetching */
   clientId: string;
+  /** Optional time period filter for insights */
   period?: string;
 }
 
+/** Stored insight data structure from database */
 interface StoredInsight {
+  /** Unique insight identifier */
   id: string;
+  /** Metric name associated with insight */
   metricName: string;
+  /** Time period for the insight */
   timePeriod: string;
+  /** Context information for the insight */
   contextText: string;
+  /** Main insight text content */
   insightText: string;
+  /** Actionable recommendation text */
   recommendationText: string;
+  /** Insight creation timestamp */
   createdAt: string;
 }
 
-export default function ComprehensiveInsightsDisplay({ 
+/**
+ * Comprehensive insights display component for AI-generated analytics insights.
+ * Fetches and displays stored insights from the database, separating dashboard overview
+ * from metric-specific insights. Features interactive insight generation, categorized
+ * display with icons, and responsive card-based layout for optimal readability.
+ * 
+ * Key features:
+ * - Automatic insights fetching with TanStack Query
+ * - Separation of dashboard overview vs metric-specific insights
+ * - Interactive insight generation buttons for missing insights
+ * - Visual categorization with metric-specific icons and badges
+ * - Responsive card layout with proper loading and error states
+ * - Real-time insight refresh capability
+ * - Period-based filtering support
+ * - Structured display of context, insights, and recommendations
+ * 
+ * Used in dashboard for displaying AI-powered analytics insights and recommendations
+ * to help users understand their performance metrics and take actionable steps.
+ * 
+ * @param clientId - Client identifier for targeted insights
+ * @param period - Optional period filter for time-based insights
+ */
+export function ComprehensiveInsightsDisplay({ 
   clientId, 
   period 
 }: ComprehensiveInsightsDisplayProps) {

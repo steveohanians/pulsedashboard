@@ -18,7 +18,7 @@ import MetricBarChart from "@/components/bar-chart";
 import { StackedBarChart } from "@/components/stacked-bar-chart";
 import LollipopChart from "@/components/lollipop-chart";
 import AIInsights from "@/components/ai-insights";
-import ComprehensiveInsightsDisplay from "@/components/comprehensive-insights-display";
+import { ComprehensiveInsightsDisplay } from "@/components/comprehensive-insights-display";
 import MetricInsightBox from "@/components/metric-insight-box";
 import CompetitorModal from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";

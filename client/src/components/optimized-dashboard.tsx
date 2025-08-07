@@ -2,16 +2,40 @@ import { memo, useMemo, Suspense, lazy } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DashboardSkeleton } from './dashboard-skeleton';
 
-// Lazy load heavy components  
+/** Lazy-loaded MetricInsightBox component for performance optimization */
 const MetricInsightBox = lazy(() => import('./metric-insight-box'));
 
 interface OptimizedDashboardProps {
+  /** Client identifier for data fetching */
   clientId: string;
+  /** Time period for metrics display */
   timePeriod: string;
+  /** Business size filter for benchmarking */
   businessSize: string;
+  /** Industry vertical for comparative analysis */
   industryVertical: string;
 }
 
+/**
+ * Performance-optimized dashboard component with advanced loading strategies.
+ * Implements React.memo for re-render prevention, lazy loading for code splitting,
+ * Suspense for progressive loading, and optimized TanStack Query configuration.
+ * Features intelligent caching, preloaded insights, and skeleton loading states.
+ * 
+ * Performance optimizations:
+ * - React.memo prevents unnecessary re-renders
+ * - Lazy loading reduces initial bundle size
+ * - Suspense provides smooth loading experience
+ * - Memoized query keys prevent cache misses
+ * - Optimized staleTime and gcTime for caching
+ * - Reduced retries to prevent rate limiting
+ * - Preloaded insights for faster metric rendering
+ * 
+ * @param clientId - Unique client identifier for dashboard data
+ * @param timePeriod - Time period filter for metrics
+ * @param businessSize - Business size for benchmarking context
+ * @param industryVertical - Industry category for competitive analysis
+ */
 const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryVertical }: OptimizedDashboardProps) => {
 
   

@@ -16,7 +16,7 @@ interface PerformanceIndicatorProps {
   className?: string;
 }
 
-export default function PerformanceIndicator({
+export function PerformanceIndicator({
   clientValue,
   industryValue,
   metricName,

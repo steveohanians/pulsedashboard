@@ -24,7 +24,7 @@ interface ChartContainerProps {
   };
 }
 
-export default function ChartContainer({
+export function ChartContainer({
   title,
   children,
   periodDisplay,
