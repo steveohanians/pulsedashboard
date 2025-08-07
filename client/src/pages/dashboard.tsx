@@ -177,7 +177,6 @@ export default function Dashboard() {
       // Validate data structure for consistent processing
       const competitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
       if (competitorMetrics.length === 0) {
-        console.warn('No competitor data available for analysis');
       }
     }
   }, [dashboardData?.metrics]);
@@ -362,7 +361,6 @@ export default function Dashboard() {
       
       // Convert Session Duration from seconds to minutes for all source types
       if (metric.metricName === 'Session Duration' && value > 60) {
-        console.log(`🔍 GROUPED METRICS ${metric.sourceType}: converting ${value} seconds to minutes`);
         value = value / 60;
       }
       
@@ -556,47 +554,23 @@ export default function Dashboard() {
   const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
-    // Comprehensive device debugging
-    console.log('🔍 DEVICE DEBUG - Total metrics:', deviceMetrics.length);
-    console.log('🔍 DEVICE DEBUG - By source type:', {
-      Client: deviceMetrics.filter(m => m.sourceType === 'Client').length,
-      Competitor: deviceMetrics.filter(m => m.sourceType === 'Competitor').length,
-      CD_Avg: deviceMetrics.filter(m => m.sourceType === 'CD_Avg').length
-    });
+    // Process device metrics by source type
     
     // Debug competitor device metrics specifically
     const competitorDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Competitor');
-    console.log('🔍 COMPETITOR DEVICE METRICS:', competitorDeviceMetrics.length);
     
     if (competitorDeviceMetrics.length > 0) {
-      console.log('🔍 COMPETITOR DEVICE SAMPLE:', {
-        metric: competitorDeviceMetrics[0].metricName,
-        channel: competitorDeviceMetrics[0].channel,
-        value: competitorDeviceMetrics[0].value,
-        valueType: typeof competitorDeviceMetrics[0].value,
-        competitorId: competitorDeviceMetrics[0].competitorId,
-        timePeriod: (competitorDeviceMetrics[0] as any).timePeriod
-      });
+        // Found competitor device metrics
     } else {
-      console.log('🚨 NO COMPETITOR DEVICE METRICS FOUND');
       // Check what competitor metrics exist
       const allCompetitorMetrics = metrics.filter(m => m.sourceType === 'Competitor');
-      console.log('🔍 ALL COMPETITOR METRICS:', {
-        count: allCompetitorMetrics.length,
-        metricNames: Array.from(new Set(allCompetitorMetrics.map(m => m.metricName))),
-        sample: allCompetitorMetrics.length > 0 ? {
-          name: allCompetitorMetrics[0].metricName,
-          value: allCompetitorMetrics[0].value,
-          channel: allCompetitorMetrics[0].channel
-        } : null
-      });
+        // No competitor device metrics found
     }
     
     // Quick validation that GA4 device data is found
     const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
     const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
     if (ga4DeviceArrayMetric) {
-      console.log('✅ Found GA4 device array metric');
     }
     
     const DEVICE_COLORS = {
@@ -654,10 +628,8 @@ export default function Dashboard() {
             // Unescape JSON
             jsonString = jsonString.replace(/\\"/g, '"');
             
-            console.log('🔍 DEVICE PARSE - Attempting to parse:', jsonString.substring(0, 100));
             
             const deviceData = JSON.parse(jsonString);
-            console.log('✅ DEVICE PARSE - Success:', deviceData);
             
             if (Array.isArray(deviceData)) {
               deviceData.forEach((device: any) => {
@@ -1662,8 +1634,6 @@ export default function Dashboard() {
             
             // DEBUG: Session Duration metricData content
             if (metricName === 'Session Duration') {
-              console.log(`🔍 SESSION DURATION metricData:`, metricData);
-              console.log(`🔍 Available source types:`, Object.keys(metricData));
             }
             
 
@@ -1912,7 +1882,6 @@ export default function Dashboard() {
                       }}
                       preloadedInsight={(() => {
                         const insight = insightsLookup[metricName] || null;
-                        console.log(`🔍 INSIGHT LOOKUP [${metricName}]:`, {
                           found: !!insight,
                           insightId: insight?.id,
                           lookupKeys: Object.keys(insightsLookup),

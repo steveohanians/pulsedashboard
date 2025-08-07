@@ -21,9 +21,6 @@ export function getCachedData(key: string): any | null {
 export function setCachedData(key: string, data: any, ttlMs: number = 60000): void {
   queryCache.set(key, {
     data,
-    timestamp: Date.now(),
-    ttl: ttlMs
-  });
 }
 
 export function clearCache(pattern?: string): void {
@@ -36,12 +33,10 @@ export function clearCache(pattern?: string): void {
       }
     }
     keysToDelete.forEach(key => queryCache.delete(key));
-    console.log(`Cache cleared: deleted ${keysToDelete.length} keys matching pattern "${pattern}"`);
+    // Cache entries cleared
   } else {
     // Clear all cache entries
-    const totalKeys = queryCache.size;
     queryCache.clear();
-    console.log(`Cache cleared: deleted all ${totalKeys} keys`);
   }
 }
 
@@ -54,9 +49,6 @@ export function debugCacheKeys(): string[] {
  * This ensures authentic data integrity by using real client data rather than synthetic fallbacks
  */
 async function generateCdAvgDeviceDistributionIfMissing(
-  clientId: string, 
-  periodsToQuery: string[], 
-  processedData: any[]
 ): Promise<void> {
   try {
     // Check if CD_Avg device distribution data already exists
@@ -89,7 +81,6 @@ async function generateCdAvgDeviceDistributionIfMissing(
         }
         deviceAverages.get(metric.channel)!.push(metric.value);
       }
-    });
 
     // Generate CD_Avg metrics for each period using authentic calculated averages
     for (const period of periodsToQuery) {
@@ -99,36 +90,17 @@ async function generateCdAvgDeviceDistributionIfMissing(
           
           // Store authentic CD_Avg device distribution data in database
           await storage.createMetric({
-            clientId: null,
-            metricName: 'Device Distribution',
-            value: avgPercentage,
-            sourceType: 'CD_Avg',
-            timePeriod: period,
-            channel: deviceName
-          });
 
           // Add to processed data for immediate use
           processedData.push({
-            metricName: 'Device Distribution',
-            value: avgPercentage,
-            sourceType: 'CD_Avg',
-            timePeriod: period,
-            channel: deviceName,
-            competitorId: null
-          });
         }
       }
     }
 
     logger.info('Generated authentic CD_Avg device distribution data', {
       clientId,
-      periodsCount: periodsToQuery.length,
-      deviceTypes: Array.from(deviceAverages.keys()),
-      averageDesktop: deviceAverages.get('Desktop') ? 
         (deviceAverages.get('Desktop')!.reduce((a, b) => a + b, 0) / deviceAverages.get('Desktop')!.length).toFixed(1) : 'N/A',
-      averageMobile: deviceAverages.get('Mobile') ? 
         (deviceAverages.get('Mobile')!.reduce((a, b) => a + b, 0) / deviceAverages.get('Mobile')!.length).toFixed(1) : 'N/A'
-    });
 
   } catch (error) {
     logger.error('Error generating CD_Avg device distribution data:', error);
@@ -160,9 +132,6 @@ export async function getFiltersOptimized() {
   const unknownBusinessSizes = availableBusinessSizes.filter(size => !businessSizeOrder.includes(size)).sort();
   
   const data = {
-    businessSizes: ["All", ...sortedBusinessSizes, ...unknownBusinessSizes],
-    industryVerticals: ["All", ...availableIndustryVerticals.sort()],
-    timePeriods: ["Last Month", "Last Quarter", "Last Year", "Custom Date Range"]
   };
   
   setCachedData(cacheKey, data, 5 * 60 * 1000); // 5 minutes
@@ -171,10 +140,6 @@ export async function getFiltersOptimized() {
 
 // Optimized dashboard query with parallel fetching and minimal data
 export async function getDashboardDataOptimized(
-  client: any,
-  periodsToQuery: string[],
-  businessSize: string,
-  industryVertical: string,
   timePeriod?: string
 ) {
   logger.info('🔴 DASHBOARD FUNCTION CALLED - CLIENT: ' + client.id);
@@ -302,11 +267,9 @@ export async function getDashboardDataOptimized(
       const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
       
       if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
-        logger.debug(`📊 Found ${cachedDailyData.length} cached daily metrics for grouping`);
         
         // Debug Session Duration in cached data
         const sessionDurationMetrics = cachedDailyData.filter(m => m.metricName === 'Session Duration');
-        logger.debug(`📊 Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
         
         // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
         const dailyByDate: Record<string, any[]> = {};
@@ -318,7 +281,6 @@ export async function getDashboardDataOptimized(
             dailyByDate[dayKey] = [];
           }
           dailyByDate[dayKey].push(metric);
-        });
         
         // Sort days and group into 6 periods (every ~5 days)
         const sortedDays = Object.keys(dailyByDate).sort();
@@ -358,11 +320,8 @@ export async function getDashboardDataOptimized(
                 allMetricsInGroup[metricKey].push(parsedValue);
                 // Debug Session Duration specifically
                 if (metric.metricName === 'Session Duration') {
-                  logger.debug(`📊 Session Duration daily value added: ${parsedValue} from ${dayKey}`);
                 }
               }
-            });
-          });
           
           // Calculate averages for each metric in this group
           Object.keys(allMetricsInGroup).forEach(metricKey => {
@@ -372,23 +331,14 @@ export async function getDashboardDataOptimized(
             
             groupedPeriods[periodKey].push({
               metricName,
-              value: average,
-              sourceType: 'Client',
-              timePeriod: periodKey,
-              channel: null,
-              competitorId: null
-            });
             
             // Debug Session Duration grouping
             if (metricName === 'Session Duration') {
-              logger.debug(`📊 Session Duration group ${i + 1} average: ${average} from ${values.length} days`);
             }
-          });
         }
         
         // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
-          logger.debug(`📊 Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
           // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
           // Get ONLY authentic CD_Avg data - do not use CD_Portfolio data as fallback
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
@@ -404,15 +354,9 @@ export async function getDashboardDataOptimized(
                   try {
                     const parsed = JSON.parse(metric.value);
                     processedValue = Number(parsed.percentage) || 0;
-                    console.log('🔍 GROUPED PERIODS JSON PARSE SUCCESS:', {
-                      metricName: metric.metricName,
-                      sourceType: metric.sourceType,
-                      periodKey: periodKey,
-                      parsedPercentage: processedValue,
-                      channel: metric.channel
-                    });
+                    // Successfully parsed traffic/device data
                   } catch (e) {
-                    console.log('🔍 GROUPED PERIODS JSON PARSE ERROR:', e, 'Metric:', metric.metricName, 'Value:', metric.value);
+                    // Failed to parse JSON data
                     processedValue = 0;
                   }
                 } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
@@ -422,15 +366,6 @@ export async function getDashboardDataOptimized(
               }
               
               groupedPeriods[periodKey].push({
-                metricName: metric.metricName,
-                value: processedValue, // Use processed value instead of raw
-                sourceType: 'CD_Avg', // Standardize to CD_Avg for chart display
-                timePeriod: periodKey,
-                channel: metric.channel,
-                competitorId: null
-              });
-            });
-          });
   
           timeSeriesData = groupedPeriods;
           periodsToQuery = Object.keys(groupedPeriods).sort();
@@ -464,8 +399,6 @@ export async function getDashboardDataOptimized(
 
   // Process device distribution metrics into frontend-expected structure
   const deviceDistribution = {
-    client: {} as any,
-    cdAvg: {} as any
   };
 
   // Group device metrics by source type
@@ -482,7 +415,7 @@ export async function getDashboardDataOptimized(
         const parsed = JSON.parse(metric.value);
         value = Number(parsed.percentage) || 0;
       } catch (error) {
-        console.log('🔍 DEVICE JSON PARSE ERROR:', error, 'Raw value:', metric.value);
+        
         value = null;
       }
     } else if (metric.valuePreview !== undefined) {
@@ -491,50 +424,26 @@ export async function getDashboardDataOptimized(
       value = parseFloat(String(metric.value).replace('%', ''));
     }
     
-    // Debug each metric to understand the structure
-    console.log('🔍 DEVICE METRIC DEBUG:', {
-      sourceType: metric.sourceType,
-      deviceType: deviceType,
-      valuePreview: metric.valuePreview,
-      rawValue: metric.value,
-      valueType: typeof metric.value,
-      timePeriod: metric.timePeriod,
-      parsedValue: value,
-      hasValueProperty: 'value' in metric,
-      allMetricKeys: Object.keys(metric),
-      isJSON: metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')
-    });
+    // Process device distribution data
     
     if (metric.sourceType === 'Client' && deviceType && value !== null && !isNaN(value)) {
       deviceDistribution.client[deviceType] = value;
     } else if (metric.sourceType === 'CD_Avg' && deviceType && value !== null && !isNaN(value)) {
       deviceDistribution.cdAvg[deviceType] = value;
     }
-  });
 
-  // Debug logging for device distribution structure
-  console.log('🔍 DEVICE DEBUG - Processed deviceDistribution:', {
-    client: deviceDistribution.client,
-    cdAvg: deviceDistribution.cdAvg,
-    rawMetricsCount: deviceDistributionMetrics.length
-  });
+  // Device distribution processing complete
 
   const result = {
     client,
     competitors,
-    insights: [], // Load insights asynchronously
     trafficChannelMetrics, // Add separate traffic channel data for stacked bar chart
     deviceDistributionMetrics, // Add separate device distribution data for donut chart
     deviceDistribution, // Add processed device distribution for frontend charts
     // For multi-period queries OR "Last Month" (daily data), structure as time series
     ...(shouldCreateTimeSeriesData ? {
-      isTimeSeries: true,
-      periods: periodsToQuery,
       timeSeriesData,
-      metrics: processedData // Keep flat structure for backward compatibility
     } : {
-      isTimeSeries: false,
-      metrics: processedData
     })
   };
   
@@ -543,11 +452,6 @@ export async function getDashboardDataOptimized(
 }
 
 function processMetricsData(
-  allMetricsArrays: any[],
-  allCompetitorMetricsArrays: any[],
-  allFilteredIndustryMetricsArrays: any[],
-  allFilteredCdAvgMetricsArrays: any[],
-  periodsToQuery: string[]
 ) {
   // Flatten and combine all metrics data efficiently
   const allMetrics = allMetricsArrays.flat();
@@ -578,25 +482,11 @@ function processMetricsData(
         if (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') {
           const percentageResult = parseMetricPercentage(m.value);
           finalValue = percentageResult ? percentageResult.percentage : 0;
-          console.log('🔍 PARSE SUCCESS - Device Distribution:', {
-            metricName: m.metricName,
-            sourceType: m.sourceType,
-            channel: m.channel,
-            rawValue: m.value,
-            parsedPercentage: finalValue
-          });
         } else {
           finalValue = parseMetricValue(m.value);
         }
         
         result.push({
-          metricName: m.metricName,
-          value: finalValue,
-          sourceType: m.sourceType,
-          timePeriod: m.timePeriod,
-          channel: m.channel,
-          competitorId: m.competitorId || m.competitor_id // Handle both field formats
-        });
       } else if ((m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') && !m.channel) {
         // Parse GA4 JSON format: [{"channel": "Direct", "sessions": 4439, "percentage": 64.87...}]
         // DON'T use parseMetricValue for traffic channels - it returns null for JSON!
@@ -615,31 +505,11 @@ function processMetricsData(
                   : (channel.channel || channel.name);
                 
                 result.push({
-                  metricName: m.metricName,
-                  value: channel.percentage || channel.value || channel.sessions,
-                  sourceType: m.sourceType,
-                  timePeriod: m.timePeriod,
-                  channel: channelName,
-                  competitorId: m.competitorId
-                });
-              });
             }
           } catch (e) {
             logger.warn('🚛 QUERY OPTIMIZER - Failed to parse traffic channel JSON:', {
-              sourceType: m.sourceType,
-              timePeriod: m.timePeriod,
-              value: rawValue,
-              error: e
-            });
             // Fallback for invalid JSON - keep original
             result.push({
-              metricName: m.metricName,
-              value: rawValue,
-              sourceType: m.sourceType,
-              timePeriod: m.timePeriod,
-              channel: m.channel,
-              competitorId: m.competitorId
-            });
           }
         } else if (Array.isArray(rawValue)) {
           // Already parsed JSON array
@@ -652,68 +522,25 @@ function processMetricsData(
               : (channel.channel || channel.name);
             
             result.push({
-              metricName: m.metricName,
-              value: channel.percentage || channel.value || channel.sessions,
-              sourceType: m.sourceType,
-              timePeriod: m.timePeriod,
-              channel: channelName,
-              competitorId: m.competitorId
-            });
-          });
         } else {
           logger.warn('🚛 QUERY OPTIMIZER - Unexpected traffic channel format:', {
-            sourceType: m.sourceType,
-            timePeriod: m.timePeriod,
-            valueType: typeof rawValue,
-            value: rawValue
-          });
         }
       } else if (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') {
         // Traffic channel metric that doesn't match above patterns
         logger.warn('🚛 QUERY OPTIMIZER - Unhandled traffic channel format:', {
-          sourceType: m.sourceType,
-          timePeriod: m.timePeriod,
-          valueType: typeof m.value,
-          hasChannel: !!m.channel,
-          value: m.value
-        });
         
         // Still try to add it as a regular metric
         result.push({
-          metricName: m.metricName,
-          value: parseMetricValue(m.value),
-          sourceType: m.sourceType,
-          timePeriod: m.timePeriod,
-          channel: m.channel,
-          competitorId: m.competitorId
-        });
       } else {
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = parseMetricValue(m.value);
         
         // Debug competitor metrics specifically
         if (m.sourceType === 'Competitor') {
-          console.log('🔍 COMPETITOR METRIC DEBUG IN PROCESSING:', {
-            metricName: m.metricName,
-            sourceType: m.sourceType,
-            rawValue: m.value,
-            valueType: typeof m.value,
-            valueString: typeof m.value === 'string' ? m.value.substring(0, 100) : 'not-string',
-            parsedValue: finalValue,
-            competitorId: m.competitorId || m.competitor_id
-          });
         }
         
         result.push({
-          metricName: m.metricName,
-          value: finalValue,
-          sourceType: m.sourceType,
-          timePeriod: m.timePeriod,
-          channel: m.channel,
-          competitorId: m.competitorId || m.competitor_id // Handle both field formats
-        });
       }
-    });
     
     return result;
   };
@@ -726,29 +553,11 @@ function processMetricsData(
   // AGGRESSIVE DEBUGGING: Check CD_Avg raw data before processing
   const cdAvgRaw = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
   logger.debug('CD_AVG RAW BEFORE PROCESSING:', {
-    count: cdAvgRaw.length,
-    samples: cdAvgRaw.slice(0, 2).map(m => ({
-      value: m.value,
-      type: typeof m.value,
-      channel: m.channel,
-      valuePreview: typeof m.value === 'string' ? m.value.substring(0, 50) : m.value
     }))
-  });
 
   // Debug competitor metrics before processing
   console.error('🚨 COMPETITOR METRICS PIPELINE DEBUG:', {
-    rawCompetitorCount: allCompetitorMetrics.length,
-    periodsQueried: periodsToQuery,
-    competitorSample: allCompetitorMetrics.slice(0, 3).map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      valueType: typeof m.value,
-      valueIsNull: m.value === null,
-      hasValueProp: m.value && typeof m.value === 'object' && 'value' in m.value,
-      competitorId: m.competitorId || m.competitor_id,
-      timePeriod: m.timePeriod
     }))
-  });
   
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
@@ -758,17 +567,8 @@ function processMetricsData(
   ];
   
   // Debug competitor metrics after processing
+  // Processed competitor metrics for analysis
   const processedCompetitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
-  console.log('🔍 COMPETITOR METRICS DEBUG AFTER PROCESSING:', {
-    count: processedCompetitorMetrics.length,
-    sampleValues: processedCompetitorMetrics.slice(0, 3).map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      valueType: typeof m.value,
-      competitorId: m.competitorId,
-      timePeriod: m.timePeriod
-    }))
-  });
   
   return processedData;
 }
@@ -785,7 +585,6 @@ function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
       grouped[period] = [];
     }
     grouped[period].push(metric);
-  });
   
   return grouped;
 }

@@ -29,13 +29,10 @@ export function parseMetricValue(value: any): number | null {
       const parsed = JSON.parse(value);
       if (typeof parsed === 'object' && parsed !== null && 'value' in parsed) {
         const numValue = typeof parsed.value === 'number' ? parsed.value : parseFloat(parsed.value);
-        // Debug successful JSON parsing
-        console.log('✅ JSON PARSE SUCCESS:', { originalValue: value, parsedValue: numValue });
         return numValue;
       }
     } catch (e) {
-      // Log failed JSON parsing attempts
-      console.log('❌ JSON PARSE FAILED:', { value: typeof value === 'string' ? value.substring(0, 100) : value, error: e instanceof Error ? e.message : String(e) });
+      // Silently handle JSON parse failures
     }
     
     // Parse as plain number

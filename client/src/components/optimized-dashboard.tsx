@@ -13,7 +13,6 @@ interface OptimizedDashboardProps {
 }
 
 const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryVertical }: OptimizedDashboardProps) => {
-  console.log('🚨 DASHBOARD COMPONENT RENDER:', { clientId, timePeriod });
   
   // Memoize query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => [
@@ -27,7 +26,6 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
 
   // Load all AI insights once at dashboard level to prevent rate limiting
-  console.log('🚨 ABOUT TO EXECUTE INSIGHTS QUERY FOR:', clientId);
   const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
     queryKey: [`/api/insights/${clientId}`],
     enabled: !!clientId,
@@ -36,7 +34,6 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     retry: 1 // Reduce retries to prevent spam
   });
   
-  console.log('🔍 INSIGHTS QUERY EXECUTED - Status:', { 
     loading: insightsLoading, 
     hasData: !!insightsData, 
     error: insightsError,
@@ -45,7 +42,6 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
   
   // Always log insights debug to see what's happening
-  console.log('🚨 DASHBOARD INSIGHTS DEBUG (ALWAYS):', {
     loading: insightsLoading,
     error: insightsError,
     hasData: !!insightsData,
@@ -78,7 +74,6 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     const insights = insightsResponse?.insights || insightsResponse || [];
     const lookup: Record<string, any> = {};
     
-    console.log('🔍 Dashboard insights data:', { 
       hasInsightsData: !!insightsData, 
       insightsCount: Array.isArray(insights) ? insights.length : 0,
       insightsPreview: insights.slice(0, 2),
@@ -88,12 +83,9 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     if (Array.isArray(insights)) {
       insights.forEach((insight: any) => {
         lookup[insight.metricName] = insight;
-        console.log(`✅ Added insight for: ${insight.metricName}`);
       });
     }
     
-    console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
-    console.log('🔍 Will preload insights for metrics:', ['Session Duration', 'Bounce Rate', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution']);
     return lookup;
   }, [insightsData]);
 

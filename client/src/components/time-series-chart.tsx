@@ -163,7 +163,6 @@ function generateRealTimeSeriesData(
         
         // Debug Session Duration processing
         if (metricName === 'Session Duration') {
-          console.log(`🔍 ${period} ${competitor.label}: Found competitorData, value=${value} (converting to minutes)`);
         }
         
         // Apply same conversions as current period
@@ -180,7 +179,6 @@ function generateRealTimeSeriesData(
         
         // Debug Session Duration fallback processing
         if (metricName === 'Session Duration') {
-          console.log(`🔍 ${period} ${competitor.label}: Using fallback, value=${value} (converting to minutes)`);
         }
         
         // Convert Session Duration from seconds to minutes if needed

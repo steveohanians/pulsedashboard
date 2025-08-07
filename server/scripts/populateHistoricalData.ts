@@ -86,7 +86,6 @@ const isMainModule = process.argv[1]?.includes('populateHistoricalData.ts');
 if (isMainModule) {
   populateHistoricalData()
     .then(result => {
-      console.log('✅ Historical data population completed:', result);
       process.exit(0);
     })
     .catch(error => {
