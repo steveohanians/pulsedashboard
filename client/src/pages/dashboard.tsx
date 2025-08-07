@@ -187,24 +187,26 @@ export default function Dashboard() {
     if (dashboardData?.metrics) {
       console.log("📊 Dashboard refreshed:", dashboardData.metrics.length, "metrics");
       
-      // Debug Session Duration competitor data in both views
-      const sessionDurationCompetitors = dashboardData.metrics.filter(m => 
-        m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
-      );
-      console.log("🔍 SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
-      if (sessionDurationCompetitors.length > 0) {
-        console.log("🔍 SESSION DURATION SAMPLES:", sessionDurationCompetitors.map(m => ({
-          value: m.value,
-          timePeriod: (m as any).timePeriod,
-          competitorId: m.competitorId
-        })));
-      } else {
-        console.log("🚨 NO SESSION DURATION COMPETITOR DATA - checking all metrics...");
-        const allCompetitorMetrics = dashboardData.metrics.filter(m => m.sourceType === 'Competitor');
-        console.log("🔍 ALL COMPETITOR METRICS:", {
-          count: allCompetitorMetrics.length,
-          metricNames: Array.from(new Set(allCompetitorMetrics.map(m => m.metricName)))
-        });
+      // Debug Session Duration competitor data in both views - with type safety
+      if (Array.isArray(dashboardData.metrics)) {
+        const sessionDurationCompetitors = dashboardData.metrics.filter((m: any) => 
+          m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
+        );
+        console.log("🔍 SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
+        if (sessionDurationCompetitors.length > 0) {
+          console.log("🔍 SESSION DURATION SAMPLES:", sessionDurationCompetitors.map((m: any) => ({
+            value: m.value,
+            timePeriod: m.timePeriod,
+            competitorId: m.competitorId
+          })));
+        } else {
+          console.log("🚨 NO SESSION DURATION COMPETITOR DATA - checking all metrics...");
+          const allCompetitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
+          console.log("🔍 ALL COMPETITOR METRICS:", {
+            count: allCompetitorMetrics.length,
+            metricNames: Array.from(new Set(allCompetitorMetrics.map((m: any) => m.metricName)))
+          });
+        }
       }
     }
   }, [dashboardData?.metrics]);
@@ -237,17 +239,20 @@ export default function Dashboard() {
   const insightsLookup = useMemo(() => {
     const lookup: Record<string, any> = {};
     
-    if (insightsData?.insights && Array.isArray(insightsData.insights)) {
-      console.log('🔍 PROCESSING INSIGHTS FOR LOOKUP:', {
-        totalInsights: insightsData.insights.length,
-        insightPreview: insightsData.insights.slice(0, 2),
-        fullInsightsResponse: insightsData
-      });
-      
-      insightsData.insights.forEach((insight: any) => {
-        lookup[insight.metricName] = insight;
-        console.log(`✅ Added insight for: ${insight.metricName}`);
-      });
+    if (insightsData && typeof insightsData === 'object' && 'insights' in insightsData) {
+      const insights = (insightsData as any).insights;
+      if (insights && Array.isArray(insights)) {
+        console.log('🔍 PROCESSING INSIGHTS FOR LOOKUP:', {
+          totalInsights: insights.length,
+          insightPreview: insights.slice(0, 2),
+          fullInsightsResponse: insightsData
+        });
+        
+        insights.forEach((insight: any) => {
+          lookup[insight.metricName] = insight;
+          console.log(`✅ Added insight for: ${insight.metricName}`);
+        });
+      }
     }
     
     console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
