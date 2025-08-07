@@ -1,8 +1,15 @@
+/**
+ * Custom hook for preloading critical application data
+ * Prefetches frequently-used data to improve navigation performance
+ */
 import { useEffect } from 'react';
 import { queryClient } from '@/lib/queryClient';
 
-// Preload critical data for faster navigation
-export function usePreloadData() {
+/**
+ * Preloads critical data on component mount for faster navigation
+ * Should be used at the app level to warm up the query cache
+ */
+export function usePreloadData(): void {
   useEffect(() => {
     // Preload user data
     queryClient.prefetchQuery({

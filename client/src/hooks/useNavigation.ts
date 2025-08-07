@@ -1,5 +1,9 @@
-// Custom hook for dashboard navigation logic
+/**
+ * Custom hook for dashboard navigation logic
+ * Handles section scrolling and active section detection
+ */
 import { useState, useEffect, useCallback } from 'react';
+import { debounce } from '@/utils/sharedUtilities';
 
 export function useNavigation() {
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
@@ -69,15 +73,3 @@ export function useNavigation() {
   };
 }
 
-// Debounce helper function
-function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(null, args), wait);
-  };
-}

@@ -1,16 +1,23 @@
-// Error boundary component for better error handling
+/**
+ * Error boundary component for better error handling
+ * Catches JavaScript errors anywhere in the child component tree
+ */
 import { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Props {
+  /** Child components to wrap with error boundary */
   children: ReactNode;
+  /** Custom fallback component to show on error */
   fallback?: ReactNode;
 }
 
 interface State {
+  /** Whether an error has been caught */
   hasError: boolean;
+  /** The error object if one was caught */
   error?: Error;
 }
 
@@ -25,7 +32,10 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // ErrorBoundary should use console.error for critical errors as this is a development tool
+    // Log error in development for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
   }
 
   render() {

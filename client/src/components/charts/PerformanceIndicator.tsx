@@ -1,11 +1,18 @@
-// Performance indicator component for showing metric comparisons
+/**
+ * Performance indicator component for showing metric comparisons
+ * Displays client vs industry values with visual performance indicators
+ */
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { formatMetricValue } from '@/utils/chartUtils';
 
 interface PerformanceIndicatorProps {
+  /** Client's metric value */
   clientValue: number;
+  /** Industry average value for comparison */
   industryValue: number;
+  /** Name of the metric for context-aware formatting */
   metricName: string;
+  /** Additional CSS classes */
   className?: string;
 }
 

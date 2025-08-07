@@ -1,12 +1,24 @@
+/**
+ * Typewriter text animation component
+ * Animates text character-by-character with bold markdown support
+ */
 import { useState, useEffect } from 'react';
 
 interface TypewriterTextProps {
+  /** Text to animate */
   text: string;
+  /** Animation speed in milliseconds per character */
   speed?: number;
+  /** Callback fired when animation completes */
   onComplete?: () => void;
+  /** Additional CSS classes */
   className?: string;
 }
 
+/**
+ * Creates a typewriter effect for text with markdown bold support
+ * Supports **bold** syntax and animated cursor
+ */
 export default function TypewriterText({ text, speed = 15, onComplete, className }: TypewriterTextProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);

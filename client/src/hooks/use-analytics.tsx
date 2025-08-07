@@ -1,8 +1,16 @@
+/**
+ * Custom hook for automatic Google Analytics page tracking
+ * Tracks page views whenever the route changes in the SPA
+ */
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { trackPageView } from '../lib/analytics';
 
-export const useAnalytics = () => {
+/**
+ * Automatically tracks page views when location changes
+ * Should be used once at the app level for global tracking
+ */
+export const useAnalytics = (): void => {
   const [location] = useLocation();
   const prevLocationRef = useRef<string>(location);
   

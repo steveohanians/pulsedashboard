@@ -1,18 +1,30 @@
+/**
+ * Validation warnings display component
+ * Shows contextual alerts for validation results with auto-detection of warning types
+ */
 import { AlertTriangle, CheckCircle, Info, XCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+/** Validation warning object with type and messaging */
 export interface ValidationWarning {
+  /** Warning severity level */
   type: 'info' | 'warning' | 'error' | 'success';
+  /** Optional title for the warning */
   title?: string;
+  /** Main warning message */
   message: string;
+  /** Additional details about the warning */
   details?: string;
 }
 
 interface ValidationWarningsProps {
+  /** Array of warnings (objects or strings) */
   warnings: ValidationWarning[] | string[];
+  /** Additional CSS classes */
   className?: string;
+  /** Whether to show section title */
   showTitle?: boolean;
 }
 

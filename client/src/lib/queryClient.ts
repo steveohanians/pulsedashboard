@@ -1,6 +1,21 @@
+/**
+ * React Query client configuration and API utilities
+ * Provides centralized HTTP request handling with error management
+ */
+
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
+/**
+ * HTTP methods supported by the API request function
+ */
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/**
+ * Validates response status and extracts error messages from failed requests
+ * @param res The fetch Response object to validate
+ * @throws Error with descriptive message if response is not ok
+ */
+async function validateResponse(res: Response): Promise<void> {
   if (!res.ok) {
     let errorMessage = res.statusText;
     
@@ -24,10 +39,17 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Generic API request function with automatic JSON handling
+ * @param method HTTP method (GET, POST, PUT, PATCH, DELETE)
+ * @param url The API endpoint URL
+ * @param data Optional request body data
+ * @returns Parsed response data or raw text
+ */
 export async function apiRequest(
-  method: string,
+  method: HttpMethod,
   url: string,
-  data?: unknown | undefined,
+  data?: unknown,
 ): Promise<any> {
   const res = await fetch(url, {
     method,
@@ -36,7 +58,7 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  await validateResponse(res);
   
   const text = await res.text();
   try {
@@ -46,7 +68,16 @@ export async function apiRequest(
   }
 }
 
+/**
+ * Behavior when receiving 401 Unauthorized responses
+ */
 type UnauthorizedBehavior = "returnNull" | "throw";
+
+/**
+ * Creates a React Query function with configurable 401 handling
+ * @param options Configuration for unauthorized response behavior
+ * @returns Query function for use with React Query
+ */
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
@@ -60,10 +91,16 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    await validateResponse(res);
     return await res.json();
   };
 
+/**
+ * Configured React Query client with optimized defaults for the application
+ * - 5 minute stale time for caching
+ * - No automatic refetching or retries
+ * - Session-based authentication support
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -1,12 +1,24 @@
-// Consistent loading spinner component
+/**
+ * Consistent loading spinner component
+ * Provides a centered loading indicator with customizable size and text
+ */
 import { Loader2 } from 'lucide-react';
 
 interface LoadingSpinnerProps {
+  /** Size variant for the spinner */
   size?: 'sm' | 'md' | 'lg';
+  /** Loading text to display */
   text?: string;
+  /** Additional CSS classes */
   className?: string;
 }
 
+/**
+ * Loading spinner with animated icon and text
+ * @param size - Controls icon and text size
+ * @param text - Message to show below spinner
+ * @param className - Additional styling classes
+ */
 export default function LoadingSpinner({ 
   size = 'md', 
   text = 'Loading...', 

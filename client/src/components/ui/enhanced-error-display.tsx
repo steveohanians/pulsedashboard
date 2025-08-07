@@ -1,23 +1,39 @@
+/**
+ * Enhanced error display component
+ * Provides rich error visualization with context, validation details, and suggestions
+ */
 import { AlertTriangle, XCircle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+/** Enhanced error object with additional context and suggestions */
 export interface EnhancedError {
+  /** Main error message */
   message: string;
+  /** Error code identifier */
   code?: string;
+  /** Array of validation error details */
   validationErrors?: string[];
+  /** Array of suggested solutions */
   suggestions?: string[];
+  /** Additional context about the error */
   context?: {
+    /** Field that caused the error */
     field?: string;
+    /** Value that caused the error */
     value?: string;
+    /** What this error conflicts with */
     conflictsWith?: string;
   };
 }
 
 interface EnhancedErrorDisplayProps {
+  /** Error object or simple error string */
   error: EnhancedError | string;
+  /** Additional CSS classes */
   className?: string;
+  /** Whether to show suggestion section */
   showSuggestions?: boolean;
 }
 

@@ -1,11 +1,14 @@
-// Centralized form validation utilities
-// Consolidates validation patterns found across form components
+/**
+ * Centralized form validation utilities
+ * Consolidates validation patterns found across form components
+ * Provides consistent validation schemas and helper functions
+ */
 
 import { z } from 'zod';
 
 /**
- * Common validation schemas
- * Consolidates repeated validation patterns across forms
+ * Common validation schemas for reuse across forms
+ * Consolidates repeated validation patterns for consistency
  */
 export const commonValidations = {
   email: z.string().email("Please enter a valid email address"),
@@ -33,11 +36,13 @@ export const commonValidations = {
 
 /**
  * Form field validation helpers
- * Standardizes field validation across components
+ * Standardizes field validation across components with immediate feedback
  */
 export const fieldValidators = {
   /**
    * Validate email format and common business rules
+   * @param value Email string to validate
+   * @returns Error message or null if valid
    */
   email: (value: string) => {
     const emailSchema = commonValidations.email;
@@ -46,7 +51,9 @@ export const fieldValidators = {
   },
 
   /**
-   * Validate password strength
+   * Validate password strength with detailed requirements
+   * @param value Password string to validate
+   * @returns Array of missing requirements or null if valid
    */
   password: (value: string) => {
     const errors: string[] = [];

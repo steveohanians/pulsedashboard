@@ -1,8 +1,16 @@
+/**
+ * Custom hook for responsive mobile detection
+ * Uses media query to detect if the viewport is mobile-sized
+ */
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
 
-export function useIsMobile() {
+/**
+ * Detects if the current viewport is mobile-sized (< 768px)
+ * @returns boolean indicating if the viewport is mobile
+ */
+export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {

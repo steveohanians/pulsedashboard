@@ -1,14 +1,23 @@
-// Reusable chart container component for consistent layout and styling
+/**
+ * Reusable chart container component for consistent layout and styling
+ * Provides standardized chart wrapper with header, title, and filter display
+ */
 import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Filter } from 'lucide-react';
 
 interface ChartContainerProps {
+  /** Chart title displayed in header */
   title: string;
+  /** Chart content to render */
   children: ReactNode;
+  /** Time period display text */
   periodDisplay?: string;
+  /** Additional CSS classes */
   className?: string;
+  /** Whether to show filter information */
   showFilters?: boolean;
+  /** Current filter values to display */
   filters?: {
     businessSize: string;
     industryVertical: string;

@@ -1,5 +1,8 @@
-// Centralized API request hook
-// Consolidates API request patterns found across multiple components
+/**
+ * Centralized API request hook
+ * Consolidates API request patterns found across multiple components
+ * Provides mutation handling with toast notifications and query invalidation
+ */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
