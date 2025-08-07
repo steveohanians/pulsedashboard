@@ -106,7 +106,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         // Refresh property access data to show updated info
         refetchPropertyAccess();
       } catch (error) {
-        console.warn("Failed to save property ID change:", error);
+        // Property ID change failed
       }
     }
   };
@@ -143,7 +143,7 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
         }, 1000);
       }
     } catch (error) {
-      console.warn("Connection test failed:", error);
+      // Connection test failed
       setHasTestedConnection(true); // Show status even on error
     } finally {
       setIsTestingConnection(false);

@@ -12,6 +12,16 @@ export const CHART_COLORS = {
   // Device distribution colors
   Desktop: 'hsl(var(--color-device-desktop))',
   Mobile: 'hsl(var(--color-device-mobile))',
+  Tablet: 'hsl(var(--color-device-tablet))',
+  Other: 'hsl(var(--color-device-other))',
+  
+  // Traffic channel colors
+  'Organic Search': 'hsl(var(--color-competitor-1))',
+  'Direct': 'hsl(var(--color-client))', 
+  'Social Media': 'hsl(var(--color-competitor-1))',
+  'Paid Search': 'hsl(var(--chart-3))',
+  'Email': 'hsl(var(--chart-5))',
+  'Referral': 'hsl(var(--chart-4))',
   
   // Default fallback
   Default: 'hsl(var(--color-default))'
@@ -20,7 +30,20 @@ export const CHART_COLORS = {
 // Specific device colors for device distribution charts
 export const DEVICE_COLORS = {
   Desktop: CHART_COLORS.Desktop,
-  Mobile: CHART_COLORS.Mobile
+  Mobile: CHART_COLORS.Mobile,
+  Tablet: CHART_COLORS.Tablet,
+  Other: CHART_COLORS.Other
+};
+
+// Traffic channel colors for channel distribution charts
+export const TRAFFIC_CHANNEL_COLORS = {
+  'Organic Search': CHART_COLORS['Organic Search'],
+  'Direct': CHART_COLORS['Direct'],
+  'Social Media': CHART_COLORS['Social Media'],
+  'Paid Search': CHART_COLORS['Paid Search'],
+  'Email': CHART_COLORS['Email'],
+  'Referral': CHART_COLORS['Referral'],
+  'Other': CHART_COLORS.Other
 };
 
 // Data source colors for metrics charts

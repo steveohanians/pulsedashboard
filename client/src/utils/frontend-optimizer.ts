@@ -92,20 +92,20 @@ export class DOMOptimizer {
   }
 }
 
-// Chart optimization utilities
-export class ChartOptimizer {
-  private static MAX_DATA_POINTS = 100;
-  private static SAMPLING_THRESHOLD = 500;
+// Chart optimization utilities - removed, no longer used
+// export class ChartOptimizer {
+  // private static MAX_DATA_POINTS = 100;
+  // private static SAMPLING_THRESHOLD = 500;
 
-  static optimizeDataPoints(data: any[]): any[] {
-    if (data.length <= this.SAMPLING_THRESHOLD) {
-      return data;
-    }
+  // static optimizeDataPoints(data: any[]): any[] {
+  //   if (data.length <= this.SAMPLING_THRESHOLD) {
+  //     return data;
+  //   }
 
-    // Use sampling to reduce data points while preserving trends
-    const samplingRate = Math.ceil(data.length / this.MAX_DATA_POINTS);
-    return data.filter((_, index) => index % samplingRate === 0);
-  }
+  //   // Use sampling to reduce data points while preserving trends
+  //   const samplingRate = Math.ceil(data.length / this.MAX_DATA_POINTS);
+  //   return data.filter((_, index) => index % samplingRate === 0);
+  // }
 
   static createLightweightChart(
     data: any[],
@@ -168,7 +168,7 @@ export class MemoryOptimizer {
 
   private static cleanupCache(): void {
     const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (now - entry.timestamp > this.CACHE_TTL) {
         this.cache.delete(key);
       }

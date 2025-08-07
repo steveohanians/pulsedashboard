@@ -60,14 +60,17 @@ export const TOOLTIP_STYLES = {
 
 /**
  * Format metric values for display in tooltips and charts
+ * Supports percentage, duration, and numeric formatting
  */
 export function formatMetricValue(value: number, metricName: string): string {
   const roundedValue = Math.round(value * 10) / 10;
   
   if (metricName.includes('Rate')) {
     return `${roundedValue}%`;
-  } else if (metricName.includes('Session Duration')) {
+  } else if (metricName.includes('Session Duration') || metricName.includes('Duration')) {
     return `${roundedValue} min`;
+  } else if (metricName.includes('Pages per Session') || metricName.includes('Sessions per User')) {
+    return `${roundedValue}`;
   }
   
   return `${roundedValue}`;
@@ -98,4 +101,79 @@ export function generateTemporalVariationSync(
   // Return empty array - authentic data only
   console.warn(`No authentic temporal data available for ${metricName}`);
   return [];
+}
+
+/**
+ * Calculate Y-axis domain for charts with proper scaling
+ */
+export function calculateYAxisDomain(data: any[], dataKey: string): [number, number] {
+  if (!data || data.length === 0) return [0, 100];
+  
+  const values = data.map(item => item[dataKey]).filter(val => val != null && !isNaN(val));
+  if (values.length === 0) return [0, 100];
+  
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const padding = (max - min) * 0.1; // 10% padding
+  
+  return [Math.max(0, min - padding), max + padding];
+}
+
+/**
+ * Generate chart colors for competitive analysis
+ */
+export function generateChartColors(competitors: any[]): Record<string, string> {
+  const colors = [
+    'hsl(var(--color-competitor-1))',
+    'hsl(var(--color-competitor-2))', 
+    'hsl(var(--color-competitor-3))',
+    'hsl(var(--color-competitor-4))',
+    'hsl(var(--color-competitor-5))'
+  ];
+  
+  const result: Record<string, string> = {
+    'Client': 'hsl(var(--color-client))',
+    'CD_Avg': 'hsl(var(--color-cd-avg))',
+    'Industry_Avg': 'hsl(var(--color-industry-avg))'
+  };
+  
+  competitors.forEach((competitor, index) => {
+    result[competitor.id] = colors[index % colors.length];
+  });
+  
+  return result;
+}
+
+/**
+ * Chart visibility state management
+ * Consolidates visibility patterns from multiple chart components
+ */
+export function createChartVisibilityState(clientKey: string, companyName: string, competitors: any[]) {
+  const initial: Record<string, boolean> = {
+    [clientKey]: true,
+    'Industry Avg': true,
+    [`${companyName} Clients Avg`]: true,
+  };
+  
+  competitors.forEach(comp => {
+    initial[comp.label] = true;
+  });
+  
+  return initial;
+}
+
+/**
+ * Update chart visibility state when competitors change
+ */
+export function updateChartVisibilityForCompetitors(
+  prevState: Record<string, boolean>, 
+  competitors: any[]
+): Record<string, boolean> {
+  const updated = { ...prevState };
+  competitors.forEach(comp => {
+    if (!(comp.label in updated)) {
+      updated[comp.label] = true; // Default new competitors to visible
+    }
+  });
+  return updated;
 }

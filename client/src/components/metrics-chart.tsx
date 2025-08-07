@@ -1,5 +1,4 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 import { DATA_SOURCE_COLORS } from '@/constants/chart-colors';
 
 interface MetricsChartProps {
@@ -25,18 +24,16 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }
 
-  // Optimize bar chart data points (Session Duration already converted in groupedMetrics)
+  // Process bar chart data points (Session Duration already converted in groupedMetrics)
   const chartDataPoints = Object.entries(data).map(([key, value]) => ({
     name: key,
     value: Math.round(value * 10) / 10,
     fill: DATA_SOURCE_COLORS[key as keyof typeof DATA_SOURCE_COLORS] || 'hsl(var(--color-default))'
   }));
-  
-  const optimizedData = ChartOptimizer.optimizeDataPoints(chartDataPoints);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={optimizedData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+      <BarChart data={chartDataPoints} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
         <XAxis 
           dataKey="name" 

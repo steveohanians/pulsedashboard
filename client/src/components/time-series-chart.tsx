@@ -1,7 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { generatePeriodLabel, generateTemporalVariationSync } from '@/utils/chartUtils';
-import { createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '../utils/chartUtilities';
+import { generatePeriodLabel, generateTemporalVariationSync, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '@/utils/chartUtils';
 import { logger } from '@/utils/logger';
 
 import { parseMetricValue } from '../utils/metricParser';

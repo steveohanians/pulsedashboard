@@ -1,6 +1,6 @@
 // Performance indicator component for showing metric comparisons
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { formatMetricValue } from '@/utils/chartDataProcessing';
+import { formatMetricValue } from '@/utils/chartUtils';
 
 interface PerformanceIndicatorProps {
   clientValue: number;

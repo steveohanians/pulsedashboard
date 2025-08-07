@@ -21,7 +21,7 @@ export default function PDFExport({ onExport, disabled }: PDFExportProps) {
       const { html2canvas, jsPDF } = await loadPDFLibraries();
       onExport();
     } catch (error) {
-      console.error('Failed to load PDF export libraries:', error);
+      // PDF export libraries failed to load
     }
   };
 

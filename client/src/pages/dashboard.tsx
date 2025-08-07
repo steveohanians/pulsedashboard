@@ -23,7 +23,8 @@ import MetricInsightBox from "@/components/metric-insight-box";
 import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
-import { CHART_COLORS, deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
+import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/constants/chart-colors";
+import { deduplicateByChannel, cleanDomainName, safeParseJSON } from "@/utils/chartDataProcessing";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
 import { parseMetricValue } from "@/utils/metricParser";
 import { 
@@ -36,16 +37,7 @@ import {
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 
-// Traffic channel color mapping
-const TRAFFIC_CHANNEL_COLORS = {
-  'Organic Search': '#10b981', // emerald-500
-  'Direct': '#3b82f6', // blue-500
-  'Social Media': '#8b5cf6', // violet-500
-  'Paid Search': '#f59e0b', // amber-500
-  'Email': '#fa198c', // primary brand color
-  'Referral': '#06b6d4', // cyan-500
-  'Other': '#6b7280', // gray-500
-};
+// Using TRAFFIC_CHANNEL_COLORS from consolidated constants
 
 const getChannelColor = (channelName: string): string => {
   return TRAFFIC_CHANNEL_COLORS[channelName as keyof typeof TRAFFIC_CHANNEL_COLORS] || TRAFFIC_CHANNEL_COLORS.Other;
@@ -529,7 +521,7 @@ export default function Dashboard() {
             name: channel.name,
             value: value,
             percentage: value,
-            color: CHART_COLORS.TRAFFIC_CHANNELS[channel.name as keyof typeof CHART_COLORS.TRAFFIC_CHANNELS] || CHART_COLORS.TRAFFIC_CHANNELS.Other
+            color: TRAFFIC_CHANNEL_COLORS[channel.name as keyof typeof TRAFFIC_CHANNEL_COLORS] || TRAFFIC_CHANNEL_COLORS.Other
           };
         });
 

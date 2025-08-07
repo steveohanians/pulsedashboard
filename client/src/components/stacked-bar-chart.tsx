@@ -82,8 +82,8 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                 <div 
                   className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap"
                   style={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '6px',
                     boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
                     padding: '8px 12px',
