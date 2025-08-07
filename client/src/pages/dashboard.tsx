@@ -35,8 +35,6 @@ import {
 } from "@/utils/chartDataProcessor";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
-// Performance tracking removed per user request
-import { ChartOptimizer, MemoryOptimizer, AsyncLoader } from "@/utils/frontend-optimizer";
 
 // Traffic channel color mapping
 const TRAFFIC_CHANNEL_COLORS = {
@@ -57,16 +55,7 @@ export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   
-  // Add effect to log when dashboard component mounts/updates
-  useEffect(() => {
-    console.log("🏠 Dashboard component mounted/updated", { 
-      userId: user?.id, 
-      clientId: user?.clientId,
-      timestamp: new Date().toISOString()
-    });
-  }, [user?.id, user?.clientId]);
-  
-  // No timer needed here - it starts with server
+  // Component state management
   const queryClient = useQueryClient();
 
   // Refresh data function for admin users
@@ -182,31 +171,13 @@ export default function Dashboard() {
   
   // Manual refresh function removed per user request
 
-  // Simplified logging for better performance
+  // Data processing and validation
   useEffect(() => {
-    if (dashboardData?.metrics) {
-      console.log("📊 Dashboard refreshed:", dashboardData.metrics.length, "metrics");
-      
-      // Debug Session Duration competitor data in both views - with type safety
-      if (Array.isArray(dashboardData.metrics)) {
-        const sessionDurationCompetitors = dashboardData.metrics.filter((m: any) => 
-          m.metricName === 'Session Duration' && m.sourceType === 'Competitor'
-        );
-        console.log("🔍 SESSION DURATION COMPETITORS:", sessionDurationCompetitors.length);
-        if (sessionDurationCompetitors.length > 0) {
-          console.log("🔍 SESSION DURATION SAMPLES:", sessionDurationCompetitors.map((m: any) => ({
-            value: m.value,
-            timePeriod: m.timePeriod,
-            competitorId: m.competitorId
-          })));
-        } else {
-          console.log("🚨 NO SESSION DURATION COMPETITOR DATA - checking all metrics...");
-          const allCompetitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
-          console.log("🔍 ALL COMPETITOR METRICS:", {
-            count: allCompetitorMetrics.length,
-            metricNames: Array.from(new Set(allCompetitorMetrics.map((m: any) => m.metricName)))
-          });
-        }
+    if (dashboardData?.metrics && Array.isArray(dashboardData.metrics)) {
+      // Validate data structure for consistent processing
+      const competitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
+      if (competitorMetrics.length === 0) {
+        console.warn('No competitor data available for analysis');
       }
     }
   }, [dashboardData?.metrics]);
@@ -217,22 +188,13 @@ export default function Dashboard() {
       .then(res => res.json()),
   });
 
-  // Load all AI insights once at dashboard level to prevent rate limiting
-  console.log('🚨 DASHBOARD INSIGHTS QUERY - CLIENT ID:', user?.clientId);
+  // Load AI insights for dashboard metrics
   const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
     queryKey: [`/api/insights/${user?.clientId}`],
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1 // Reduce retries to prevent spam
-  });
-  
-  console.log('🔍 DASHBOARD INSIGHTS QUERY STATUS:', { 
-    loading: insightsLoading, 
-    hasData: !!insightsData, 
-    error: insightsError,
-    clientId: user?.clientId,
-    rawResponse: insightsData 
+    retry: 1
   });
 
   // Create insights lookup map from loaded insights
@@ -242,21 +204,11 @@ export default function Dashboard() {
     if (insightsData && typeof insightsData === 'object' && 'insights' in insightsData) {
       const insights = (insightsData as any).insights;
       if (insights && Array.isArray(insights)) {
-        console.log('🔍 PROCESSING INSIGHTS FOR LOOKUP:', {
-          totalInsights: insights.length,
-          insightPreview: insights.slice(0, 2),
-          fullInsightsResponse: insightsData
-        });
-        
         insights.forEach((insight: any) => {
           lookup[insight.metricName] = insight;
-          console.log(`✅ Added insight for: ${insight.metricName}`);
         });
       }
     }
-    
-    console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
-    console.log('🔍 Will preload insights for metrics:', ['Session Duration', 'Bounce Rate', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution']);
     
     return lookup;
   }, [insightsData]);

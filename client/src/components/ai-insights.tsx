@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import TypewriterText from "./typewriter-text";
 import { validateUserInput } from "@/utils/inputValidation";
-import { logger } from "@/utils/logger";
+// Temporarily use console instead of logger to prevent runtime errors
 
 // Function to render text with bold formatting and numbered lists
 function renderTextWithBold(text: string, isRecommendation = false) {
@@ -148,7 +148,7 @@ export default function AIInsights({
 
   // Reset typing states when content changes or isTyping changes
   useEffect(() => {
-    logger.component('AIInsights', 'Effect triggered - isTyping:', isTyping);
+    console.log('[AIInsights] Effect triggered - isTyping:', isTyping);
     if (isTyping) {
       // For typing mode, reset all states to start typing sequence
       setContextComplete(false);
@@ -241,7 +241,7 @@ export default function AIInsights({
         }
       }
     } catch (error) {
-      logger.error("Error loading context:", error);
+      console.error("[AIInsights] Error loading context:", error);
       toast({
         title: "Error",
         description: "Failed to load existing context",
@@ -303,7 +303,7 @@ export default function AIInsights({
         description: "Context saved and insights regenerating...",
       });
     } catch (error) {
-      logger.error("Error saving context:", error);
+      console.error("[AIInsights] Error saving context:", error);
       toast({
         title: "Error",
         description: "Failed to save context",
@@ -353,7 +353,7 @@ export default function AIInsights({
                   text={context} 
                   speed={5}
                   onComplete={() => {
-                    logger.component('AIInsights', 'Context typing complete');
+                    console.log('[AIInsights] Context typing complete');
                     setContextComplete(true);
                     setShowInsight(true);
                   }}
@@ -379,7 +379,7 @@ export default function AIInsights({
                   text={insight} 
                   speed={5}
                   onComplete={() => {
-                    logger.component('AIInsights', 'Insight typing complete');
+                    console.log('[AIInsights] Insight typing complete');
                     setInsightComplete(true);
                     setShowRecommendation(true);
                   }}
@@ -405,7 +405,7 @@ export default function AIInsights({
                   text={recommendation} 
                   speed={5}
                   onComplete={() => {
-                    logger.component('AIInsights', 'Recommendation typing complete');
+                    console.log('[AIInsights] Recommendation typing complete');
                     setRecommendationComplete(true);
                   }}
                   className="text-xs sm:text-sm text-slate-600 leading-relaxed"
