@@ -84,6 +84,7 @@ export interface IStorage {
   getAIInsights(clientId: string, timePeriod: string): Promise<AIInsight[]>;
   getAIInsightsByClient(clientId: string, timePeriod?: string): Promise<AIInsight[]>;
   createAIInsight(insight: InsertAIInsight): Promise<AIInsight>;
+  deleteAIInsight(id: string): Promise<void>;
   clearAllAIInsights(): Promise<void>;
   
   // Password Reset
@@ -1056,6 +1057,10 @@ export class DatabaseStorage implements IStorage {
       .from(aiInsights)
       .where(and(...conditions))
       .orderBy(sql`${aiInsights.createdAt} DESC`);
+  }
+
+  async deleteAIInsight(id: string): Promise<void> {
+    await db.delete(aiInsights).where(eq(aiInsights.id, id));
   }
 
   async clearAllAIInsights(): Promise<void> {

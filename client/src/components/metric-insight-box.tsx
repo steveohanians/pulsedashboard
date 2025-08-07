@@ -342,19 +342,33 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           onStatusChange?.(undefined);
         }}
         onClear={async () => {
-          // Clear insight and storage
-          setInsight(null);
-          insightsStorage.remove(clientId, metricName);
-          onStatusChange?.(undefined);
-          
-          // Also delete the saved context
           try {
-            await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
-              method: 'DELETE'
+            // Clear insight from database first
+            const response = await fetch(`/api/insights/${clientId}/${encodeURIComponent(metricName)}`, {
+              method: 'DELETE',
+              credentials: 'include'
             });
-            // Successfully cleared insights and deleted saved context
+            
+            if (!response.ok) {
+              throw new Error(`Failed to clear insight: ${response.statusText}`);
+            }
+            
+            // Clear local state and storage
+            setInsight(null);
+            insightsStorage.remove(clientId, metricName);
+            onStatusChange?.(undefined);
+            
+            console.log(`✅ Successfully cleared insight for ${metricName}`);
+            
+            // Invalidate insights cache to trigger refresh
+            queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+            
           } catch (error) {
-            // Failed to delete context - handled silently
+            console.error(`❌ Failed to clear insight for ${metricName}:`, error);
+            // Still clear local state even if API call fails
+            setInsight(null);
+            insightsStorage.remove(clientId, metricName);
+            onStatusChange?.(undefined);
           }
         }}
       />

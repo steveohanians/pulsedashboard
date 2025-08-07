@@ -1198,6 +1198,40 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Clear individual AI insight
+  app.delete("/api/insights/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+      
+      // Get existing insights to find the specific one to delete
+      const existingInsights = await storage.getAIInsightsByClient(clientId);
+      const insightToDelete = existingInsights.find(i => i.metricName === metricName);
+      
+      if (insightToDelete) {
+        // Delete the specific insight from database
+        await storage.deleteAIInsight(insightToDelete.id);
+      }
+      
+      // Also clear the context
+      await storage.deleteInsightContext(`${clientId}:${metricName}`);
+      
+      logger.info(`Cleared individual AI insight`, { 
+        clientId, 
+        metricName, 
+        userId: req.user?.id 
+      });
+      
+      res.json({ message: `AI insight cleared for ${metricName}` });
+    } catch (error) {
+      logger.error("Error clearing individual AI insight", { 
+        error: (error as Error).message,
+        clientId: req.params.clientId,
+        metricName: req.params.metricName
+      });
+      res.status(500).json({ message: "Failed to clear AI insight" });
+    }
+  });
+
   // AI Insights generation endpoint
   app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
     try {

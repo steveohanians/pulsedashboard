@@ -380,12 +380,14 @@ export default function Dashboard() {
     console.log('🔄 Manual retry of batch generation');
   };
 
-  // Add a test button for debugging (temporary)
-  const debugBatchGeneration = () => {
-    console.log('🧪 Debug batch generation with raw period');
+  // User-accessible batch generation function
+  const triggerBatchGeneration = () => {
+    console.log('🔄 User-triggered batch generation');
+    setBatchGenerationAttempted(false); // Reset the flag
+    setBatchGenerating(true);
     batchGenerateMutation.mutate({ 
       clientId: user?.clientId || 'demo-client-id', 
-      timePeriod: '2025-06' // Test with actual period from logs
+      timePeriod: effectiveTimePeriod
     });
   };
 
@@ -1390,7 +1392,28 @@ export default function Dashboard() {
               )}
             </Button>
 
-            {/* Debug: Clear Insights Button */}
+            {/* Generate All Insights Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={triggerBatchGeneration}
+              disabled={batchGenerating || isRateLimited || batchGenerateMutation.isPending}
+              className="pdf-hide hover:bg-blue-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-blue-200 text-blue-600"
+            >
+              {batchGenerating || batchGenerateMutation.isPending ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Generating...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Generate All</span>
+                </div>
+              )}
+            </Button>
+
+            {/* Clear Insights Button */}
             <Button
               variant="outline"
               size="sm"
@@ -1406,7 +1429,7 @@ export default function Dashboard() {
               ) : (
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Clear Insights</span>
+                  <span className="hidden sm:inline">Clear All</span>
                 </div>
               )}
             </Button>
@@ -1507,6 +1530,20 @@ export default function Dashboard() {
                         </span>
                       </span>
                     </button>
+                    
+                    {/* Generate All Insights Button */}
+                    <button
+                      onClick={triggerBatchGeneration}
+                      disabled={batchGenerating || isRateLimited || batchGenerateMutation.isPending}
+                      className="w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="flex items-center justify-between">
+                        <span className="flex items-center">
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Generate All Insights
+                        </span>
+                      </span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1560,6 +1597,18 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-2">
                         <RefreshCw className="h-3 w-3 text-slate-400" />
                         <span>Refresh Data</span>
+                      </div>
+                    </button>
+                  </li>
+                  <li key="generate-insights">
+                    <button 
+                      onClick={triggerBatchGeneration}
+                      disabled={batchGenerating || isRateLimited || batchGenerateMutation.isPending}
+                      className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="h-3 w-3 text-slate-400" />
+                        <span>Generate All Insights</span>
                       </div>
                     </button>
                   </li>
