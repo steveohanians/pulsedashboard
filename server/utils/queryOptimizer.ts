@@ -51,7 +51,7 @@ export function debugCacheKeys() {
 
 async function generateCdAvgDeviceDistribution(clientId: string, periodsToQuery: string[]) {
   try {
-    const cdPortfolioCompanies = await storage.getCDPortfolioCompanies();
+    const cdPortfolioCompanies = await storage.getCdPortfolioCompanies();
     
     if (cdPortfolioCompanies.length === 0) {
       logger.warn('No CD portfolio companies found for device distribution fallback');
@@ -62,7 +62,7 @@ async function generateCdAvgDeviceDistribution(clientId: string, periodsToQuery:
     
     for (const period of periodsToQuery) {
       for (const company of cdPortfolioCompanies) {
-        const metrics = await storage.getMetricsByCompany(company.id, period);
+        const metrics = await storage.getMetricsByCompanyId(company.id);
         const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
         
         deviceMetrics.forEach(metric => {
@@ -164,19 +164,17 @@ export async function getDashboardMetricsOptimized(clientId: string, filters: an
   );
   
   const allCompetitorMetricsArrays = await Promise.all(
-    competitors.flatMap(competitor =>
-      periodsToQuery.map(period => storage.getMetricsByCompetitor(competitor.id, period))
-    )
+    competitors.map(competitor => storage.getMetricsByCompanyId(competitor.id))
   );
   
   const allFilteredIndustryMetricsArrays = await Promise.all(
     periodsToQuery.map(period => 
-      storage.getIndustryAverageMetrics(client.industryVertical, period)
+      storage.getBenchmarks('', client.industryVertical, client.businessSize || '', period)
     )
   );
   
   const allFilteredCdAvgMetricsArrays = await Promise.all(
-    periodsToQuery.map(period => storage.getCdAvgMetrics(period))
+    periodsToQuery.map(period => storage.getMetricsBySourceType('CD_Avg'))
   );
   
   const processedData = processMetricsData(
