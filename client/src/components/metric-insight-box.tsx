@@ -95,9 +95,10 @@ interface MetricInsightBoxProps {
     competitorNames: string[];
   };
   onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
+  preloadedInsight?: any; // Pre-loaded insight to prevent API calls
 }
 
-export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange }: MetricInsightBoxProps) {
+export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<StoredInsight['data'] & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
@@ -105,9 +106,34 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   } | null>(null);
   const queryClient = useQueryClient();
   
-  // Load stored insights from database on mount
+  // Load stored insights from database on mount or use preloaded insight
   useEffect(() => {
     const loadStoredInsight = async () => {
+      console.log(`🔍 [${metricName}] Checking for preloaded insight:`, !!preloadedInsight);
+      
+      // If we have a preloaded insight, use it directly
+      if (preloadedInsight) {
+        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+        console.log(`✅ [${metricName}] Using preloaded insight - no API call needed`);
+        setInsight({
+          contextText: preloadedInsight.context,
+          insightText: preloadedInsight.insight,
+          recommendationText: preloadedInsight.recommendation,
+          status: preloadedInsight.status,
+          isTyping: false,
+          isFromStorage: true
+        });
+        
+        // Report status to parent
+        if (preloadedInsight.status && onStatusChange) {
+          onStatusChange(preloadedInsight.status);
+        }
+        return;
+      }
+
+      console.log(`⚠️ [${metricName}] No preloaded insight - falling back to API call`);
+      
+      // Fallback to loading from database if no preloaded insight
       try {
         const stored = await insightsStorage.load(clientId, metricName);
         if (stored) {
@@ -129,7 +155,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     };
     
     loadStoredInsight();
-  }, [clientId, metricName, onStatusChange]);
+  }, [clientId, metricName, onStatusChange, preloadedInsight]);
   
   // Store insight in persistent storage when it changes (without typing state)
   useEffect(() => {
