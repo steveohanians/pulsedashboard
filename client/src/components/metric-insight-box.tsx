@@ -29,28 +29,56 @@ const insightsStorage = {
   getKey: (clientId: string, metricName: string) => `${clientId}-${metricName}`,
   
   save: (clientId: string, metricName: string, insight: StoredInsight['data']) => {
-    // localStorage operations disabled for performance optimization
+    // Database operations handled by API - no client-side storage needed
     return;
   },
   
-  load: (clientId: string, metricName: string) => {
-    // localStorage operations disabled for performance optimization
-    return null;
+  load: async (clientId: string, metricName: string): Promise<StoredInsight['data'] | null> => {
+    try {
+      // Fetch existing insights from database
+      const response = await fetch(`/api/insights/${clientId}`);
+      if (!response.ok) {
+        if (response.status === 401) {
+          logger.warn('Authentication required for loading insights');
+          return null;
+        }
+        throw new Error(`Failed to fetch insights: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const insights = data.insights || data; // Handle both response formats
+      
+      // Find insight for this specific metric
+      const metricInsight = Array.isArray(insights) ? insights.find((insight: any) => 
+        insight.metricName === metricName
+      ) : null;
+      
+      if (metricInsight) {
+        logger.info('Loaded stored insight from database', {
+          clientId,
+          metricName,
+          hasInsight: !!metricInsight.insight,
+          status: metricInsight.status
+        });
+        
+        return {
+          contextText: metricInsight.context,
+          insightText: metricInsight.insight, 
+          recommendationText: metricInsight.recommendation,
+          status: metricInsight.status
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Failed to load insights from database', { error: (error as Error).message, clientId, metricName });
+      return null;
+    }
   },
   
   remove: (clientId: string, metricName: string) => {
-    try {
-      const stored = localStorage.getItem(INSIGHTS_STORAGE_KEY);
-      if (!stored) return;
-      
-      const allInsights = JSON.parse(stored);
-      const key = insightsStorage.getKey(clientId, metricName);
-      delete allInsights[key];
-      
-      localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify(allInsights));
-    } catch (error) {
-      // Failed to remove insight from localStorage - handled silently
-    }
+    // Database cleanup handled by API - no client-side storage to remove
+    return;
   }
 };
 
@@ -77,11 +105,30 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   } | null>(null);
   const queryClient = useQueryClient();
   
-  // Load insight from persistent storage on mount - disabled for performance
+  // Load stored insights from database on mount
   useEffect(() => {
-    // localStorage operations disabled for performance optimization
-    // const storedInsight = insightsStorage.load(clientId, metricName);
-    // Storage functionality disabled
+    const loadStoredInsight = async () => {
+      try {
+        const stored = await insightsStorage.load(clientId, metricName);
+        if (stored) {
+          logger.component('MetricInsightBox', `Loaded stored insight for ${metricName}`);
+          setInsight({
+            ...stored,
+            isTyping: false,
+            isFromStorage: true
+          });
+          
+          // Report status to parent
+          if (stored.status && onStatusChange) {
+            onStatusChange(stored.status);
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to load stored insight', { error: (error as Error).message, clientId, metricName });
+      }
+    };
+    
+    loadStoredInsight();
   }, [clientId, metricName, onStatusChange]);
   
   // Store insight in persistent storage when it changes (without typing state)
