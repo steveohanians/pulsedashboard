@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    /* Base Theme Colors */
     --background: 0 0% 100%;
     --foreground: 20 14.3% 4.1%;
     --card: 0 0% 100%;
@@ -27,44 +28,45 @@
     --ring: 329 86% 54%;
     --radius: 0.5rem;
 
-    /* Chart Colors */
-    --chart-1: 329 86% 54%;
-    --chart-2: 160 84% 39%;
-    --chart-3: 43 96% 56%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 271 91% 65%;
+    /* Chart Colors - Used across all components */
+    --chart-1: 329 86% 54%;  /* Primary pink */
+    --chart-2: 160 84% 39%;  /* Green */
+    --chart-3: 43 96% 56%;   /* Yellow */
+    --chart-4: 0 84% 60%;    /* Red */
+    --chart-5: 271 91% 65%;  /* Purple */
 
-    /* Component-Specific Colors */
-    --color-client: 329 86% 54%;
-    --color-industry-avg: 241 5% 64%;
-    --color-cd-avg: 210 9% 31%;
-    --color-competitor-1: 266 85% 58%;
-    --color-competitor-2: 197 94% 43%;
-    --color-competitor-3: 0 84% 60%;
-    --color-default: 220 9% 46%;
+    /* Dashboard Component Colors */
+    --color-client: 329 86% 54%;        /* Client data - Primary pink */
+    --color-industry-avg: 241 5% 64%;   /* Industry average - Gray */
+    --color-cd-avg: 210 9% 31%;         /* CD Portfolio average - Dark blue */
+    --color-competitor-1: 266 85% 58%;  /* First competitor - Purple */
+    --color-competitor-2: 197 94% 43%;  /* Second competitor - Cyan */
+    --color-competitor-3: 0 84% 60%;    /* Third competitor - Red */
+    --color-default: 220 9% 46%;        /* Default/fallback - Gray */
 
-    /* Device Colors */
-    --color-device-desktop: 217 91% 60%;
-    --color-device-mobile: 43 96% 56%;
-    --color-device-tablet: 266 85% 58%;
-    --color-device-other: 220 9% 46%;
+    /* Device Distribution Colors */
+    --color-device-desktop: 217 91% 60%;  /* Desktop - Blue */
+    --color-device-mobile: 43 96% 56%;    /* Mobile - Yellow */
+    --color-device-tablet: 266 85% 58%;   /* Tablet - Purple */
+    --color-device-other: 220 9% 46%;     /* Other devices - Gray */
 
     /* Traffic Channel Colors */
-    --color-channel-organic: 160 84% 39%;
-    --color-channel-direct: 217 91% 60%;
-    --color-channel-social: 266 85% 58%;
-    --color-channel-paid: 43 96% 56%;
-    --color-channel-email: 329 86% 54%;
-    --color-channel-referral: 197 94% 43%;
-    --color-channel-other: 220 9% 46%;
+    --color-channel-organic: 160 84% 39%;   /* Organic Search - Green */
+    --color-channel-direct: 217 91% 60%;    /* Direct - Blue */
+    --color-channel-social: 266 85% 58%;    /* Social Media - Purple */
+    --color-channel-paid: 43 96% 56%;       /* Paid Search - Yellow */
+    --color-channel-email: 329 86% 54%;     /* Email - Pink */
+    --color-channel-referral: 197 94% 43%;  /* Referral - Cyan */
+    --color-channel-other: 220 9% 46%;      /* Other channels - Gray */
 
-    /* Performance Colors */
-    --color-excellent: 160 84% 39%;
-    --color-good: 43 96% 56%;
-    --color-poor: 0 84% 60%;
+    /* Performance Indicator Colors */
+    --color-excellent: 160 84% 39%;  /* Excellent performance - Green */
+    --color-good: 43 96% 56%;        /* Good performance - Yellow */
+    --color-poor: 0 84% 60%;         /* Poor performance - Red */
   }
 
   .dark {
+    /* Base Theme Colors for Dark Mode */
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
     --card: 20 14.3% 4.1%;
@@ -84,42 +86,6 @@
     --border: 12 6.5% 15.1%;
     --input: 12 6.5% 15.1%;
     --ring: 329 86% 54%;
-
-    /* Chart Colors (same in dark mode) */
-    --chart-1: 329 86% 54%;
-    --chart-2: 160 84% 39%;
-    --chart-3: 43 96% 56%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 271 91% 65%;
-
-    /* Component-Specific Colors (same in dark mode) */
-    --color-client: 329 86% 54%;
-    --color-industry-avg: 241 5% 64%;
-    --color-cd-avg: 210 9% 31%;
-    --color-competitor-1: 266 85% 58%;
-    --color-competitor-2: 197 94% 43%;
-    --color-competitor-3: 0 84% 60%;
-    --color-default: 220 9% 46%;
-
-    /* Device Colors (same in dark mode) */
-    --color-device-desktop: 217 91% 60%;
-    --color-device-mobile: 43 96% 56%;
-    --color-device-tablet: 266 85% 58%;
-    --color-device-other: 220 9% 46%;
-
-    /* Traffic Channel Colors (same in dark mode) */
-    --color-channel-organic: 160 84% 39%;
-    --color-channel-direct: 217 91% 60%;
-    --color-channel-social: 266 85% 58%;
-    --color-channel-paid: 43 96% 56%;
-    --color-channel-email: 329 86% 54%;
-    --color-channel-referral: 197 94% 43%;
-    --color-channel-other: 220 9% 46%;
-
-    /* Performance Colors (same in dark mode) */
-    --color-excellent: 160 84% 39%;
-    --color-good: 43 96% 56%;
-    --color-poor: 0 84% 60%;
   }
 
   * {
