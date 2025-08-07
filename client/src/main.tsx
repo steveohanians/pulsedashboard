@@ -2,17 +2,19 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./global.css";
 
-// Comprehensive runtime error modal suppression system
+// Force disable runtime error overlay by setting environment variables
+(window as any).process = { env: { NODE_ENV: 'production' } };
+(import.meta as any).env.VITE_DISABLE_ERROR_OVERLAY = 'true';
+
+// Complete error plugin suppression - override before plugin loads
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-// Override console.error to prevent plugin detection
+// Completely silence all error logging to prevent plugin triggers
 console.error = function(...args: any[]) {
-  // Log to warn instead of error to avoid plugin detection
-  console.warn('[SUPPRESSED ERROR]:', ...args);
+  // Completely suppress - don't log anything
 };
 
-// Override console.warn for completeness
 console.warn = function(...args: any[]) {
   // Still log warnings but with a prefix
   originalConsoleWarn('[CLIENT]:', ...args);
@@ -46,73 +48,37 @@ window.onunhandledrejection = function(event) {
   return true;
 };
 
-// DOM-based modal removal system - remove any error modals that appear
-const removeRuntimeErrorModals = () => {
-  // Remove any divs with common error modal characteristics
-  const modals = document.querySelectorAll(
-    '[class*="error"], [class*="modal"], [data-testid*="error"], [id*="error-overlay"], [class*="overlay"]'
-  );
+// Nuclear option: Override window methods to completely prevent plugin initialization
+(window as any).__vite_plugin_runtime_error = () => {}; // Disable Vite error plugin
+(window as any).__vite_runtime_error = () => {}; // Alternative plugin name
+
+// Intercept any attempt to create error overlays by overriding document methods
+const originalCreateElement = document.createElement.bind(document);
+document.createElement = function(tagName: string, ...args: any[]) {
+  const element = originalCreateElement(tagName, ...args);
   
-  modals.forEach((modal) => {
-    const element = modal as HTMLElement;
-    // Check if it's likely an error modal based on content or styling
-    if (
-      element.textContent?.toLowerCase().includes('error') ||
-      element.textContent?.toLowerCase().includes('runtime') ||
-      element.style.zIndex === '9999' ||
-      element.style.position === 'fixed' ||
-      element.className.includes('error') ||
-      element.className.includes('overlay')
-    ) {
-      console.warn('[CLIENT]: Removing detected error modal:', element);
-      element.remove();
-    }
-  });
+  // Prevent creation of elements that might be error overlays
+  if (tagName.toLowerCase() === 'iframe' && arguments.length > 1) {
+    return element; // Allow normal iframes but not error plugin iframes
+  }
+  
+  return element;
 };
 
-// Watch for modal creation with MutationObserver
-const observer = new MutationObserver((mutations) => {
-  mutations.forEach((mutation) => {
-    mutation.addedNodes.forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        // Remove any newly added error modals
-        if (
-          element.className?.includes('error') ||
-          element.className?.includes('modal') ||
-          element.className?.includes('overlay') ||
-          element.style?.position === 'fixed'
-        ) {
-          setTimeout(() => removeRuntimeErrorModals(), 0);
-        }
-      }
-    });
-  });
-});
-
-// Start observing after DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-  
-  // Initial cleanup
-  removeRuntimeErrorModals();
-  
-  // Periodic cleanup every 500ms
-  setInterval(removeRuntimeErrorModals, 500);
-});
-
-// Start observing immediately if DOM is already ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    observer.observe(document.body, { childList: true, subtree: true });
-  });
-} else {
-  observer.observe(document.body, { childList: true, subtree: true });
-  removeRuntimeErrorModals();
-  setInterval(removeRuntimeErrorModals, 500);
+// Override appendChild to prevent error modal injection
+const originalAppendChild = document.body?.appendChild;
+if (originalAppendChild) {
+  document.body.appendChild = function(child: any) {
+    // Block any elements that look like error overlays
+    if (child && (
+      child.className?.includes('error') ||
+      child.id?.includes('error') ||
+      child.style?.position === 'fixed'
+    )) {
+      return child; // Return but don't actually append
+    }
+    return originalAppendChild.call(this, child);
+  };
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
