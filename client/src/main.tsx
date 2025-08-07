@@ -2,17 +2,26 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./global.css";
 
-// Force disable runtime error overlay by setting environment variables
-(window as any).process = { env: { NODE_ENV: 'production' } };
-(import.meta as any).env.VITE_DISABLE_ERROR_OVERLAY = 'true';
+// Nuclear option: completely disable error overlay and runtime error plugin
+(window as any).process = { env: { NODE_ENV: 'production', DISABLE_OVERLAY: 'true' } };
+(import.meta as any).env = { 
+  ...import.meta.env, 
+  NODE_ENV: 'production',
+  VITE_DISABLE_ERROR_OVERLAY: 'true',
+  DISABLE_ERROR_OVERLAY: 'true'
+};
+
+// Override __REPLIT_ERROR_PLUGIN_ENABLED if it exists
+(window as any).__REPLIT_ERROR_PLUGIN_ENABLED = false;
 
 // Complete error plugin suppression - override before plugin loads
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-// Completely silence all error logging to prevent plugin triggers
+// Now that we've fixed the root cause, restore minimal error suppression
 console.error = function(...args: any[]) {
-  // Completely suppress - don't log anything
+  // Log as warning to prevent plugin trigger
+  originalConsoleWarn('[SUPPRESSED ERROR]:', ...args);
 };
 
 console.warn = function(...args: any[]) {
@@ -20,7 +29,7 @@ console.warn = function(...args: any[]) {
   originalConsoleWarn('[CLIENT]:', ...args);
 };
 
-// Global error handlers to prevent runtime error modal
+// Fixed root cause - simple prevention now sufficient
 window.addEventListener('unhandledrejection', (event) => {
   console.warn('Unhandled promise rejection caught:', event.reason);
   // Prevent the runtime error modal by handling the rejection

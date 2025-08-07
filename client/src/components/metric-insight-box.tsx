@@ -35,19 +35,20 @@ const insightsStorage = {
   
   load: async (clientId: string, metricName: string): Promise<StoredInsight['data'] | null> => {
     try {
-      // Create AbortController for timeout handling
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      // Fetch existing insights from database with timeout
+      // Fetch with comprehensive error handling to prevent unhandled promise rejections
       const response = await fetch(`/api/insights/${clientId}`, {
-        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json'
         }
+      }).catch((fetchError) => {
+        // Handle network errors explicitly to prevent unhandled promise rejections
+        logger.warn('Network error during insights fetch', { 
+          error: fetchError.message, 
+          clientId, 
+          metricName 
+        });
+        throw new Error(`Network error: ${fetchError.message}`);
       });
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         if (response.status === 401) {
@@ -89,17 +90,13 @@ const insightsStorage = {
       
       return null;
     } catch (error) {
-      // Handle timeout and network errors gracefully
+      // Handle network errors gracefully
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          logger.warn('Insights fetch request timed out', { clientId, metricName });
-        } else {
-          logger.warn('Failed to load insights from database', { 
-            error: error.message, 
-            clientId, 
-            metricName 
-          });
-        }
+        logger.warn('Failed to load insights from database', { 
+          error: error.message, 
+          clientId, 
+          metricName 
+        });
       }
       // Always return null instead of throwing to prevent unhandled rejections
       return null;
@@ -164,9 +161,12 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
 
 
       
-      // Fallback to loading from database if no preloaded insight
-      // Add small delay to allow authentication to complete
-      setTimeout(async () => {
+      // Fallback to loading from database if no preloaded insight  
+      // Use a properly awaited delay to prevent unhandled promise rejections
+      const loadWithDelay = async () => {
+        // Small delay to allow authentication to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         try {
           const stored = await insightsStorage.load(clientId, metricName);
           if (stored) {
@@ -190,7 +190,16 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
             metricName 
           });
         }
-      }, 100);
+      };
+      
+      loadWithDelay().catch((error) => {
+        // Catch any potential promise rejections at the top level
+        logger.warn('Promise rejection in loadWithDelay caught', { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          clientId, 
+          metricName 
+        });
+      });
     };
     
     loadStoredInsight();
