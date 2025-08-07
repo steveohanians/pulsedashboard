@@ -417,11 +417,11 @@ export default function AIInsights({
             
             {/* Timestamp and Action Buttons - Only show after recommendation is complete */}
             {(!isTyping || recommendationComplete) && (
-              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-slate-200 space-y-2 sm:space-y-0">
               <div className="text-xs text-slate-400">
                 {timestamp}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-shrink-0">
                 {/* Context Badge - Show first if this insight was generated with custom context */}
                 {hasCustomContext && (
                   <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300 rounded-md text-xs border border-blue-200 dark:border-blue-800">
