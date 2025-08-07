@@ -109,10 +109,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   // Load stored insights from database on mount or use preloaded insight
   useEffect(() => {
     const loadStoredInsight = async () => {
+      console.log(`🔍 [${metricName}] Checking for preloaded insight:`, !!preloadedInsight);
       
       // If we have a preloaded insight, use it directly
       if (preloadedInsight) {
-        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`, {
+        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+        console.log(`✅ [${metricName}] Using preloaded insight - no API call needed`);
+        console.log(`🔍 [${metricName}] Preloaded insight data:`, {
           hasContext: !!preloadedInsight.contextText,
           hasInsight: !!preloadedInsight.insightText,
           hasRecommendation: !!preloadedInsight.recommendationText,
@@ -134,6 +137,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         return;
       }
 
+      console.log(`⚠️ [${metricName}] No preloaded insight - falling back to API call`);
       
       // Fallback to loading from database if no preloaded insight
       try {

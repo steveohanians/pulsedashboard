@@ -87,6 +87,7 @@ const __dirname = dirname(__filename);
 if (process.argv[1] === __filename) {
   replaceWithAuthenticData()
     .then(results => {
+      console.log('✅ Replacement completed:', results);
       process.exit(0);
     })
     .catch(error => {

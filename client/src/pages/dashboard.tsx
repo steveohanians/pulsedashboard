@@ -177,6 +177,7 @@ export default function Dashboard() {
       // Validate data structure for consistent processing
       const competitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
       if (competitorMetrics.length === 0) {
+        console.warn('No competitor data available for analysis');
       }
     }
   }, [dashboardData?.metrics]);
@@ -361,6 +362,7 @@ export default function Dashboard() {
       
       // Convert Session Duration from seconds to minutes for all source types
       if (metric.metricName === 'Session Duration' && value > 60) {
+        console.log(`🔍 GROUPED METRICS ${metric.sourceType}: converting ${value} seconds to minutes`);
         value = value / 60;
       }
       
@@ -384,7 +386,7 @@ export default function Dashboard() {
   const processTrafficChannelData = () => {
 
     
-    let trafficMetrics: any[] = [];
+    let trafficMetrics = [];
     
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
@@ -397,39 +399,8 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
-      let rawTrafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
-      console.warn('🔍 FALLBACK TO REGULAR METRICS:', { 
-        foundCount: rawTrafficMetrics.length,
-        totalMetrics: metrics.length,
-        allMetricNames: Array.from(new Set(metrics.map(m => m.metricName))),
-        trafficChannelSample: rawTrafficMetrics[0] 
-      });
-      
-      // If we have JSON-formatted Traffic Channels data, parse it into individual channel records
-      trafficMetrics = [];
-      rawTrafficMetrics.forEach(metric => {
-        if (typeof metric.value === 'string' && metric.value.startsWith('[')) {
-          try {
-            const channelData = JSON.parse(metric.value);
-            if (Array.isArray(channelData)) {
-              channelData.forEach(channel => {
-                trafficMetrics.push({
-                  ...metric,
-                  channel: channel.channel,
-                  value: channel.percentage,
-                  sessions: channel.sessions
-                });
-              });
-              console.warn('✅ PARSED TRAFFIC CHANNELS JSON:', channelData.length, 'channels');
-            }
-          } catch (e: any) {
-            console.warn('❌ FAILED TO PARSE TRAFFIC CHANNELS JSON:', e.message);
-            trafficMetrics.push(metric);
-          }
-        } else {
-          trafficMetrics.push(metric);
-        }
-      });
+      trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+      // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
     
     // Debug logging disabled for performance
@@ -491,20 +462,6 @@ export default function Dashboard() {
     } else {
       console.warn('❌ No client traffic metrics found! Available metrics:', 
         trafficMetrics.map(m => ({ sourceType: m.sourceType, metricName: m.metricName })));
-      console.warn('🔍 DEBUG - All metrics sample:', metrics.slice(0, 3).map(m => ({ 
-        sourceType: m.sourceType, 
-        metricName: m.metricName,
-        hasValue: !!m.value 
-      })));
-      console.warn('🔍 DEBUG - Traffic Channels specific:', 
-        metrics.filter(m => m.metricName === 'Traffic Channels').map(m => ({ 
-          sourceType: m.sourceType, 
-          metricName: m.metricName,
-          valueType: typeof m.value,
-          valuePreview: typeof m.value === 'string' ? m.value.slice(0, 100) : m.value
-        })));
-      console.warn('🔍 DEBUG - All unique metric names:', Array.from(new Set(metrics.map(m => m.metricName))));
-      console.warn('🔍 DEBUG - Dashboard data keys:', dashboardData ? Object.keys(dashboardData) : 'no dashboardData');
     }
 
     // CD Average data
@@ -599,23 +556,47 @@ export default function Dashboard() {
   const processDeviceDistributionData = () => {
     const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
     
-    // Process device metrics by source type
+    // Comprehensive device debugging
+    console.log('🔍 DEVICE DEBUG - Total metrics:', deviceMetrics.length);
+    console.log('🔍 DEVICE DEBUG - By source type:', {
+      Client: deviceMetrics.filter(m => m.sourceType === 'Client').length,
+      Competitor: deviceMetrics.filter(m => m.sourceType === 'Competitor').length,
+      CD_Avg: deviceMetrics.filter(m => m.sourceType === 'CD_Avg').length
+    });
     
     // Debug competitor device metrics specifically
     const competitorDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Competitor');
+    console.log('🔍 COMPETITOR DEVICE METRICS:', competitorDeviceMetrics.length);
     
     if (competitorDeviceMetrics.length > 0) {
-        // Found competitor device metrics
+      console.log('🔍 COMPETITOR DEVICE SAMPLE:', {
+        metric: competitorDeviceMetrics[0].metricName,
+        channel: competitorDeviceMetrics[0].channel,
+        value: competitorDeviceMetrics[0].value,
+        valueType: typeof competitorDeviceMetrics[0].value,
+        competitorId: competitorDeviceMetrics[0].competitorId,
+        timePeriod: (competitorDeviceMetrics[0] as any).timePeriod
+      });
     } else {
+      console.log('🚨 NO COMPETITOR DEVICE METRICS FOUND');
       // Check what competitor metrics exist
       const allCompetitorMetrics = metrics.filter(m => m.sourceType === 'Competitor');
-        // No competitor device metrics found
+      console.log('🔍 ALL COMPETITOR METRICS:', {
+        count: allCompetitorMetrics.length,
+        metricNames: Array.from(new Set(allCompetitorMetrics.map(m => m.metricName))),
+        sample: allCompetitorMetrics.length > 0 ? {
+          name: allCompetitorMetrics[0].metricName,
+          value: allCompetitorMetrics[0].value,
+          channel: allCompetitorMetrics[0].channel
+        } : null
+      });
     }
     
     // Quick validation that GA4 device data is found
     const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
     const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
     if (ga4DeviceArrayMetric) {
+      console.log('✅ Found GA4 device array metric');
     }
     
     const DEVICE_COLORS = {
@@ -673,8 +654,10 @@ export default function Dashboard() {
             // Unescape JSON
             jsonString = jsonString.replace(/\\"/g, '"');
             
+            console.log('🔍 DEVICE PARSE - Attempting to parse:', jsonString.substring(0, 100));
             
             const deviceData = JSON.parse(jsonString);
+            console.log('✅ DEVICE PARSE - Success:', deviceData);
             
             if (Array.isArray(deviceData)) {
               deviceData.forEach((device: any) => {
@@ -1679,6 +1662,8 @@ export default function Dashboard() {
             
             // DEBUG: Session Duration metricData content
             if (metricName === 'Session Duration') {
+              console.log(`🔍 SESSION DURATION metricData:`, metricData);
+              console.log(`🔍 Available source types:`, Object.keys(metricData));
             }
             
 
@@ -1927,6 +1912,14 @@ export default function Dashboard() {
                       }}
                       preloadedInsight={(() => {
                         const insight = insightsLookup[metricName] || null;
+                        console.log(`🔍 INSIGHT LOOKUP [${metricName}]:`, {
+                          found: !!insight,
+                          insightId: insight?.id,
+                          lookupKeys: Object.keys(insightsLookup),
+                          exactMatch: insightsLookup.hasOwnProperty(metricName),
+                          metricNameType: typeof metricName,
+                          metricNameValue: metricName
+                        });
                         return insight;
                       })()}
                       onStatusChange={(status) => {
