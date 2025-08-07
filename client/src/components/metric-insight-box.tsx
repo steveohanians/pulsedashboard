@@ -115,10 +115,16 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       if (preloadedInsight) {
         logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
         console.log(`✅ [${metricName}] Using preloaded insight - no API call needed`);
+        console.log(`🔍 [${metricName}] Preloaded insight data:`, {
+          hasContext: !!preloadedInsight.contextText,
+          hasInsight: !!preloadedInsight.insightText,
+          hasRecommendation: !!preloadedInsight.recommendationText,
+          status: preloadedInsight.status
+        });
         setInsight({
-          contextText: preloadedInsight.context,
-          insightText: preloadedInsight.insight,
-          recommendationText: preloadedInsight.recommendation,
+          contextText: preloadedInsight.contextText,
+          insightText: preloadedInsight.insightText,
+          recommendationText: preloadedInsight.recommendationText,
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true
