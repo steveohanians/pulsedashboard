@@ -25,12 +25,33 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
 
   // Load all AI insights once at dashboard level to prevent rate limiting
-  const { data: insightsData } = useQuery({
-    queryKey: [`/api/insights/${clientId}`],
+  const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
+    queryKey: ['/api/insights', clientId],
+    enabled: !!clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1 // Reduce retries to prevent spam
   });
+  
+  console.log('🔍 Insights Query Status:', { 
+    loading: insightsLoading, 
+    hasData: !!insightsData, 
+    error: insightsError,
+    clientId,
+    rawData: insightsData 
+  });
+  
+  // Force debug logging to appear
+  if (insightsData || insightsError || insightsLoading) {
+    console.log('🚨 DASHBOARD INSIGHTS DEBUG:', {
+      loading: insightsLoading,
+      error: insightsError,
+      hasData: !!insightsData,
+      dataType: typeof insightsData,
+      dataKeys: insightsData ? Object.keys(insightsData) : null,
+      fullData: insightsData
+    });
+  }
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -56,11 +77,21 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     const insights = insightsResponse?.insights || insightsResponse || [];
     const lookup: Record<string, any> = {};
     
+    console.log('🔍 Dashboard insights data:', { 
+      hasInsightsData: !!insightsData, 
+      insightsCount: Array.isArray(insights) ? insights.length : 0,
+      insightsPreview: insights.slice(0, 2),
+      fullInsightsResponse: insightsData
+    });
+    
     if (Array.isArray(insights)) {
       insights.forEach((insight: any) => {
         lookup[insight.metricName] = insight;
+        console.log(`✅ Added insight for: ${insight.metricName}`);
       });
     }
+    
+    console.log('🔍 Final insights lookup:', Object.keys(lookup));
     return lookup;
   }, [insightsData]);
 
