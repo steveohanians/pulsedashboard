@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DATA_SOURCE_COLORS } from '@/constants/chart-colors';
+import { DATA_SOURCE_COLORS } from '@/utils/chartUtils';
 
 interface MetricsChartProps {
   metricName: string;

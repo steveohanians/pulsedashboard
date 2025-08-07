@@ -1,5 +1,5 @@
 import React from 'react';
-import { DEVICE_COLORS } from '@/constants/chart-colors';
+import { DEVICE_COLORS } from '@/utils/chartUtils';
 
 interface LollipopChartProps {
   data: {

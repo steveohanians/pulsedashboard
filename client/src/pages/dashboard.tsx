@@ -23,7 +23,7 @@ import MetricInsightBox from "@/components/metric-insight-box";
 import CompetitorModal from "@/components/competitor-modal";
 import Footer from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
-import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/constants/chart-colors";
+import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/utils/chartUtils";
 import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
