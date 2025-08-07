@@ -4,6 +4,7 @@
  */
 
 import { parseMetricValue } from './metricParser';
+import { convertMetricValue } from './chartUtils';
 
 export interface CompanyMetricData {
   id: string;
@@ -49,7 +50,7 @@ export function processCompanyMetrics(
       if (!companyMetric) return null;
       
       const rawValue = parseMetricValue(companyMetric.value);
-      return convertValue(rawValue, { convertToPercentage, convertToMinutes });
+      return convertMetricValue(rawValue, { convertToPercentage, convertToMinutes });
     }).filter(value => value !== null && !isNaN(value)) as number[];
 
     if (companyMetrics.length === 0) {
@@ -78,7 +79,7 @@ export function processCompanyMetrics(
       let value = fallbackValue;
       if (companyMetric) {
         const rawValue = parseMetricValue(companyMetric.value);
-        value = convertValue(rawValue, { convertToPercentage, convertToMinutes });
+        value = convertMetricValue(rawValue, { convertToPercentage, convertToMinutes });
       }
 
       return {
@@ -187,20 +188,7 @@ function formatCompanyLabel(company: any, sourceType: 'Portfolio' | 'Competitor'
 /**
  * Convert raw values for display (percentages, minutes, etc.)
  */
-function convertValue(
-  rawValue: number, 
-  options: { convertToPercentage?: boolean; convertToMinutes?: boolean }
-): number {
-  if (options.convertToPercentage) {
-    // For bounce rate: 0.5635 -> 56.35
-    return rawValue * 100;
-  }
-  if (options.convertToMinutes) {
-    // For session duration: 580 seconds -> 9.67 minutes
-    return rawValue / 60;
-  }
-  return rawValue;
-}
+// convertValue moved to chartUtils.ts and merged with formatMetricValue for consistency
 
 /**
  * Generate fallback values based on metric type

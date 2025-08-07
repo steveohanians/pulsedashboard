@@ -66,16 +66,7 @@ export class DOMOptimizer {
     observer.observe(element);
   }
 
-  static debounce<T extends (...args: any[]) => any>(
-    func: T,
-    delay: number
-  ): (...args: Parameters<T>) => void {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: Parameters<T>) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func.apply(null, args), delay);
-    };
-  }
+  // debounce moved to sharedUtilities.ts for consolidation
 
   static throttle<T extends (...args: any[]) => any>(
     func: T,
@@ -92,50 +83,7 @@ export class DOMOptimizer {
   }
 }
 
-// Chart optimization utilities - removed, no longer used
-// export class ChartOptimizer {
-  // private static MAX_DATA_POINTS = 100;
-  // private static SAMPLING_THRESHOLD = 500;
-
-  // static optimizeDataPoints(data: any[]): any[] {
-  //   if (data.length <= this.SAMPLING_THRESHOLD) {
-  //     return data;
-  //   }
-
-  //   // Use sampling to reduce data points while preserving trends
-  //   const samplingRate = Math.ceil(data.length / this.MAX_DATA_POINTS);
-  //   return data.filter((_, index) => index % samplingRate === 0);
-  // }
-
-  static createLightweightChart(
-    data: any[],
-    config: any = {}
-  ): { data: any[]; config: any } {
-    const optimizedData = this.optimizeDataPoints(data);
-    
-    const lightweightConfig = {
-      ...config,
-      animation: false, // Disable animations for performance
-      responsive: true,
-      interaction: {
-        intersect: false,
-        mode: 'nearest'
-      },
-      scales: {
-        x: {
-          ...config.scales?.x,
-          ticks: { maxTicksLimit: 10 }
-        },
-        y: {
-          ...config.scales?.y,
-          ticks: { maxTicksLimit: 8 }
-        }
-      }
-    };
-
-    return { data: optimizedData, config: lightweightConfig };
-  }
-}
+// ChartOptimizer completely removed - functionality simplified in direct implementations
 
 // Memory management utilities
 export class MemoryOptimizer {

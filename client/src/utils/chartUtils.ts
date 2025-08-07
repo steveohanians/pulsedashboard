@@ -1,27 +1,7 @@
 // Consolidated chart utility functions
 // Used across multiple chart components to reduce duplication
 
-/**
- * Generate readable period labels for chart display
- * Converts period strings like "2025-07" to "Jul 2025"
- */
-export function generatePeriodLabel(period: string): string {
-  if (!period) return '';
-  
-  // Handle different period formats
-  if (period.includes('-')) {
-    const [year, month] = period.split('-');
-    if (year && month) {
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: 'numeric' 
-      });
-    }
-  }
-  
-  return period; // Return as-is if format is unrecognized
-}
+// generatePeriodLabel removed - use comprehensive version from chartUtilities.ts
 
 /**
  * Common tooltip content style for consistent chart tooltips
@@ -74,6 +54,25 @@ export function formatMetricValue(value: number, metricName: string): string {
   }
   
   return `${roundedValue}`;
+}
+
+/**
+ * Convert raw metric values for processing (consolidates chartDataProcessor convertValue)
+ * Handles percentage conversion and time unit conversion
+ */
+export function convertMetricValue(
+  rawValue: number, 
+  options: { convertToPercentage?: boolean; convertToMinutes?: boolean }
+): number {
+  if (options.convertToPercentage) {
+    // For bounce rate: 0.5635 -> 56.35
+    return rawValue * 100;
+  }
+  if (options.convertToMinutes) {
+    // For session duration: 580 seconds -> 9.67 minutes
+    return rawValue / 60;
+  }
+  return rawValue;
 }
 
 /**

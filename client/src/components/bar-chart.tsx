@@ -25,7 +25,8 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { generatePeriodLabel, generateTemporalVariationSync } from '@/utils/chartUtils';
+import { generateTemporalVariationSync } from '@/utils/chartUtils';
+import { generatePeriodLabel } from '@/utils/chartUtilities';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(
