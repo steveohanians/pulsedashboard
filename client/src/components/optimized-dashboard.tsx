@@ -13,6 +13,8 @@ interface OptimizedDashboardProps {
 }
 
 const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryVertical }: OptimizedDashboardProps) => {
+  console.log('🚨 DASHBOARD COMPONENT RENDER:', { clientId, timePeriod });
+  
   // Memoize query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => [
     `/api/dashboard/${clientId}?timePeriod=${encodeURIComponent(timePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
@@ -25,15 +27,16 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
   });
 
   // Load all AI insights once at dashboard level to prevent rate limiting
+  console.log('🚨 ABOUT TO EXECUTE INSIGHTS QUERY FOR:', clientId);
   const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
-    queryKey: ['/api/insights', clientId],
+    queryKey: [`/api/insights/${clientId}`],
     enabled: !!clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1 // Reduce retries to prevent spam
   });
   
-  console.log('🔍 Insights Query Status:', { 
+  console.log('🔍 INSIGHTS QUERY EXECUTED - Status:', { 
     loading: insightsLoading, 
     hasData: !!insightsData, 
     error: insightsError,
@@ -41,17 +44,15 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     rawData: insightsData 
   });
   
-  // Force debug logging to appear
-  if (insightsData || insightsError || insightsLoading) {
-    console.log('🚨 DASHBOARD INSIGHTS DEBUG:', {
-      loading: insightsLoading,
-      error: insightsError,
-      hasData: !!insightsData,
-      dataType: typeof insightsData,
-      dataKeys: insightsData ? Object.keys(insightsData) : null,
-      fullData: insightsData
-    });
-  }
+  // Always log insights debug to see what's happening
+  console.log('🚨 DASHBOARD INSIGHTS DEBUG (ALWAYS):', {
+    loading: insightsLoading,
+    error: insightsError,
+    hasData: !!insightsData,
+    dataType: typeof insightsData,
+    dataKeys: insightsData ? Object.keys(insightsData) : null,
+    fullData: insightsData
+  });
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -91,7 +92,8 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
       });
     }
     
-    console.log('🔍 Final insights lookup:', Object.keys(lookup));
+    console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
+    console.log('🔍 Will preload insights for metrics:', ['Session Duration', 'Bounce Rate', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution']);
     return lookup;
   }, [insightsData]);
 

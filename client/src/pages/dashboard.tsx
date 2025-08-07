@@ -215,6 +215,47 @@ export default function Dashboard() {
       .then(res => res.json()),
   });
 
+  // Load all AI insights once at dashboard level to prevent rate limiting
+  console.log('🚨 DASHBOARD INSIGHTS QUERY - CLIENT ID:', user?.clientId);
+  const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
+    queryKey: [`/api/insights/${user?.clientId}`],
+    enabled: !!user?.clientId,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1 // Reduce retries to prevent spam
+  });
+  
+  console.log('🔍 DASHBOARD INSIGHTS QUERY STATUS:', { 
+    loading: insightsLoading, 
+    hasData: !!insightsData, 
+    error: insightsError,
+    clientId: user?.clientId,
+    rawResponse: insightsData 
+  });
+
+  // Create insights lookup map from loaded insights
+  const insightsLookup = useMemo(() => {
+    const lookup: Record<string, any> = {};
+    
+    if (insightsData?.insights && Array.isArray(insightsData.insights)) {
+      console.log('🔍 PROCESSING INSIGHTS FOR LOOKUP:', {
+        totalInsights: insightsData.insights.length,
+        insightPreview: insightsData.insights.slice(0, 2),
+        fullInsightsResponse: insightsData
+      });
+      
+      insightsData.insights.forEach((insight: any) => {
+        lookup[insight.metricName] = insight;
+        console.log(`✅ Added insight for: ${insight.metricName}`);
+      });
+    }
+    
+    console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
+    console.log('🔍 Will preload insights for metrics:', ['Session Duration', 'Bounce Rate', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution']);
+    
+    return lookup;
+  }, [insightsData]);
+
   // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
     mutationFn: async () => {
@@ -1912,6 +1953,7 @@ export default function Dashboard() {
                         competitorValues: [],
                         competitorNames: []
                       }}
+                      preloadedInsight={insightsLookup[metricName] || null}
                       onStatusChange={(status) => {
                         logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
