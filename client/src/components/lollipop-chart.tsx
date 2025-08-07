@@ -1,32 +1,66 @@
 import React from 'react';
 import { DEVICE_COLORS } from '@/utils/chartUtils';
 
-interface LollipopChartProps {
-  data: {
-    Desktop: number;
-    Mobile: number;
-  };
-  competitors: Array<{
-    id: string;
-    label: string;
-    value: {
-      Desktop: number;
-      Mobile: number;
-    };
-  }>;
-  clientUrl?: string;
-  clientName?: string;
-  industryAvg: {
-    Desktop: number;
-    Mobile: number;
-  };
-  cdAvg: {
-    Desktop: number;
-    Mobile: number;
-  };
+/** Device distribution data structure for Desktop and Mobile percentages */
+interface DeviceDistribution {
+  /** Desktop device percentage (0-100) */
+  Desktop: number;
+  /** Mobile device percentage (0-100) */
+  Mobile: number;
 }
 
-export default function LollipopChart({ 
+/** Competitor data for comparative visualization */
+interface CompetitorData {
+  /** Unique competitor identifier */
+  id: string;
+  /** Display label for competitor */
+  label: string;
+  /** Device distribution values */
+  value: DeviceDistribution;
+}
+
+interface LollipopChartProps {
+  /** Client's device distribution data */
+  data: DeviceDistribution;
+  /** Array of competitor data for benchmarking */
+  competitors: Array<CompetitorData>;
+  /** Optional client URL for name extraction */
+  clientUrl?: string;
+  /** Optional explicit client name */
+  clientName?: string;
+  /** Industry average benchmarks */
+  industryAvg: DeviceDistribution;
+  /** Clear Digital portfolio average */
+  cdAvg: DeviceDistribution;
+}
+
+/**
+ * Interactive lollipop chart for device distribution visualization.
+ * Displays comparative device usage (Desktop vs Mobile) across client data,
+ * competitors, industry averages, and portfolio benchmarks. Features horizontal
+ * bars with circular endpoints, responsive design, and color-coded legend.
+ * 
+ * Key features:
+ * - Horizontal lollipop visualization with proportional bars
+ * - Comparative benchmarking across multiple data sources
+ * - Responsive design with mobile-optimized layout
+ * - Dynamic client name extraction from URL or explicit naming
+ * - Color-coded device differentiation using theme colors
+ * - Interactive legend with device type indicators
+ * - Normalized scale display (0-100% range)
+ * - Automatic competitor data fallback handling
+ * 
+ * Used for device distribution analysis in analytics dashboard to help
+ * users understand their audience device preferences relative to competitors.
+ * 
+ * @param data - Client's device distribution percentages
+ * @param competitors - Array of competitor benchmark data
+ * @param clientUrl - Client URL for automatic name extraction
+ * @param clientName - Explicit client name override
+ * @param industryAvg - Industry benchmark averages
+ * @param cdAvg - Clear Digital portfolio averages
+ */
+export function LollipopChart({ 
   data, 
   competitors, 
   clientUrl, 
@@ -34,7 +68,10 @@ export default function LollipopChart({
   industryAvg, 
   cdAvg 
 }: LollipopChartProps) {
-  // Use provided client name or extract from URL as fallback
+  /**
+   * Extracts display name from client name or URL with fallback handling.
+   * Prioritizes explicit client name, then extracts domain name from URL.
+   */
   const getClientDisplayName = () => {
     if (clientName) return clientName;
     if (!clientUrl) return 'Demo Company';
@@ -43,8 +80,12 @@ export default function LollipopChart({
     const parts = cleanUrl.split('.');
     return parts[0] || 'Demo Company';
   };
-  // Convert percentages to proportions (0-1 scale) - simplified for 2-device model
-  const normalizeData = (deviceData: Record<string, number>) => ({
+  
+  /**
+   * Converts percentage values (0-100) to proportions (0-1) for chart scaling.
+   * Handles missing data with zero fallback for consistent visualization.
+   */
+  const normalizeData = (deviceData: DeviceDistribution): DeviceDistribution => ({
     Desktop: (deviceData.Desktop || 0) / 100,
     Mobile: (deviceData.Mobile || 0) / 100
   });
