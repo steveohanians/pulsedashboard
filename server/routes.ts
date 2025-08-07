@@ -58,7 +58,7 @@ function parseDistributionMetricValue(value: any, metricName: string): any {
     return null;
   }
 
-  // Special handling for Traffic Channels - return full distribution
+  // Special handling for Traffic Channels - return full distribution for AI context  
   if (metricName === 'Traffic Channels') {
     try {
       let parsedData;
@@ -70,12 +70,12 @@ function parseDistributionMetricValue(value: any, metricName: string): any {
         parsedData = value;
       }
       
-      // Handle array format (Client data)
+      // Handle array format (Client data) - ALWAYS return full array for AI analysis
       if (Array.isArray(parsedData)) {
-        logger.info('🔥 ROUTE: Traffic Channels array data provided for AI', {
+        logger.info('🔥 ROUTE: Traffic Channels FULL array preserved for AI', {
           channelBreakdown: parsedData,
           channelCount: parsedData.length,
-          source: 'Client array format'
+          source: 'Client array format - keeping full data for AI context'
         });
         return parsedData; // Return full array for comprehensive AI analysis
       }
@@ -620,14 +620,7 @@ export function registerRoutes(app: Express): Server {
             cdAvg: formatChannelData(cdChannels)
           };
           
-          // For Traffic Channels, use the formatted channel data as clientValue for meaningful AI analysis
-          if (typeof clientValue === 'object' && clientValue !== null) {
-            // Keep the array format so OpenAI gets the actual channel breakdown
-            clientValue = Array.isArray(clientValue) ? clientValue : [clientValue];
-          } else if (clientValue === null) {
-            // If no client data found for this period, use empty array
-            clientValue = [];
-          }
+          // No need to modify clientValue here - parseDistributionMetricValue already returns the correct format
           
           logger.info('Traffic Channels AI data prepared', {
             clientChannelsCount: clientChannels.length,
@@ -650,12 +643,13 @@ export function registerRoutes(app: Express): Server {
         note: 'AI should use DB value for specific period, not frontend averaged value'
       });
       
-      // CRITICAL: Get actual benchmark values for targetPeriod (July 2025) from database, not frontend averaged data
+      // Get benchmark values for targetPeriod from database
       const industryMetricForPeriod = clientMetrics.find((m: any) => 
         m.metricName === metricName && 
         m.timePeriod === targetPeriod &&
         m.sourceType === 'Industry_Avg'
       );
+      const industryAverage = industryMetricForPeriod ? parseDistributionMetricValue(industryMetricForPeriod.value, metricName) : metricData.Industry_Avg;
       
       // For Traffic Channels, get all CD_Avg channel data for comprehensive analysis
       let cdMetricForPeriod;
@@ -687,13 +681,6 @@ export function registerRoutes(app: Express): Server {
         );
         cdPortfolioAverage = cdMetricForPeriod ? parseDistributionMetricValue(cdMetricForPeriod.value, metricName) : metricData.CD_Avg;
       }
-      
-      const industryMetricForPeriod = clientMetrics.find((m: any) => 
-        m.metricName === metricName && 
-        m.timePeriod === targetPeriod &&
-        m.sourceType === 'Industry_Avg'
-      );
-      const industryAverage = industryMetricForPeriod ? parseDistributionMetricValue(industryMetricForPeriod.value, metricName) : metricData.Industry_Avg;
       
       logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
         metricName, 
