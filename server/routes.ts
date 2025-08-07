@@ -2747,7 +2747,25 @@ export function registerRoutes(app: Express): Server {
   // Batch generation endpoint for all metrics
   app.post("/api/insights/generate-batch", async (req, res) => {
     try {
-      const { clientId, timePeriod } = req.body;
+      let { clientId, timePeriod } = req.body;
+      
+      // Map display time periods to actual periods (same logic as dashboard route)
+      if (timePeriod === "Last Month") {
+        // Use Pacific Time for period calculation
+        const now = new Date();
+        const ptFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Los_Angeles',
+          year: 'numeric',
+          month: '2-digit'
+        });
+        const ptParts = ptFormatter.formatToParts(now);
+        const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
+        const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+        const targetMonth = new Date(ptYear, ptMonth - 2, 1); // 2 months before current PT (June = August - 2)
+        timePeriod = `${targetMonth.getFullYear()}-${String(targetMonth.getMonth() + 1).padStart(2, '0')}`;
+        
+        logger.info(`Mapped "Last Month" to actual period: ${timePeriod}`);
+      }
       
       // Check circuit breaker
       if (checkRateLimit(clientId)) {
@@ -2768,6 +2786,15 @@ export function registerRoutes(app: Express): Server {
       logger.info(`Batch generating insights for ${clientId}`, { timePeriod });
 
       const metrics = await storage.getMetricsByClient(clientId, timePeriod);
+      
+      logger.info(`Batch generation: Found ${metrics.length} metrics for ${clientId}, period: ${timePeriod}`, {
+        sampleMetrics: metrics.slice(0, 3).map(m => ({
+          name: m.metricName,
+          sourceType: m.sourceType,
+          period: m.timePeriod,
+          value: typeof m.value
+        }))
+      });
       
       // Group metrics by name and calculate averages
       interface MetricGroup {

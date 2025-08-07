@@ -239,6 +239,7 @@ export default function Dashboard() {
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [rateLimitRetryAfter, setRateLimitRetryAfter] = useState(0);
   const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchGenerationAttempted, setBatchGenerationAttempted] = useState(false);
 
   // Create insights lookup map from loaded insights
   const insightsLookup = useMemo(() => {
@@ -317,18 +318,27 @@ export default function Dashboard() {
       setIsRateLimited(false);
       setRateLimitRetryAfter(0);
       setBatchGenerating(false);
+      setBatchGenerationAttempted(true);
       
       // Invalidate insights query to reload fresh data
       queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
       
-      toast({
-        title: "AI Insights Generated",
-        description: `Generated ${data.totalGenerated} insights successfully.`,
-      });
+      // Only show success toast if insights were actually generated
+      if (data.totalGenerated > 0) {
+        toast({
+          title: "AI Insights Generated",
+          description: `Generated ${data.totalGenerated} insights successfully.`,
+        });
+      } else if (data.totalRequested === 0) {
+        console.log('⚠️ Batch generation found no metrics to process');
+      } else {
+        console.log('⚠️ Batch generation completed but no insights were generated');
+      }
     },
     onError: (error) => {
       console.error('❌ Batch generation failed:', error);
       setBatchGenerating(false);
+      setBatchGenerationAttempted(true);
       
       if (!error.message.includes('Circuit breaker') && !error.message.includes('Rate limit')) {
         toast({
@@ -340,17 +350,44 @@ export default function Dashboard() {
     }
   });
 
-  // Auto-trigger batch generation when no insights exist (only once)
+  // Auto-trigger batch generation when no insights exist (only once per session)
   useEffect(() => {
-    if (hasNoInsights && user?.clientId && !batchGenerating && !isRateLimited && !batchGenerateMutation.isPending) {
+    if (hasNoInsights && user?.clientId && !batchGenerating && !isRateLimited && !batchGenerateMutation.isPending && !batchGenerationAttempted) {
       console.log('🔄 Auto-triggering batch generation for empty insights state');
       setBatchGenerating(true);
+      console.log('🔍 Time period mapping:', {
+        displayPeriod: timePeriod,
+        effectivePeriod: effectiveTimePeriod,
+        userClientId: user.clientId
+      });
+      
       batchGenerateMutation.mutate({ 
         clientId: user.clientId, 
-        timePeriod: effectiveTimePeriod 
+        timePeriod: effectiveTimePeriod  // Use the mapped period, not the display period
       });
     }
-  }, [hasNoInsights, user?.clientId, effectiveTimePeriod, batchGenerating, isRateLimited, batchGenerateMutation.isPending]);
+  }, [hasNoInsights, user?.clientId, effectiveTimePeriod, batchGenerating, isRateLimited, batchGenerateMutation.isPending, batchGenerationAttempted]);
+
+  // Reset batch generation attempt flag when time period changes
+  useEffect(() => {
+    setBatchGenerationAttempted(false);
+  }, [effectiveTimePeriod]);
+
+  // Debug: Allow manual batch generation retry
+  const retryBatchGeneration = () => {
+    setBatchGenerationAttempted(false);
+    setBatchGenerating(false);
+    console.log('🔄 Manual retry of batch generation');
+  };
+
+  // Add a test button for debugging (temporary)
+  const debugBatchGeneration = () => {
+    console.log('🧪 Debug batch generation with raw period');
+    batchGenerateMutation.mutate({ 
+      clientId: user?.clientId || 'demo-client-id', 
+      timePeriod: '2025-06' // Test with actual period from logs
+    });
+  };
 
   // Rate limit countdown timer
   useEffect(() => {
