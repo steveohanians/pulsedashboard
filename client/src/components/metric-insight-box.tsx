@@ -35,14 +35,32 @@ const insightsStorage = {
   
   load: async (clientId: string, metricName: string): Promise<StoredInsight['data'] | null> => {
     try {
-      // Fetch existing insights from database
-      const response = await fetch(`/api/insights/${clientId}`);
+      // Create AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      // Fetch existing insights from database with timeout
+      const response = await fetch(`/api/insights/${clientId}`, {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         if (response.status === 401) {
           logger.warn('Authentication required for loading insights');
           return null;
         }
-        throw new Error(`Failed to fetch insights: ${response.statusText}`);
+        if (response.status === 404) {
+          logger.info(`No insights found for client ${clientId}`);
+          return null;
+        }
+        // Log error but don't throw to prevent unhandled rejections
+        logger.error(`Failed to fetch insights: ${response.status} ${response.statusText}`);
+        return null;
       }
       
       const data = await response.json();
@@ -71,7 +89,19 @@ const insightsStorage = {
       
       return null;
     } catch (error) {
-      logger.error('Failed to load insights from database', { error: (error as Error).message, clientId, metricName });
+      // Handle timeout and network errors gracefully
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          logger.warn('Insights fetch request timed out', { clientId, metricName });
+        } else {
+          logger.error('Failed to load insights from database', { 
+            error: error.message, 
+            clientId, 
+            metricName 
+          });
+        }
+      }
+      // Always return null instead of throwing to prevent unhandled rejections
       return null;
     }
   },
@@ -135,24 +165,32 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
 
       
       // Fallback to loading from database if no preloaded insight
-      try {
-        const stored = await insightsStorage.load(clientId, metricName);
-        if (stored) {
-          logger.component('MetricInsightBox', `Loaded stored insight for ${metricName}`);
-          setInsight({
-            ...stored,
-            isTyping: false,
-            isFromStorage: true
-          });
-          
-          // Report status to parent
-          if (stored.status && onStatusChange) {
-            onStatusChange(stored.status);
+      // Add small delay to allow authentication to complete
+      setTimeout(async () => {
+        try {
+          const stored = await insightsStorage.load(clientId, metricName);
+          if (stored) {
+            logger.component('MetricInsightBox', `Loaded stored insight for ${metricName}`);
+            setInsight({
+              ...stored,
+              isTyping: false,
+              isFromStorage: true
+            });
+            
+            // Report status to parent
+            if (stored.status && onStatusChange) {
+              onStatusChange(stored.status);
+            }
           }
+        } catch (error) {
+          // Silently handle errors to prevent runtime error modal
+          logger.warn('Failed to load stored insight', { 
+            error: error instanceof Error ? error.message : 'Unknown error', 
+            clientId, 
+            metricName 
+          });
         }
-      } catch (error) {
-        logger.error('Failed to load stored insight', { error: (error as Error).message, clientId, metricName });
-      }
+      }, 100);
     };
     
     loadStoredInsight();
