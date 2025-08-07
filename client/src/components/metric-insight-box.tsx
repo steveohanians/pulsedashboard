@@ -42,14 +42,6 @@ const insightsStorage = {
           logger.warn('Authentication required for loading insights');
           return null;
         }
-        
-        // Handle rate limiting gracefully
-        if (response.status === 429) {
-          const errorText = await response.text().catch(() => 'Rate limit exceeded');
-          logger.warn('Rate limit hit during insight loading', { clientId, metricName, error: errorText });
-          return null; // Return null instead of throwing to prevent cascading failures
-        }
-        
         throw new Error(`Failed to fetch insights: ${response.statusText}`);
       }
       
@@ -79,14 +71,7 @@ const insightsStorage = {
       
       return null;
     } catch (error) {
-      // Enhanced error handling with circuit breaker awareness
-      const errorMessage = (error as Error).message;
-      if (errorMessage.includes('Too Many Requests') || errorMessage.includes('429')) {
-        logger.warn('Rate limit circuit breaker - stopping individual API calls', { clientId, metricName });
-        return null; // Graceful degradation instead of error logging spam
-      }
-      
-      logger.error('Failed to load insights from database', { error: errorMessage, clientId, metricName });
+      logger.error('Failed to load insights from database', { error: (error as Error).message, clientId, metricName });
       return null;
     }
   },
@@ -111,11 +96,9 @@ interface MetricInsightBoxProps {
   };
   onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
   preloadedInsight?: any; // Pre-loaded insight to prevent API calls
-  isRateLimited?: boolean; // Circuit breaker state from parent
-  batchGenerating?: boolean; // Batch generation in progress
 }
 
-export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight, isRateLimited = false, batchGenerating = false }: MetricInsightBoxProps) {
+export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<StoredInsight['data'] & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
@@ -152,15 +135,6 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           onStatusChange(preloadedInsight.status);
         }
         return;
-      }
-
-      // Check for circuit breaker conditions before making any API calls
-      if (isRateLimited || batchGenerating) {
-        console.log(`🔒 [${metricName}] Circuit breaker active - no individual API calls allowed`, {
-          isRateLimited,
-          batchGenerating
-        });
-        return; // Don't make any API calls when rate limited or batch generating
       }
 
       console.log(`⚠️ [${metricName}] No preloaded insight - falling back to API call`);
@@ -342,33 +316,19 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           onStatusChange?.(undefined);
         }}
         onClear={async () => {
+          // Clear insight and storage
+          setInsight(null);
+          insightsStorage.remove(clientId, metricName);
+          onStatusChange?.(undefined);
+          
+          // Also delete the saved context
           try {
-            // Clear insight from database first
-            const response = await fetch(`/api/insights/${clientId}/${encodeURIComponent(metricName)}`, {
-              method: 'DELETE',
-              credentials: 'include'
+            await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
+              method: 'DELETE'
             });
-            
-            if (!response.ok) {
-              throw new Error(`Failed to clear insight: ${response.statusText}`);
-            }
-            
-            // Clear local state and storage
-            setInsight(null);
-            insightsStorage.remove(clientId, metricName);
-            onStatusChange?.(undefined);
-            
-            console.log(`✅ Successfully cleared insight for ${metricName}`);
-            
-            // Invalidate insights cache to trigger refresh
-            queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-            
+            // Successfully cleared insights and deleted saved context
           } catch (error) {
-            console.error(`❌ Failed to clear insight for ${metricName}:`, error);
-            // Still clear local state even if API call fails
-            setInsight(null);
-            insightsStorage.remove(clientId, metricName);
-            onStatusChange?.(undefined);
+            // Failed to delete context - handled silently
           }
         }}
       />

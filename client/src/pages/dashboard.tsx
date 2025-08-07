@@ -235,12 +235,6 @@ export default function Dashboard() {
     rawResponse: insightsData 
   });
 
-  // Circuit breaker state for rate limiting
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [rateLimitRetryAfter, setRateLimitRetryAfter] = useState(0);
-  const [batchGenerating, setBatchGenerating] = useState(false);
-  const [batchGenerationAttempted, setBatchGenerationAttempted] = useState(false);
-
   // Create insights lookup map from loaded insights
   const insightsLookup = useMemo(() => {
     const lookup: Record<string, any> = {};
@@ -266,138 +260,6 @@ export default function Dashboard() {
     
     return lookup;
   }, [insightsData]);
-
-  // Detect empty insights state and trigger batch generation
-  const hasNoInsights = useMemo(() => {
-    if (insightsLoading) return false;
-    return Object.keys(insightsLookup).length === 0;
-  }, [insightsLookup, insightsLoading]);
-
-  // Batch generation mutation for empty insights state
-  const batchGenerateMutation = useMutation({
-    mutationFn: async ({ clientId, timePeriod }: { clientId: string; timePeriod: string }) => {
-      console.log('🚀 Starting batch insight generation...', { clientId, timePeriod });
-      const response = await fetch("/api/insights/generate-batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ clientId, timePeriod })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        // Handle rate limiting
-        if (response.status === 429) {
-          if (errorData.type === 'circuit_breaker') {
-            setIsRateLimited(true);
-            setRateLimitRetryAfter(errorData.retryAfter || 30);
-            throw new Error(`Circuit breaker active. Retry in ${errorData.retryAfter || 30} seconds.`);
-          } else {
-            setIsRateLimited(true);
-            setRateLimitRetryAfter(60); // Default 60 second retry
-            throw new Error('Rate limit reached. Please wait before trying again.');
-          }
-        }
-        
-        throw new Error(`Batch generation failed: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      console.log('✅ Batch generation completed:', {
-        totalGenerated: data.totalGenerated,
-        totalRequested: data.totalRequested,
-        batchComplete: data.batchComplete
-      });
-      
-      // Clear rate limiting state on success
-      setIsRateLimited(false);
-      setRateLimitRetryAfter(0);
-      setBatchGenerating(false);
-      setBatchGenerationAttempted(true);
-      
-      // Invalidate insights query to reload fresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
-      
-      // Only show success toast if insights were actually generated
-      if (data.totalGenerated > 0) {
-        toast({
-          title: "AI Insights Generated",
-          description: `Generated ${data.totalGenerated} insights successfully.`,
-        });
-      } else if (data.totalRequested === 0) {
-        console.log('⚠️ Batch generation found no metrics to process');
-      } else {
-        console.log('⚠️ Batch generation completed but no insights were generated');
-      }
-    },
-    onError: (error) => {
-      console.error('❌ Batch generation failed:', error);
-      setBatchGenerating(false);
-      setBatchGenerationAttempted(true);
-      
-      if (!error.message.includes('Circuit breaker') && !error.message.includes('Rate limit')) {
-        toast({
-          title: "Generation Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    }
-  });
-
-  // Auto-trigger batch generation when no insights exist (only once per session)
-  useEffect(() => {
-    if (hasNoInsights && user?.clientId && !batchGenerating && !isRateLimited && !batchGenerateMutation.isPending && !batchGenerationAttempted) {
-      console.log('🔄 Auto-triggering batch generation for empty insights state');
-      setBatchGenerating(true);
-      console.log('🔍 Time period mapping:', {
-        displayPeriod: timePeriod,
-        effectivePeriod: effectiveTimePeriod,
-        userClientId: user.clientId
-      });
-      
-      batchGenerateMutation.mutate({ 
-        clientId: user.clientId, 
-        timePeriod: effectiveTimePeriod  // Use the mapped period, not the display period
-      });
-    }
-  }, [hasNoInsights, user?.clientId, effectiveTimePeriod, batchGenerating, isRateLimited, batchGenerateMutation.isPending, batchGenerationAttempted]);
-
-  // Reset batch generation attempt flag when time period changes
-  useEffect(() => {
-    setBatchGenerationAttempted(false);
-  }, [effectiveTimePeriod]);
-
-  // Debug: Allow manual batch generation retry
-  const retryBatchGeneration = () => {
-    setBatchGenerationAttempted(false);
-    setBatchGenerating(false);
-    console.log('🔄 Manual retry of batch generation');
-  };
-
-
-
-  // Rate limit countdown timer
-  useEffect(() => {
-    if (rateLimitRetryAfter > 0) {
-      const timer = setInterval(() => {
-        setRateLimitRetryAfter(prev => {
-          if (prev <= 1) {
-            setIsRateLimited(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      return () => clearInterval(timer);
-    }
-  }, [rateLimitRetryAfter]);
 
   // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
@@ -1383,7 +1245,7 @@ export default function Dashboard() {
               )}
             </Button>
 
-            {/* Clear Insights Button */}
+            {/* Debug: Clear Insights Button */}
             <Button
               variant="outline"
               size="sm"
@@ -1399,7 +1261,7 @@ export default function Dashboard() {
               ) : (
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Clear All</span>
+                  <span className="hidden sm:inline">Clear Insights</span>
                 </div>
               )}
             </Button>
@@ -1500,8 +1362,6 @@ export default function Dashboard() {
                         </span>
                       </span>
                     </button>
-                    
-
                   </div>
                 </div>
               )}
@@ -1558,7 +1418,6 @@ export default function Dashboard() {
                       </div>
                     </button>
                   </li>
-
                 </>
               )}
             </ul>
@@ -2111,8 +1970,6 @@ export default function Dashboard() {
                         });
                         return insight;
                       })()}
-                      isRateLimited={isRateLimited}
-                      batchGenerating={batchGenerating}
                       onStatusChange={(status) => {
                         logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
