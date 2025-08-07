@@ -158,7 +158,8 @@ export class InsightDataAggregator {
         if (sourceType.startsWith('Competitor_')) {
           const competitorId = sourceType.replace('Competitor_', '');
           const competitorName = competitorMap.get(competitorId) || `Competitor ${competitorId}`;
-          competitorValues.push(parseMetricValue(value) || 0);
+          const parsedValue = this.parseDistributionValue(value, metricName) || 0;
+          competitorValues.push(parsedValue);
           competitorNames.push(competitorName);
         }
       });
@@ -175,8 +176,8 @@ export class InsightDataAggregator {
       result.push({
         metricName,
         clientValue: currentClientValue,
-        cdAverage: currentData.CD_Avg ? parseMetricValue(currentData.CD_Avg) : null,
-        industryAverage: currentData.Industry_Avg ? parseMetricValue(currentData.Industry_Avg) : null,
+        cdAverage: currentData.CD_Avg ? this.parseDistributionValue(currentData.CD_Avg, metricName) : null,
+        industryAverage: currentData.Industry_Avg ? this.parseDistributionValue(currentData.Industry_Avg, metricName) : null,
         competitorValues,
         competitorNames,
         previousPeriodValue: previousClientValue,
@@ -192,6 +193,14 @@ export class InsightDataAggregator {
    * Parse client value with special handling for distribution metrics
    */
   private parseClientValue(value: any, metricName: string): number | null {
+    return this.parseDistributionValue(value, metricName);
+  }
+
+  /**
+   * Universal parser for distribution metrics (Device Distribution, Traffic Channels)
+   * Handles Client, CD_Avg, Industry_Avg, and Competitor data sources
+   */
+  private parseDistributionValue(value: any, metricName: string): number | null {
     // Special handling for Device Distribution
     if (metricName === 'Device Distribution') {
       try {
@@ -206,17 +215,66 @@ export class InsightDataAggregator {
         
         if (Array.isArray(parsedArray)) {
           // Return desktop percentage as the primary metric for AI insights
-          const desktopData = parsedArray.find(item => item.device === 'Desktop');
+          const desktopData = parsedArray.find(item => 
+            item.device === 'Desktop' || item.channel === 'Desktop'
+          );
           if (desktopData && typeof desktopData.percentage === 'number') {
             logger.info('Device Distribution desktop percentage extracted for AI', {
               desktopPercentage: desktopData.percentage,
-              fullData: parsedArray
+              fullData: parsedArray,
+              sourceNote: 'Extracted from distribution array'
             });
             return desktopData.percentage;
           }
         }
       } catch (error) {
         logger.error('Failed to parse Device Distribution data for AI insights', {
+          value: typeof value === 'string' ? value.substring(0, 100) : value,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return null;
+    }
+
+    // Special handling for Traffic Channels
+    if (metricName === 'Traffic Channels') {
+      try {
+        let parsedArray;
+        
+        // Handle double-encoded JSON string
+        if (typeof value === 'string') {
+          parsedArray = JSON.parse(value);
+        } else {
+          parsedArray = value;
+        }
+        
+        if (Array.isArray(parsedArray)) {
+          // Return organic search percentage as primary metric for AI insights
+          const organicData = parsedArray.find(item => 
+            item.channel === 'Organic Search' || 
+            item.channel === 'organic' ||
+            item.source === 'organic'
+          );
+          if (organicData && typeof organicData.percentage === 'number') {
+            logger.info('Traffic Channels organic percentage extracted for AI', {
+              organicPercentage: organicData.percentage,
+              fullData: parsedArray,
+              sourceNote: 'Extracted from traffic channels array'
+            });
+            return organicData.percentage;
+          }
+          
+          // Fallback: return the first channel's percentage
+          if (parsedArray.length > 0 && parsedArray[0].percentage) {
+            logger.info('Traffic Channels fallback to first channel for AI', {
+              firstChannelPercentage: parsedArray[0].percentage,
+              channel: parsedArray[0].channel || parsedArray[0].source
+            });
+            return parsedArray[0].percentage;
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to parse Traffic Channels data for AI insights', {
           value: typeof value === 'string' ? value.substring(0, 100) : value,
           error: error instanceof Error ? error.message : String(error)
         });
