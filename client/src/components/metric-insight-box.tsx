@@ -6,45 +6,13 @@ import { apiRequest } from "@/lib/queryClient";
 import AIInsights from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
 
-// Persistent insights storage using localStorage with month-based expiration
-const INSIGHTS_STORAGE_KEY = 'pulse_dashboard_insights';
-
-interface StoredInsight {
-  data: {
-    contextText?: string;
-    insightText?: string;
-    recommendationText?: string;
-    status?: 'success' | 'needs_improvement' | 'warning';
-  };
-  month: string; // Format: "2025-07"
-  timestamp: number;
+// Simplified insight data interface
+interface InsightData {
+  contextText?: string;
+  insightText?: string;
+  recommendationText?: string;
+  status?: 'success' | 'needs_improvement' | 'warning';
 }
-
-const insightsStorage = {
-  getCurrentMonth: () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  },
-  
-  getKey: (clientId: string, metricName: string) => `${clientId}-${metricName}`,
-  
-  save: (clientId: string, metricName: string, insight: StoredInsight['data']) => {
-    // Database operations handled by API - no client-side storage needed
-    return;
-  },
-  
-  load: async (clientId: string, metricName: string): Promise<StoredInsight['data'] | null> => {
-    // COMPLETELY REMOVED fetch calls to prevent unhandled promise rejections
-    // All insights data should come from preloaded data passed as props
-    logger.info('Individual fetch calls disabled - using preloaded data only', { clientId, metricName });
-    return null;
-  },
-  
-  remove: (clientId: string, metricName: string) => {
-    // Database cleanup handled by API - no client-side storage to remove
-    return;
-  }
-};
 
 interface MetricInsightBoxProps {
   metricName: string;
@@ -63,7 +31,7 @@ interface MetricInsightBoxProps {
 }
 
 export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
-  const [insight, setInsight] = useState<StoredInsight['data'] & { 
+  const [insight, setInsight] = useState<InsightData & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
     hasCustomContext?: boolean;
@@ -105,14 +73,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
   
-  // Store insight in persistent storage when it changes (without typing state)
-  useEffect(() => {
-    if (insight && !insight.isFromStorage) {
-      // Store without the typing state and storage flag to avoid restart issues
-      const { isTyping, isFromStorage, ...insightToStore } = insight;
-      insightsStorage.save(clientId, metricName, insightToStore);
-    }
-  }, [insight, clientId, metricName]);
+  // Removed client-side storage - all persistence handled by API
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
@@ -243,9 +204,8 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
         metricData={metricData}
         onRegenerate={async () => {
           logger.component('MetricInsightBox', 'Regenerate clicked - checking for existing context');
-          // Clear current insight and storage to force fresh generation with typewriter effect
+          // Clear current insight to force fresh generation with typewriter effect
           setInsight(null);
-          insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           
           // Check if there's existing context and use it for regeneration
@@ -272,15 +232,13 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           // Start the mutation first to trigger loading state
           generateInsightWithContextMutation.mutate(userContext);
           
-          // Then clear current insight and storage
+          // Then clear current insight
           setInsight(null);
-          insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
         }}
         onClear={async () => {
-          // Clear insight and storage
+          // Clear insight state
           setInsight(null);
-          insightsStorage.remove(clientId, metricName);
           onStatusChange?.(undefined);
           
           // Also delete the saved context

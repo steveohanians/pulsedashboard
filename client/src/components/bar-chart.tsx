@@ -1,7 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
-import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
 import { parseMetricValue } from '../utils/metricParser';
 
 interface BarChartProps {
@@ -26,7 +25,7 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { seededRandom, generatePeriodLabel, generatePacificTimePeriods, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
+import { generatePeriodLabel, generateTemporalVariationSync } from '../utils/chartUtilities';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(

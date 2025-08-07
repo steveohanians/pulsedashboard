@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEVICE_COLORS } from '@/constants/chart-colors';
 
 interface LollipopChartProps {
   data: {
@@ -24,11 +25,6 @@ interface LollipopChartProps {
     Mobile: number;
   };
 }
-
-const DEVICE_COLORS = {
-  Desktop: 'hsl(var(--color-device-desktop))',
-  Mobile: 'hsl(var(--color-device-mobile))'
-};
 
 export default function LollipopChart({ 
   data, 

@@ -36,23 +36,7 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     retry: 1 // Reduce retries to prevent spam
   });
   
-  console.log('Insights query executed - Status:', { 
-    loading: insightsLoading, 
-    hasData: !!insightsData, 
-    error: insightsError,
-    clientId,
-    rawData: insightsData 
-  });
-  
-  // Always log insights debug to see what's happening
-  console.log('Dashboard insights debug:', {
-    loading: insightsLoading,
-    error: insightsError,
-    hasData: !!insightsData,
-    dataType: typeof insightsData,
-    dataKeys: insightsData ? Object.keys(insightsData) : null,
-    fullData: insightsData
-  });
+  // Insights data loaded - processing for preloading
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -78,22 +62,11 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
     const insights = insightsResponse?.insights || insightsResponse || [];
     const lookup: Record<string, any> = {};
     
-    console.log('🔍 Dashboard insights data:', { 
-      hasInsightsData: !!insightsData, 
-      insightsCount: Array.isArray(insights) ? insights.length : 0,
-      insightsPreview: insights.slice(0, 2),
-      fullInsightsResponse: insightsData
-    });
-    
     if (Array.isArray(insights)) {
       insights.forEach((insight: any) => {
         lookup[insight.metricName] = insight;
-        console.log(`✅ Added insight for: ${insight.metricName}`);
       });
     }
-    
-    console.log('🔍 Final insights lookup keys:', Object.keys(lookup));
-    console.log('🔍 Will preload insights for metrics:', ['Session Duration', 'Bounce Rate', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution']);
     return lookup;
   }, [insightsData]);
 

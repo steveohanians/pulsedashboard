@@ -1,18 +1,11 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
+import { DATA_SOURCE_COLORS } from '@/constants/chart-colors';
 
 interface MetricsChartProps {
   metricName: string;
   data: Record<string, number>;
 }
-
-const COLORS = {
-  Client: 'hsl(var(--color-client))',
-  CD_Avg: 'hsl(var(--color-cd-avg))',
-  Industry_Avg: 'hsl(var(--color-industry-avg))',
-  Industry: 'hsl(var(--color-industry-avg))', // fallback
-  Competitor: 'hsl(var(--color-competitor-1))'
-};
 
 export default function MetricsChart({ metricName, data }: MetricsChartProps) {
   const isTrafficOrDevice = metricName.includes('Traffic') || metricName.includes('Device');
@@ -36,7 +29,7 @@ export default function MetricsChart({ metricName, data }: MetricsChartProps) {
   const chartDataPoints = Object.entries(data).map(([key, value]) => ({
     name: key,
     value: Math.round(value * 10) / 10,
-    fill: COLORS[key as keyof typeof COLORS] || 'hsl(var(--color-default))'
+    fill: DATA_SOURCE_COLORS[key as keyof typeof DATA_SOURCE_COLORS] || 'hsl(var(--color-default))'
   }));
   
   const optimizedData = ChartOptimizer.optimizeDataPoints(chartDataPoints);

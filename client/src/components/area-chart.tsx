@@ -27,7 +27,7 @@ interface AreaChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { seededRandom, generatePacificTimePeriods, generateTemporalVariationSync } from '../utils/chartUtilities';
+import { generateTemporalVariationSync } from '../utils/chartUtilities';
 
 // Generate stable time series data for area chart
 interface AreaDataPoint {
