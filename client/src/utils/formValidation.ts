@@ -13,19 +13,19 @@ export const commonValidations = {
   url: z.string().url("Please enter a valid URL").or(z.literal("")),
   required: z.string().min(1, "This field is required"),
   optional: z.string().optional(),
-  
+
   // Business-specific validations
   companyName: z.string()
     .min(2, "Company name must be at least 2 characters")
     .max(100, "Company name must be less than 100 characters"),
-  
+
   websiteUrl: z.string()
     .url("Please enter a valid website URL")
     .refine(
       (url) => !url.includes('localhost') && !url.includes('127.0.0.1'),
       "Please enter a public website URL"
     ),
-  
+
   // Dynamic validation - validates against filter_options API
   industryVertical: z.string().min(1, "Please select a valid industry vertical"),
   businessSize: z.string().min(1, "Please select a valid business size"),
@@ -50,7 +50,7 @@ export const fieldValidators = {
    */
   password: (value: string) => {
     const errors: string[] = [];
-    
+
     if (value.length < 8) {
       errors.push("At least 8 characters");
     }
@@ -63,7 +63,7 @@ export const fieldValidators = {
     if (!/\d/.test(value)) {
       errors.push("One number");
     }
-    
+
     return errors.length > 0 ? `Password must contain: ${errors.join(", ")}` : null;
   },
 
@@ -72,7 +72,7 @@ export const fieldValidators = {
    */
   url: (value: string) => {
     if (!value) return null;
-    
+
     try {
       const url = new URL(value);
       if (!['http:', 'https:'].includes(url.protocol)) {
@@ -160,12 +160,12 @@ export const formatFormErrors = {
    */
   fromZodError: (error: z.ZodError): Record<string, string> => {
     const fieldErrors: Record<string, string> = {};
-    
+
     error.errors.forEach((err) => {
       const field = err.path.join('.');
       fieldErrors[field] = err.message;
     });
-    
+
     return fieldErrors;
   },
 

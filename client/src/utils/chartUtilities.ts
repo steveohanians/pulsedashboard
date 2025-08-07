@@ -171,7 +171,6 @@ export async function generateTemporalVariation(
     }
   }
   
-  // REMOVED: No fallback to synthetic data - maintain data authenticity
   logger.warn(`No authentic data found for ${metricName}, returning empty array`);
   return [];
 }
@@ -185,13 +184,9 @@ export function generateTemporalVariationSync(
   metricName: string,
   seed: string = 'default'
 ): number[] {
-  // REMOVED: No synthetic data generation - return empty array for authentic data only
   logger.warn(`No authentic temporal data available for ${metricName}`);
   return [];
 }
-
-// REMOVED: All fallback data generators eliminated to maintain data authenticity
-// System now shows empty states instead of synthetic data when authentic data unavailable
 
 /**
  * Chart visibility state management hook pattern

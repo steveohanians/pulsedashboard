@@ -3,8 +3,6 @@
 
 import { logger } from './logger';
 
-// generatePeriodLabel removed - use comprehensive version from chartUtilities.ts
-
 /**
  * Common tooltip content style for consistent chart tooltips
  */

@@ -40,7 +40,7 @@ export function parseMetricValue(value: any): number {
     } catch {
       // Not JSON, try parsing as plain number
     }
-    
+
     // Parse as plain number
     const num = parseFloat(value);
     return isNaN(num) ? 0 : num;

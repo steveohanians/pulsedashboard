@@ -66,8 +66,6 @@ export class DOMOptimizer {
     observer.observe(element);
   }
 
-  // debounce moved to sharedUtilities.ts for consolidation
-
   static throttle<T extends (...args: any[]) => any>(
     func: T,
     limit: number
@@ -82,8 +80,6 @@ export class DOMOptimizer {
     };
   }
 }
-
-// ChartOptimizer completely removed - functionality simplified in direct implementations
 
 // Memory management utilities
 export class MemoryOptimizer {

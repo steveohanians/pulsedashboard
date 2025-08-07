@@ -158,12 +158,3 @@ export function processDeviceDistribution(
     };
   });
 }
-
-// Company utility functions moved to sharedUtilities.ts for broader reuse
-
-/**
- * Convert raw values for display (percentages, minutes, etc.)
- */
-// convertValue moved to chartUtils.ts and merged with formatMetricValue for consistency
-
-// Metric processing utilities moved to chartUtils.ts for better organization

@@ -4,10 +4,10 @@
  * This provides immediate feedback to users before sending to the server
  */
 
-import { 
-  PROMPT_INJECTION_PATTERNS, 
-  HTML_SCRIPT_PATTERNS, 
-  PROFANITY_PATTERNS, 
+import {
+  PROMPT_INJECTION_PATTERNS,
+  HTML_SCRIPT_PATTERNS,
+  PROFANITY_PATTERNS,
   OFF_TOPIC_PATTERNS,
   VALIDATION_LIMITS
 } from '@shared/validationPatterns';

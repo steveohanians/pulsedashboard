@@ -39,6 +39,11 @@ class PerformanceMonitor {
     return result;
   }
 
+  markDashboardComplete() {
+    // Performance tracking disabled per user request
+    return 0;
+  }
+
   getTotalTime(): number {
     return Date.now() - this.startTime;
   }
