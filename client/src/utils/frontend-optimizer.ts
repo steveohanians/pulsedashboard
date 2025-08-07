@@ -65,20 +65,6 @@ export class DOMOptimizer {
     
     observer.observe(element);
   }
-
-  static throttle<T extends (...args: any[]) => any>(
-    func: T,
-    limit: number
-  ): (...args: Parameters<T>) => void {
-    let inThrottle: boolean;
-    return (...args: Parameters<T>) => {
-      if (!inThrottle) {
-        func.apply(null, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    };
-  }
 }
 
 // Memory management utilities

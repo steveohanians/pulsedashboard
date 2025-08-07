@@ -26,7 +26,7 @@ interface BarChartProps {
 
 // Generate deterministic seeded random number and temporal variation
 import { generateTemporalVariationSync } from '@/utils/chartUtils';
-import { generatePeriodLabel } from '@/utils/chartUtilities';
+import { generatePeriodLabel } from '@/utils/chartGenerators';
 
 // Process time-series data for bar chart display
 function processTimeSeriesForBar(
@@ -44,7 +44,7 @@ function processTimeSeriesForBar(
   const data: Array<Record<string, unknown>> = [];
   
   // Generate dynamic period labels based on actual periods
-  // generatePeriodLabel now imported from chartUtilities
+  // generatePeriodLabel now imported from chartGenerators
   
   const clientKey = clientUrl || 'Client';
   

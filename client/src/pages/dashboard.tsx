@@ -26,7 +26,7 @@ import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.p
 import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/utils/chartUtils";
 import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
-import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartUtilities";
+import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartGenerators";
 import { parseMetricValue } from "@/utils/metricParser";
 import { 
   processCompanyMetrics, 
@@ -437,7 +437,7 @@ export default function Dashboard() {
     if (clientTrafficMetrics.length > 0) {
 
       
-      // Use the corrected processChannelData function from chartUtilities.ts
+      // Use the corrected processChannelData function from chartGenerators.ts
       const channelMap = aggregateChannelData(clientTrafficMetrics);
 
       

@@ -1,7 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 import { generateTemporalVariationSync, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '@/utils/chartUtils';
-import { generatePeriodLabel } from '@/utils/chartUtilities';
+import { generatePeriodLabel } from '@/utils/chartGenerators';
 import { logger } from '@/utils/logger';
 
 import { parseMetricValue } from '../utils/metricParser';
@@ -108,7 +108,7 @@ function generateRealTimeSeriesData(
   
   const data: Array<Record<string, unknown>> = [];
   
-  // Generate dynamic period labels based on actual periods (now imported from chartUtilities)
+  // Generate dynamic period labels based on actual periods (now imported from chartGenerators)
   
   const clientKey = clientUrl || 'Client';
   

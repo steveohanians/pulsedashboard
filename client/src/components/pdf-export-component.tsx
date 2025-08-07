@@ -1,14 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-
-// Heavy libraries are only imported when this component loads
-const loadPDFLibraries = async () => {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf')
-  ]);
-  return { html2canvas, jsPDF };
-};
+import { loadPDFLibraries } from '@/utils/performanceUtils';
 
 interface PDFExportProps {
   onExport: () => void;
