@@ -27,7 +27,7 @@ interface AreaChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { generateTemporalVariationSync } from '../utils/chartUtilities';
+import { generateTemporalVariationSync } from '@/utils/chartUtils';
 
 // Generate stable time series data for area chart
 interface AreaDataPoint {
@@ -363,7 +363,7 @@ export default function SessionDurationAreaChart({ metricName, timePeriod, clien
                 <div style={{ color: '#374151', fontWeight: 'medium', fontSize: '11px', marginBottom: '4px' }}>
                   {label}
                 </div>
-                {payload.map((entry: { color?: string; name: string; value: number }, index: number) => (
+                {payload.map((entry: any, index: number) => (
                   <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
                     <div 
                       style={{ 

@@ -1,8 +1,9 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { generatePeriodLabel, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, generateTemporalVariationSync } from '../utils/chartUtilities';
+import { generatePeriodLabel, generateTemporalVariationSync } from '@/utils/chartUtils';
+import { createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '../utils/chartUtilities';
 import { logger } from '@/utils/logger';
-import { ChartOptimizer, MemoryOptimizer } from '../utils/frontend-optimizer';
+
 import { parseMetricValue } from '../utils/metricParser';
 
 // Use shared DiamondDot component

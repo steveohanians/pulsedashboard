@@ -43,10 +43,12 @@ const OptimizedChart = memo(({ data, dataKey, color, height = 200 }: OptimizedCh
           fontSize={12}
         />
         <Tooltip 
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e0e0e0',
-            borderRadius: '4px',
+          contentStyle={{
+            backgroundColor: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '6px',
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+            padding: '8px 12px',
             fontSize: '12px'
           }}
         />

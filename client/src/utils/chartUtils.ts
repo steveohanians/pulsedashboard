@@ -72,3 +72,30 @@ export function formatMetricValue(value: number, metricName: string): string {
   
   return `${roundedValue}`;
 }
+
+/**
+ * Generate deterministic seeded random number for consistent chart variations
+ */
+export function seededRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash) / 2147483647; // Normalize to 0-1
+}
+
+/**
+ * Generate temporal variation for chart data (authentic data only)
+ */
+export function generateTemporalVariationSync(
+  baseValue: number, 
+  dates: string[], 
+  metricName: string,
+  seed: string = 'default'
+): number[] {
+  // Return empty array - authentic data only
+  console.warn(`No authentic temporal data available for ${metricName}`);
+  return [];
+}

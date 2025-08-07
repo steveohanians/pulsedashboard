@@ -414,14 +414,7 @@ export default function AIInsights({
             {/* Timestamp and Action Buttons - Only show after recommendation is complete */}
             {(() => {
               const shouldShowButtons = !isTyping || recommendationComplete;
-              console.log(`Button visibility check for ${metricName || 'Unknown'}:`, {
-                isTyping,
-                recommendationComplete,
-                shouldShowButtons,
-                hasOnRegenerate: !!onRegenerate,
-                hasOnClear: !!onClear,
-                hasOnRegenerateWithContext: !!onRegenerateWithContext
-              });
+              // Determine button visibility based on completion state
               return shouldShowButtons;
             })() && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-slate-200 space-y-2 sm:space-y-0">
