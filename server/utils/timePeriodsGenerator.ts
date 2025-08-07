@@ -34,6 +34,70 @@ export function generateTimePeriods(): string[] {
 }
 
 /**
+ * Generate time periods based on filter selection with custom date support
+ * Used by dashboard queries to determine which periods to fetch data for
+ */
+export function generateTimePeriodsWithOffsets(
+  timePeriod: string, 
+  customStartDate?: string, 
+  customEndDate?: string
+): string[] {
+  const { year, month } = parsePacificTimeDate();
+  
+  switch (timePeriod) {
+    case 'Last Month':
+      // Return the most recent complete month
+      const lastMonth = new Date(year, month - 1, 1);
+      return [`${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`];
+      
+    case 'Last Quarter':
+      // Return the last 3 months
+      const periods: string[] = [];
+      for (let i = 1; i <= 3; i++) {
+        const date = new Date(year, month - i, 1);
+        periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+      }
+      return periods;
+      
+    case 'Last Year':
+      // Return the last 12 months
+      const yearPeriods: string[] = [];
+      for (let i = 1; i <= 12; i++) {
+        const date = new Date(year, month - i, 1);
+        yearPeriods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+      }
+      return yearPeriods;
+      
+    case 'Custom Date Range':
+      if (!customStartDate || !customEndDate) {
+        // Fallback to last month if custom dates are missing
+        const fallbackMonth = new Date(year, month - 1, 1);
+        return [`${fallbackMonth.getFullYear()}-${String(fallbackMonth.getMonth() + 1).padStart(2, '0')}`];
+      }
+      
+      // Generate periods between custom start and end dates
+      const start = new Date(customStartDate);
+      const end = new Date(customEndDate);
+      const customPeriods: string[] = [];
+      
+      let current = new Date(start.getFullYear(), start.getMonth(), 1);
+      const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+      
+      while (current <= endMonth) {
+        customPeriods.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
+        current.setMonth(current.getMonth() + 1);
+      }
+      
+      return customPeriods;
+      
+    default:
+      // Default to last month for unknown time periods
+      const defaultMonth = new Date(year, month - 1, 1);
+      return [`${defaultMonth.getFullYear()}-${String(defaultMonth.getMonth() + 1).padStart(2, '0')}`];
+  }
+}
+
+/**
  * Parse Pacific Time date parts for consistent date handling
  * Consolidates the repeated ptParts.find pattern found across multiple files
  */

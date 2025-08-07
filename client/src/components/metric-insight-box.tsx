@@ -112,7 +112,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       
       // If we have a preloaded insight, use it directly
       if (preloadedInsight) {
-        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`, {
           hasContext: !!preloadedInsight.contextText,
           hasInsight: !!preloadedInsight.insightText,
           hasRecommendation: !!preloadedInsight.recommendationText,

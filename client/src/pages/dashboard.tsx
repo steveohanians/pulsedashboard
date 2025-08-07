@@ -1882,13 +1882,6 @@ export default function Dashboard() {
                       }}
                       preloadedInsight={(() => {
                         const insight = insightsLookup[metricName] || null;
-                          found: !!insight,
-                          insightId: insight?.id,
-                          lookupKeys: Object.keys(insightsLookup),
-                          exactMatch: insightsLookup.hasOwnProperty(metricName),
-                          metricNameType: typeof metricName,
-                          metricNameValue: metricName
-                        });
                         return insight;
                       })()}
                       onStatusChange={(status) => {
