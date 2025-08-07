@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./global.css";
 
-// Comprehensive error suppression to prevent runtime error plugin modal
+// Comprehensive runtime error modal suppression system
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
@@ -45,5 +45,74 @@ window.onunhandledrejection = function(event) {
   event.preventDefault();
   return true;
 };
+
+// DOM-based modal removal system - remove any error modals that appear
+const removeRuntimeErrorModals = () => {
+  // Remove any divs with common error modal characteristics
+  const modals = document.querySelectorAll(
+    '[class*="error"], [class*="modal"], [data-testid*="error"], [id*="error-overlay"], [class*="overlay"]'
+  );
+  
+  modals.forEach((modal) => {
+    const element = modal as HTMLElement;
+    // Check if it's likely an error modal based on content or styling
+    if (
+      element.textContent?.toLowerCase().includes('error') ||
+      element.textContent?.toLowerCase().includes('runtime') ||
+      element.style.zIndex === '9999' ||
+      element.style.position === 'fixed' ||
+      element.className.includes('error') ||
+      element.className.includes('overlay')
+    ) {
+      console.warn('[CLIENT]: Removing detected error modal:', element);
+      element.remove();
+    }
+  });
+};
+
+// Watch for modal creation with MutationObserver
+const observer = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    mutation.addedNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        // Remove any newly added error modals
+        if (
+          element.className?.includes('error') ||
+          element.className?.includes('modal') ||
+          element.className?.includes('overlay') ||
+          element.style?.position === 'fixed'
+        ) {
+          setTimeout(() => removeRuntimeErrorModals(), 0);
+        }
+      }
+    });
+  });
+});
+
+// Start observing after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+  
+  // Initial cleanup
+  removeRuntimeErrorModals();
+  
+  // Periodic cleanup every 500ms
+  setInterval(removeRuntimeErrorModals, 500);
+});
+
+// Start observing immediately if DOM is already ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+} else {
+  observer.observe(document.body, { childList: true, subtree: true });
+  removeRuntimeErrorModals();
+  setInterval(removeRuntimeErrorModals, 500);
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

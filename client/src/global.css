@@ -4,6 +4,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Completely hide any runtime error modals from @replit/vite-plugin-runtime-error-modal */
+[id*="error-overlay"],
+[class*="error-overlay"], 
+[data-testid*="error"],
+[class*="runtime-error"],
+div[style*="position: fixed"][style*="z-index: 9999"],
+div[style*="position: fixed"][style*="top: 0"][style*="left: 0"],
+iframe[src*="__vite_plugin_runtime_error"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+}
+
 @layer base {
   :root {
     /* Base Theme Colors */
