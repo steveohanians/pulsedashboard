@@ -34,73 +34,10 @@ const insightsStorage = {
   },
   
   load: async (clientId: string, metricName: string): Promise<StoredInsight['data'] | null> => {
-    try {
-      // Fetch with comprehensive error handling to prevent unhandled promise rejections
-      const response = await fetch(`/api/insights/${clientId}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).catch((fetchError) => {
-        // Handle network errors explicitly to prevent unhandled promise rejections
-        logger.warn('Network error during insights fetch', { 
-          error: fetchError.message, 
-          clientId, 
-          metricName 
-        });
-        throw new Error(`Network error: ${fetchError.message}`);
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          logger.warn('Authentication required for loading insights');
-          return null;
-        }
-        if (response.status === 404) {
-          logger.info(`No insights found for client ${clientId}`);
-          return null;
-        }
-        // Log error but don't throw to prevent unhandled rejections
-        logger.warn(`Failed to fetch insights: ${response.status} ${response.statusText}`);
-        return null;
-      }
-      
-      const data = await response.json();
-      const insights = data.insights || data; // Handle both response formats
-      
-      // Find insight for this specific metric
-      const metricInsight = Array.isArray(insights) ? insights.find((insight: any) => 
-        insight.metricName === metricName
-      ) : null;
-      
-      if (metricInsight) {
-        logger.info('Loaded stored insight from database', {
-          clientId,
-          metricName,
-          hasInsight: !!metricInsight.insight,
-          status: metricInsight.status
-        });
-        
-        return {
-          contextText: metricInsight.context,
-          insightText: metricInsight.insight, 
-          recommendationText: metricInsight.recommendation,
-          status: metricInsight.status
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      // Handle network errors gracefully
-      if (error instanceof Error) {
-        logger.warn('Failed to load insights from database', { 
-          error: error.message, 
-          clientId, 
-          metricName 
-        });
-      }
-      // Always return null instead of throwing to prevent unhandled rejections
-      return null;
-    }
+    // COMPLETELY REMOVED fetch calls to prevent unhandled promise rejections
+    // All insights data should come from preloaded data passed as props
+    logger.info('Individual fetch calls disabled - using preloaded data only', { clientId, metricName });
+    return null;
   },
   
   remove: (clientId: string, metricName: string) => {
@@ -161,45 +98,8 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
 
 
       
-      // Fallback to loading from database if no preloaded insight  
-      // Use a properly awaited delay to prevent unhandled promise rejections
-      const loadWithDelay = async () => {
-        // Small delay to allow authentication to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        try {
-          const stored = await insightsStorage.load(clientId, metricName);
-          if (stored) {
-            logger.component('MetricInsightBox', `Loaded stored insight for ${metricName}`);
-            setInsight({
-              ...stored,
-              isTyping: false,
-              isFromStorage: true
-            });
-            
-            // Report status to parent
-            if (stored.status && onStatusChange) {
-              onStatusChange(stored.status);
-            }
-          }
-        } catch (error) {
-          // Silently handle errors to prevent runtime error modal
-          logger.warn('Failed to load stored insight', { 
-            error: error instanceof Error ? error.message : 'Unknown error', 
-            clientId, 
-            metricName 
-          });
-        }
-      };
-      
-      loadWithDelay().catch((error) => {
-        // Catch any potential promise rejections at the top level
-        logger.warn('Promise rejection in loadWithDelay caught', { 
-          error: error instanceof Error ? error.message : 'Unknown error',
-          clientId, 
-          metricName 
-        });
-      });
+      // No fallback loading - rely entirely on preloaded insights to prevent API calls
+      logger.component('MetricInsightBox', `No preloaded insight available for ${metricName} - will show generate button`);
     };
     
     loadStoredInsight();
