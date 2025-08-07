@@ -21,22 +21,33 @@ function parseDistributionMetricValue(value: any, metricName: string): any {
   // Special handling for Device Distribution - return full distribution
   if (metricName === 'Device Distribution') {
     try {
-      let parsedArray;
+      let parsedData;
       
       // Handle double-encoded JSON string
       if (typeof value === 'string') {
-        parsedArray = JSON.parse(value);
+        parsedData = JSON.parse(value);
       } else {
-        parsedArray = value;
+        parsedData = value;
       }
       
-      if (Array.isArray(parsedArray)) {
-        logger.info('🔥 ROUTE: Device Distribution full data provided for AI', {
-          deviceBreakdown: parsedArray,
-          deviceCount: parsedArray.length,
-          source: 'Metric-specific insight route'
+      // Handle array format (Client data)
+      if (Array.isArray(parsedData)) {
+        logger.info('🔥 ROUTE: Device Distribution array data provided for AI', {
+          deviceBreakdown: parsedData,
+          deviceCount: parsedData.length,
+          source: 'Client array format'
         });
-        return parsedArray; // Return full array for comprehensive AI analysis
+        return parsedData; // Return full array for comprehensive AI analysis
+      }
+      
+      // Handle CD_Avg/Industry_Avg object format: {"source": "cd_portfolio_average", "sessions": 298312, "percentage": 27.8734598496723}
+      if (parsedData && typeof parsedData === 'object' && 'percentage' in parsedData) {
+        logger.info('🔥 ROUTE: Device Distribution percentage extracted for AI', {
+          originalObject: parsedData,
+          extractedPercentage: parsedData.percentage,
+          source: 'CD_Avg/Industry_Avg object format'
+        });
+        return parsedData.percentage; // Return just the percentage for benchmarking
       }
     } catch (error) {
       logger.error('🔥 ROUTE: Failed to parse Device Distribution data for AI insights', {
@@ -50,22 +61,33 @@ function parseDistributionMetricValue(value: any, metricName: string): any {
   // Special handling for Traffic Channels - return full distribution
   if (metricName === 'Traffic Channels') {
     try {
-      let parsedArray;
+      let parsedData;
       
       // Handle double-encoded JSON string
       if (typeof value === 'string') {
-        parsedArray = JSON.parse(value);
+        parsedData = JSON.parse(value);
       } else {
-        parsedArray = value;
+        parsedData = value;
       }
       
-      if (Array.isArray(parsedArray)) {
-        logger.info('🔥 ROUTE: Traffic Channels full data provided for AI', {
-          channelBreakdown: parsedArray,
-          channelCount: parsedArray.length,
-          source: 'Metric-specific insight route'
+      // Handle array format (Client data)
+      if (Array.isArray(parsedData)) {
+        logger.info('🔥 ROUTE: Traffic Channels array data provided for AI', {
+          channelBreakdown: parsedData,
+          channelCount: parsedData.length,
+          source: 'Client array format'
         });
-        return parsedArray; // Return full array for comprehensive AI analysis
+        return parsedData; // Return full array for comprehensive AI analysis
+      }
+      
+      // Handle CD_Avg/Industry_Avg object format: {"source": "cd_portfolio_average", "sessions": X, "percentage": Y}
+      if (parsedData && typeof parsedData === 'object' && 'percentage' in parsedData) {
+        logger.info('🔥 ROUTE: Traffic Channels percentage extracted for AI', {
+          originalObject: parsedData,
+          extractedPercentage: parsedData.percentage,
+          source: 'CD_Avg/Industry_Avg object format'
+        });
+        return parsedData.percentage; // Return just the percentage for benchmarking
       }
     } catch (error) {
       logger.error('🔥 ROUTE: Failed to parse Traffic Channels data for AI insights', {
@@ -620,8 +642,8 @@ export function registerRoutes(app: Express): Server {
         m.sourceType === 'CD_Avg'
       );
       
-      const industryAverage = industryMetricForPeriod ? parseMetricValue(industryMetricForPeriod.value) : metricData.Industry_Avg;
-      const cdPortfolioAverage = cdMetricForPeriod ? parseMetricValue(cdMetricForPeriod.value) : metricData.CD_Avg;
+      const industryAverage = industryMetricForPeriod ? parseDistributionMetricValue(industryMetricForPeriod.value, metricName) : metricData.Industry_Avg;
+      const cdPortfolioAverage = cdMetricForPeriod ? parseDistributionMetricValue(cdMetricForPeriod.value, metricName) : metricData.CD_Avg;
       
       logger.info('🎯 AI BENCHMARK VALUES DEBUG', { 
         metricName, 
