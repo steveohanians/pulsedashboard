@@ -184,13 +184,15 @@ export default function Dashboard() {
   });
 
   // Load AI insights for dashboard metrics
-  const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
+  const insightsQuery = useQuery({
     queryKey: [`/api/insights/${user?.clientId}`],
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1
   });
+  
+  const { data: insightsData, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = insightsQuery;
 
   // Create insights lookup map from loaded insights
   const insightsLookup = useMemo(() => {
@@ -245,8 +247,9 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
-      // Force refetch the dashboard data immediately
+      // Force refetch all data immediately
       dashboardQuery.refetch();
+      refetchInsights();
       logger.info("State reset, cache invalidated, localStorage cleared, and dashboard refetched");
       // Force page reload to ensure all components reset their state
       window.location.reload();
@@ -290,8 +293,9 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
-      // Force refetch the dashboard data immediately
+      // Force refetch all data immediately
       dashboardQuery.refetch();
+      refetchInsights();
       setDeletingCompetitorId(null);
       logger.info("Cache invalidated and competitor deleted successfully");
     },
