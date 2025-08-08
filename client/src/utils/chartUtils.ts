@@ -1,5 +1,3 @@
-// Chart utilities consolidating functions used across multiple components
-
 import { logger } from '@/utils/logger';
 
 export const TOOLTIP_STYLES = {
@@ -34,34 +32,24 @@ export const TOOLTIP_STYLES = {
   }
 };
 
-// Chart color constants for consistent styling
 export const CHART_COLORS = {
-  // Data source colors
   Client: 'hsl(var(--color-client))',
   CD_Avg: 'hsl(var(--color-cd-avg))',
   Industry_Avg: 'hsl(var(--color-industry-avg))',
-  Industry: 'hsl(var(--color-industry-avg))', // fallback
+  Industry: 'hsl(var(--color-industry-avg))',
   Competitor: 'hsl(var(--color-competitor-1))',
-  
-  // Device distribution colors
   Desktop: 'hsl(var(--color-device-desktop))',
   Mobile: 'hsl(var(--color-device-mobile))',
   Tablet: 'hsl(var(--color-device-tablet))',
   Other: 'hsl(var(--color-device-other))',
-  
-  // Traffic channel colors
   'Organic Search': 'hsl(var(--color-competitor-1))',
   'Direct': 'hsl(var(--color-client))', 
   'Social Media': 'hsl(var(--color-competitor-1))',
   'Paid Search': 'hsl(var(--chart-3))',
   'Email': 'hsl(var(--chart-5))',
   'Referral': 'hsl(var(--chart-4))',
-  
-  // Default fallback
   Default: 'hsl(var(--color-default))'
 };
-
-// Use CHART_COLORS directly - device, traffic, and data source colors are all available there
 
 export function formatMetricValue(value: number, metricName: string): string {
   const roundedValue = Math.round(value * 10) / 10;
@@ -82,17 +70,13 @@ export function convertMetricValue(
   options: { convertToPercentage?: boolean; convertToMinutes?: boolean }
 ): number {
   if (options.convertToPercentage) {
-    // For bounce rate: 0.5635 -> 56.35
     return rawValue * 100;
   }
   if (options.convertToMinutes) {
-    // For session duration: 580 seconds -> 9.67 minutes
     return rawValue / 60;
   }
   return rawValue;
 }
-
-// Removed getMetricFallback - use getDefaultMetricValue instead
 
 export function shouldConvertToPercentage(metricName: string): boolean {
   return metricName === 'Bounce Rate';
@@ -107,9 +91,9 @@ export function seededRandom(seed: string): number {
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    hash = hash & hash;
   }
-  return Math.abs(hash) / 2147483647; // Normalize to 0-1
+  return Math.abs(hash) / 2147483647;
 }
 
 export function generateTemporalVariationSync(
@@ -118,7 +102,6 @@ export function generateTemporalVariationSync(
   metricName: string,
   seed: string = 'default'
 ): number[] {
-  // Return empty array - authentic data only
   logger.warn(`No authentic temporal data available for ${metricName}`);
   return [];
 }
@@ -131,7 +114,7 @@ export function calculateYAxisDomain(data: any[], dataKey: string): [number, num
   
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const padding = (max - min) * 0.1; // 10% padding
+  const padding = (max - min) * 0.1;
   
   return [Math.max(0, min - padding), max + padding];
 }
@@ -179,7 +162,7 @@ export function updateChartVisibilityForCompetitors(
   const updated = { ...prevState };
   competitors.forEach(comp => {
     if (!(comp.label in updated)) {
-      updated[comp.label] = true; // Default new competitors to visible
+      updated[comp.label] = true;
     }
   });
   return updated;

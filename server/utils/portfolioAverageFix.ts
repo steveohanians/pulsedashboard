@@ -1,7 +1,4 @@
-/**
- * Fix CD_Avg portfolio averages calculation bug
- * This utility recalculates all CD_Avg values from the actual individual company data
- */
+
 
 import logger from './logger';
 import type { InsertMetric } from '@shared/schema';
@@ -19,21 +16,17 @@ const db = neon(process.env.DATABASE_URL!);
 
 export class PortfolioAverageFix {
   
-  /**
-   * Fix all CD_Avg metrics by recalculating from individual company data
-   */
+
   public static async fixAllCdAvgMetrics(): Promise<void> {
     logger.info('🔧 Starting MASSIVE CD_Avg portfolio averages fix - ALL TIME PERIODS');
 
     try {
-      // Get all unique time periods that have CD_Portfolio data
       const periods = await this.getUniqueTimePeriods();
       logger.info('Found time periods with portfolio data', { periodsCount: periods.length });
 
       let totalFixed = 0;
       const metricNames = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
       
-      // Fix all metrics for all periods
       for (const period of periods) {
         logger.info(`🔧 Processing period: ${period}`);
         for (const metricName of metricNames) {
@@ -55,9 +48,7 @@ export class PortfolioAverageFix {
     }
   }
 
-  /**
-   * Get all unique time periods that have CD_Portfolio data
-   */
+
   private static async getUniqueTimePeriods(): Promise<string[]> {
     const query = `
       SELECT DISTINCT time_period 
@@ -71,9 +62,7 @@ export class PortfolioAverageFix {
     return (result as any[]).map((row: any) => row.time_period);
   }
 
-  /**
-   * Fix all metrics for a specific time period
-   */
+
   private static async fixMetricsForPeriod(period: string): Promise<number> {
     logger.info(`🔧 Fixing metrics for period: ${period}`);
     
@@ -99,11 +88,7 @@ export class PortfolioAverageFix {
     return fixedCount;
   }
 
-  /**
-   * Get metric data for analysis and fixing
-   */
   private static async getMetricData(metricName: string, period: string): Promise<MetricData | null> {
-    // Get individual company values
     const portfolioQuery = `
       SELECT CAST(value::jsonb->>'value' AS NUMERIC) as metric_value
       FROM metrics 
@@ -119,8 +104,6 @@ export class PortfolioAverageFix {
     if (values.length === 0) {
       return null;
     }
-
-    // Get current CD_Avg value
     const cdAvgQuery = `
       SELECT CAST(value::jsonb->>'value' AS NUMERIC) as cd_avg_value
       FROM metrics 
@@ -145,11 +128,7 @@ export class PortfolioAverageFix {
     };
   }
 
-  /**
-   * Fix a specific metric for a specific period
-   */
   private static async fixSpecificMetric(metricName: string, period: string): Promise<boolean> {
-    // Get individual company values for this metric and period
     const portfolioQuery = `
       SELECT CAST(value::jsonb->>'value' AS NUMERIC) as metric_value
       FROM metrics 
@@ -163,12 +142,10 @@ export class PortfolioAverageFix {
     const values = (portfolioResult as any[]).map((row: any) => row.metric_value);
     
     if (values.length < 2) {
-      return false; // Need at least 2 companies to calculate average
+      return false;
     }
     
     const correctAverage = values.reduce((sum, val) => sum + val, 0) / values.length;
-    
-    // Update the CD_Avg entry directly with proper JSON formatting
     const updateQuery = `
       UPDATE metrics 
       SET value = jsonb_set(value, '{value}', to_jsonb($1::numeric)),
@@ -196,19 +173,13 @@ export class PortfolioAverageFix {
     return false;
   }
 
-  /**
-   * Update CD_Avg metric with correct average
-   */
   private static async updateCdAvgMetric(metricData: MetricData): Promise<boolean> {
-    // Only update if the current value is significantly different from correct average
-    const tolerance = 0.001; // Small tolerance for floating point comparison
+    const tolerance = 0.001;
     const needsUpdate = Math.abs(metricData.currentCdAvg - metricData.correctAverage) > tolerance;
     
     if (!needsUpdate) {
-      return false; // No update needed
+      return false;
     }
-
-    // Delete existing CD_Avg entry for this metric and period
     const deleteQuery = `
       DELETE FROM metrics 
       WHERE source_type = 'CD_Avg'
@@ -217,8 +188,6 @@ export class PortfolioAverageFix {
     `;
     
     await db(deleteQuery, [metricData.metricName, metricData.timePeriod]);
-
-    // Insert corrected CD_Avg entry
     const insertQuery = `
       INSERT INTO metrics (client_id, competitor_id, metric_name, value, source_type, time_period, channel, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -237,9 +206,7 @@ export class PortfolioAverageFix {
     return true;
   }
 
-  /**
-   * Get a summary of current vs correct averages for debugging
-   */
+
   public static async getAveragingReport(period: string = '2025-06'): Promise<void> {
     logger.info(`📊 CD_Avg Averaging Report for ${period}`);
     

@@ -3,10 +3,7 @@ import logger from "../utils/logger";
 import { CompanyType } from "./globalCompanyValidation";
 import { GlobalValidationOrchestrator, EntityUpdateData, UpdateValidationOptions, ValidationResult } from "./globalValidationOrchestrator";
 
-/**
- * Phase 3: Update Validation Utilities
- * Specialized utilities for handling company updates with comprehensive validation
- */
+
 
 export interface CompanyUpdateResult {
   success: boolean;
@@ -20,9 +17,7 @@ export interface CompanyUpdateResult {
   };
 }
 
-/**
- * Enhanced company update with comprehensive Phase 3 validation
- */
+
 export async function updateCompanyWithValidation(
   companyType: CompanyType,
   companyId: string,
@@ -40,7 +35,6 @@ export async function updateCompanyWithValidation(
   });
 
   try {
-    // Step 1: Get current company data
     const currentCompany = await getCurrentCompanyData(companyType, companyId, storage);
     if (!currentCompany) {
       return {
@@ -49,7 +43,6 @@ export async function updateCompanyWithValidation(
       };
     }
 
-    // Step 2: Prepare validation data
     const entityUpdateData: EntityUpdateData = {
       id: companyId,
       currentData: currentCompany,
@@ -58,7 +51,6 @@ export async function updateCompanyWithValidation(
       clientId: currentCompany.clientId
     };
 
-    // Step 3: Run Phase 3 validation
     const orchestrator = new GlobalValidationOrchestrator(storage);
     const validationResult = await orchestrator.validateEntityUpdate(entityUpdateData, options);
 
@@ -76,7 +68,6 @@ export async function updateCompanyWithValidation(
       };
     }
 
-    // Step 4: Perform the actual update
     const updatedCompany = await performCompanyUpdate(companyType, companyId, updateData, storage);
     
     if (!updatedCompany) {
@@ -86,7 +77,6 @@ export async function updateCompanyWithValidation(
       };
     }
 
-    // Step 5: Post-update workflows (if any)
     await executePostUpdateWorkflows(companyType, updatedCompany, currentCompany, storage);
 
     const totalTime = Date.now() - startTime;
@@ -122,9 +112,7 @@ export async function updateCompanyWithValidation(
   }
 }
 
-/**
- * Batch update multiple companies with validation
- */
+
 export async function updateCompaniesWithValidation(
   updates: Array<{
     companyType: CompanyType;
@@ -139,11 +127,9 @@ export async function updateCompaniesWithValidation(
     validationLevel: options.validationLevel || 'standard'
   });
 
-  // Prepare all entities for batch validation
   const entities: EntityUpdateData[] = [];
   const companyDataMap = new Map<string, any>();
 
-  // Fetch all current company data
   for (const update of updates) {
     const currentCompany = await getCurrentCompanyData(update.companyType, update.companyId, storage);
     if (currentCompany) {
@@ -158,11 +144,9 @@ export async function updateCompaniesWithValidation(
     }
   }
 
-  // Run batch validation
   const orchestrator = new GlobalValidationOrchestrator(storage);
   const validationResults = await orchestrator.validateBatch(entities, options);
 
-  // Process updates based on validation results
   const results: { companyId: string; result: CompanyUpdateResult }[] = [];
 
   for (const update of updates) {
@@ -180,13 +164,12 @@ export async function updateCompaniesWithValidation(
       continue;
     }
 
-    // Proceed with update if validation passed
     const updateResult = await updateCompanyWithValidation(
       update.companyType,
       update.companyId,
       update.updateData,
       storage,
-      { ...options, allowPartialValidation: true } // Skip re-validation
+      { ...options, allowPartialValidation: true }
     );
 
     results.push({
@@ -205,9 +188,7 @@ export async function updateCompaniesWithValidation(
   return results;
 }
 
-/**
- * Smart update that detects and validates only changed fields
- */
+
 export async function smartUpdateCompany(
   companyType: CompanyType,
   companyId: string,
@@ -218,8 +199,6 @@ export async function smartUpdateCompany(
   return await updateCompanyWithValidation(companyType, companyId, updateData, storage, options);
 }
 
-// Helper functions
-
 async function getCurrentCompanyData(
   companyType: CompanyType,
   companyId: string,
@@ -228,8 +207,6 @@ async function getCurrentCompanyData(
   try {
     switch (companyType) {
       case 'competitor':
-        // Note: Storage doesn't have getCompetitor by ID method - competitors need to be fetched differently
-        // For now, we'll return null and handle this case in the update logic
         return null;
       case 'portfolio':
         const portfolioCompanies = await storage.getCdPortfolioCompanies();
@@ -260,7 +237,6 @@ async function performCompanyUpdate(
   try {
     switch (companyType) {
       case 'competitor':
-        // Note: Storage doesn't have updateCompetitor method - competitor updates need to be handled differently
         throw new Error('Competitor updates not yet supported in storage interface');
       case 'portfolio':
         return await storage.updateCdPortfolioCompany(companyId, updateData);
@@ -287,7 +263,6 @@ async function executePostUpdateWorkflows(
   storage: IStorage
 ): Promise<void> {
   try {
-    // Portfolio companies need average recalculation
     if (companyType === 'portfolio') {
       const { PortfolioIntegration } = await import('../services/semrush/portfolioIntegration');
       const portfolioIntegration = new PortfolioIntegration(storage);
@@ -299,7 +274,6 @@ async function executePostUpdateWorkflows(
       });
     }
 
-    // Domain changes might require SEMrush re-sync
     const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
     if (originalCompany[domainField] !== updatedCompany[domainField]) {
       logger.info('Domain changed - consider triggering SEMrush re-sync', {
@@ -308,8 +282,6 @@ async function executePostUpdateWorkflows(
         oldDomain: originalCompany[domainField],
         newDomain: updatedCompany[domainField]
       });
-      
-      // Note: SEMrush re-sync would typically be triggered manually or via admin interface
     }
 
   } catch (error) {

@@ -70,10 +70,8 @@ export function sanitizeUserInput(input: string): SanitizationResult {
   let sanitized = input;
   let isBlocked = false;
 
-  // Step 1: Basic cleanup
   sanitized = sanitized.trim();
   
-  // Step 2: Length validation using consolidated limits
   if (sanitized.length > VALIDATION_LIMITS.MAX_INPUT_LENGTH) {
     sanitized = sanitized.substring(0, VALIDATION_LIMITS.MAX_INPUT_LENGTH);
     warnings.push(`Input truncated to ${VALIDATION_LIMITS.MAX_INPUT_LENGTH} characters`);
@@ -83,7 +81,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     });
   }
   
-  // Step 3: Check for prompt injection patterns
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(sanitized)) {
       isBlocked = true;
@@ -96,7 +93,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     }
   }
 
-  // Step 4: Check for profanity and inappropriate content
   for (const pattern of PROFANITY_PATTERNS) {
     if (pattern.test(sanitized)) {
       isBlocked = true;
@@ -108,7 +104,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     }
   }
 
-  // Step 5: Check for off-topic content
   for (const pattern of OFF_TOPIC_PATTERNS) {
     if (pattern.test(sanitized)) {
       isBlocked = true;
@@ -120,7 +115,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     }
   }
 
-  // Step 6: Check for business relevance (if not blocked yet)
   if (!isBlocked) {
     const relevanceScore = checkBusinessRelevance(sanitized);
     if (relevanceScore < 0.3) {
@@ -132,7 +126,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     }
   }
 
-  // Step 7: Check for vague or repetitive content (if not blocked yet)
   if (!isBlocked) {
     const qualityIssues = checkContentQuality(sanitized);
     if (qualityIssues.length > 0) {
@@ -144,7 +137,6 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     }
   }
   
-  // Step 8: Remove HTML/Script tags
   let hadHtmlContent = false;
   for (const pattern of HTML_SCRIPT_PATTERNS) {
     if (pattern.test(sanitized)) {
@@ -161,23 +153,19 @@ export function sanitizeUserInput(input: string): SanitizationResult {
     });
   }
   
-  // Step 9: Escape template literal patterns
   sanitized = sanitized
     .replace(/\$\{/g, '\\${')  // Escape template literals
     .replace(/`/g, '\\`');     // Escape backticks
   
-  // Step 10: Escape curly braces for prompt template safety
   sanitized = sanitized
     .replace(/{/g, '\\{')
     .replace(/}/g, '\\}');
   
-  // Step 11: Remove excessive whitespace and normalize
   sanitized = sanitized
     .replace(/\s+/g, ' ')      // Normalize whitespace
     .replace(/\n\s*\n/g, '\n') // Remove excessive newlines
     .trim();
   
-  // Step 12: Final safety check - block if empty after sanitization
   if (!sanitized || sanitized.length < 3) {
     isBlocked = true;
     warnings.push('Input too short or empty after sanitization');
@@ -274,14 +262,12 @@ function checkBusinessRelevance(input: string): number {
   let matchCount = 0;
   let totalWords = lowerInput.split(/\s+/).length;
   
-  // Count matches with business keywords
   for (const keyword of BUSINESS_RELEVANCE_KEYWORDS) {
     if (lowerInput.includes(keyword.toLowerCase())) {
       matchCount++;
     }
   }
   
-  // Calculate relevance score
   const relevanceScore = Math.min(matchCount / Math.max(totalWords * 0.1, 1), 1);
   return relevanceScore;
 }

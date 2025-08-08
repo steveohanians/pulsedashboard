@@ -6,7 +6,6 @@ export { seededRandom, seededRandomRange, seededVariance };
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function generatePeriodLabel(period: string): string {
-  // Handle grouped period format: YYYY-MM-group-N
   if (period.includes('-group-')) {
     const groupParts = period.split('-group-');
     if (groupParts.length === 2) {
@@ -27,9 +26,8 @@ export function generatePeriodLabel(period: string): string {
     }
   }
   
-  // Handle daily format: YYYY-MM-daily-YYYYMMDD
   if (period.includes('-daily-')) {
-    const dailyDatePart = period.split('-daily-')[1]; // Get YYYYMMDD
+    const dailyDatePart = period.split('-daily-')[1];
     if (dailyDatePart && dailyDatePart.length === 8) {
       const year = dailyDatePart.substring(0, 4);
       const month = dailyDatePart.substring(4, 6);
@@ -45,7 +43,7 @@ export function generatePeriodLabel(period: string): string {
     return `${MONTH_NAMES[parseInt(month) - 1]} ${shortYear}`;
   }
   
-  return period; // fallback
+  return period;
 }
 
 export function generatePacificTimePeriods(timePeriod: string) {
@@ -57,7 +55,7 @@ export function generatePacificTimePeriods(timePeriod: string) {
   });
   const ptParts = ptFormatter.formatToParts(now);
   const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1;
 
   const dates: string[] = [];
   
@@ -171,7 +169,7 @@ export function updateChartVisibilityForCompetitors(
   const updated = { ...prevState };
   competitors.forEach(comp => {
     if (!(comp.label in updated)) {
-      updated[comp.label] = true; // Default new competitors to visible
+      updated[comp.label] = true;
     }
   });
   return updated;
@@ -215,7 +213,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
   const channelSums = new Map();
   const channelCounts = new Map();
   
-  sourceMetrics.forEach((metric, index) => {
+  sourceMetrics.forEach((metric) => {
     if (metric.channel) {
       const channelName = metric.channel;
       const value = parseFloat(metric.value);
