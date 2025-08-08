@@ -1,0 +1,53 @@
+We are addressing the 3 critical issues from the audit. Work on ONE item at a time in this order: fetchHelpers.ts → parseMetricValue → emailService.ts.
+
+Global rules
+- Minimum change necessary, behavior-preserving for existing flows.
+- Show SMALL unified diffs (changed lines only).
+- No new abstractions unless they remove duplication (net negative lines).
+- Keep/restore green type check, lint, and tests after each item.
+- If uncertain, STOP and ask.
+
+Item 1 — fetchHelpers.ts (343 lines; 8 exports; 0 imports)
+Investigation (no edits yet):
+- Prove whether it is referenced dynamically (dynamic import, global exposure, registries, or string-based lookup).
+- Show evidence: file/line snippets of any indirect usage.
+If unused:
+- Plan: either delete file or move to deprecated/ with a short README note and a calendar date for removal.
+- Implement: remove and show diff; run verification.
+If used dynamically:
+- Plan: list call sites and propose converting them to explicit imports or a tiny facade with typed exports.
+- Implement the smallest change; show diff; run verification.
+
+Item 2 — parseMetricValue duplication (server/utils vs client/src/utils)
+Investigation (no edits yet):
+- Show both signatures and all call sites (counts per side).
+- Recommend one canonical contract (return type + error handling).
+Plan:
+- Replace non-canonical version with a thin compatibility wrapper that forwards to the canonical function and keeps prior semantics (or marks @deprecated with a TODO link).
+- Update imports only where trivial and risk-free.
+Implement:
+- Show the diff; list files touched; run verification.
+
+Item 3 — emailService.ts (no direct imports; suspect singleton)
+Investigation (no edits yet):
+- List any side-effect imports, DI container registrations, or global getters (getInstance()).
+- Show where the service is actually constructed and used (files/lines).
+If unused:
+- Remove or quarantine to deprecated/ and show diff; run verification.
+If used:
+- Convert hidden side-effect usage into explicit imports where possible; keep behavior identical.
+- Show diff; run verification.
+
+Verification (after each item):
+- Type check: tsc -noEmit
+- Lint: eslint .
+- Tests: npm test -s (or project command)
+- Unused scan: ts-prune (or equivalent) report for changed modules
+- Import graph: madge or depcruise to confirm no new cycles
+Output:
+- Root cause evidence
+- Minimal fix plan
+- Diff (changed lines only)
+- Rationale (2–3 sentences)
+- Verification results
+- Post-fix audit: confirm no unused vars/imports/logs remain

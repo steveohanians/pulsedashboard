@@ -9,57 +9,20 @@ export interface MetricValueObject {
   sessions?: number;
 }
 
+// Import the canonical server-side parser
+import { parseMetricValue as serverParseMetricValue } from '../../../server/utils/metricParser';
+
 /**
- * Safely parse a metric value that could be a string number or JSON object
+ * Client-side wrapper for parseMetricValue that maintains UI compatibility.
+ * Uses the canonical server implementation but converts null to 0 for display purposes.
+ * 
+ * @param value - Raw metric value to parse
+ * @returns Parsed number value (0 fallback for UI display)
+ * @deprecated Consider migrating to handle null values properly in UI components
  */
 export function parseMetricValue(value: any): number {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  // If it's already a number
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  // If it's a string, try to parse as JSON first
-  if (typeof value === 'string') {
-    // Try parsing as JSON first (for CD_Avg and competitor metrics)
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null) {
-        // For Device Distribution metrics that use "percentage"
-        if ('percentage' in parsed) {
-          return typeof parsed.percentage === 'number' ? parsed.percentage : parseFloat(parsed.percentage) || 0;
-        }
-        // For other metrics that use "value"
-        if ('value' in parsed) {
-          return typeof parsed.value === 'number' ? parsed.value : parseFloat(parsed.value) || 0;
-        }
-      }
-    } catch {
-      // Not JSON, try parsing as plain number
-    }
-
-    // Parse as plain number
-    const num = parseFloat(value);
-    return isNaN(num) ? 0 : num;
-  }
-
-  // If it's already an object with value or percentage property
-  if (typeof value === 'object' && value !== null) {
-    // For Device Distribution metrics that use "percentage"
-    if ('percentage' in value) {
-      return typeof value.percentage === 'number' ? value.percentage : parseFloat(value.percentage) || 0;
-    }
-    // For other metrics that use "value"
-    if ('value' in value) {
-      return typeof value.value === 'number' ? value.value : parseFloat(value.value) || 0;
-    }
-  }
-
-  // Fallback to 0
-  return 0;
+  const result = serverParseMetricValue(value);
+  return result ?? 0; // Convert null to 0 for UI compatibility
 }
 
 /**

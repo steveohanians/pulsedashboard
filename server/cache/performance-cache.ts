@@ -70,6 +70,11 @@ class PerformanceCache {
     }
   }
 
+  // Delete specific cache entry
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
   // Clear all cache
   clear(): void {
     this.cache.clear();
