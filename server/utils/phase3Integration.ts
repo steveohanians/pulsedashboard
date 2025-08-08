@@ -4,20 +4,13 @@ import { GlobalValidationOrchestrator, ValidationResult } from "./globalValidati
 import { updateCompanyWithValidation, updateCompaniesWithValidation } from "./updateValidationUtils";
 import { validateCompetitorPortfolioConflicts, validateBenchmarkDiversity, validateClientUniqueness } from "./advancedValidationWorkflows";
 
-/**
- * Phase 3: Integration Layer
- * Integrates Phase 3 validation into existing routes and workflows
- */
 
-/**
- * Enhanced route handlers with Phase 3 validation
- */
+
+
 export class Phase3RouteIntegration {
   constructor(private storage: IStorage) {}
 
-  /**
-   * Enhanced competitor update with Phase 3 validation (creating the missing functionality)
-   */
+
   async handleCompetitorUpdate(
     competitorId: string,
     updateData: any,
@@ -30,7 +23,6 @@ export class Phase3RouteIntegration {
         updateFields: Object.keys(updateData)
       });
 
-      // Step 1: Get current competitor data (simulate since storage doesn't have getCompetitor by ID)
       const clientCompetitors = await this.storage.getCompetitorsByClient(clientId);
       const currentCompetitor = clientCompetitors.find(c => c.id === competitorId);
       
@@ -41,7 +33,6 @@ export class Phase3RouteIntegration {
         };
       }
 
-      // Step 2: Run Phase 3 validation for domain changes
       if (updateData.domain && updateData.domain !== currentCompetitor.domain) {
         const conflictValidation = await validateCompetitorPortfolioConflicts(
           this.storage,
@@ -58,7 +49,6 @@ export class Phase3RouteIntegration {
         }
       }
 
-      // Step 3: Perform the actual update using storage method
       const updatedCompetitor = await this.storage.updateCompetitor(competitorId, updateData);
       
       if (!updatedCompetitor) {
@@ -93,15 +83,12 @@ export class Phase3RouteIntegration {
     }
   }
 
-  /**
-   * Enhanced portfolio company update with comprehensive Phase 3 validation
-   */
+
   async handlePortfolioCompanyUpdate(
     companyId: string,
     updateData: any
   ): Promise<{ success: boolean; company?: any; error?: string; warnings?: string[] }> {
     try {
-      // Use the comprehensive update utility
       const result = await updateCompanyWithValidation(
         'portfolio',
         companyId,
@@ -133,17 +120,13 @@ export class Phase3RouteIntegration {
     }
   }
 
-  /**
-   * Enhanced benchmark company update with diversity validation
-   */
+
   async handleBenchmarkCompanyUpdate(
     companyId: string,
     updateData: any
   ): Promise<{ success: boolean; company?: any; error?: string; warnings?: string[] }> {
     try {
-      // Run diversity validation if filters are being updated
       if (updateData.businessSize || updateData.industryVertical) {
-        // Get current company to fill in missing fields
         const allCompanies = await this.storage.getBenchmarkCompanies();
         const currentCompany = allCompanies.find(c => c.id === companyId);
         
@@ -161,10 +144,8 @@ export class Phase3RouteIntegration {
           companyId
         );
 
-        // Diversity warnings don't fail the update, but provide feedback
         const warnings = diversityValidation.warnings || [];
 
-        // Use the comprehensive update utility
         const result = await updateCompanyWithValidation(
           'benchmark',
           companyId,
@@ -184,7 +165,6 @@ export class Phase3RouteIntegration {
         };
       }
 
-      // Standard update without diversity validation
       const result = await updateCompanyWithValidation(
         'benchmark',
         companyId,
@@ -212,15 +192,12 @@ export class Phase3RouteIntegration {
     }
   }
 
-  /**
-   * Enhanced client update with uniqueness validation
-   */
+
   async handleClientUpdate(
     clientId: string,
     updateData: any
   ): Promise<{ success: boolean; client?: any; error?: string; warnings?: string[] }> {
     try {
-      // Run uniqueness validation
       const uniquenessValidation = await validateClientUniqueness(
         this.storage,
         updateData,
@@ -234,7 +211,6 @@ export class Phase3RouteIntegration {
         };
       }
 
-      // Use the comprehensive update utility
       const result = await updateCompanyWithValidation(
         'client',
         clientId,
@@ -263,9 +239,7 @@ export class Phase3RouteIntegration {
     }
   }
 
-  /**
-   * Batch company updates with comprehensive validation
-   */
+
   async handleBatchUpdate(
     updates: Array<{
       companyType: 'competitor' | 'portfolio' | 'benchmark' | 'client';
@@ -276,14 +250,12 @@ export class Phase3RouteIntegration {
     try {
       const results: Array<{ companyId: string; success: boolean; error?: string; warnings?: string[] }> = [];
 
-      // Process updates sequentially for better error handling and logging
       for (const update of updates) {
         try {
           let result;
 
           switch (update.companyType) {
             case 'competitor':
-              // We need clientId for competitor updates - this would need to be provided
               result = await this.handleCompetitorUpdate(update.companyId, update.updateData, 'demo-client-id');
               break;
             case 'portfolio':
@@ -339,9 +311,7 @@ export class Phase3RouteIntegration {
   }
 }
 
-/**
- * Global utility functions for Phase 3 integration
- */
+
 
 export async function createPhase3RouteIntegration(storage: IStorage): Promise<Phase3RouteIntegration> {
   return new Phase3RouteIntegration(storage);

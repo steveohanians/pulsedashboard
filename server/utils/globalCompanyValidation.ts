@@ -4,16 +4,11 @@ import { semrushService } from "../services/semrush/semrushService";
 
 export type CompanyType = 'competitor' | 'portfolio' | 'benchmark' | 'client';
 
-/**
- * Global company validation utilities for all company types
- * Phases 1 & 2: Domain validation and SEMrush API health checks
- */
+
 export class GlobalCompanyValidator {
   constructor(private storage: IStorage) {}
 
-  /**
-   * Phase 1: Domain format validation and normalization
-   */
+
   validateAndNormalizeDomain(domain: string): { 
     isValid: boolean; 
     normalizedDomain?: string; 
@@ -29,7 +24,6 @@ export class GlobalCompanyValidator {
 
       const normalizedDomain = this.normalizeDomain(domain);
       
-      // Basic domain validation regex
       const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
       
       if (!domainRegex.test(normalizedDomain)) {
@@ -39,7 +33,6 @@ export class GlobalCompanyValidator {
         };
       }
 
-      // Check for minimum domain structure (at least one dot)
       if (!normalizedDomain.includes('.')) {
         return {
           isValid: false,
@@ -47,7 +40,6 @@ export class GlobalCompanyValidator {
         };
       }
 
-      // Check for reasonable length
       if (normalizedDomain.length > 253) {
         return {
           isValid: false,
@@ -72,9 +64,7 @@ export class GlobalCompanyValidator {
     }
   }
 
-  /**
-   * Phase 1: Check for duplicate domains across company types
-   */
+
   async checkForDuplicateDomain(
     clientId: string, 
     domain: string, 
@@ -88,7 +78,6 @@ export class GlobalCompanyValidator {
     try {
       const normalizedDomain = this.normalizeDomain(domain);
       
-      // Check competitors
       const existingCompetitors = await this.storage.getCompetitorsByClient(clientId);
       const duplicateCompetitor = existingCompetitors.find(company => 
         company.id !== excludeCompanyId &&
@@ -112,7 +101,6 @@ export class GlobalCompanyValidator {
         };
       }
 
-      // Check portfolio companies (they use 'websiteUrl' instead of 'domain')
       const portfolioCompanies = await this.storage.getCdPortfolioCompanies();
       const duplicatePortfolio = portfolioCompanies.find(company => 
         company.id !== excludeCompanyId &&
@@ -136,7 +124,6 @@ export class GlobalCompanyValidator {
         };
       }
 
-      // Check benchmark companies (they also use 'websiteUrl' instead of 'domain')
       const benchmarkCompanies = await this.storage.getBenchmarkCompanies();
       const duplicateBenchmark = benchmarkCompanies.find(company => 
         company.id !== excludeCompanyId &&
@@ -169,21 +156,16 @@ export class GlobalCompanyValidator {
         error: (error as Error).message
       });
       
-      // On error, assume not duplicate to avoid blocking valid additions
       return { isDuplicate: false };
     }
   }
 
-  /**
-   * Phase 2: SEMrush API Health Check
-   * Test if domain is accessible and returns data from SEMrush
-   */
+
   async validateSemrushApiAccess(domain: string, companyType: CompanyType): Promise<{
     isValid: boolean;
     error?: string;
     apiHealthStatus?: string;
   }> {
-    // Skip SEMrush validation for clients (they don't need SEMrush data)
     if (companyType === 'client') {
       return {
         isValid: true,
@@ -200,10 +182,9 @@ export class GlobalCompanyValidator {
         companyType
       });
 
-      // Test SEMrush API connectivity with timeout and retry logic
       const startTime = Date.now();
-      const HEALTH_CHECK_TIMEOUT = 30000; // 30 seconds (increased from 15)
-      const MAX_RETRIES = 2; // Allow one retry
+      const HEALTH_CHECK_TIMEOUT = 30000;
+      const MAX_RETRIES = 2;
       
       let lastError: any = null;
       
@@ -215,13 +196,11 @@ export class GlobalCompanyValidator {
             maxRetries: MAX_RETRIES
           });
 
-          // Wrap the health check in a timeout promise
           const healthCheckPromise = semrushService.fetchHistoricalData(normalizedDomain);
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT);
           });
           
-          // Race between the health check and timeout
           const testData = await Promise.race([healthCheckPromise, timeoutPromise]) as Map<string, any>;
           const responseTime = Date.now() - startTime;
         
@@ -261,17 +240,14 @@ export class GlobalCompanyValidator {
             willRetry: attempt < MAX_RETRIES
           });
 
-          // If this was the last attempt, handle the error
           if (attempt === MAX_RETRIES) {
-            break; // Exit the retry loop
+            break;
           }
 
-          // Add a small delay before retry to allow for network recovery
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
 
-      // Handle the final error after all retries exhausted
       if (lastError) {
         const responseTime = Date.now() - startTime;
 
@@ -284,7 +260,6 @@ export class GlobalCompanyValidator {
           errorType: lastError.name || 'Unknown'
         });
 
-        // Handle specific API error types
         if (lastError.message?.includes('timeout') || responseTime > 60000) {
           return {
             isValid: false,
@@ -309,7 +284,6 @@ export class GlobalCompanyValidator {
           };
         }
 
-        // Generic API error
         return {
           isValid: false,
           error: `Unable to connect to SEMrush for domain "${normalizedDomain}" after ${MAX_RETRIES} attempts. Please verify the domain and try again.`,
@@ -317,7 +291,6 @@ export class GlobalCompanyValidator {
         };
       }
 
-      // Fallback in case no error was captured (should not happen, but required for TypeScript)
       return {
         isValid: false,
         error: 'Unexpected error during SEMrush validation. Please try again.',
@@ -339,9 +312,7 @@ export class GlobalCompanyValidator {
     }
   }
 
-  /**
-   * Comprehensive validation for company creation (Phases 1 & 2)
-   */
+
   async validateCompanyCreation(
     clientId: string, 
     domain: string, 
@@ -353,7 +324,6 @@ export class GlobalCompanyValidator {
     error?: string;
     normalizedDomain?: string;
   }> {
-    // Step 1: Validate domain format
     const domainValidation = this.validateAndNormalizeDomain(domain);
     if (!domainValidation.isValid) {
       return {
@@ -362,7 +332,6 @@ export class GlobalCompanyValidator {
       };
     }
 
-    // Step 2: Check for duplicates across all company types
     const duplicateCheck = await this.checkForDuplicateDomain(clientId, domain, companyType, excludeCompanyId);
     if (duplicateCheck.isDuplicate) {
       const existingCompany = duplicateCheck.existingCompany;
@@ -376,7 +345,6 @@ export class GlobalCompanyValidator {
       };
     }
 
-    // Step 3: Validate label
     if (!label || typeof label !== 'string' || label.trim().length === 0) {
       return {
         isValid: false,
@@ -391,7 +359,6 @@ export class GlobalCompanyValidator {
       };
     }
 
-    // Step 4: Phase 2 - SEMrush API Health Check
     const semrushValidation = await this.validateSemrushApiAccess(domain, companyType);
     if (!semrushValidation.isValid) {
       return {
@@ -415,29 +382,17 @@ export class GlobalCompanyValidator {
     };
   }
 
-  /**
-   * Normalize domain by removing protocol, www, paths, etc.
-   */
+
   private normalizeDomain(domain: string): string {
     if (!domain) return '';
     
     try {
-      // Convert to lowercase
       let normalized = domain.toLowerCase().trim();
       
-      // Remove protocol if present
       normalized = normalized.replace(/^https?:\/\//, '');
-      
-      // Remove www. prefix
       normalized = normalized.replace(/^www\./, '');
-      
-      // Remove trailing slash and path
       normalized = normalized.split('/')[0];
-      
-      // Remove port if present
       normalized = normalized.split(':')[0];
-      
-      // Remove query parameters
       normalized = normalized.split('?')[0];
       
       return normalized;
@@ -450,9 +405,7 @@ export class GlobalCompanyValidator {
     }
   }
 
-  /**
-   * Get user-friendly display name for company type
-   */
+
   private getCompanyTypeDisplayName(companyType: CompanyType): string {
     switch (companyType) {
       case 'competitor':

@@ -3,10 +3,7 @@ import logger from "../utils/logger";
 import { CompanyType } from "./globalCompanyValidation";
 import { ValidationResult, GlobalValidationOrchestrator } from "./globalValidationOrchestrator";
 
-/**
- * Phase 3: Advanced Validation Workflows
- * Complex validation scenarios and business rule enforcement
- */
+
 
 export interface ValidationWorkflowResult {
   isValid: boolean;
@@ -20,10 +17,6 @@ export interface ValidationWorkflowResult {
   };
 }
 
-/**
- * Cross-Entity Validation Workflows
- * Validates relationships and dependencies between different entities
- */
 export class AdvancedValidationWorkflows {
   private orchestrator: GlobalValidationOrchestrator;
 
@@ -31,9 +24,7 @@ export class AdvancedValidationWorkflows {
     this.orchestrator = new GlobalValidationOrchestrator(storage);
   }
 
-  /**
-   * Validate that competitor domains don't conflict with portfolio company domains
-   */
+
   async validateCompetitorPortfolioConflicts(
     competitorDomain: string,
     clientId: string,
@@ -43,11 +34,9 @@ export class AdvancedValidationWorkflows {
     const stepsExecuted: string[] = [];
 
     try {
-      // Step 1: Get all portfolio companies
       stepsExecuted.push('fetch_portfolio_companies');
       const portfolioCompanies = await this.storage.getCdPortfolioCompanies();
       
-      // Step 2: Check for domain conflicts
       stepsExecuted.push('check_domain_conflicts');
       const normalizedCompetitorDomain = this.normalizeDomain(competitorDomain);
       
@@ -68,13 +57,12 @@ export class AdvancedValidationWorkflows {
         };
       }
 
-      // Step 3: Check for conflicts with other competitors of the same client
       stepsExecuted.push('check_competitor_conflicts');
       const clientCompetitors = await this.storage.getCompetitorsByClient(clientId);
       
       const conflictingCompetitor = clientCompetitors.find(comp => {
         if (excludeCompetitorId && comp.id === excludeCompetitorId) {
-          return false; // Skip self when updating
+          return false;
         }
         const existingDomain = this.normalizeDomain(comp.domain || '');
         return existingDomain === normalizedCompetitorDomain;
@@ -128,9 +116,7 @@ export class AdvancedValidationWorkflows {
     }
   }
 
-  /**
-   * Validate business size and industry vertical diversity in benchmark companies
-   */
+
   async validateBenchmarkDiversity(
     newBusinessSize: string,
     newIndustryVertical: string,
@@ -140,16 +126,13 @@ export class AdvancedValidationWorkflows {
     const stepsExecuted: string[] = [];
 
     try {
-      // Step 1: Get all benchmark companies
       stepsExecuted.push('fetch_benchmark_companies');
       const benchmarkCompanies = await this.storage.getBenchmarkCompanies();
       
-      // Filter out the company being updated
       const otherBenchmarkCompanies = excludeCompanyId 
         ? benchmarkCompanies.filter(bc => bc.id !== excludeCompanyId)
         : benchmarkCompanies;
 
-      // Step 2: Analyze diversity
       stepsExecuted.push('analyze_diversity');
       const businessSizeCounts = new Map<string, number>();
       const industryVerticalCounts = new Map<string, number>();
@@ -169,22 +152,19 @@ export class AdvancedValidationWorkflows {
         }
       });
 
-      // Step 3: Check diversity thresholds
       stepsExecuted.push('check_diversity_thresholds');
       const warnings: string[] = [];
 
-      // Business size diversity check
       const currentBusinessSizeCount = businessSizeCounts.get(newBusinessSize) || 0;
-      const totalCompanies = otherBenchmarkCompanies.length + 1; // +1 for the new/updated company
+      const totalCompanies = otherBenchmarkCompanies.length + 1;
       
-      if (currentBusinessSizeCount >= Math.ceil(totalCompanies * 0.6)) { // More than 60%
+      if (currentBusinessSizeCount >= Math.ceil(totalCompanies * 0.6)) {
         warnings.push(`Business size "${newBusinessSize}" will represent over 60% of benchmark companies. Consider adding more diversity.`);
       }
 
-      // Industry vertical diversity check  
       const currentIndustryCount = industryVerticalCounts.get(newIndustryVertical) || 0;
       
-      if (currentIndustryCount >= Math.ceil(totalCompanies * 0.5)) { // More than 50%
+      if (currentIndustryCount >= Math.ceil(totalCompanies * 0.5)) {
         warnings.push(`Industry vertical "${newIndustryVertical}" will represent over 50% of benchmark companies. Consider adding more diversity.`);
       }
 
@@ -226,9 +206,7 @@ export class AdvancedValidationWorkflows {
     }
   }
 
-  /**
-   * Validate client uniqueness and domain conflicts
-   */
+
   async validateClientUniqueness(
     clientData: {
       name?: string;
@@ -241,16 +219,13 @@ export class AdvancedValidationWorkflows {
     const stepsExecuted: string[] = [];
 
     try {
-      // Step 1: Get all clients
       stepsExecuted.push('fetch_all_clients');
       const allClients = await this.storage.getClients();
       
-      // Filter out the client being updated
       const otherClients = excludeClientId 
         ? allClients.filter(c => c.id !== excludeClientId)
         : allClients;
 
-      // Step 2: Check name uniqueness
       if (clientData.name) {
         stepsExecuted.push('check_name_uniqueness');
         const conflictingClient = otherClients.find(c => 
@@ -270,7 +245,6 @@ export class AdvancedValidationWorkflows {
         }
       }
 
-      // Step 3: Check domain uniqueness
       if (clientData.domain) {
         stepsExecuted.push('check_domain_uniqueness');
         const normalizedDomain = this.normalizeDomain(clientData.domain);
@@ -292,7 +266,6 @@ export class AdvancedValidationWorkflows {
         }
       }
 
-      // Step 4: Check GA4 Property ID uniqueness
       if (clientData.ga4PropertyId) {
         stepsExecuted.push('check_ga4_property_uniqueness');
         const conflictingClient = otherClients.find(c => 
@@ -347,9 +320,7 @@ export class AdvancedValidationWorkflows {
     }
   }
 
-  /**
-   * Comprehensive portfolio company validation workflow
-   */
+
   async validatePortfolioCompanyWorkflow(
     portfolioData: {
       name?: string;
@@ -364,7 +335,6 @@ export class AdvancedValidationWorkflows {
     const warnings: string[] = [];
 
     try {
-      // Step 1: Validate filter combination
       if (portfolioData.businessSize && portfolioData.industryVertical) {
         stepsExecuted.push('validate_filter_combination');
         const { FilterValidator } = await import("./filterValidation");
@@ -388,7 +358,6 @@ export class AdvancedValidationWorkflows {
         }
       }
 
-      // Step 2: Check for domain conflicts with competitors (all clients)
       if (portfolioData.websiteUrl) {
         stepsExecuted.push('check_competitor_conflicts');
         const allClients = await this.storage.getClients();
@@ -414,7 +383,6 @@ export class AdvancedValidationWorkflows {
         }
       }
 
-      // Step 3: Check for duplicate portfolio companies
       if (portfolioData.name || portfolioData.websiteUrl) {
         stepsExecuted.push('check_portfolio_duplicates');
         const allPortfolioCompanies = await this.storage.getCdPortfolioCompanies();
@@ -494,31 +462,21 @@ export class AdvancedValidationWorkflows {
     }
   }
 
-  // Helper method
   private normalizeDomain(domain: string): string {
     if (!domain) return '';
     
     let normalized = domain.toLowerCase().trim();
     
-    // Remove protocol
     normalized = normalized.replace(/^https?:\/\//, '');
-    
-    // Remove www
     normalized = normalized.replace(/^www\./, '');
-    
-    // Remove trailing slash
     normalized = normalized.replace(/\/$/, '');
-    
-    // Remove path (keep only domain)
     normalized = normalized.split('/')[0];
     
     return normalized;
   }
 }
 
-/**
- * Global utility functions for advanced validation workflows
- */
+
 
 export async function validateCompetitorPortfolioConflicts(
   storage: IStorage,

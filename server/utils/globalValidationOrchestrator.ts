@@ -2,10 +2,7 @@ import { IStorage } from "../storage";
 import logger from "../utils/logger";
 import { GlobalCompanyValidator, CompanyType } from "./globalCompanyValidation";
 
-/**
- * Phase 3: Advanced Global Validation Orchestrator
- * Handles complex validation workflows, update validation, and cross-entity validation
- */
+
 
 export interface ValidationResult {
   isValid: boolean;
@@ -34,9 +31,7 @@ export interface EntityUpdateData {
   clientId?: string;
 }
 
-/**
- * Global Validation Orchestrator for Phase 3 advanced validation workflows
- */
+
 export class GlobalValidationOrchestrator {
   private validator: GlobalCompanyValidator;
   private validationCache: Map<string, { result: ValidationResult; timestamp: number }> = new Map();
@@ -46,10 +41,7 @@ export class GlobalValidationOrchestrator {
     this.validator = new GlobalCompanyValidator(storage);
   }
 
-  /**
-   * Phase 3: Comprehensive entity update validation
-   * Validates updates to existing companies with intelligent field comparison
-   */
+
   async validateEntityUpdate(
     updateData: EntityUpdateData,
     options: UpdateValidationOptions = {}
@@ -72,7 +64,6 @@ export class GlobalValidationOrchestrator {
       const validatedFields: string[] = [];
       const warnings: string[] = [];
 
-      // Step 1: Determine which fields are actually changing
       const changedFields = this.detectChangedFields(updateData.currentData, updateData.updateData);
       
       if (changedFields.length === 0) {
@@ -93,7 +84,6 @@ export class GlobalValidationOrchestrator {
         changedFields
       });
 
-      // Step 2: Validate domain changes (critical validation)
       const domainField = updateData.companyType === 'competitor' ? 'domain' : 'websiteUrl';
       if (changedFields.includes(domainField)) {
         const domainValidation = await this.validateDomainUpdate(updateData, updateData.updateData[domainField]);
@@ -106,7 +96,6 @@ export class GlobalValidationOrchestrator {
         }
       }
 
-      // Step 3: Validate label/name changes
       const labelField = updateData.companyType === 'competitor' ? 'label' : 'name';
       if (changedFields.includes(labelField)) {
         const labelValidation = this.validateLabelUpdate(updateData.updateData[labelField]);
@@ -116,7 +105,6 @@ export class GlobalValidationOrchestrator {
         validatedFields.push(labelField);
       }
 
-      // Step 4: Validate filter changes (for portfolio/benchmark companies)
       if (['portfolio', 'benchmark'].includes(updateData.companyType)) {
         const filterFields = ['businessSize', 'industryVertical'];
         const changedFilterFields = changedFields.filter(field => filterFields.includes(field));
@@ -130,7 +118,6 @@ export class GlobalValidationOrchestrator {
         }
       }
 
-      // Step 5: Cross-dependency validation (if enabled)
       if (validateCrossDependencies && validationLevel !== 'basic') {
         const crossValidation = await this.validateCrossDependencies(updateData, changedFields);
         if (!crossValidation.isValid) {
@@ -141,7 +128,6 @@ export class GlobalValidationOrchestrator {
         }
       }
 
-      // Step 6: Business rule validation (comprehensive level only)
       if (validationLevel === 'comprehensive') {
         const businessValidation = await this.validateBusinessRules(updateData, changedFields);
         if (!businessValidation.isValid) {
@@ -190,9 +176,7 @@ export class GlobalValidationOrchestrator {
     }
   }
 
-  /**
-   * Phase 3: Batch validation for multiple entities
-   */
+
   async validateBatch(
     entities: EntityUpdateData[],
     options: UpdateValidationOptions = {}
@@ -219,9 +203,7 @@ export class GlobalValidationOrchestrator {
     return results;
   }
 
-  /**
-   * Phase 3: Smart validation with caching
-   */
+
   async validateWithCache(
     cacheKey: string,
     validationFn: () => Promise<ValidationResult>
@@ -249,15 +231,11 @@ export class GlobalValidationOrchestrator {
     return result;
   }
 
-  /**
-   * Clear validation cache (useful for testing or forced refresh)
-   */
+
   clearCache(): void {
     this.validationCache.clear();
     logger.info('Validation cache cleared');
   }
-
-  // Private helper methods
 
   private detectChangedFields(currentData: any, updateData: any): string[] {
     const changedFields: string[] = [];
@@ -275,19 +253,17 @@ export class GlobalValidationOrchestrator {
     updateData: EntityUpdateData, 
     newDomain: string
   ): Promise<ValidationResult> {
-    // Skip validation if domain hasn't actually changed
     const domainField = updateData.companyType === 'competitor' ? 'domain' : 'websiteUrl';
     if (updateData.currentData[domainField] === newDomain) {
       return { isValid: true, warnings: ['Domain unchanged'] };
     }
 
-    // Use existing domain validation logic
     const validation = await this.validator.validateCompanyCreation(
       updateData.clientId || 'update-validation',
       newDomain,
       updateData.updateData.label || updateData.updateData.name || 'Update Validation',
       updateData.companyType,
-      updateData.id // Exclude current entity from duplicate check
+      updateData.id
     );
 
     return {
@@ -323,7 +299,6 @@ export class GlobalValidationOrchestrator {
       const { FilterValidator } = await import("./filterValidation");
       const filterValidator = new FilterValidator(this.storage);
 
-      // Merge current data with updates for validation
       const dataToValidate = {
         businessSize: updateData.updateData.businessSize || updateData.currentData.businessSize,
         industryVertical: updateData.updateData.industryVertical || updateData.currentData.industryVertical
@@ -350,10 +325,8 @@ export class GlobalValidationOrchestrator {
   ): Promise<ValidationResult> {
     const warnings: string[] = [];
 
-    // Example: Check if domain change would create conflicts with other entities
     const domainField = updateData.companyType === 'competitor' ? 'domain' : 'websiteUrl';
     if (changedFields.includes(domainField)) {
-      // Additional cross-dependency checks could go here
       warnings.push('Cross-dependency validation passed');
     }
 
@@ -369,11 +342,6 @@ export class GlobalValidationOrchestrator {
   ): Promise<ValidationResult> {
     const warnings: string[] = [];
 
-    // Example business rules:
-    // 1. Portfolio companies can't have same domain as competitors
-    // 2. Benchmark companies should have different business sizes for diversity
-    // 3. Client domains should be unique across all clients
-
     warnings.push('Business rule validation passed');
 
     return { 
@@ -383,9 +351,7 @@ export class GlobalValidationOrchestrator {
   }
 }
 
-/**
- * Global utility function for entity update validation
- */
+
 export async function validateEntityUpdate(
   storage: IStorage,
   updateData: EntityUpdateData,
@@ -395,9 +361,7 @@ export async function validateEntityUpdate(
   return await orchestrator.validateEntityUpdate(updateData, options);
 }
 
-/**
- * Global utility function for batch validation
- */
+
 export async function validateBatch(
   storage: IStorage,
   entities: EntityUpdateData[],

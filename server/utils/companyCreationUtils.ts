@@ -1,7 +1,4 @@
-/**
- * Global utilities for company creation across portfolio companies, competitors, and benchmark companies
- * Consolidates common validation, logging, and post-creation workflow patterns
- */
+
 
 import { z } from "zod";
 import logger from "./logger";
@@ -35,9 +32,7 @@ export interface CreationResult<T = any> {
   workflowResults?: { [key: string]: any };
 }
 
-/**
- * Enhanced company creation with comprehensive validation and workflow orchestration
- */
+
 export async function createCompanyWithWorkflows<T>(
   options: CompanyCreationOptions<T>,
   storage: any
@@ -51,7 +46,6 @@ export async function createCompanyWithWorkflows<T>(
       hasFilterValidation: options.requiresFilterValidation 
     });
 
-    // Step 1: Schema validation
     let validatedData: T;
     try {
       validatedData = validationSchema.parse(requestBody);
@@ -67,7 +61,6 @@ export async function createCompanyWithWorkflows<T>(
       };
     }
 
-    // Step 2: Filter validation (for companies with businessSize/industryVertical)
     if (options.requiresFilterValidation) {
       const filterValidationResult = await performFilterValidation(validatedData, storage, companyType);
       if (!filterValidationResult.isValid) {
@@ -78,7 +71,6 @@ export async function createCompanyWithWorkflows<T>(
       }
     }
 
-    // Step 2.5: Domain validation (for companies with domain/websiteUrl)
     if (options.requiresDomainValidation) {
       const domainValidationResult = await performDomainValidation(
         validatedData, 
@@ -93,14 +85,12 @@ export async function createCompanyWithWorkflows<T>(
         };
       }
       
-      // Update the validated data with normalized domain if available
       if (domainValidationResult.normalizedDomain) {
         const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
         (validatedData as any)[domainField] = domainValidationResult.normalizedDomain;
       }
     }
 
-    // Step 3: Create the company using appropriate storage method
     const company = await createCompanyRecord(companyType, validatedData, storage);
     
     logger.info(`${companyType} company created successfully`, {
@@ -110,7 +100,6 @@ export async function createCompanyWithWorkflows<T>(
       requestUser: requestUser?.id
     });
 
-    // Step 4: Handle additional setup (like GA4 property access for clients)
     if (options.additionalSetup) {
       try {
         await options.additionalSetup.handler(company, requestBody);
@@ -123,7 +112,6 @@ export async function createCompanyWithWorkflows<T>(
         });
         
         if (options.additionalSetup.failClientCreation) {
-          // Cleanup: delete the created company if setup is critical
           await deleteCreatedCompany(companyType, company.id, storage);
           return {
             success: false,
@@ -133,13 +121,11 @@ export async function createCompanyWithWorkflows<T>(
       }
     }
 
-    // Step 5: Execute post-creation workflows (like SEMrush integration)
     const workflowResults: { [key: string]: any } = {};
     if (options.postCreationWorkflows) {
       for (const workflow of options.postCreationWorkflows) {
         try {
           if (workflow.isBackground) {
-            // Use proper background processor to avoid response conflicts
             const jobId = backgroundProcessor.enqueue({
               id: `${companyType.toUpperCase()}_INTEGRATION_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               type: 'COMPETITOR_INTEGRATION',
@@ -169,7 +155,6 @@ export async function createCompanyWithWorkflows<T>(
               jobId
             });
           } else {
-            // Execute synchronously
             const result = await workflow.handler(company);
             workflowResults[workflow.name] = result;
             logger.info(`${workflow.name} completed synchronously for ${companyType}`, {
@@ -185,14 +170,12 @@ export async function createCompanyWithWorkflows<T>(
           });
           workflowResults[workflow.name] = { error: (workflowError as Error).message };
           
-          // For critical integrations like SEMrush, fail the entire creation
           if (workflow.name === 'SEMrush Competitor Integration') {
             logger.error(`Critical SEMrush integration failed - failing competitor creation`, {
               companyId: company.id,
               error: (workflowError as Error).message
             });
             
-            // Clean up the created competitor
             await deleteCreatedCompany(companyType, company.id, storage);
             
             return {
@@ -232,9 +215,7 @@ export async function createCompanyWithWorkflows<T>(
   }
 }
 
-/**
- * Perform filter validation for companies with businessSize/industryVertical
- */
+
 async function performFilterValidation(
   validatedData: any, 
   storage: any, 
@@ -271,30 +252,25 @@ async function performFilterValidation(
   }
 }
 
-/**
- * Perform domain validation for companies with domain/websiteUrl fields
- * Phases 1 & 2: Domain format, duplicates, and SEMrush health check
- */
+
 async function performDomainValidation(
   validatedData: any, 
   storage: any, 
   companyType: CompanyType,
   clientId?: string
 ): Promise<{ isValid: boolean; error?: string; normalizedDomain?: string }> {
-  // Determine the domain field based on company type
   const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
-  const domain = (validatedData as any)[domainField]; // Safe cast since we control the field names
+  const domain = (validatedData as any)[domainField];
   const label = (validatedData as any).label || (validatedData as any).name;
 
   if (!domain) {
-    return { isValid: true }; // No domain to validate
+    return { isValid: true };
   }
 
   try {
     const { GlobalCompanyValidator } = await import("./globalCompanyValidation");
     const validator = new GlobalCompanyValidator(storage);
     
-    // Use demo-client-id as fallback for global validation
     const effectiveClientId = clientId || 'demo-client-id';
     
     const domainValidation = await validator.validateCompanyCreation(
@@ -336,9 +312,7 @@ async function performDomainValidation(
   }
 }
 
-/**
- * Create company record using appropriate storage method
- */
+
 async function createCompanyRecord(companyType: CompanyType, validatedData: any, storage: any): Promise<any> {
   switch (companyType) {
     case 'portfolio':
@@ -354,9 +328,7 @@ async function createCompanyRecord(companyType: CompanyType, validatedData: any,
   }
 }
 
-/**
- * Delete created company if setup fails critically
- */
+
 async function deleteCreatedCompany(companyType: CompanyType, companyId: string, storage: any): Promise<void> {
   try {
     switch (companyType) {
@@ -382,16 +354,12 @@ async function deleteCreatedCompany(companyType: CompanyType, companyId: string,
   }
 }
 
-/**
- * Get display name for logging
- */
+
 function getCompanyDisplayName(company: any): string {
   return company.name || company.domain || company.label || 'Unknown';
 }
 
-/**
- * Enhanced portfolio company creation
- */
+
 export async function createPortfolioCompanyEnhanced(
   requestBody: any,
   requestUser: { id: string },
@@ -417,16 +385,13 @@ export async function createPortfolioCompanyEnhanced(
   }, storage);
 }
 
-/**
- * Enhanced competitor creation with comprehensive validation
- */
+
 export async function createCompetitorEnhanced(
   requestBody: any,
   requestUser: { id: string },
   storage: any,
   insertSchema: z.ZodSchema
 ): Promise<CreationResult> {
-  // Phase 1: Pre-creation validation using CompetitorValidator
   try {
     const { CompetitorValidator } = await import('./competitorValidation');
     const validator = new CompetitorValidator(storage);
@@ -450,7 +415,6 @@ export async function createCompetitorEnhanced(
       };
     }
     
-    // Use normalized domain for creation
     if (validationResult.normalizedDomain) {
       requestBody.domain = validationResult.normalizedDomain;
     }
@@ -468,7 +432,7 @@ export async function createCompetitorEnhanced(
       domain: requestBody.domain
     });
     
-    // Continue with creation if validation check fails (graceful degradation)
+
   }
 
   return await createCompanyWithWorkflows({
@@ -476,11 +440,11 @@ export async function createCompetitorEnhanced(
     validationSchema: insertSchema,
     requestBody,
     requestUser,
-    requiresFilterValidation: false, // Competitors don't have businessSize/industryVertical
-    requiresDomainValidation: false, // Already validated above in pre-creation check
+    requiresFilterValidation: false,
+    requiresDomainValidation: false,
     postCreationWorkflows: [{
       name: 'SEMrush Competitor Integration',
-      isBackground: false,  // Changed to synchronous for immediate historical data
+      isBackground: false,
       handler: async (competitor) => {
         const { CompetitorIntegration } = await import('../services/semrush/competitorIntegration');
         const integration = new CompetitorIntegration(storage);
@@ -490,9 +454,7 @@ export async function createCompetitorEnhanced(
   }, storage);
 }
 
-/**
- * Enhanced benchmark company creation
- */
+
 export async function createBenchmarkCompanyEnhanced(
   requestBody: any,
   requestUser: { id: string },
@@ -506,13 +468,10 @@ export async function createBenchmarkCompanyEnhanced(
     requestUser,
     requiresFilterValidation: true,
     requiresDomainValidation: true
-    // No post-creation workflows for benchmark companies
   }, storage);
 }
 
-/**
- * Enhanced client creation
- */
+
 export async function createClientEnhanced(
   requestBody: any,
   requestUser: { id: string },
@@ -540,7 +499,7 @@ export async function createClientEnhanced(
           serviceAccountId: serviceAccountId
         });
       },
-      failClientCreation: false // Don't fail client creation if GA4 setup fails
+      failClientCreation: false
     } : undefined
   }, storage);
 }
