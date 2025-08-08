@@ -1060,15 +1060,6 @@ export function registerRoutes(app: Express): Server {
       // Import OpenAI service and generate insights with context
       const { generateMetricSpecificInsightsWithContext } = await import('./services/openai.js');
       
-      logger.info('🔍 About to call OpenAI with enrichedData', {
-        metricName,
-        enrichedDataKeys: Object.keys(enrichedData),
-        clientValue: enrichedData.metric?.clientValue,
-        hasIndustryAvg: !!enrichedData.benchmarks?.industryAverage,
-        hasCdAvg: !!enrichedData.benchmarks?.cdPortfolioAverage,
-        competitorCount: enrichedData.benchmarks?.competitors?.length || 0
-      });
-      
       const insights = await generateMetricSpecificInsightsWithContext(metricName, enrichedData, clientId, sanitizedUserContext);
       
       const normalizedInsights = {
