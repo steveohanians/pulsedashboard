@@ -1224,16 +1224,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Clear all AI insights (debug only)
+  // Clear all AI insights (debug only) - Enhanced systematic clearing
   app.delete("/api/debug/clear-all-insights", requireAuth, async (req, res) => {
     try {
-      await storage.clearAllAIInsights();
+      logger.info("Starting systematic clear of all AI insights", { userId: req.user?.id });
+      
+      // 1. Clear database tables in proper order (contexts first due to potential dependencies)
       await storage.clearAllInsightContexts();
-      logger.info("Cleared all AI insights and contexts for debugging", { userId: req.user?.id });
-      res.json({ message: "All AI insights and contexts cleared successfully" });
+      logger.info("✅ Database: Cleared all insight contexts");
+      
+      await storage.clearAllAIInsights();
+      logger.info("✅ Database: Cleared all AI insights");
+      
+      // 2. Return structured response for frontend coordination
+      res.json({ 
+        message: "All AI insights and contexts cleared successfully",
+        clearedTables: ["insight_contexts", "ai_insights"],
+        timestamp: new Date().toISOString(),
+        affectedCacheKeys: [
+          "/api/insights",
+          "/api/dashboard", 
+          "/api/metric-insights"
+        ]
+      });
+      
+      logger.info("✅ Systematic clear completed successfully", { userId: req.user?.id });
     } catch (error) {
-      logger.error("Error clearing AI insights and contexts", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to clear AI insights and contexts" });
+      logger.error("❌ Error in systematic clear operation", { 
+        error: (error as Error).message,
+        userId: req.user?.id,
+        stack: (error as Error).stack
+      });
+      res.status(500).json({ 
+        message: "Failed to clear AI insights and contexts",
+        error: (error as Error).message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

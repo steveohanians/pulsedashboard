@@ -210,97 +210,134 @@ export default function Dashboard() {
     return lookup;
   }, [insightsData]);
 
-  // Clear all AI insights mutation (debug only)
+  // Systematic AI insights clearing with proper separation of concerns
+  
+  // 1. Database clearing function
+  const clearInsightsFromDatabase = async () => {
+    logger.info("🗂️ Starting database clearing operation");
+    const response = await fetch("/api/debug/clear-all-insights", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Database clear failed: ${response.status} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    logger.info("✅ Database cleared successfully", result);
+    return result;
+  };
+
+  // 2. Cache invalidation function  
+  const invalidateInsightsCache = async (clientId: string) => {
+    logger.info("🔄 Starting cache invalidation");
+    const cacheKeys = [
+      [`/api/insights/${clientId}`],
+      ["/api/insights"], // Legacy compatibility
+      ["/api/dashboard"],
+      ["/api/metric-insights"]
+    ];
+    
+    // Invalidate all cache keys
+    cacheKeys.forEach(key => {
+      queryClient.invalidateQueries({ queryKey: key });
+    });
+    
+    // Force immediate refetch of critical data
+    await Promise.all([
+      dashboardQuery.refetch(),
+      refetchInsights()
+    ]);
+    
+    logger.info("✅ Cache invalidation completed");
+  };
+
+  // 3. UI state reset function
+  const resetInsightsUI = () => {
+    logger.info("🎯 Starting UI state reset");
+    
+    // Reset component state
+    setMetricStatuses({});
+    
+    // Clear localStorage (if used)
+    try {
+      localStorage.removeItem('pulse_dashboard_insights');
+      logger.info("✅ Cleared localStorage insights cache");
+    } catch (error) {
+      logger.warn("⚠️ localStorage clear failed:", error);
+    }
+    
+    logger.info("✅ UI state reset completed");
+  };
+
+  // 4. Coordinated clearing mutation
   const clearInsightsMutation = useMutation({
     mutationFn: async () => {
-      logger.info("Starting to clear all AI insights...");
-      const response = await fetch("/api/debug/clear-all-insights", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Important: include session cookies for authentication
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      if (!user?.clientId) {
+        throw new Error("No client ID available for clearing");
       }
       
-      return response.json();
+      logger.info("🚀 Starting systematic insights clearing");
+      
+      // Step 1: Clear database
+      const dbResult = await clearInsightsFromDatabase();
+      
+      // Step 2: Invalidate cache
+      await invalidateInsightsCache(user.clientId);
+      
+      // Step 3: Reset UI state  
+      resetInsightsUI();
+      
+      return {
+        ...dbResult,
+        systemicClearCompleted: true,
+        clientId: user.clientId
+      };
     },
-    onSuccess: (data) => {
-      logger.info("Successfully cleared AI insights:", data);
-      // Reset all metric statuses to empty
-      setMetricStatuses({});
-      // Clear localStorage insights to prevent loading from cache
-      try {
-        localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
-        logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
-        
-          // localStorage operations disabled for performance
-      } catch (error) {
-        logger.warn("Failed to clear localStorage:", error);
-      }
-      // Invalidate and refetch all related queries with correct key patterns
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
-      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
-      // Force refetch all data immediately
-      dashboardQuery.refetch();
-      refetchInsights();
-      logger.info("State reset, cache invalidated, localStorage cleared, and dashboard refetched");
-      // Force page reload to ensure all components reset their state
-      window.location.reload();
+    onSuccess: (result) => {
+      logger.info("🎉 Systematic clearing completed successfully", result);
     },
     onError: (error) => {
-      logger.error("Failed to clear AI insights:", error);
-      // Log more details about the error
-      if (error instanceof Error) {
-        logger.error("Error message:", error.message);
-        logger.error("Error stack:", error.stack);
-      }
+      logger.error("❌ Systematic clearing failed", { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   });
 
-  // Delete competitor mutation  
+  // Delete competitor mutation using systematic cache invalidation
   const deleteCompetitorMutation = useMutation({
     mutationFn: async (competitorId: string) => {
-      logger.info("Deleting competitor:", competitorId);
-      try {
-        const response = await fetch(`/api/competitors/${competitorId}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to delete competitor: ${response.status}`);
-        }
-        // Check if response has content before parsing JSON
-        const text = await response.text();
-        const result = text ? JSON.parse(text) : { success: true };
-        logger.info("Delete successful:", result);
-        return result;
-      } catch (error) {
-        logger.error("Delete failed:", error);
-        throw error;
+      logger.info("🗑️ Deleting competitor:", competitorId);
+      const response = await fetch(`/api/competitors/${competitorId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete competitor: ${response.status}`);
       }
+      // Check if response has content before parsing JSON
+      const text = await response.text();
+      const result = text ? JSON.parse(text) : { success: true };
+      logger.info("✅ Competitor deleted successfully:", result);
+      return result;
     },
-    onSuccess: () => {
-      logger.info("Delete mutation onSuccess triggered");
-      // Invalidate cache first, then refetch - ensures UI updates properly
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
-      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
-      // Force refetch all data immediately
-      dashboardQuery.refetch();
-      refetchInsights();
+    onSuccess: async () => {
+      logger.info("🔄 Starting systematic cache refresh after competitor deletion");
+      
+      if (user?.clientId) {
+        // Use the same systematic cache invalidation as insights clearing
+        await invalidateInsightsCache(user.clientId);
+      }
+      
       setDeletingCompetitorId(null);
-      logger.info("Cache invalidated and competitor deleted successfully");
+      logger.info("✅ Competitor deletion and cache refresh completed");
     },
     onError: (error) => {
-      logger.error("Delete mutation onError triggered:", error);
+      logger.error("❌ Competitor deletion failed:", error);
       setDeletingCompetitorId(null);
     }
   });
