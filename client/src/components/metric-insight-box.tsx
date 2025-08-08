@@ -102,16 +102,23 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
         return;
       }
 
-      // Use preloaded insights for performance optimization
-      logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+      // Don't override insights that are currently typing to preserve typewriter effect
+      setInsight(currentInsight => {
+        if (currentInsight?.isTyping) {
+          logger.component('MetricInsightBox', `Preserving typing state for ${metricName}, not overriding with preloaded`);
+          return currentInsight; // Keep the current typing insight
+        }
 
-      setInsight({
-        contextText: preloadedInsight.contextText,
-        insightText: preloadedInsight.insightText,
-        recommendationText: preloadedInsight.recommendationText,
-        status: preloadedInsight.status,
-        isTyping: false,
-        isFromStorage: true
+        // Use preloaded insights for performance optimization when not typing
+        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+        return {
+          contextText: preloadedInsight.contextText,
+          insightText: preloadedInsight.insightText,
+          recommendationText: preloadedInsight.recommendationText,
+          status: preloadedInsight.status,
+          isTyping: false,
+          isFromStorage: true
+        };
       });
       
       // Notify parent component of performance status for dashboard coordination
