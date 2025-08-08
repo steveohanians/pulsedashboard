@@ -152,7 +152,9 @@ export default function Dashboard() {
   const effectiveTimePeriod = timePeriod === "Custom Date Range" && customDateRange ? customDateRange : timePeriod;
   
   const dashboardQuery = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`],
+    queryKey: [`/api/dashboard/${user?.clientId}`, effectiveTimePeriod, businessSize, industryVertical],
+    queryFn: () => fetch(`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`)
+      .then(res => res.json()),
     enabled: !!user?.clientId,
     staleTime: 0, // Force fresh data on each request
     refetchOnMount: 'always', // Always refetch when component mounts
@@ -1369,36 +1371,48 @@ export default function Dashboard() {
             <CardContent className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
-                <Select value={businessSize} onValueChange={setBusinessSize}>
+                <Select value={businessSize || ""} onValueChange={(value) => {
+                  try {
+                    setBusinessSize(value);
+                  } catch (error) {
+                    console.warn('Business size selection error:', error);
+                  }
+                }}>
                   <SelectTrigger className="justify-between pl-3 pr-3">
                     <span className="text-left truncate flex-1">
-                      {businessSize}
+                      {businessSize || "Select business size"}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
                     {filtersData?.businessSizes && Array.isArray(filtersData.businessSizes)
-                      ? filtersData.businessSizes.map((size: string) => (
-                          <SelectItem key={size} value={size}>{size}</SelectItem>
-                        ))
-                      : []
+                      ? filtersData.businessSizes.map((size: string) => 
+                          size ? <SelectItem key={size} value={size}>{size}</SelectItem> : null
+                        ).filter(Boolean)
+                      : [<SelectItem key="default" value="All">All</SelectItem>]
                     }
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
-                <Select value={industryVertical} onValueChange={setIndustryVertical}>
+                <Select value={industryVertical || ""} onValueChange={(value) => {
+                  try {
+                    setIndustryVertical(value);
+                  } catch (error) {
+                    console.warn('Industry vertical selection error:', error);
+                  }
+                }}>
                   <SelectTrigger className="justify-between pl-3 pr-3">
                     <span className="text-left truncate flex-1">
-                      {industryVertical}
+                      {industryVertical || "Select industry"}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
                     {filtersData?.industryVerticals && Array.isArray(filtersData.industryVerticals)
-                      ? filtersData.industryVerticals.map((vertical: string) => (
-                          <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem>
-                        ))
-                      : []
+                      ? filtersData.industryVerticals.map((vertical: string) => 
+                          vertical ? <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem> : null
+                        ).filter(Boolean)
+                      : [<SelectItem key="default" value="All">All</SelectItem>]
                     }
                   </SelectContent>
                 </Select>
@@ -1416,12 +1430,16 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={timePeriod} onValueChange={(value) => {
-                if (value === "Custom Date Range") {
-                  setShowDatePicker(true);
-                } else {
-                  setTimePeriod(value);
-                  setCustomDateRange("");
+              <Select value={timePeriod || ""} onValueChange={(value) => {
+                try {
+                  if (value === "Custom Date Range") {
+                    setShowDatePicker(true);
+                  } else {
+                    setTimePeriod(value);
+                    setCustomDateRange("");
+                  }
+                } catch (error) {
+                  console.warn('Time period selection error:', error);
                 }
               }}>
                 <SelectTrigger>
@@ -1430,11 +1448,11 @@ export default function Dashboard() {
                 <SelectContent>
                   {filtersData?.timePeriods && Array.isArray(filtersData.timePeriods) 
                     ? filtersData.timePeriods
-                        .filter((period: string) => period !== "Year")
+                        .filter((period: string) => period && period !== "Year")
                         .map((period: string) => (
                           <SelectItem key={period} value={period}>{period}</SelectItem>
                         ))
-                    : []
+                    : [<SelectItem key="default" value="Last Month">Last Month</SelectItem>]
                   }
                 </SelectContent>
               </Select>
