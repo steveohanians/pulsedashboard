@@ -153,16 +153,8 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
       
-      // Delay cache invalidation until after typewriter effect completes (~4 seconds)
-      setTimeout(() => {
-        queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/insights/${clientId}`],
-          refetchType: 'active'
-        });
-        logger.component('MetricInsightBox', `Cache invalidated after typewriter effect for ${metricName}`);
-      }, 4500);
-      
+      // No frontend cache invalidation - backend cache clearing ensures fresh data
+      // This preserves the typewriter effect without interference
       logger.component('MetricInsightBox', `Generated insight for ${metricName}, typewriter effect enabled`);
     },
     onError: (error) => {
@@ -206,16 +198,8 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
       
-      // Delay cache invalidation until after typewriter effect completes (~4 seconds)
-      setTimeout(() => {
-        queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/insights/${clientId}`],
-          refetchType: 'active'
-        });
-        logger.component('MetricInsightBox', `Cache invalidated after typewriter effect for ${metricName} with context`);
-      }, 4500);
-      
+      // No frontend cache invalidation - backend cache clearing ensures fresh data
+      // This preserves the typewriter effect without interference
       logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, typewriter effect enabled`);
     },
     onError: (error) => {
