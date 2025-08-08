@@ -257,9 +257,6 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
         metricData={metricData}
         onRegenerate={async () => {
           logger.component('MetricInsightBox', 'Regenerate clicked - checking for existing context');
-          // Clear current insight to force fresh generation with typewriter effect
-          setInsight(null);
-          onStatusChange?.(undefined);
           
           // Check if there's existing context and use it for regeneration
           try {
@@ -282,26 +279,29 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
-          // Start the mutation first to trigger loading state
+          // Start the mutation to trigger loading state and regenerate with context
           generateInsightWithContextMutation.mutate(userContext);
-          
-          // Then clear current insight
-          setInsight(null);
-          onStatusChange?.(undefined);
         }}
         onClear={async () => {
-          // Clear insight state
+          // Clear insight state immediately for responsive UI
           setInsight(null);
           onStatusChange?.(undefined);
           
-          // Also delete the saved context
+          // Delete from database and clear saved context
           try {
-            await fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
-              method: 'DELETE'
-            });
-            // Successfully cleared insights and deleted saved context
+            await Promise.all([
+              fetch(`/api/insights/${clientId}/${encodeURIComponent(metricName)}`, {
+                method: 'DELETE'
+              }),
+              fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
+                method: 'DELETE'
+              })
+            ]);
+            // Invalidate cache to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
+            logger.component('MetricInsightBox', 'Successfully deleted insight and context');
           } catch (error) {
-            // Failed to delete context - handled silently
+            logger.warn('Failed to delete insight or context', { error });
           }
         }}
       />

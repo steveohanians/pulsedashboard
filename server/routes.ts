@@ -1205,6 +1205,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete specific AI insight
+  app.delete("/api/insights/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Delete the insight from database
+      await storage.deleteAIInsightByMetric(clientId, metricName);
+      logger.info("Deleted AI insight for specific metric", { clientId, metricName, userId: req.user.id });
+      
+      res.json({ message: "AI insight deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting AI insight", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
+      res.status(500).json({ message: "Failed to delete AI insight" });
+    }
+  });
+
   // Clear all AI insights (debug only)
   app.delete("/api/debug/clear-all-insights", requireAuth, async (req, res) => {
     try {
