@@ -920,7 +920,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/generate-metric-insight-with-context/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      const { metricName, timePeriod, metricData, userContext } = req.body;
+      const { metricName, timePeriod, userContext } = req.body;
 
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
@@ -976,7 +976,10 @@ export function registerRoutes(app: Express): Server {
         rationale: 'AI insights always use July 2025 data regardless of dashboard filters'
       });
       
+      // Get all necessary data separately since getMetricsByClient only returns client-specific data
       const clientMetrics = await storage.getMetricsByClient(clientId, targetPeriod);
+      const industryMetrics = await storage.getFilteredIndustryMetrics(targetPeriod);
+      const cdMetrics = await storage.getFilteredCdAvgMetrics(targetPeriod);
       
       const competitorData = competitors.map((comp: any) => {
         const competitorMetric = clientMetrics.find((m: any) => 
@@ -990,29 +993,27 @@ export function registerRoutes(app: Express): Server {
         };
       }).filter((c: any) => c.value !== null);
 
-      // CRITICAL: Get actual client, industry, and CD values for targetPeriod (July 2025) from database, not from frontend averaged data
+      // CRITICAL: Get actual client, industry, and CD values for targetPeriod from separate data sources
       const clientMetricForPeriod = clientMetrics.find((m: any) => 
         m.metricName === metricName && 
         m.timePeriod === targetPeriod &&
-        m.sourceType === 'Client' // Client data is stored with sourceType 'Client'
+        m.sourceType === 'Client'
       );
       
-      const industryMetricsForPeriod = clientMetrics.filter((m: any) => 
+      const industryMetricsForPeriod = industryMetrics.filter((m: any) => 
         m.metricName === metricName && 
-        m.timePeriod === targetPeriod &&
-        m.sourceType === 'Industry_Avg'
+        m.timePeriod === targetPeriod
       );
       
-      const cdMetricsForPeriod = clientMetrics.filter((m: any) => 
+      const cdMetricsForPeriod = cdMetrics.filter((m: any) => 
         m.metricName === metricName && 
-        m.timePeriod === targetPeriod &&
-        m.sourceType === 'CD_Avg'
+        m.timePeriod === targetPeriod
       );
 
       // Import metric parser utility
       const { parseMetricValue } = await import("./utils/metricParser");
 
-      // Calculate actual July 2025 database values with proper parsing
+      // Calculate actual database values with proper parsing
       const clientValueFromDB = clientMetricForPeriod ? parseMetricValue(clientMetricForPeriod.value) : null;
       const industryAvgFromDB = industryMetricsForPeriod.length > 0 ? 
         industryMetricsForPeriod.reduce((sum: number, m: any) => {
@@ -1029,11 +1030,8 @@ export function registerRoutes(app: Express): Server {
         metricName,
         targetPeriod,
         clientValueFromDB,
-        clientValueFromFrontend: metricData.Client || metricData,
         industryAvgFromDB,
-        industryAvgFromFrontend: metricData.Industry_Avg,
         cdAvgFromDB,
-        cdAvgFromFrontend: metricData.CD_Avg,
         note: 'AI context should use DB values for specific period, not frontend averaged values'
       });
 
@@ -1061,6 +1059,15 @@ export function registerRoutes(app: Express): Server {
 
       // Import OpenAI service and generate insights with context
       const { generateMetricSpecificInsightsWithContext } = await import('./services/openai.js');
+      
+      logger.info('🔍 About to call OpenAI with enrichedData', {
+        metricName,
+        enrichedDataKeys: Object.keys(enrichedData),
+        clientValue: enrichedData.metric?.clientValue,
+        hasIndustryAvg: !!enrichedData.benchmarks?.industryAverage,
+        hasCdAvg: !!enrichedData.benchmarks?.cdPortfolioAverage,
+        competitorCount: enrichedData.benchmarks?.competitors?.length || 0
+      });
       
       const insights = await generateMetricSpecificInsightsWithContext(metricName, enrichedData, clientId, sanitizedUserContext);
       
