@@ -1218,7 +1218,7 @@ export function registerRoutes(app: Express): Server {
       
       // Clear the insights cache for this client
       const cacheKey = `insights:${clientId}`;
-      performanceCache.delete(cacheKey);
+      performanceCache.remove(cacheKey);
       
       logger.info("Deleted AI insight for specific metric", { clientId, metricName, userId: req.user.id });
       
