@@ -187,25 +187,49 @@ export default function Dashboard() {
   const insightsQuery = useQuery({
     queryKey: [`/api/insights/${user?.clientId}`],
     enabled: !!user?.clientId,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0, // Always consider data stale to ensure fresh insights
     gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1
+    retry: 1,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false
   });
   
   const { data: insightsData, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = insightsQuery;
 
-  // Create insights lookup map from loaded insights
+  // Create insights lookup map from loaded insights with enhanced debugging
   const insightsLookup = useMemo(() => {
     const lookup: Record<string, any> = {};
     
+    logger.info("🔍 Building insights lookup", {
+      hasInsightsData: !!insightsData,
+      insightsDataType: typeof insightsData,
+      insightsDataKeys: insightsData ? Object.keys(insightsData) : [],
+      rawInsightsData: insightsData
+    });
+    
     if (insightsData && typeof insightsData === 'object' && 'insights' in insightsData) {
       const insights = (insightsData as any).insights;
+      logger.info("🔍 Processing insights array", {
+        insightsIsArray: Array.isArray(insights),
+        insightsLength: insights?.length || 0,
+        firstInsight: insights?.[0] || null
+      });
+      
       if (insights && Array.isArray(insights)) {
         insights.forEach((insight: any) => {
           lookup[insight.metricName] = insight;
+          logger.info(`🔍 Added insight to lookup: ${insight.metricName}`, {
+            insightId: insight.id,
+            status: insight.status
+          });
         });
       }
     }
+    
+    logger.info("🔍 Final insights lookup", {
+      lookupKeys: Object.keys(lookup),
+      lookupCount: Object.keys(lookup).length
+    });
     
     return lookup;
   }, [insightsData]);

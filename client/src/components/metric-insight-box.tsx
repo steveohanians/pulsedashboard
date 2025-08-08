@@ -152,9 +152,20 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Enable typing animation for engaging user experience
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      // Invalidate cache for fresh data consistency with correct key pattern
+      
+      // Comprehensive cache invalidation to refresh all insight-related queries
       queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
+      
+      // Force refetch of main dashboard insights query to update insightsLookup
+      queryClient.refetchQueries({ queryKey: [`/api/insights/${clientId}`] });
+      
+      // Also manually trigger a refetch with a small delay to ensure cache invalidation completes
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      }, 100);
+      
+      logger.component('MetricInsightBox', `Generated insight for ${metricName}, invalidated caches and triggered refetch`);
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -196,9 +207,20 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Mark context-enhanced insights with special metadata
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      // Refresh cache to maintain data consistency with correct key pattern
+      
+      // Comprehensive cache invalidation to refresh all insight-related queries
       queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
+      
+      // Force refetch of main dashboard insights query to update insightsLookup
+      queryClient.refetchQueries({ queryKey: [`/api/insights/${clientId}`] });
+      
+      // Also manually trigger a refetch with a small delay to ensure cache invalidation completes
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      }, 100);
+      
+      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, invalidated caches and triggered refetch`);
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
