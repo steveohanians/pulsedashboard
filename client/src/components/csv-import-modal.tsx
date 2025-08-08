@@ -22,24 +22,37 @@ import { Upload, FileText, Check, X, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CSVImportModalProps {
+  /** Modal visibility state */
   open: boolean;
+  /** Callback to control modal visibility */
   onOpenChange: (open: boolean) => void;
+  /** Callback triggered after successful import completion */
   onImportComplete: () => void;
 }
 
+/** CSV file preview data structure for column mapping interface */
 interface PreviewData {
+  /** Extracted column headers from CSV file */
   headers: string[];
+  /** Sample data rows for preview display (limited set) */
   preview: Record<string, string>[];
+  /** Total number of rows in the CSV file */
   totalRows: number;
+  /** Available target fields for column mapping */
   availableFields: string[];
 }
 
+/** Import operation results with success/failure metrics */
 interface ImportResults {
+  /** Number of successfully imported records */
   successful: number;
+  /** Number of failed import attempts */
   failed: number;
+  /** Detailed error messages for failed imports */
   errors: string[];
 }
 
+/** Field mapping configuration with user-friendly labels */
 const fieldLabels: Record<string, string> = {
   name: "Company Name *",
   websiteUrl: "Website URL *", 
@@ -49,15 +62,49 @@ const fieldLabels: Record<string, string> = {
   active: "Active Status"
 };
 
+/**
+ * Advanced CSV import modal with multi-step workflow and intelligent column mapping.
+ * Provides comprehensive data import solution with file validation, preview generation,
+ * interactive column mapping, and detailed import results with error handling.
+ * 
+ * Key features:
+ * - Multi-step wizard workflow (Upload → Mapping → Importing → Results)
+ * - CSV file validation and preview generation with sample data display
+ * - Interactive column mapping interface with dropdown field selection
+ * - Real-time import progress tracking with success/failure metrics
+ * - Comprehensive error reporting with detailed failure reasons
+ * - Field validation with required field enforcement
+ * - Bulk data processing with batch import capabilities
+ * - User-friendly interface with step-by-step guidance
+ * - Responsive design optimized for data management workflows
+ * - Toast notification integration for immediate user feedback
+ * 
+ * The modal integrates with backend data processing pipeline for
+ * company data ingestion and portfolio management system integration.
+ * 
+ * @param open - Controls modal visibility state
+ * @param onOpenChange - Handler for modal visibility changes
+ * @param onImportComplete - Callback for successful import completion
+ */
 export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImportModalProps) {
+  /** Current step in the import workflow process */
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'results'>('upload');
+  /** Currently selected CSV file for processing */
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  /** Parsed CSV data with headers and preview rows */
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  /** User-defined mapping from CSV columns to target fields */
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  /** Final import operation results and metrics */
   const [importResults, setImportResults] = useState<ImportResults | null>(null);
+  /** Loading state for async operations (file processing, import) */
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  /**
+   * Handles CSV file selection with validation.
+   * Ensures only CSV files are accepted and updates file state.
+   */
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/csv') {
@@ -71,6 +118,11 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
     }
   };
 
+  /**
+   * Processes CSV file for preview and generates intelligent column mappings.
+   * Uploads file to backend for parsing, extracts headers and sample data,
+   * then creates smart default mappings based on column name patterns.
+   */
   const handlePreview = async () => {
     if (!selectedFile) return;
 
@@ -92,7 +144,7 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
       const data = await response.json();
       setPreviewData(data);
       
-      // Initialize column mapping with smart defaults
+      // Intelligent column mapping with pattern-based field detection
       const initialMapping: Record<string, string> = {};
       data.availableFields.forEach((field: string) => {
         const matchingHeader = data.headers.find((header: string) => 
@@ -119,10 +171,15 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
     }
   };
 
+  /**
+   * Executes CSV data import with comprehensive validation and error handling.
+   * Validates required field mappings, processes data through backend pipeline,
+   * and provides detailed success/failure reporting with metrics.
+   */
   const handleImport = async () => {
     if (!selectedFile || !previewData) return;
 
-    // Validate required mappings
+    // Comprehensive validation of required field mappings
     const requiredFields = ['name', 'websiteUrl', 'industryVertical', 'businessSize'];
     const missingMappings = requiredFields.filter(field => !columnMapping[field]);
     
@@ -157,6 +214,7 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
       setImportResults(data.results);
       setStep('results');
       
+      // Trigger completion callback for successful imports
       if (data.results.successful > 0) {
         onImportComplete();
       }
@@ -172,6 +230,10 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
     }
   };
 
+  /**
+   * Resets modal state and closes the dialog.
+   * Clears all form data, step progression, and temporary state.
+   */
   const handleClose = () => {
     setStep('upload');
     setSelectedFile(null);

@@ -10,40 +10,84 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
 import ValidationWarnings from "@/components/ui/validation-warnings";
 
+/** Competitor data structure for management interface */
+interface CompetitorItem {
+  /** Unique competitor identifier */
+  id: string;
+  /** Competitor domain URL */
+  domain: string;
+  /** Display label for competitor */
+  label: string;
+  /** Current competitor status (Active/Inactive) */
+  status: string;
+}
+
 interface CompetitorModalProps {
+  /** Modal visibility state */
   isOpen: boolean;
+  /** Callback to close the modal */
   onClose: () => void;
-  competitors: Array<{
-    id: string;
-    domain: string;
-    label: string;
-    status: string;
-  }>;
+  /** Array of existing competitors for display and management */
+  competitors: Array<CompetitorItem>;
+  /** Client identifier for competitor association */
   clientId: string;
 }
 
-export default function CompetitorModal({ isOpen, onClose, competitors, clientId }: CompetitorModalProps) {
+/**
+ * Advanced competitor management modal with comprehensive CRUD operations.
+ * Provides intuitive interface for adding, managing, and removing competitors
+ * with real-time validation, status tracking, and seamless data synchronization.
+ * 
+ * Key features:
+ * - Interactive competitor addition with domain/label input
+ * - Real-time validation with warning display system
+ * - Bulk competitor management with individual delete actions
+ * - SEMrush API integration with health checks and domain validation
+ * - TanStack Query cache management for immediate UI updates
+ * - Comprehensive error handling with user-friendly feedback
+ * - Status badge indicators for competitor health monitoring
+ * - Form state management with automatic cleanup
+ * - Responsive design with mobile-optimized layout
+ * - Accessibility-compliant dialog implementation
+ * 
+ * The modal integrates with backend competitor management system for
+ * seamless data persistence and competitive analysis pipeline integration.
+ * 
+ * @param isOpen - Controls modal visibility state
+ * @param onClose - Handler for modal dismissal
+ * @param competitors - Current competitor list for management
+ * @param clientId - Client context for competitor association
+ */
+export function CompetitorModal({ isOpen, onClose, competitors, clientId }: CompetitorModalProps) {
+  /** Domain input state for new competitor addition */
   const [domain, setDomain] = useState("");
+  /** Label input state for new competitor display name */
   const [label, setLabel] = useState("");
+  /** Validation warnings array for form feedback */
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  /**
+   * TanStack Query mutation for adding new competitors with comprehensive validation.
+   * Integrates with SEMrush API for domain validation and historical data fetching.
+   * Manages cache invalidation and provides detailed user feedback throughout process.
+   */
   const addCompetitorMutation = useMutation({
     mutationFn: async (data: { domain: string; label: string; clientId: string }) => {
       const response = await apiRequest("POST", "/api/competitors", data);
       return response; // apiRequest already parses JSON
     },
     onSuccess: (response) => {
-      // Clear any existing validation warnings
+      // Reset validation state for clean UX
       setValidationWarnings([]);
       
-      // Handle validation warnings if present
+      // Display any validation warnings from successful operation
       if (response.warnings && response.warnings.length > 0) {
         setValidationWarnings(response.warnings);
       }
       
-      // Invalidate all dashboard-related queries
+      // Comprehensive cache invalidation for immediate UI updates
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey[0]?.toString() || '';
@@ -51,7 +95,7 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
         }
       });
       
-      // Also refresh the page data
+      // Force refresh dashboard data for real-time synchronization
       queryClient.refetchQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey[0]?.toString() || '';
@@ -59,10 +103,11 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
         }
       });
       
+      // Clear form inputs after successful addition
       setDomain("");
       setLabel("");
       
-      // Single success message since backend validation and sync is now synchronous
+      // Comprehensive success feedback for user confidence
       toast({
         title: "Competitor successfully added",
         description: "Domain validated, SEMrush data integrated, and 15 months of historical data loaded. Charts updated with new benchmarks.",
@@ -72,16 +117,17 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
     onError: (error: any) => {
       logger.warn("Competitor creation error:", error);
       
-      // Clear previous warnings and show error-based warnings if available
+      // Reset and extract validation warnings from error response
       setValidationWarnings([]);
       
-      // Extract validation warnings from error if present
+      // Handle multiple warning data structures from API
       if (error.response?.data?.warnings) {
         setValidationWarnings(error.response.data.warnings);
       } else if (error.response?.data?.validationErrors) {
         setValidationWarnings(error.response.data.validationErrors);
       }
       
+      // User-friendly error notification
       toast({
         title: "Failed to add competitor",
         description: error.message || "An unexpected error occurred",
@@ -90,6 +136,11 @@ export default function CompetitorModal({ isOpen, onClose, competitors, clientId
     },
   });
 
+  /**
+   * TanStack Query mutation for competitor deletion with cascading cleanup.
+   * Removes all associated metrics and triggers comprehensive cache invalidation
+   * for immediate dashboard updates and benchmark recalculation.
+   */
   const deleteCompetitorMutation = useMutation({
     mutationFn: async (competitorId: string) => {
       await apiRequest("DELETE", `/api/competitors/${competitorId}`);

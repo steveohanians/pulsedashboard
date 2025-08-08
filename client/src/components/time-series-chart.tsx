@@ -9,30 +9,60 @@ import { parseMetricValue } from '../utils/metricParser';
 // Use shared DiamondDot component
 import { DiamondDot } from './shared/DiamondDot';
 
+/** Props interface for TimeSeriesChart component configuration */
 interface TimeSeriesChartProps {
+  /** Name of the metric being visualized (e.g., 'Sessions', 'Bounce Rate') */
   metricName: string;
+  /** Time period for data display ('Last Month', '3 Months', etc.) */
   timePeriod: string;
+  /** Current client's metric value */
   clientData: number;
+  /** Industry average for the metric */
   industryAvg: number;
+  /** Clear Digital portfolio average for the metric */
   cdAvg: number;
+  /** Client website URL for data identification */
   clientUrl?: string;
+  /** Array of competitor data for comparative analysis */
   competitors: Array<{
+    /** Unique identifier for the competitor */
     id: string;
+    /** Display label for the competitor */
     label: string;
+    /** Competitor's metric value */
     value: number;
   }>;
+  /** Time series data structure from database queries */
   timeSeriesData?: Record<string, Array<{
+    /** Metric identifier matching the chart */
     metricName: string;
+    /** Metric value (can be string or number) */
     value: string | number;
+    /** Data source type ('Client', 'Industry_Avg', 'CD_Avg', 'Competitor') */
     sourceType: string;
+    /** Competitor identifier for competitor data points */
     competitorId?: string;
   }>>;
+  /** Array of time periods for the chart x-axis */
   periods?: string[];
 }
 
-
-
-// Generate time series data from database or fallback to current behavior
+/**
+ * Generates time series data for chart visualization with authentic data integration.
+ * Processes database time series data or provides single-point fallback for Last Month view.
+ * Prioritizes authentic data from database over synthetic generation.
+ * 
+ * @param timePeriod - Time period selection ('Last Month', '3 Months', etc.)
+ * @param clientData - Client's current metric value
+ * @param industryAvg - Industry benchmark average
+ * @param cdAvg - Clear Digital portfolio average
+ * @param competitors - Array of competitor data points
+ * @param clientUrl - Client website URL for identification
+ * @param timeSeriesData - Raw time series data from database
+ * @param periods - Time period array for chart axis
+ * @param metricName - Metric identifier for data filtering
+ * @returns Processed chart data array with time series points
+ */
 function generateTimeSeriesData(
   timePeriod: string, 
   clientData: number, 
@@ -96,7 +126,19 @@ function generateTimeSeriesData(
   return [];
 }
 
-// Generate real time-series data from database
+/**
+ * Processes authentic time series data from database into chart-ready format.
+ * Handles multiple data points per period by averaging, supports all source types,
+ * and ensures proper metric conversion for rate-based and session-based metrics.
+ * 
+ * @param timeSeriesData - Raw time series data grouped by time period
+ * @param periods - Array of time periods for processing
+ * @param competitors - Competitor configuration for data mapping
+ * @param clientUrl - Client identifier for data labeling
+ * @param metricName - Metric name for filtering and conversion logic
+ * @param cdAvg - Clear Digital average for fallback scenarios
+ * @returns Chart data array with properly processed time series points
+ */
 function generateRealTimeSeriesData(
   timeSeriesData: Record<string, Array<{ metricName: string; value: string | number; sourceType: string; competitorId?: string }>>,
   periods: string[],
@@ -199,10 +241,49 @@ function generateRealTimeSeriesData(
   return data;
 }
 
-// REMOVED: Fallback data generator completely eliminated per user request
-// No fake/sample data will ever be generated - only authentic GA4 data or empty state
-
-export default function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
+/**
+ * Advanced time series chart component for comprehensive analytics visualization.
+ * Provides interactive line and bar chart displays with authentic data integration,
+ * competitive benchmarking, and sophisticated data processing capabilities.
+ * 
+ * Key Features:
+ * - Authentic time series data visualization from Google Analytics 4
+ * - Interactive line/bar chart toggle with smooth animations
+ * - Competitive benchmarking with multiple competitors support
+ * - Industry average and Clear Digital portfolio comparisons
+ * - Smart data processing with metric-specific formatting
+ * - Dynamic Y-axis scaling with optimized domain calculation
+ * - Interactive legend with line/bar visibility controls
+ * - Responsive design with customizable color theming
+ * - Empty state handling for missing or invalid data
+ * - Session duration conversion (seconds to minutes)
+ * - Rate metric percentage formatting with proper scaling
+ * - Real-time data updates with React.memo optimization
+ * - Touch-friendly controls for mobile interactions
+ * - Comprehensive tooltip with detailed metric information
+ * - Performance-optimized rendering with selective re-renders
+ * 
+ * Data Processing:
+ * - Prioritizes authentic database time series data over fallback generation
+ * - Handles multiple data points per period through intelligent averaging
+ * - Supports both daily and monthly data aggregation
+ * - Ensures proper metric conversion for different data types
+ * - Eliminates all synthetic/fake data generation for authentic insights
+ * 
+ * The component integrates seamlessly with the broader analytics dashboard
+ * and maintains consistent visual styling across all chart implementations.
+ * 
+ * @param metricName - Name of the metric being visualized
+ * @param timePeriod - Selected time period for data display
+ * @param clientData - Client's current metric value
+ * @param industryAvg - Industry benchmark average
+ * @param cdAvg - Clear Digital portfolio average
+ * @param clientUrl - Client website URL for identification
+ * @param competitors - Array of competitor data for comparison
+ * @param timeSeriesData - Raw time series data from database
+ * @param periods - Time periods array for chart axis
+ */
+export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
   
 
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks

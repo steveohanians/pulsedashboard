@@ -3,34 +3,80 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import AIInsights from "@/components/ai-insights";
+import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
 
-// Simplified insight data interface
+/** AI-generated insight data structure with performance status */
 interface InsightData {
+  /** Contextual information about the metric */
   contextText?: string;
+  /** AI-generated insight analysis */
   insightText?: string;
+  /** Actionable recommendations */
   recommendationText?: string;
+  /** Performance status indicator */
   status?: 'success' | 'needs_improvement' | 'warning';
 }
 
-interface MetricInsightBoxProps {
+/** Metric data structure for competitive analysis */
+interface MetricData {
+  /** Name of the metric being analyzed */
   metricName: string;
-  clientId: string;
-  timePeriod: string;
-  metricData: {
-    metricName: string;
-    clientValue: number | null;
-    industryAverage: number | null;
-    cdAverage: number | null;
-    competitorValues: number[];
-    competitorNames: string[];
-  };
-  onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
-  preloadedInsight?: any; // Pre-loaded insight to prevent API calls
+  /** Client's current metric value */
+  clientValue: number | null;
+  /** Industry benchmark average */
+  industryAverage: number | null;
+  /** Clear Digital portfolio average */
+  cdAverage: number | null;
+  /** Array of competitor metric values */
+  competitorValues: number[];
+  /** Array of competitor names for context */
+  competitorNames: string[];
 }
 
-export default function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
+interface MetricInsightBoxProps {
+  /** Name of the metric for insight generation */
+  metricName: string;
+  /** Client identifier for targeted analysis */
+  clientId: string;
+  /** Time period for metric analysis */
+  timePeriod: string;
+  /** Comprehensive metric data for AI analysis */
+  metricData: MetricData;
+  /** Optional callback for status change notifications */
+  onStatusChange?: (status?: 'success' | 'needs_improvement' | 'warning') => void;
+  /** Pre-loaded insight to prevent redundant API calls */
+  preloadedInsight?: InsightData;
+}
+
+/**
+ * Advanced metric insight box component with AI-powered analysis and recommendations.
+ * Integrates with AI insight generation system, handles preloaded insights for performance,
+ * manages mutation states, and provides interactive insight generation with visual feedback.
+ * 
+ * Key features:
+ * - AI-powered competitive metric analysis
+ * - Preloaded insight support for performance optimization
+ * - Interactive insight generation with loading states
+ * - Performance status classification (success/needs_improvement/warning)
+ * - TanStack Query integration for cache management
+ * - Typewriter animation for engaging user experience
+ * - Comprehensive error handling with fallback states
+ * - Status change notifications to parent components
+ * - Database persistence for generated insights
+ * 
+ * The component prioritizes preloaded insights to minimize API calls and improve
+ * dashboard load times, falling back to on-demand generation when needed.
+ * 
+ * @param metricName - Metric identifier for insight targeting
+ * @param clientId - Client context for personalized analysis
+ * @param timePeriod - Temporal context for metric analysis
+ * @param metricData - Complete metric dataset for AI processing
+ * @param onStatusChange - Optional callback for parent status updates
+ * @param preloadedInsight - Performance optimization with cached insights
+ */
+export function MetricInsightBox({ metricName, clientId, timePeriod, metricData, onStatusChange, preloadedInsight }: MetricInsightBoxProps) {
+  /** Enhanced insight state with typing animation and storage metadata */
   const [insight, setInsight] = useState<InsightData & { 
     isTyping?: boolean; 
     isFromStorage?: boolean;
@@ -38,15 +84,16 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
   } | null>(null);
   const queryClient = useQueryClient();
   
-  // Load stored insights from database on mount or use preloaded insight
+  /**
+   * Effect hook for loading stored insights with preloaded optimization.
+   * Prioritizes preloaded insights to minimize API calls and improve performance.
+   * Handles status reporting to parent components for dashboard coordination.
+   */
   useEffect(() => {
     const loadStoredInsight = async () => {
-
-      
-      // If we have a preloaded insight, use it directly
+      // Prioritize preloaded insights for performance optimization
       if (preloadedInsight) {
         logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
-
 
         setInsight({
           contextText: preloadedInsight.contextText,
@@ -57,24 +104,25 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
           isFromStorage: true
         });
         
-        // Report status to parent
+        // Notify parent component of performance status for dashboard coordination
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
         }
         return;
       }
 
-
-      
-      // No fallback loading - rely entirely on preloaded insights to prevent API calls
+      // No fallback loading - maintain authentic data integrity
       logger.component('MetricInsightBox', `No preloaded insight available for ${metricName} - will show generate button`);
     };
     
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
-  
-  // Removed client-side storage - all persistence handled by API
 
+  /**
+   * TanStack Query mutation for on-demand AI insight generation.
+   * Integrates with backend AI processing pipeline and handles comprehensive
+   * error states, loading management, and cache invalidation.
+   */
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/generate-metric-insight/${clientId}`, {
@@ -96,14 +144,14 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       return await response.json();
     },
     onSuccess: (data) => {
-      // Set insight with typing effect enabled
+      // Enable typing animation for engaging user experience
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      // Invalidate insights cache
+      // Invalidate cache for fresh data consistency
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      // Log error but don't throw to prevent runtime error modal
+      // Graceful error handling without breaking user experience
       logger.warn('Failed to generate insight', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         clientId,
@@ -112,6 +160,11 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     }
   });
 
+  /**
+   * Advanced mutation for context-aware insight generation.
+   * Allows users to provide additional business context for more targeted
+   * AI analysis. Includes automatic fallback to standard generation on failure.
+   */
   const generateInsightWithContextMutation = useMutation({
     mutationFn: async (userContext: string) => {
       const response = await fetch(`/api/generate-metric-insight-with-context/${clientId}`, {
@@ -134,21 +187,21 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
       return await response.json();
     },
     onSuccess: (data) => {
-      // Set insight with typing effect enabled and mark as having custom context
+      // Mark context-enhanced insights with special metadata
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      // Invalidate insights cache
+      // Refresh cache to maintain data consistency
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
     },
     onError: (error) => {
-      // Log error and attempt fallback to regular regeneration
+      // Comprehensive error handling with intelligent fallback system
       logger.warn('Failed to generate insight with context', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         clientId,
         metricName
       });
       
-      // Attempt fallback to regular regeneration, but catch any errors
+      // Automatic fallback to standard generation for robust user experience
       try {
         generateInsightMutation.mutate();
       } catch (fallbackError) {
@@ -161,7 +214,7 @@ export default function MetricInsightBox({ metricName, clientId, timePeriod, met
     }
   });
 
-  // Show loading state during any generation process
+  /** Render loading state during any active insight generation process */
   if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending) {
     return (
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">

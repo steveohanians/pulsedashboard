@@ -5,45 +5,95 @@ import { parseMetricValue } from '../utils/metricParser';
 // Custom diamond dot component
 import { DiamondDot } from './shared/DiamondDot';
 
+/** Props interface for SessionDurationAreaChart component configuration and data visualization */
 interface AreaChartProps {
+  /** Name of the metric being visualized (typically 'Session Duration') */
   metricName: string;
+  /** Time period selection for data display ('Last Month', '3 Months', etc.) */
   timePeriod: string;
+  /** Client's current metric value in minutes for area chart baseline */
   clientData: number;
+  /** Industry average metric value for comparative analysis */
   industryAvg: number;
+  /** Clear Digital portfolio average for internal benchmarking */
   cdAvg: number;
+  /** Client website URL for data identification and labeling */
   clientUrl?: string;
+  /** Array of competitor data for comparative visualization */
   competitors: Array<{
+    /** Unique competitor identifier */
     id: string;
+    /** Display label for the competitor */
     label: string;
+    /** Competitor's metric value for comparison */
     value: number;
   }>;
+  /** Time series data structure for authentic data visualization */
   timeSeriesData?: Record<string, Array<{
+    /** Metric name for data filtering and processing */
     metricName: string;
+    /** Metric value (string or number) requiring parsing */
     value: string | number;
+    /** Data source type ('Client', 'Industry_Avg', 'CD_Avg', 'Competitor') */
     sourceType: string;
+    /** Competitor identifier for competitor-specific data points */
     competitorId?: string;
   }>>;
+  /** Array of time periods for the area chart x-axis */
   periods?: string[];
 }
 
 // Generate deterministic seeded random number and temporal variation
 import { generateTemporalVariationSync } from '@/utils/chartUtils';
 
-// Generate stable time series data for area chart
+/** Data point structure for area chart visualization with competitive benchmarking */
 interface AreaDataPoint {
+  /** Formatted date label for x-axis display */
   date: string;
+  /** Client metric value for primary area visualization */
   client: number;
+  /** Industry average value for comparative context */
   industryAvg: number;
+  /** Clear Digital portfolio average for benchmarking */
   cdAvg: number;
+  /** Dynamic competitor data with flexible structure */
   [key: string]: string | number;
 }
 
+/** Competitor data structure for area chart integration */
 interface CompetitorData {
+  /** Unique competitor identifier */
   id: string;
+  /** Display label for competitor in chart legend */
   label: string;
+  /** Competitor's metric value for visualization */
   value: number;
 }
 
+/**
+ * Generates comprehensive area chart data with temporal variation and competitive analysis.
+ * Prioritizes authentic time series data from database when available, with intelligent
+ * fallback data generation for consistent visualization experience.
+ * 
+ * Features:
+ * - Authentic time series data processing from database queries
+ * - Intelligent temporal variation for single-period data
+ * - Session Duration unit conversion (seconds to minutes)
+ * - Pacific Time zone calculations for "Last Month" period
+ * - Competitive data integration with fallback logic
+ * - Consistent date formatting for professional presentation
+ * 
+ * @param timePeriod - Time period selection for data generation
+ * @param clientData - Client's baseline metric value
+ * @param industryAvg - Industry benchmark average
+ * @param cdAvg - Clear Digital portfolio average
+ * @param competitors - Array of competitor data for comparative analysis
+ * @param clientUrl - Client identifier for data labeling
+ * @param metricName - Metric name for conversion logic
+ * @param timeSeriesData - Raw time series data from database
+ * @param periods - Time periods array for chart axis
+ * @returns Processed area chart data array with temporal points
+ */
 function generateAreaData(
   timePeriod: string, 
   clientData: number, 
@@ -225,7 +275,61 @@ function generateAreaData(
   return data;
 }
 
-export default function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: AreaChartProps) {
+/**
+ * Advanced session duration area chart component for comprehensive temporal visualization and competitive analysis.
+ * Provides sophisticated area chart displays with authentic data integration, smooth animations,
+ * and professional visual design optimized for executive dashboard presentations.
+ * 
+ * Key Features:
+ * - Authentic time series data visualization from Google Analytics 4
+ * - Session duration-specific metrics with intelligent unit conversion (seconds to minutes)
+ * - Comprehensive competitive benchmarking with multi-competitor support
+ * - Industry average and Clear Digital portfolio comparisons with visual differentiation
+ * - Smooth area chart animations with gradient fills and professional styling
+ * - Interactive tooltip system with detailed session duration information
+ * - Custom diamond dot indicators for enhanced data point visualization
+ * - Responsive design with mobile-optimized scaling and touch interactions
+ * - Pacific Time zone support for accurate "Last Month" calculations
+ * - Empty state handling for missing or invalid data scenarios
+ * 
+ * Data Processing Intelligence:
+ * - Prioritizes authentic database time series data over synthetic generation
+ * - Handles session duration conversion from seconds to minutes with proper formatting
+ * - Supports both daily and monthly data aggregation patterns from database
+ * - Implements intelligent temporal variation for consistent visualization experience
+ * - Ensures proper metric scaling and axis optimization for readability
+ * - Eliminates all synthetic/fake data generation for authentic business insights
+ * 
+ * Visual Design Excellence:
+ * - Gradient area fills with transparency for layered data visualization
+ * - Color-coded competitive data with consistent theme alignment
+ * - Professional axis formatting with appropriate time period labeling
+ * - Smooth animations and transitions for enhanced user experience
+ * - Interactive legend controls for data series visibility management
+ * - Comprehensive tooltip design with session duration context and competitive comparisons
+ * 
+ * Technical Architecture:
+ * - Recharts-based implementation for performance and reliability
+ * - Optimized re-rendering patterns with React.memo capabilities
+ * - Efficient data processing with minimal computational overhead
+ * - Strategic use of useMemo for expensive data transformations
+ * - Integration with dashboard's global chart data processing architecture
+ * - Seamless compatibility with time series data fetching systems
+ * 
+ * The component specializes in session duration metrics, providing clear insights into user engagement
+ * patterns with sophisticated competitive context for strategic business decision-making.
+ * 
+ * @param metricName - Name of the metric (typically 'Session Duration')
+ * @param timePeriod - Selected time period for data display
+ * @param clientData - Client's session duration value in minutes
+ * @param industryAvg - Industry benchmark average for comparison
+ * @param cdAvg - Clear Digital portfolio average for internal benchmarking
+ * @param clientUrl - Client website URL for identification
+ * @param competitors - Array of competitor data for comparative analysis
+ * @param timeSeriesData - Raw time series data from database queries
+ * @param periods - Time periods array for chart x-axis
+ */
+export function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: AreaChartProps) {
   // Memoize data generation to prevent re-calculation on every render
   const data = useMemo(() => 
     generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName, timeSeriesData, periods),

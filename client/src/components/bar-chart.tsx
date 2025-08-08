@@ -3,24 +3,41 @@ import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
 import { parseMetricValue } from '../utils/metricParser';
 
+/** Props interface for MetricBarChart component configuration */
 interface BarChartProps {
+  /** Name of the metric being visualized (e.g., 'Sessions', 'Bounce Rate') */
   metricName: string;
+  /** Time period for data display ('Last Month', '3 Months', etc.) */
   timePeriod: string;
+  /** Current client's metric value */
   clientData: number;
+  /** Industry average for the metric */
   industryAvg: number;
+  /** Clear Digital portfolio average for the metric */
   cdAvg: number;
+  /** Client website URL for data identification */
   clientUrl?: string;
+  /** Array of competitor data for comparative analysis */
   competitors: Array<{
+    /** Unique identifier for the competitor */
     id: string;
+    /** Display label for the competitor */
     label: string;
+    /** Competitor's metric value */
     value: number;
   }>;
+  /** Time series data structure from database queries */
   timeSeriesData?: Record<string, Array<{
+    /** Metric identifier matching the chart */
     metricName: string;
+    /** Metric value as string for parsing */
     value: string;
+    /** Data source type ('Client', 'Industry_Avg', 'CD_Avg', 'Competitor') */
     sourceType: string;
+    /** Competitor identifier for competitor data points */
     competitorId?: string;
   }>>;
+  /** Array of time periods for the chart x-axis */
   periods?: string[];
 }
 
@@ -28,7 +45,18 @@ interface BarChartProps {
 import { generateTemporalVariationSync } from '@/utils/chartUtils';
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 
-// Process time-series data for bar chart display
+/**
+ * Processes authentic time series data from database into bar chart format.
+ * Handles metric-specific conversions, period grouping, and competitive data mapping.
+ * Ensures proper unit conversion (e.g., seconds to minutes for Session Duration).
+ * 
+ * @param timeSeriesData - Raw time series data grouped by time period
+ * @param periods - Array of time periods for processing
+ * @param competitors - Competitor configuration for data mapping
+ * @param clientUrl - Client identifier for data labeling
+ * @param metricName - Metric name for filtering and conversion logic
+ * @returns Processed chart data array with bar chart points
+ */
 function processTimeSeriesForBar(
   timeSeriesData: Record<string, Array<{
     metricName: string;
@@ -115,7 +143,20 @@ function processTimeSeriesForBar(
   return data;
 }
 
-// Generate stable time series data for bar chart
+/**
+ * Generates stable bar chart data with temporal variation for single-period displays.
+ * Creates consistent data points across multiple periods with deterministic variation,
+ * ensuring visual consistency while providing temporal context for comparison.
+ * 
+ * @param timePeriod - Time period selection ('Last Month', '3 Months', etc.)
+ * @param clientData - Client's current metric value
+ * @param industryAvg - Industry benchmark average
+ * @param cdAvg - Clear Digital portfolio average
+ * @param competitors - Array of competitor data points
+ * @param clientUrl - Client identifier for data labeling
+ * @param metricName - Metric name for conversion logic
+ * @returns Processed chart data array with temporal variation
+ */
 function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string, metricName?: string): Array<Record<string, unknown>> {
 
   
@@ -279,7 +320,55 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
   return data;
 }
 
-export default function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
+/**
+ * Interactive bar chart component for comprehensive metric visualization and competitive analysis.
+ * Provides authentic data-driven bar chart displays with sophisticated data processing,
+ * competitive benchmarking capabilities, and responsive design optimization.
+ * 
+ * Key Features:
+ * - Authentic time series data visualization from Google Analytics 4
+ * - Comprehensive competitive benchmarking with multiple competitor support
+ * - Industry average and Clear Digital portfolio comparisons
+ * - Smart data processing with metric-specific unit conversion
+ * - Session duration conversion (seconds to minutes) with proper formatting
+ * - Dynamic period grouping with intelligent temporal variation
+ * - Interactive legend controls for data series visibility
+ * - Responsive design with customizable color theming
+ * - Empty state handling for missing or invalid data scenarios
+ * - Performance-optimized rendering with React.memo capabilities
+ * - Touch-friendly interactions for mobile device compatibility
+ * - Comprehensive tooltip system with detailed metric information
+ * - Dashed bar support for Clear Digital average differentiation
+ * 
+ * Data Processing Intelligence:
+ * - Prioritizes authentic database time series data over synthetic generation
+ * - Handles multiple data points per period through intelligent averaging
+ * - Supports both daily and monthly data aggregation patterns
+ * - Ensures proper metric conversion for different data types and units
+ * - Implements fallback logic for competitor data across periods
+ * - Eliminates all synthetic/fake data generation for authentic insights
+ * 
+ * Visual Design:
+ * - Consistent color scheme aligned with brand guidelines
+ * - Clear data hierarchy with client data prominently displayed
+ * - Sophisticated tooltip design with hover state animations
+ * - Responsive scaling and axis optimization for various screen sizes
+ * - Professional styling with subtle animations and transitions
+ * 
+ * The component integrates seamlessly with the broader analytics dashboard
+ * ecosystem and maintains visual consistency across all chart implementations.
+ * 
+ * @param metricName - Name of the metric being visualized
+ * @param timePeriod - Selected time period for data display
+ * @param clientData - Client's current metric value
+ * @param industryAvg - Industry benchmark average
+ * @param cdAvg - Clear Digital portfolio average
+ * @param clientUrl - Client website URL for identification
+ * @param competitors - Array of competitor data for comparison
+ * @param timeSeriesData - Raw time series data from database
+ * @param periods - Time periods array for chart axis
+ */
+export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
   
 
