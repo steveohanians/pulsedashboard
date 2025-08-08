@@ -153,38 +153,19 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
       
-      // Nuclear cache clearing - remove all queries and force fresh fetch
-      queryClient.clear(); // Clear entire cache
+      // Targeted cache invalidation - only clear insights queries without page refresh
+      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.removeQueries({ queryKey: ['/api/insights'] });
       
-      // Force complete refresh of insights data with cache-busting
-      const cacheBuster = Date.now();
-      queryClient.refetchQueries({ 
-        queryKey: [`/api/insights/${clientId}`],
-        type: 'all'
-      });
+      // Gentle invalidation to refresh insights data without destroying app state
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/insights/${clientId}`],
+          refetchType: 'active'
+        });
+      }, 100);
       
-      // Additional delayed refetch with cache-busting parameter
-      setTimeout(async () => {
-        try {
-          const freshResponse = await fetch(`/api/insights/${clientId}?t=${cacheBuster}`, {
-            cache: 'no-cache',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          });
-          if (freshResponse.ok) {
-            const freshData = await freshResponse.json();
-            queryClient.setQueryData([`/api/insights/${clientId}`], freshData);
-            logger.component('MetricInsightBox', `Force refreshed insights data with ${freshData.insights?.length || 0} insights`);
-          }
-        } catch (error) {
-          logger.warn('Failed to force refresh insights', error);
-        }
-      }, 300);
-      
-      logger.component('MetricInsightBox', `Generated insight for ${metricName}, nuclear cache clear executed`);
+      logger.component('MetricInsightBox', `Generated insight for ${metricName}, gentle cache invalidation applied`);
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -227,38 +208,19 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
       
-      // Nuclear cache clearing - remove all queries and force fresh fetch
-      queryClient.clear(); // Clear entire cache
+      // Targeted cache invalidation - only clear insights queries without page refresh
+      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.removeQueries({ queryKey: ['/api/insights'] });
       
-      // Force complete refresh of insights data with cache-busting
-      const cacheBuster = Date.now();
-      queryClient.refetchQueries({ 
-        queryKey: [`/api/insights/${clientId}`],
-        type: 'all'
-      });
+      // Gentle invalidation to refresh insights data without destroying app state
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/insights/${clientId}`],
+          refetchType: 'active'
+        });
+      }, 100);
       
-      // Additional delayed refetch with cache-busting parameter
-      setTimeout(async () => {
-        try {
-          const freshResponse = await fetch(`/api/insights/${clientId}?t=${cacheBuster}`, {
-            cache: 'no-cache',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          });
-          if (freshResponse.ok) {
-            const freshData = await freshResponse.json();
-            queryClient.setQueryData([`/api/insights/${clientId}`], freshData);
-            logger.component('MetricInsightBox', `Force refreshed insights data with ${freshData.insights?.length || 0} insights`);
-          }
-        } catch (error) {
-          logger.warn('Failed to force refresh insights', error);
-        }
-      }, 300);
-      
-      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, nuclear cache clear executed`);
+      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, gentle cache invalidation applied`);
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
