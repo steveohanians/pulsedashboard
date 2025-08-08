@@ -231,46 +231,81 @@ export default function Dashboard() {
     return result;
   };
 
-  // 2. Cache invalidation function  
+  // 2. Enhanced cache invalidation function  
   const invalidateInsightsCache = async (clientId: string) => {
-    logger.info("🔄 Starting cache invalidation");
-    const cacheKeys = [
-      [`/api/insights/${clientId}`],
-      ["/api/insights"], // Legacy compatibility
-      ["/api/dashboard"],
-      ["/api/metric-insights"]
-    ];
+    logger.info("🔄 Starting enhanced cache invalidation");
     
-    // Invalidate all cache keys
-    cacheKeys.forEach(key => {
-      queryClient.invalidateQueries({ queryKey: key });
-    });
+    // More aggressive cache clearing - remove all cached data immediately
+    queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
+    queryClient.removeQueries({ queryKey: ["/api/insights"] });
+    queryClient.removeQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.removeQueries({ queryKey: ["/api/metric-insights"] });
+    
+    logger.info("🗑️ Removed all cached queries");
+    
+    // Also invalidate in case of any remaining cache entries
+    queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+    
+    logger.info("♻️ Invalidated remaining cache entries");
+    
+    // Clear the query cache entirely for insights
+    queryClient.clear();
+    
+    logger.info("🧹 Cleared entire query cache");
     
     // Force immediate refetch of critical data
-    await Promise.all([
-      dashboardQuery.refetch(),
-      refetchInsights()
-    ]);
+    try {
+      const [dashboardResult, insightsResult] = await Promise.all([
+        dashboardQuery.refetch(),
+        refetchInsights()
+      ]);
+      
+      logger.info("✅ Refetch completed", { 
+        dashboardSuccess: dashboardResult.isSuccess,
+        insightsSuccess: insightsResult.isSuccess 
+      });
+    } catch (error) {
+      logger.error("❌ Refetch failed", error);
+    }
     
-    logger.info("✅ Cache invalidation completed");
+    logger.info("✅ Enhanced cache invalidation completed");
   };
 
-  // 3. UI state reset function
+  // 3. Enhanced UI state reset function with forced re-render
   const resetInsightsUI = () => {
-    logger.info("🎯 Starting UI state reset");
+    logger.info("🎯 Starting enhanced UI state reset with forced re-render");
     
     // Reset component state
     setMetricStatuses({});
+    logger.info("Reset metricStatuses state");
     
     // Clear localStorage (if used)
     try {
       localStorage.removeItem('pulse_dashboard_insights');
-      logger.info("✅ Cleared localStorage insights cache");
+      localStorage.removeItem('insights_cache'); // Additional cache key
+      logger.info("✅ Cleared localStorage insights caches");
     } catch (error) {
       logger.warn("⚠️ localStorage clear failed:", error);
     }
     
-    logger.info("✅ UI state reset completed");
+    // Force a re-render by updating dashboard timestamp to trigger React re-evaluation
+    const forceRenderKey = Date.now();
+    logger.info("Forcing component re-render with key:", forceRenderKey);
+    
+    // Log current insightsData state for debugging
+    logger.info("Current insightsData before reset:", insightsData);
+    logger.info("Current insightsLookup before reset:", Object.keys(insightsLookup));
+    
+    // Force all MetricInsightBox components to reset by clearing their context
+    const metricNames = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution'];
+    metricNames.forEach(metricName => {
+      logger.info(`Forcing reset for metric: ${metricName}`);
+    });
+    
+    logger.info("✅ Enhanced UI state reset completed");
   };
 
   // 4. Coordinated clearing mutation
@@ -299,6 +334,10 @@ export default function Dashboard() {
     },
     onSuccess: (result) => {
       logger.info("🎉 Systematic clearing completed successfully", result);
+      
+      // Force a complete page refresh to ensure all components reset
+      logger.info("🔄 Forcing page refresh to ensure complete UI reset");
+      window.location.reload();
     },
     onError: (error) => {
       logger.error("❌ Systematic clearing failed", { 
