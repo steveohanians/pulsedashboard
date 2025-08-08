@@ -183,15 +183,29 @@ export default function Dashboard() {
       .then(res => res.json()),
   });
 
-  // Load AI insights for dashboard metrics
+  // Load AI insights for dashboard metrics with aggressive fresh data strategy
   const insightsQuery = useQuery({
     queryKey: [`/api/insights/${user?.clientId}`],
     enabled: !!user?.clientId,
-    staleTime: 0, // Always consider data stale to ensure fresh insights
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data at all
     retry: 1,
     refetchOnMount: true,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    queryFn: async () => {
+      const response = await fetch(`/api/insights/${user?.clientId}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch insights');
+      }
+      return response.json();
+    }
   });
   
   const { data: insightsData, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = insightsQuery;
@@ -255,34 +269,41 @@ export default function Dashboard() {
     return result;
   };
 
-  // 2. Targeted cache invalidation without full cache clear  
+  // 2. Aggressive cache clearing for complete cache reset
   const invalidateInsightsCache = async (clientId: string) => {
-    logger.info("🔄 Starting targeted cache invalidation");
+    logger.info("🔄 Starting aggressive cache clearing");
     
-    // Remove specific insight cache entries
+    // Complete cache removal for insights
     queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
     queryClient.removeQueries({ queryKey: ["/api/insights"] });
+    queryClient.removeQueries({ predicate: query => 
+      query.queryKey[0]?.toString().includes('insights') || false
+    });
     
-    logger.info("🗑️ Removed insight cache entries");
+    logger.info("🗑️ Completely removed all insight cache entries");
     
-    // Invalidate to trigger refetch
-    queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-    queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+    // Force aggressive refetch with cache bypass
+    queryClient.invalidateQueries({ 
+      queryKey: [`/api/insights/${clientId}`],
+      refetchType: 'all'
+    });
     
-    logger.info("♻️ Invalidated insight cache keys");
+    logger.info("♻️ Triggered aggressive cache invalidation");
     
-    // Force immediate refetch of insights data
+    // Multiple refetch attempts to ensure fresh data
     try {
+      await new Promise(resolve => setTimeout(resolve, 300));
       const insightsResult = await refetchInsights();
-      logger.info("✅ Insights refetch completed", { 
+      logger.info("✅ Insights aggressive refetch completed", { 
         success: insightsResult.isSuccess,
-        dataLength: (insightsResult.data as any)?.insights?.length || 0
+        dataLength: (insightsResult.data as any)?.insights?.length || 0,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
       logger.error("❌ Insights refetch failed", error);
     }
     
-    logger.info("✅ Targeted cache invalidation completed");
+    logger.info("✅ Aggressive cache clearing completed");
   };
 
   // 3. Enhanced UI state reset function with forced re-render

@@ -153,19 +153,25 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
       
-      // Comprehensive cache invalidation to refresh all insight-related queries
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
+      // Aggressive cache clearing to force fresh data
+      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.removeQueries({ queryKey: ['/api/insights'] });
       
-      // Force refetch of main dashboard insights query to update insightsLookup
-      queryClient.refetchQueries({ queryKey: [`/api/insights/${clientId}`] });
+      // Force immediate refetch with bypassing cache
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/insights/${clientId}`],
+        refetchType: 'all'
+      });
       
-      // Also manually trigger a refetch with a small delay to ensure cache invalidation completes
+      // Additional delayed invalidation to ensure UI updates
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-      }, 100);
+        queryClient.refetchQueries({ 
+          queryKey: [`/api/insights/${clientId}`],
+          type: 'all'
+        });
+      }, 200);
       
-      logger.component('MetricInsightBox', `Generated insight for ${metricName}, invalidated caches and triggered refetch`);
+      logger.component('MetricInsightBox', `Generated insight for ${metricName}, aggressively cleared caches`);
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -208,19 +214,25 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
       
-      // Comprehensive cache invalidation to refresh all insight-related queries
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
+      // Aggressive cache clearing to force fresh data
+      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.removeQueries({ queryKey: ['/api/insights'] });
       
-      // Force refetch of main dashboard insights query to update insightsLookup
-      queryClient.refetchQueries({ queryKey: [`/api/insights/${clientId}`] });
+      // Force immediate refetch with bypassing cache
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/insights/${clientId}`],
+        refetchType: 'all'
+      });
       
-      // Also manually trigger a refetch with a small delay to ensure cache invalidation completes
+      // Additional delayed invalidation to ensure UI updates
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
-      }, 100);
+        queryClient.refetchQueries({ 
+          queryKey: [`/api/insights/${clientId}`],
+          type: 'all'
+        });
+      }, 200);
       
-      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, invalidated caches and triggered refetch`);
+      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, aggressively cleared caches`);
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
