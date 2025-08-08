@@ -1215,11 +1215,6 @@ export function registerRoutes(app: Express): Server {
 
       // Delete the insight from database
       await storage.deleteAIInsightByMetric(clientId, metricName);
-      
-      // Clear the insights cache for this client
-      const cacheKey = `insights:${clientId}`;
-      performanceCache.remove(cacheKey);
-      
       logger.info("Deleted AI insight for specific metric", { clientId, metricName, userId: req.user.id });
       
       res.json({ message: "AI insight deleted successfully" });
@@ -1234,10 +1229,6 @@ export function registerRoutes(app: Express): Server {
     try {
       await storage.clearAllAIInsights();
       await storage.clearAllInsightContexts();
-      
-      // Clear all insights cache entries
-      performanceCache.clear();
-      
       logger.info("Cleared all AI insights and contexts for debugging", { userId: req.user?.id });
       res.json({ message: "All AI insights and contexts cleared successfully" });
     } catch (error) {

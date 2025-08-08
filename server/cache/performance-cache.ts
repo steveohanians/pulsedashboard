@@ -75,11 +75,6 @@ class PerformanceCache {
     this.cache.clear();
   }
 
-  // Remove specific key
-  remove(key: string): void {
-    this.cache.delete(key);
-  }
-
   // Clear specific pattern
   clearPattern(pattern: string): void {
     for (const key of Array.from(this.cache.keys())) {
