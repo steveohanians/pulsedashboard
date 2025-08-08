@@ -114,3 +114,9 @@ iframe[src*="__vite_plugin_runtime_error"] {
     font-family: 'Poppins', sans-serif;
   }
 }
+
+/* Custom select padding fix */
+.native-select-custom {
+  padding-left: 12px !important;
+  padding-right: 48px !important;
+}
