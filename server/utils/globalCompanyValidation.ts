@@ -1,12 +1,18 @@
 import { IStorage } from "../storage";
 import logger from "../utils/logger";
-import { semrushService } from "../services/semrush/semrushService";
 
 export type CompanyType = 'competitor' | 'portfolio' | 'benchmark' | 'client';
 
+// Interface for SEMrush validation to enable dependency inversion
+export interface ISemrushValidator {
+  fetchHistoricalData(domain: string): Promise<Map<string, any>>;
+}
 
 export class GlobalCompanyValidator {
-  constructor(private storage: IStorage) {}
+  constructor(
+    private storage: IStorage,
+    private semrushValidator: ISemrushValidator
+  ) {}
 
 
   validateAndNormalizeDomain(domain: string): { 
@@ -196,7 +202,7 @@ export class GlobalCompanyValidator {
             maxRetries: MAX_RETRIES
           });
 
-          const healthCheckPromise = semrushService.fetchHistoricalData(normalizedDomain);
+          const healthCheckPromise = this.semrushValidator.fetchHistoricalData(normalizedDomain);
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT);
           });

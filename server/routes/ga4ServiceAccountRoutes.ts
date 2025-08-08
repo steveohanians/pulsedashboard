@@ -16,20 +16,7 @@ import {
   insertGA4PropertyAccessSchema 
 } from '../../shared/schema';
 import { ga4ServiceAccountManager } from '../services/ga4ServiceAccountManager';
-// Middleware is defined inline in routes.ts, we'll use the same pattern here
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  next();
-}
-
-function requireAdmin(req: any, res: any, next: any) {
-  if (!req.isAuthenticated() || req.user.role !== "Admin") {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  next();
-}
+import { requireAuth, requireAdmin } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
 
 const router = Router();

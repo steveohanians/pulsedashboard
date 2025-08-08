@@ -3,6 +3,7 @@ import logger from "../utils/logger";
 import { GlobalValidationOrchestrator, ValidationResult } from "./globalValidationOrchestrator";
 import { updateCompanyWithValidation, updateCompaniesWithValidation } from "./updateValidationUtils";
 import { validateCompetitorPortfolioConflicts, validateBenchmarkDiversity, validateClientUniqueness } from "./advancedValidationWorkflows";
+import { semrushService } from "../services/semrush/semrushService";
 
 
 
@@ -323,7 +324,7 @@ export async function validateWithPhase3(
   data: any,
   options?: { excludeId?: string; clientId?: string }
 ): Promise<ValidationResult> {
-  const orchestrator = new GlobalValidationOrchestrator(storage);
+  const orchestrator = new GlobalValidationOrchestrator(storage, semrushService);
 
   switch (validationType) {
     case 'competitor-portfolio-conflict':

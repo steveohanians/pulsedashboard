@@ -1,6 +1,6 @@
 import { IStorage } from "../storage";
 import logger from "../utils/logger";
-import { CompanyType } from "./globalCompanyValidation";
+import { CompanyType, ISemrushValidator } from "./globalCompanyValidation";
 import { ValidationResult, GlobalValidationOrchestrator } from "./globalValidationOrchestrator";
 
 
@@ -20,8 +20,8 @@ export interface ValidationWorkflowResult {
 export class AdvancedValidationWorkflows {
   private orchestrator: GlobalValidationOrchestrator;
 
-  constructor(private storage: IStorage) {
-    this.orchestrator = new GlobalValidationOrchestrator(storage);
+  constructor(private storage: IStorage, private semrushValidator: ISemrushValidator) {
+    this.orchestrator = new GlobalValidationOrchestrator(storage, semrushValidator);
   }
 
 

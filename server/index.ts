@@ -118,7 +118,7 @@ app.use((req, res, next) => {
       process.exit(1);
     }
     
-    const port = APP_CONFIG.DEFAULT_PORT;
+    const port = APP_CONFIG.PORT;
     server.listen({
       port,
       host: "0.0.0.0",

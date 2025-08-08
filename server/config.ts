@@ -1,15 +1,33 @@
-// Application configuration constants
+// Centralized environment configuration with type safety
+const isProduction = process.env.NODE_ENV === "production";
+const isDevelopment = process.env.NODE_ENV === "development";
+
 export const APP_CONFIG = {
+  // Environment
+  NODE_ENV: process.env.NODE_ENV || "development",
+  IS_PRODUCTION: isProduction,
+  IS_DEVELOPMENT: isDevelopment,
+  
+  // Server Configuration
+  PORT: parseInt(process.env.PORT || '5000', 10),
+  SESSION_SECRET: process.env.SESSION_SECRET || (() => {
+    if (isProduction) throw new Error('SESSION_SECRET is required in production');
+    return 'dev-session-secret-not-for-production';
+  })(),
+  
   // Demo/Sample Data Configuration
   DEMO_CLIENT_ID: process.env.DEMO_CLIENT_ID || "demo-client-id",
   DEMO_ADMIN_USER_ID: process.env.DEMO_ADMIN_USER_ID || "admin-user-id",
   
-  // Server Configuration
-  DEFAULT_PORT: parseInt(process.env.PORT || '5000', 10),
-  
   // Company Branding
   COMPANY_NAME: process.env.COMPANY_NAME || "Clear Digital",
   COMPANY_LEGAL_NAME: process.env.COMPANY_LEGAL_NAME || "Clear Digital, Inc.",
+  
+  // External API Keys
+  SEMRUSH_API_KEY: process.env.SEMRUSH_API_KEY || null,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || null,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || null,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || null,
   
   // DISABLED: All sample data generation permanently disabled to ensure authentic data only
   ENABLE_SAMPLE_DATA: false,
@@ -48,8 +66,15 @@ export const APP_CONFIG = {
   
   // Production Safety
   PRODUCTION_SAFETY: {
-    DISABLE_SAMPLE_DATA_IN_PROD: process.env.NODE_ENV === "production" && !process.env.FORCE_SAMPLE_DATA,
+    DISABLE_SAMPLE_DATA_IN_PROD: isProduction && !process.env.FORCE_SAMPLE_DATA,
     REQUIRE_EXPLICIT_PROD_OVERRIDE: true
+  },
+  
+  // Security Settings
+  SECURITY: {
+    COOKIE_SECURE: isProduction,
+    TRUST_PROXY: isProduction,
+    SESSION_MAX_AGE: 24 * 60 * 60 * 1000 // 24 hours
   }
 };
 
@@ -74,16 +99,32 @@ export function getBrandedLabel(suffix: string = "Avg"): string {
   return `${APP_CONFIG.COMPANY_NAME} Clients ${suffix}`;
 }
 
+// Type-safe config getters for external services
+export function requireSemrushApiKey(): string {
+  if (!APP_CONFIG.SEMRUSH_API_KEY) {
+    throw new Error('SEMRUSH_API_KEY environment variable is required');
+  }
+  return APP_CONFIG.SEMRUSH_API_KEY;
+}
+
+export function requireSessionSecret(): string {
+  return APP_CONFIG.SESSION_SECRET;
+}
+
 // Environment validation
 export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
-  if (APP_CONFIG.DEFAULT_PORT < 1000 || APP_CONFIG.DEFAULT_PORT > 65535) {
+  if (APP_CONFIG.PORT < 1000 || APP_CONFIG.PORT > 65535) {
     errors.push("Invalid port number. Must be between 1000-65535");
   }
   
   if (!APP_CONFIG.COMPANY_NAME?.trim()) {
     errors.push("Company name cannot be empty");
+  }
+  
+  if (APP_CONFIG.IS_PRODUCTION && !APP_CONFIG.SESSION_SECRET) {
+    errors.push("SESSION_SECRET is required in production");
   }
   
   return {

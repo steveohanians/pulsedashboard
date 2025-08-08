@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { authLimiter } from "./middleware/rateLimiter";
+import { APP_CONFIG, requireSessionSecret } from "./config";
 import logger from "./utils/logger";
 
 declare global {
@@ -32,19 +33,19 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET!,
+    secret: requireSessionSecret(),
     resave: false,
     saveUninitialized: true,  // Save sessions to database  
     store: storage.sessionStore,
     cookie: {
-      secure: false,  // Allow non-HTTPS for development
+      secure: APP_CONFIG.SECURITY.COOKIE_SECURE,
       httpOnly: true, // Prevent XSS access to cookies
       sameSite: 'lax', // Allow cross-site requests for login
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: APP_CONFIG.SECURITY.SESSION_MAX_AGE
     }
   };
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", APP_CONFIG.SECURITY.TRUST_PROXY ? 1 : 0);
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());

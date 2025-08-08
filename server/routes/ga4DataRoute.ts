@@ -6,14 +6,7 @@ import { ga4PropertyAccess, clients } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 import logger from '../utils/logger';
 import { ErrorResponses, asyncErrorHandler } from '../utils/errorHandling';
-
-// Admin middleware to check admin role
-function adminRequired(req: any, res: any, next: any) {
-  if (!req.isAuthenticated() || req.user.role !== "Admin") {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  next();
-}
+import { adminRequired } from '../middleware/authMiddleware';
 
 // Enhanced validation middleware with comprehensive error handling
 const validateClientId = asyncErrorHandler(async (req: any, res: any, next: any) => {

@@ -35,15 +35,15 @@ export interface SemrushApiResponse {
   }>;
 }
 
-export class SemrushService {
+import { requireSemrushApiKey } from '../../config';
+import { ISemrushValidator } from '../../utils/globalCompanyValidation';
+
+export class SemrushService implements ISemrushValidator {
   private apiKey: string;
   private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3'; // Analytics API v3 for traffic data
 
   constructor() {
-    this.apiKey = process.env.SEMRUSH_API_KEY!;
-    if (!this.apiKey) {
-      throw new Error('SEMRUSH_API_KEY environment variable is required');
-    }
+    this.apiKey = requireSemrushApiKey();
   }
 
   /**

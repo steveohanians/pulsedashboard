@@ -6,22 +6,8 @@
 
 import { Router } from 'express';
 import { GA4DataManager } from '../services/ga4/GA4DataManager';
+import { requireAuth, requireAdmin } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
-
-// Auth middleware
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  next();
-}
-
-function requireAdmin(req: any, res: any, next: any) {
-  if (!req.isAuthenticated() || req.user.role !== "Admin") {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  next();
-}
 
 const router = Router();
 const ga4Manager = new GA4DataManager();
