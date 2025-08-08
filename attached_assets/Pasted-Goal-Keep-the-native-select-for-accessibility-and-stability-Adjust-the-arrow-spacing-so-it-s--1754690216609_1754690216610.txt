@@ -1,0 +1,53 @@
+Goal
+- Keep the native <select> for accessibility and stability.
+- Adjust the arrow spacing so it’s not flush with the right edge.
+- Use CSS-only techniques (no new JS components, no third-party UI kits).
+- Make the minimal change required; do not refactor unrelated code.
+
+Approach (choose ONE, prefer A)
+A) Background SVG arrow:
+   - Hide the default arrow with `appearance: none; -webkit-appearance: none;`
+   - Add a chevron as a background-image (inline SVG) on the select.
+   - Position it with `background-position: right .75rem center; background-repeat: no-repeat; background-size: 1em;`
+   - Add `padding-right: 2rem;` to prevent text overlap with the icon.
+   - Keep focus/hover states consistent with the design system.
+
+B) Wrapper + absolutely positioned arrow:
+   - Wrap the select in a `position: relative` container.
+   - Add a decorative `<svg class="chevron" aria-hidden>` absolutely positioned at `right:.75rem; top:50%; transform: translateY(-50%); pointer-events:none;`
+   - Apply `appearance: none` to the select to hide native arrow.
+   - Add `padding-right: 2rem;` on select.
+
+Implementation
+- Edit only the select component stylesheet (or a small co-located CSS module).
+- Provide a SMALL unified diff with only the changed lines.
+
+Reference CSS to use (adjust class names to our codebase):
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='currentColor'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .75rem center;
+  background-size: 1rem;
+  padding-right: 2rem; /* keep text away from arrow */
+}
+
+Optional wrapper pattern:
+.select-wrap { position: relative; }
+.select-wrap .chevron {
+  position: absolute; right: .75rem; top: 50%; transform: translateY(-50%);
+  width: 1rem; height: 1rem; pointer-events: none; color: currentColor;
+}
+.select-wrap select {
+  appearance: none; -webkit-appearance: none; padding-right: 2rem;
+}
+
+Verification
+- Confirm visual spacing on desktop and mobile Safari/Chrome.
+- Ensure keyboard nav and screen reader behavior unchanged.
+- Run type check, lint, tests; report results.
+
+Stop if
+- Any unrelated files would be modified.
+- A JS/React “custom select” refactor is proposed.
