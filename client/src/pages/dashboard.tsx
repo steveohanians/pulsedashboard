@@ -335,7 +335,7 @@ export default function Dashboard() {
     // Quick return for empty states
     if (!dashboardData) return {};
     
-    if (isTimeSeries && averagedMetrics && Object.keys(averagedMetrics).length > 0) {
+    if (isTimeSeries && averagedMetrics && typeof averagedMetrics === 'object' && Object.keys(averagedMetrics).length > 0) {
       return averagedMetrics as Record<string, Record<string, number>>;
     }
     
@@ -395,7 +395,9 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
-      trafficMetrics = Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels');
+      trafficMetrics = timeSeriesData && typeof timeSeriesData === 'object' 
+        ? Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels')
+        : [];
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
@@ -1374,9 +1376,12 @@ export default function Dashboard() {
                     </span>
                   </SelectTrigger>
                   <SelectContent>
-                    {filtersData?.businessSizes?.map((size: string) => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
-                    ))}
+                    {filtersData?.businessSizes && Array.isArray(filtersData.businessSizes)
+                      ? filtersData.businessSizes.map((size: string) => (
+                          <SelectItem key={size} value={size}>{size}</SelectItem>
+                        ))
+                      : []
+                    }
                   </SelectContent>
                 </Select>
               </div>
@@ -1389,9 +1394,12 @@ export default function Dashboard() {
                     </span>
                   </SelectTrigger>
                   <SelectContent>
-                    {filtersData?.industryVerticals?.map((vertical: string) => (
-                      <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem>
-                    ))}
+                    {filtersData?.industryVerticals && Array.isArray(filtersData.industryVerticals)
+                      ? filtersData.industryVerticals.map((vertical: string) => (
+                          <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem>
+                        ))
+                      : []
+                    }
                   </SelectContent>
                 </Select>
                 
@@ -1420,11 +1428,14 @@ export default function Dashboard() {
                   <SelectValue>{timePeriod || "Select time period"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {filtersData?.timePeriods?.filter((period: string) => 
-                    period !== "Year" // Remove the unwanted "Year" option
-                  ).map((period: string) => (
-                    <SelectItem key={period} value={period}>{period}</SelectItem>
-                  ))}
+                  {filtersData?.timePeriods && Array.isArray(filtersData.timePeriods) 
+                    ? filtersData.timePeriods
+                        .filter((period: string) => period !== "Year")
+                        .map((period: string) => (
+                          <SelectItem key={period} value={period}>{period}</SelectItem>
+                        ))
+                    : []
+                  }
                 </SelectContent>
               </Select>
               
