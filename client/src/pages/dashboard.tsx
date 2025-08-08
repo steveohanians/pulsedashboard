@@ -240,9 +240,10 @@ export default function Dashboard() {
       } catch (error) {
         logger.warn("Failed to clear localStorage:", error);
       }
-      // Invalidate and refetch all related queries
+      // Invalidate and refetch all related queries with correct key patterns
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
       // Force refetch the dashboard data immediately
       dashboardQuery.refetch();
@@ -286,7 +287,8 @@ export default function Dashboard() {
       logger.info("Delete mutation onSuccess triggered");
       // Invalidate cache first, then refetch - ensures UI updates properly
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
       // Force refetch the dashboard data immediately
       dashboardQuery.refetch();

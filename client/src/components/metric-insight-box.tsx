@@ -147,8 +147,9 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Enable typing animation for engaging user experience
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      // Invalidate cache for fresh data consistency
-      queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
+      // Invalidate cache for fresh data consistency with correct key pattern
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -190,8 +191,9 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Mark context-enhanced insights with special metadata
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      // Refresh cache to maintain data consistency
-      queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
+      // Refresh cache to maintain data consistency with correct key pattern
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
@@ -297,8 +299,9 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
                 method: 'DELETE'
               })
             ]);
-            // Invalidate cache to ensure fresh data
-            queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
+            // Invalidate cache to ensure fresh data with correct key pattern
+            queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+            queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
             logger.component('MetricInsightBox', 'Successfully deleted insight and context');
           } catch (error) {
             logger.warn('Failed to delete insight or context', { error });
