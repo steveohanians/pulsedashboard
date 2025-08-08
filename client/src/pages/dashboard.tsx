@@ -183,229 +183,124 @@ export default function Dashboard() {
       .then(res => res.json()),
   });
 
-  // Load AI insights for dashboard metrics with aggressive fresh data strategy
+  // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
     queryKey: [`/api/insights/${user?.clientId}`],
     enabled: !!user?.clientId,
-    staleTime: 0, // Always consider data stale
-    gcTime: 0, // Don't cache data at all
-    retry: 1,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-    refetchInterval: false,
-    queryFn: async () => {
-      const response = await fetch(`/api/insights/${user?.clientId}`, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch insights');
-      }
-      return response.json();
-    }
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1
   });
   
   const { data: insightsData, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = insightsQuery;
 
-  // Create insights lookup map from loaded insights with enhanced debugging
+  // Create insights lookup map from loaded insights
   const insightsLookup = useMemo(() => {
     const lookup: Record<string, any> = {};
     
-    logger.info("🔍 Building insights lookup", {
-      hasInsightsData: !!insightsData,
-      insightsDataType: typeof insightsData,
-      insightsDataKeys: insightsData ? Object.keys(insightsData) : [],
-      rawInsightsData: insightsData
-    });
-    
     if (insightsData && typeof insightsData === 'object' && 'insights' in insightsData) {
       const insights = (insightsData as any).insights;
-      logger.info("🔍 Processing insights array", {
-        insightsIsArray: Array.isArray(insights),
-        insightsLength: insights?.length || 0,
-        firstInsight: insights?.[0] || null
-      });
-      
       if (insights && Array.isArray(insights)) {
         insights.forEach((insight: any) => {
           lookup[insight.metricName] = insight;
-          logger.info(`🔍 Added insight to lookup: ${insight.metricName}`, {
-            insightId: insight.id,
-            status: insight.status
-          });
         });
       }
     }
     
-    logger.info("🔍 Final insights lookup", {
-      lookupKeys: Object.keys(lookup),
-      lookupCount: Object.keys(lookup).length
-    });
-    
     return lookup;
   }, [insightsData]);
 
-  // Systematic AI insights clearing with proper separation of concerns
-  
-  // 1. Database clearing function
-  const clearInsightsFromDatabase = async () => {
-    logger.info("🗂️ Starting database clearing operation");
-    const response = await fetch("/api/debug/clear-all-insights", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Database clear failed: ${response.status} - ${errorText}`);
-    }
-    
-    const result = await response.json();
-    logger.info("✅ Database cleared successfully", result);
-    return result;
-  };
-
-  // 2. Aggressive cache clearing for complete cache reset
-  const invalidateInsightsCache = async (clientId: string) => {
-    logger.info("🔄 Starting aggressive cache clearing");
-    
-    // Complete cache removal for insights
-    queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
-    queryClient.removeQueries({ queryKey: ["/api/insights"] });
-    queryClient.removeQueries({ predicate: query => 
-      query.queryKey[0]?.toString().includes('insights') || false
-    });
-    
-    logger.info("🗑️ Completely removed all insight cache entries");
-    
-    // Force aggressive refetch with cache bypass
-    queryClient.invalidateQueries({ 
-      queryKey: [`/api/insights/${clientId}`],
-      refetchType: 'all'
-    });
-    
-    logger.info("♻️ Triggered aggressive cache invalidation");
-    
-    // Multiple refetch attempts to ensure fresh data
-    try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const insightsResult = await refetchInsights();
-      logger.info("✅ Insights aggressive refetch completed", { 
-        success: insightsResult.isSuccess,
-        dataLength: (insightsResult.data as any)?.insights?.length || 0,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      logger.error("❌ Insights refetch failed", error);
-    }
-    
-    logger.info("✅ Aggressive cache clearing completed");
-  };
-
-  // 3. Enhanced UI state reset function with forced re-render
-  const resetInsightsUI = () => {
-    logger.info("🎯 Starting enhanced UI state reset with forced re-render");
-    
-    // Reset component state
-    setMetricStatuses({});
-    logger.info("Reset metricStatuses state");
-    
-    // Clear localStorage (if used)
-    try {
-      localStorage.removeItem('pulse_dashboard_insights');
-      localStorage.removeItem('insights_cache'); // Additional cache key
-      logger.info("✅ Cleared localStorage insights caches");
-    } catch (error) {
-      logger.warn("⚠️ localStorage clear failed:", error);
-    }
-    
-    // Force a re-render by updating dashboard timestamp to trigger React re-evaluation
-    const forceRenderKey = Date.now();
-    logger.info("Forcing component re-render with key:", forceRenderKey);
-    
-    // Log current insightsData state for debugging
-    logger.info("Current insightsData before reset:", insightsData);
-    logger.info("Current insightsLookup before reset:", Object.keys(insightsLookup));
-    
-    // Force all MetricInsightBox components to reset by clearing their context
-    const metricNames = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User', 'Traffic Channels', 'Device Distribution'];
-    metricNames.forEach(metricName => {
-      logger.info(`Forcing reset for metric: ${metricName}`);
-    });
-    
-    logger.info("✅ Enhanced UI state reset completed");
-  };
-
-  // 4. Coordinated clearing mutation
+  // Clear all AI insights mutation (debug only)
   const clearInsightsMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.clientId) {
-        throw new Error("No client ID available for clearing");
+      logger.info("Starting to clear all AI insights...");
+      const response = await fetch("/api/debug/clear-all-insights", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Important: include session cookies for authentication
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
-      logger.info("🚀 Starting systematic insights clearing");
-      
-      // Step 1: Clear database
-      const dbResult = await clearInsightsFromDatabase();
-      
-      // Step 2: Invalidate cache
-      await invalidateInsightsCache(user.clientId);
-      
-      // Step 3: Reset UI state  
-      resetInsightsUI();
-      
-      return {
-        ...dbResult,
-        systemicClearCompleted: true,
-        clientId: user.clientId
-      };
+      return response.json();
     },
-    onSuccess: (result) => {
-      logger.info("🎉 Systematic clearing completed successfully", result);
-      logger.info("✅ UI should now show clean state with generate buttons");
+    onSuccess: (data) => {
+      logger.info("Successfully cleared AI insights:", data);
+      // Reset all metric statuses to empty
+      setMetricStatuses({});
+      // Clear localStorage insights to prevent loading from cache
+      try {
+        localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
+        logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
+        
+          // localStorage operations disabled for performance
+      } catch (error) {
+        logger.warn("Failed to clear localStorage:", error);
+      }
+      // Invalidate and refetch all related queries with correct key patterns
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
+      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      // Force refetch all data immediately
+      dashboardQuery.refetch();
+      refetchInsights();
+      logger.info("State reset, cache invalidated, localStorage cleared, and dashboard refetched");
+      // Force page reload to ensure all components reset their state
+      window.location.reload();
     },
     onError: (error) => {
-      logger.error("❌ Systematic clearing failed", { 
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      logger.error("Failed to clear AI insights:", error);
+      // Log more details about the error
+      if (error instanceof Error) {
+        logger.error("Error message:", error.message);
+        logger.error("Error stack:", error.stack);
+      }
     }
   });
 
-  // Delete competitor mutation using systematic cache invalidation
+  // Delete competitor mutation  
   const deleteCompetitorMutation = useMutation({
     mutationFn: async (competitorId: string) => {
-      logger.info("🗑️ Deleting competitor:", competitorId);
-      const response = await fetch(`/api/competitors/${competitorId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to delete competitor: ${response.status}`);
+      logger.info("Deleting competitor:", competitorId);
+      try {
+        const response = await fetch(`/api/competitors/${competitorId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to delete competitor: ${response.status}`);
+        }
+        // Check if response has content before parsing JSON
+        const text = await response.text();
+        const result = text ? JSON.parse(text) : { success: true };
+        logger.info("Delete successful:", result);
+        return result;
+      } catch (error) {
+        logger.error("Delete failed:", error);
+        throw error;
       }
-      // Check if response has content before parsing JSON
-      const text = await response.text();
-      const result = text ? JSON.parse(text) : { success: true };
-      logger.info("✅ Competitor deleted successfully:", result);
-      return result;
     },
-    onSuccess: async () => {
-      logger.info("🔄 Starting systematic cache refresh after competitor deletion");
-      
-      if (user?.clientId) {
-        // Use the same systematic cache invalidation as insights clearing
-        await invalidateInsightsCache(user.clientId);
-      }
-      
+    onSuccess: () => {
+      logger.info("Delete mutation onSuccess triggered");
+      // Invalidate cache first, then refetch - ensures UI updates properly
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
+      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      // Force refetch all data immediately
+      dashboardQuery.refetch();
+      refetchInsights();
       setDeletingCompetitorId(null);
-      logger.info("✅ Competitor deletion and cache refresh completed");
+      logger.info("Cache invalidated and competitor deleted successfully");
     },
     onError: (error) => {
-      logger.error("❌ Competitor deletion failed:", error);
+      logger.error("Delete mutation onError triggered:", error);
       setDeletingCompetitorId(null);
     }
   });
@@ -1955,7 +1850,7 @@ export default function Dashboard() {
                         <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse AI Insight</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">
                           AI-powered analysis and recommendations for {getDataPeriodDisplay()}
                         </p>
@@ -2022,7 +1917,7 @@ export default function Dashboard() {
 
         </div>
 
-        {/* Keep the original Pulse AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
+        {/* Keep the original Pulse™ AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
         </div>
 
         {/* Competitor Modal */}

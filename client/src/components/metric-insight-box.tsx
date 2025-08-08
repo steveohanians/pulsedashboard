@@ -88,43 +88,31 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
    * Effect hook for loading stored insights with preloaded optimization.
    * Prioritizes preloaded insights to minimize API calls and improve performance.
    * Handles status reporting to parent components for dashboard coordination.
-   * Responds to preloadedInsight changes to reset component when insights are cleared.
    */
   useEffect(() => {
     const loadStoredInsight = async () => {
-      // Check if preloadedInsight was cleared (null/undefined)
-      if (!preloadedInsight) {
-        logger.component('MetricInsightBox', `No preloaded insight for ${metricName} - resetting to generate state`);
-        setInsight(null);
-        if (onStatusChange) {
-          onStatusChange(undefined);
-        }
-        return;
-      }
-
-      // Don't override insights that are currently typing to preserve typewriter effect
-      setInsight(currentInsight => {
-        if (currentInsight?.isTyping) {
-          logger.component('MetricInsightBox', `Preserving typing state for ${metricName}, not overriding with preloaded`);
-          return currentInsight; // Keep the current typing insight
-        }
-
-        // Use preloaded insights for performance optimization when not typing
+      // Prioritize preloaded insights for performance optimization
+      if (preloadedInsight) {
         logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
-        return {
+
+        setInsight({
           contextText: preloadedInsight.contextText,
           insightText: preloadedInsight.insightText,
           recommendationText: preloadedInsight.recommendationText,
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true
-        };
-      });
-      
-      // Notify parent component of performance status for dashboard coordination
-      if (preloadedInsight.status && onStatusChange) {
-        onStatusChange(preloadedInsight.status);
+        });
+        
+        // Notify parent component of performance status for dashboard coordination
+        if (preloadedInsight.status && onStatusChange) {
+          onStatusChange(preloadedInsight.status);
+        }
+        return;
       }
+
+      // No fallback loading - maintain authentic data integrity
+      logger.component('MetricInsightBox', `No preloaded insight available for ${metricName} - will show generate button`);
     };
     
     loadStoredInsight();
@@ -159,10 +147,9 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Enable typing animation for engaging user experience
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      
-      // No frontend cache invalidation - backend cache clearing ensures fresh data
-      // This preserves the typewriter effect without interference
-      logger.component('MetricInsightBox', `Generated insight for ${metricName}, typewriter effect enabled`);
+      // Invalidate cache for fresh data consistency with correct key pattern
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -204,10 +191,9 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       // Mark context-enhanced insights with special metadata
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      
-      // No frontend cache invalidation - backend cache clearing ensures fresh data
-      // This preserves the typewriter effect without interference
-      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, typewriter effect enabled`);
+      // Refresh cache to maintain data consistency with correct key pattern
+      queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/insights'] }); // Legacy key
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
