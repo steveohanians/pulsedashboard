@@ -515,7 +515,7 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
             fill="url(#industryGradient)"
             dot={(props: any) => {
               const { cx, cy, key, ...restProps } = props;
-              return <DiamondDot cx={cx} cy={cy} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />;
+              return <DiamondDot key={key} cx={cx} cy={cy} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />;
             }}
             strokeDasharray="5 5"
             animationDuration={isInitialRender ? 800 : 0}
@@ -532,7 +532,7 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
             fill="url(#cdGradient)"
             dot={(props: any) => {
               const { cx, cy, key, ...restProps } = props;
-              return <DiamondDot cx={cx} cy={cy} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />;
+              return <DiamondDot key={key} cx={cx} cy={cy} fill={colors['Clear Digital Clients Avg']} stroke={colors['Clear Digital Clients Avg']} strokeWidth={1} />;
             }}
             strokeDasharray="8 4"
             animationDuration={isInitialRender ? 800 : 0}
@@ -551,7 +551,7 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
               fill={`url(#competitorGradient${index % competitorColors.length})`}
               dot={(props: any) => {
                 const { cx, cy, key, ...restProps } = props;
-                return <DiamondDot cx={cx} cy={cy} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />;
+                return <DiamondDot key={key} cx={cx} cy={cy} fill={competitorColors[index % competitorColors.length]} stroke={competitorColors[index % competitorColors.length]} strokeWidth={1} />;
               }}
               animationDuration={isInitialRender ? 800 : 0}
             />
