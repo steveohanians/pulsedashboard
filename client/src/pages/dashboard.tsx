@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1372,51 +1373,33 @@ export default function Dashboard() {
             <CardContent className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
-                <Select value={businessSize || ""} onValueChange={(value: string) => {
-                  try {
-                    setBusinessSize(value);
-                  } catch (error) {
-                    console.warn('Business size selection error:', error);
-                  }
-                }}>
-                  <SelectTrigger className="justify-between pl-3 pr-3">
-                    <span className="text-left truncate flex-1">
-                      {businessSize || "Select business size"}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filtersData?.businessSizes && Array.isArray(filtersData.businessSizes)
-                      ? filtersData.businessSizes.map((size: string) => 
-                          size ? <SelectItem key={size} value={size}>{size}</SelectItem> : null
-                        ).filter(Boolean)
-                      : [<SelectItem key="default" value="All">All</SelectItem>]
+                <NativeSelect
+                  value={businessSize || ""}
+                  onChange={(e) => {
+                    try {
+                      setBusinessSize(e.target.value);
+                    } catch (error) {
+                      console.warn('Business size selection error:', error);
                     }
-                  </SelectContent>
-                </Select>
+                  }}
+                  options={filtersData?.businessSizes?.map(size => ({ value: size, label: size })) || [{ value: "All", label: "All" }]}
+                  placeholder="Select business size"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
-                <Select value={industryVertical || ""} onValueChange={(value: string) => {
-                  try {
-                    setIndustryVertical(value);
-                  } catch (error) {
-                    console.warn('Industry vertical selection error:', error);
-                  }
-                }}>
-                  <SelectTrigger className="justify-between pl-3 pr-3">
-                    <span className="text-left truncate flex-1">
-                      {industryVertical || "Select industry"}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filtersData?.industryVerticals && Array.isArray(filtersData.industryVerticals)
-                      ? filtersData.industryVerticals.map((vertical: string) => 
-                          vertical ? <SelectItem key={vertical} value={vertical}>{vertical}</SelectItem> : null
-                        ).filter(Boolean)
-                      : [<SelectItem key="default" value="All">All</SelectItem>]
+                <NativeSelect
+                  value={industryVertical || ""}
+                  onChange={(e) => {
+                    try {
+                      setIndustryVertical(e.target.value);
+                    } catch (error) {
+                      console.warn('Industry vertical selection error:', error);
                     }
-                  </SelectContent>
-                </Select>
+                  }}
+                  options={filtersData?.industryVerticals?.map(vertical => ({ value: vertical, label: vertical })) || [{ value: "All", label: "All" }]}
+                  placeholder="Select industry"
+                />
                 
 
               </div>
@@ -1431,32 +1414,23 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={timePeriod || ""} onValueChange={(value: string) => {
-                try {
-                  if (value === "Custom Date Range") {
-                    setShowDatePicker(true);
-                  } else {
-                    setTimePeriod(value);
-                    setCustomDateRange("");
+              <NativeSelect
+                value={timePeriod || ""}
+                onChange={(e) => {
+                  try {
+                    if (e.target.value === "Custom Date Range") {
+                      setShowDatePicker(true);
+                    } else {
+                      setTimePeriod(e.target.value);
+                      setCustomDateRange("");
+                    }
+                  } catch (error) {
+                    console.warn('Time period selection error:', error);
                   }
-                } catch (error) {
-                  console.warn('Time period selection error:', error);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time period">{timePeriod || "Select time period"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {filtersData?.timePeriods && Array.isArray(filtersData.timePeriods) 
-                    ? filtersData.timePeriods
-                        .filter((period: string) => period && period !== "Year")
-                        .map((period: string) => (
-                          <SelectItem key={period} value={period}>{period}</SelectItem>
-                        ))
-                    : [<SelectItem key="default" value="Last Month">Last Month</SelectItem>]
-                  }
-                </SelectContent>
-              </Select>
+                }}
+                options={filtersData?.timePeriods?.filter(period => period && period !== "Year").map(period => ({ value: period, label: period })) || [{ value: "Last Month", label: "Last Month" }]}
+                placeholder="Select time period"
+              />
               
               {/* Display time period details below dropdown */}
               {(() => {
