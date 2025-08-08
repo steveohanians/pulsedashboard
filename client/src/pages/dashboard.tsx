@@ -22,6 +22,7 @@ import { ComprehensiveInsightsDisplay } from "@/components/comprehensive-insight
 import { MetricInsightBox } from "@/components/metric-insight-box";
 import { CompetitorModal } from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";
+
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS } from "@/utils/chartUtils";
 import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";
@@ -1371,7 +1372,7 @@ export default function Dashboard() {
             <CardContent className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
-                <Select value={businessSize || ""} onValueChange={(value) => {
+                <Select value={businessSize || ""} onValueChange={(value: string) => {
                   try {
                     setBusinessSize(value);
                   } catch (error) {
@@ -1395,7 +1396,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
-                <Select value={industryVertical || ""} onValueChange={(value) => {
+                <Select value={industryVertical || ""} onValueChange={(value: string) => {
                   try {
                     setIndustryVertical(value);
                   } catch (error) {
@@ -1430,7 +1431,7 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={timePeriod || ""} onValueChange={(value) => {
+              <Select value={timePeriod || ""} onValueChange={(value: string) => {
                 try {
                   if (value === "Custom Date Range") {
                     setShowDatePicker(true);
@@ -1443,7 +1444,7 @@ export default function Dashboard() {
                 }
               }}>
                 <SelectTrigger>
-                  <SelectValue>{timePeriod || "Select time period"}</SelectValue>
+                  <SelectValue placeholder="Select time period">{timePeriod || "Select time period"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {filtersData?.timePeriods && Array.isArray(filtersData.timePeriods) 

@@ -14,20 +14,23 @@ import ResetPasswordPage from "@/pages/reset-password";
 import { useEffect } from "react";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "@/hooks/use-analytics";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 function Router() {
   // Track page views when routes change
   useAnalytics();
   
   return (
-    <Switch>
-      <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/admin" component={AdminPanel} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/forgot-password" component={ForgotPasswordPage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <ErrorBoundary>
+      <Switch>
+        <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/admin" component={AdminPanel} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </ErrorBoundary>
   );
 }
 
