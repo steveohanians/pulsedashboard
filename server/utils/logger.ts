@@ -49,6 +49,11 @@ class Logger {
     }
   }
   
+  // Log database events
+  database(message: string, meta?: any): void {
+    this.debug(`DATABASE: ${message}`, meta);
+  }
+  
   // Log security events
   security(event: string, details: any): void {
     this.error(`SECURITY: ${event}`, {

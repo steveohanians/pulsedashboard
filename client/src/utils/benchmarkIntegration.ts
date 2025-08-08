@@ -7,11 +7,13 @@
 
 import { 
   processCompanyMetrics, 
-  processDeviceDistribution,
+  processDeviceDistribution
+} from './chartDataProcessor';
+import { 
   getMetricFallback,
   shouldConvertToPercentage,
   shouldConvertToMinutes 
-} from './chartDataProcessor';
+} from './chartUtils';
 
 /**
  * EXAMPLE: Adding benchmark support to any chart component

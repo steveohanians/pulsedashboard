@@ -1,4 +1,5 @@
 // Database connection pooling optimization
+import { Pool } from 'pg';
 import { logger } from '../utils/logger';
 
 interface PoolConfig {
@@ -10,7 +11,7 @@ interface PoolConfig {
 }
 
 class DatabaseConnectionPool {
-  private pool: any | null = null;
+  private pool: Pool | null = null;
   private readonly config: PoolConfig;
 
   constructor() {
@@ -24,7 +25,7 @@ class DatabaseConnectionPool {
   }
 
   // Initialize the connection pool
-  initialize(databaseUrl: string): any {
+  initialize(databaseUrl: string): Pool {
     if (this.pool) {
       return this.pool;
     }
@@ -58,7 +59,7 @@ class DatabaseConnectionPool {
   }
 
   // Get the pool instance
-  getPool(): any {
+  getPool(): Pool {
     if (!this.pool) {
       throw new Error('Database pool not initialized. Call initialize() first.');
     }

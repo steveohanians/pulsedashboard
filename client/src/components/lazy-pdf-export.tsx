@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 
 // Lazy load heavy PDF libraries only when needed
-const PDFExport = lazy(() => import('./pdf-export-component'));
+const PDFExport = lazy(() => import('./pdf-export-component').then(module => ({ default: module.PDFExport })));
 
 interface LazyPDFExportProps {
   onExport: () => void;

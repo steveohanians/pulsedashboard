@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DashboardSkeleton } from './dashboard-skeleton';
 
 /** Lazy-loaded MetricInsightBox component for performance optimization */
-const MetricInsightBox = lazy(() => import('./metric-insight-box'));
+const MetricInsightBox = lazy(() => import('./metric-insight-box').then(module => ({ default: module.MetricInsightBox })));
 
 interface OptimizedDashboardProps {
   /** Client identifier for data fetching */
