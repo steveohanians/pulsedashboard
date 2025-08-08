@@ -243,6 +243,7 @@ export function AIInsights({
   const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [contentKey, setContentKey] = useState(Date.now());
+  const [showConfetti, setShowConfetti] = useState(false);
   
   // Context modal state
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
@@ -275,6 +276,15 @@ export function AIInsights({
     // Generate new key to force TypewriterText to remount
     setContentKey(Date.now());
   }, [context, insight, recommendation, isTyping]);
+
+  // Trigger confetti effect when status becomes 'success'
+  useEffect(() => {
+    if (status === 'success' && !isTyping && recommendationComplete) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 4000); // Hide after 4 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [status, isTyping, recommendationComplete]);
   
   // Format timestamp
   const timestamp = new Date().toLocaleString('en-US', {
@@ -446,7 +456,15 @@ export function AIInsights({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px] sm:min-h-[120px]">
+      <div className={`p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px] sm:min-h-[120px] ${status === 'success' ? 'confetti-container' : ''}`}>
+        {/* Confetti Effect for Success Status */}
+        {showConfetti && status === 'success' && (
+          <>
+            {Array.from({ length: 9 }, (_, i) => (
+              <div key={i} className="confetti" />
+            ))}
+          </>
+        )}
         {context && (
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">

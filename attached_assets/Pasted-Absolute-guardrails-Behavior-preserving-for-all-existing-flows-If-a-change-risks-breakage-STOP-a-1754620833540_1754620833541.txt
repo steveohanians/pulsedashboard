@@ -1,0 +1,49 @@
+Absolute guardrails
+- Behavior-preserving for all existing flows. If a change risks breakage, STOP and ask.
+- No renames/moves outside the feature’s scope without my approval.
+- Reuse existing utilities/state/hooks; do NOT add duplicate helpers.
+- Keep logging minimal; remove any exploratory logs before final patch.
+- If an existing function/API covers the need, use/extend it rather than creating a new one.
+
+Preflight (do BEFORE coding)
+1) Clarify unknowns: list questions if any acceptance criteria are ambiguous.
+2) Impact analysis:
+   - List affected modules/files/functions.
+   - Note data/API contracts touched; confirm backward compatibility.
+   - Security, performance, accessibility, and i18n considerations (brief).
+3) Plan:
+   - 3–6 minimal steps to deliver the feature safely.
+   - Any migration/seed changes? If yes, propose a reversible approach.
+   - Rollback plan for each step.
+
+Implementation rules
+- Work on ONE step at a time. For the current step:
+  - Show a SMALL unified diff only (changed lines).
+  - Explain the change in 2–3 sentences.
+  - Update/ADD tests for the new behavior (unit + the smallest viable integration).
+  - Update docs/README/changelog snippets if applicable.
+- After the step: run type check, lint, and tests. Report results.
+- Proceed to next step ONLY if green; otherwise revert and propose an alternative.
+
+Quality & safety checklist (apply before presenting final patch)
+- No unused vars/imports/logs added.
+- No duplicated helpers or near-identical functions.
+- Public/API contracts unchanged unless explicitly approved; if changed, provide compatibility layer + deprecation note.
+- Feature is behind a flag or guarded condition if it touches critical paths. Provide kill-switch instructions.
+- Performance: note any hot-path impact and measurements if applicable.
+- Accessibility: verify keyboard/focus/aria for UI additions.
+
+Output format
+- Clarifications (if any)
+- Impact analysis (files/contracts/risks)
+- Step N of M
+  - Diff (fenced patch; minimal)
+  - Rationale (2–3 sentences)
+  - Tests added/updated (names)
+  - Verification results (type/lint/tests)
+- After all steps: final audit summary + explicit confirmation that existing flows still pass.
+
+Stop conditions
+- Any failing test/type error
+- Any required public API change not approved
+- Any uncertainty about acceptance criteria
