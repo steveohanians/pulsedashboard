@@ -29,6 +29,11 @@ export function TypewriterText({ text, speed = 15, onComplete, className }: Type
     setIsComplete(false);
     
     if (!text || text.length === 0) {
+      // Call onComplete immediately for empty text so buttons show up
+      setIsComplete(true);
+      if (onComplete) {
+        onComplete();
+      }
       return;
     }
     
