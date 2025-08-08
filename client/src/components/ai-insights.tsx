@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle, MessageCircle, Plus, Tag, Trash2 } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, CheckCircle, AlertTriangle, AlertCircle, MessageCircle, Plus, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
