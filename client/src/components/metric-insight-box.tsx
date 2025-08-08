@@ -153,19 +153,17 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
       
-      // Targeted cache invalidation - only clear insights queries without page refresh
-      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
-      queryClient.removeQueries({ queryKey: ['/api/insights'] });
-      
-      // Gentle invalidation to refresh insights data without destroying app state
+      // Delay cache invalidation until after typewriter effect completes (~4 seconds)
       setTimeout(() => {
+        queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
         queryClient.invalidateQueries({ 
           queryKey: [`/api/insights/${clientId}`],
           refetchType: 'active'
         });
-      }, 100);
+        logger.component('MetricInsightBox', `Cache invalidated after typewriter effect for ${metricName}`);
+      }, 4500);
       
-      logger.component('MetricInsightBox', `Generated insight for ${metricName}, gentle cache invalidation applied`);
+      logger.component('MetricInsightBox', `Generated insight for ${metricName}, typewriter effect enabled`);
     },
     onError: (error) => {
       // Graceful error handling without breaking user experience
@@ -208,19 +206,17 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
       
-      // Targeted cache invalidation - only clear insights queries without page refresh
-      queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
-      queryClient.removeQueries({ queryKey: ['/api/insights'] });
-      
-      // Gentle invalidation to refresh insights data without destroying app state
+      // Delay cache invalidation until after typewriter effect completes (~4 seconds)
       setTimeout(() => {
+        queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
         queryClient.invalidateQueries({ 
           queryKey: [`/api/insights/${clientId}`],
           refetchType: 'active'
         });
-      }, 100);
+        logger.component('MetricInsightBox', `Cache invalidated after typewriter effect for ${metricName} with context`);
+      }, 4500);
       
-      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, gentle cache invalidation applied`);
+      logger.component('MetricInsightBox', `Generated insight with context for ${metricName}, typewriter effect enabled`);
     },
     onError: (error) => {
       // Comprehensive error handling with intelligent fallback system
