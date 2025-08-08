@@ -1910,7 +1910,7 @@ export default function Dashboard() {
                         <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse™ AI Insight</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse AI Insight</h3>
                         <p className="text-xs sm:text-sm text-slate-600">
                           AI-powered analysis and recommendations for {getDataPeriodDisplay()}
                         </p>
@@ -1977,7 +1977,7 @@ export default function Dashboard() {
 
         </div>
 
-        {/* Keep the original Pulse™ AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
+        {/* Keep the original Pulse AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
         </div>
 
         {/* Competitor Modal */}
