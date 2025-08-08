@@ -788,6 +788,11 @@ export function registerRoutes(app: Express): Server {
       const savedInsight = await storage.createAIInsight(insertInsight);
       logger.info('Successfully saved metric-specific insights', { clientId, metricName, insightId: savedInsight.id });
 
+      // Clear performance cache to ensure fresh insights appear immediately
+      const { performanceCache } = await import('./cache/performance-cache');
+      performanceCache.clearPattern(`insights:${clientId}`);
+      logger.info('Cleared insights cache after generating new insight', { clientId, metricName });
+
       res.json({
         message: "Metric insights generated successfully",
         insight: {
@@ -1091,6 +1096,11 @@ export function registerRoutes(app: Express): Server {
       const savedInsight = await storage.createAIInsight(insertInsight);
       logger.info('Successfully saved metric-specific insights with context', { clientId, metricName, insightId: savedInsight.id });
 
+      // Clear performance cache to ensure fresh insights appear immediately
+      const { performanceCache } = await import('./cache/performance-cache');
+      performanceCache.clearPattern(`insights:${clientId}`);
+      logger.info('Cleared insights cache after generating new insight with context', { clientId, metricName });
+
       res.json({
         message: "Metric insights with context generated successfully",
         insight: {
@@ -1160,6 +1170,14 @@ export function registerRoutes(app: Express): Server {
         });
         storedInsights.push(storedInsight);
       }
+
+      // Clear performance cache to ensure fresh insights appear immediately
+      const { performanceCache } = await import('./cache/performance-cache');
+      performanceCache.clearPattern(`insights:${clientId}`);
+      logger.info('Cleared insights cache after generating comprehensive insights', { 
+        clientId, 
+        insightsCount: storedInsights.length 
+      });
 
       res.json({
         message: "Comprehensive AI insights generated successfully",
