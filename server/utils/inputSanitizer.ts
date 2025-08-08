@@ -1,3 +1,35 @@
+/**
+ * Input Sanitizer - Comprehensive security utility for validating and sanitizing user input in AI-powered analytics contexts.
+ * Provides multi-layered protection against prompt injection attacks, XSS vulnerabilities, and content quality issues.
+ * 
+ * Security Features:
+ * - Prompt injection detection and blocking using pattern-based analysis
+ * - XSS prevention through HTML/script tag removal and escaping
+ * - Content appropriateness filtering (profanity, off-topic detection)  
+ * - Business context relevance validation for analytics-focused discussions
+ * - Template literal and curly brace escaping for prompt template safety
+ * - Quality assessment for vague or repetitive content
+ * 
+ * Multi-Layer Defense Strategy:
+ * 1. Length validation and truncation for DoS prevention
+ * 2. Prompt injection pattern detection (LLM manipulation attempts)
+ * 3. Inappropriate content filtering (profanity, harmful content)
+ * 4. Off-topic content detection (maintains business focus)
+ * 5. Business relevance scoring (ensures analytics context)
+ * 6. Content quality assessment (prevents vague inputs)
+ * 7. HTML/script sanitization (XSS prevention)
+ * 8. Template literal escaping (injection prevention)
+ * 9. Whitespace normalization (cleanup)
+ * 
+ * AI Context Security:
+ * - Protects against adversarial prompts that attempt to manipulate AI behavior
+ * - Ensures user inputs maintain business analytics focus
+ * - Prevents context pollution from irrelevant or harmful content
+ * - Maintains data integrity in AI-generated insights
+ * 
+ * @module InputSanitizer
+ */
+
 import { logger } from './logger';
 import { 
   PROMPT_INJECTION_PATTERNS, 
@@ -10,15 +42,41 @@ import {
   type ValidationResult
 } from '@shared/validationPatterns';
 
+// ============================
+// TYPE DEFINITIONS
+// ============================
+
+/**
+ * Result of input sanitization process with security flags and warnings.
+ * Provides comprehensive feedback on input safety and modifications made.
+ */
 export interface SanitizationResult {
+  /** Sanitized and safe version of the input text */
   sanitized: string;
+  /** Whether input was blocked due to security concerns */
   isBlocked: boolean;
+  /** Array of warnings about content issues or modifications */
   warnings: string[];
 }
 
-// Note: PROFANITY_PATTERNS and OFF_TOPIC_PATTERNS now imported from shared/validationPatterns.ts
+// ============================
+// SECURITY CONFIGURATION CONSTANTS
+// ============================
 
-// Business/analytics relevance keywords
+/**
+ * Business and analytics relevance keywords for context validation.
+ * Ensures user inputs maintain focus on legitimate business analytics discussions.
+ * 
+ * Categories:
+ * - Core Metrics: traffic, users, customers, visitors, conversion, bounce, session
+ * - Marketing: marketing, campaign, advertising, SEO, analytics, metrics, performance
+ * - Business: business, company, product, service, sales, revenue, growth
+ * - Technical: mobile, desktop, browser, page, content, UX, UI, design
+ * - Infrastructure: technical, server, downtime, loading, speed, optimization
+ * - Competitive: competitor, industry, market, benchmark, comparison, target
+ * 
+ * Keywords selected based on common analytics dashboard terminology and business intelligence vocabulary.
+ */
 const BUSINESS_RELEVANCE_KEYWORDS = [
   'website', 'traffic', 'users', 'customers', 'visitors', 'conversion', 'bounce', 'session',
   'marketing', 'campaign', 'advertising', 'SEO', 'analytics', 'metrics', 'performance',
@@ -28,10 +86,34 @@ const BUSINESS_RELEVANCE_KEYWORDS = [
   'competitor', 'industry', 'market', 'benchmark', 'comparison', 'target'
 ];
 
+// ============================
+// CORE SANITIZATION FUNCTIONS
+// ============================
+
 /**
- * Sanitizes user input for AI prompt injection and XSS attacks
- * @param input - Raw user input string
- * @returns SanitizationResult with sanitized text and security flags
+ * Performs comprehensive sanitization of user input with multi-layered security validation.
+ * Primary defense against prompt injection, XSS attacks, and content quality issues in AI contexts.
+ * 
+ * Security Layers:
+ * - Length validation with truncation for DoS prevention
+ * - Prompt injection pattern detection using sophisticated regex analysis
+ * - Profanity and inappropriate content filtering
+ * - Off-topic content detection to maintain business focus
+ * - Business relevance scoring for analytics context validation
+ * - Content quality assessment for meaningful interactions
+ * - HTML/script tag removal for XSS prevention
+ * - Template literal and brace escaping for prompt template safety
+ * - Whitespace normalization and cleanup
+ * 
+ * Threat Models Addressed:
+ * - Adversarial prompt injection (attempts to manipulate AI behavior)
+ * - Cross-site scripting (XSS) through malicious HTML/JavaScript
+ * - Context pollution through irrelevant or harmful content
+ * - Quality degradation through vague or repetitive inputs
+ * - Template injection through unescaped template literals
+ * 
+ * @param input - Raw user input requiring sanitization
+ * @returns Comprehensive sanitization result with security status and warnings
  */
 export function sanitizeUserInput(input: string): SanitizationResult {
   const warnings: string[] = [];
@@ -169,10 +251,29 @@ export function sanitizeUserInput(input: string): SanitizationResult {
   };
 }
 
+// ============================
+// AI INTEGRATION FUNCTIONS
+// ============================
+
 /**
- * Validates context input before storing in database
- * @param context - User provided context string
- * @returns Object with validation result and sanitized context
+ * Validates and sanitizes user context specifically for AI system integration.
+ * Provides additional validation layer for AI prompt contexts with business focus enforcement.
+ * 
+ * Features:
+ * - Full sanitization pipeline application
+ * - Binary validation result for AI system integration
+ * - Detailed error reporting for blocked content
+ * - Warning aggregation for transparency
+ * - Context preservation for valid inputs
+ * 
+ * AI Safety Considerations:
+ * - Prevents adversarial prompts from reaching AI models
+ * - Maintains business analytics focus in AI discussions  
+ * - Ensures content quality for meaningful AI interactions
+ * - Protects against context injection attacks
+ * 
+ * @param context - User-provided context for AI processing
+ * @returns Validation result with sanitized context and error details
  */
 export function validateContextInput(context: string): { isValid: boolean; sanitizedContext: string; error?: string } {
   const result = sanitizeUserInput(context);
@@ -192,10 +293,31 @@ export function validateContextInput(context: string): { isValid: boolean; sanit
   };
 }
 
+// ============================
+// CONTENT ANALYSIS HELPER FUNCTIONS
+// ============================
+
 /**
- * Checks business relevance of input content
- * @param input - Sanitized input text
- * @returns Relevance score between 0 and 1
+ * Analyzes business relevance of input content for analytics context validation.
+ * Calculates relevance score based on business keyword density and context appropriateness.
+ * 
+ * Algorithm:
+ * - Identifies business-relevant keywords in input text
+ * - Calculates keyword density relative to total word count
+ * - Applies normalization to prevent score inflation
+ * - Returns confidence score for business analytics context
+ * 
+ * Scoring Strategy:
+ * - High scores (0.7+): Strong business analytics focus
+ * - Medium scores (0.3-0.7): Moderate business relevance
+ * - Low scores (<0.3): Poor business context, may trigger warnings
+ * 
+ * Keywords Categories:
+ * - Performance metrics, marketing terms, technical indicators
+ * - Business operations, competitive analysis, optimization focus
+ * 
+ * @param input - Sanitized input text for relevance analysis
+ * @returns Business relevance score between 0.0 (irrelevant) and 1.0 (highly relevant)
  */
 function checkBusinessRelevance(input: string): number {
   const lowerInput = input.toLowerCase();
@@ -215,9 +337,28 @@ function checkBusinessRelevance(input: string): number {
 }
 
 /**
- * Checks content quality for vague or repetitive content
- * @param input - Sanitized input text
- * @returns Array of quality issue warnings
+ * Performs comprehensive content quality assessment to ensure meaningful AI interactions.
+ * Detects various quality issues that could degrade AI response quality or user experience.
+ * 
+ * Quality Dimensions Assessed:
+ * - Vagueness: Excessive use of non-specific terms ("thing", "stuff", "maybe")
+ * - Repetitiveness: Low vocabulary diversity indicating repetitive content
+ * - Fragment Quality: Prevalence of incomplete sentences or fragments
+ * - Capitalization: Excessive capital letters indicating poor formatting
+ * 
+ * Quality Thresholds:
+ * - Vague words: >10% of total words triggers vagueness warning
+ * - Unique words: <50% vocabulary diversity triggers repetitiveness warning  
+ * - Short sentences: >50% fragments (when >2 sentences) triggers structure warning
+ * - Capital words: >20% all-caps words triggers formatting warning
+ * 
+ * Purpose:
+ * - Maintains high-quality AI interactions
+ * - Prevents low-value inputs from degrading system performance
+ * - Guides users toward more specific, actionable input
+ * 
+ * @param input - Sanitized input text for quality assessment
+ * @returns Array of specific quality issue warnings for user guidance
  */
 function checkContentQuality(input: string): string[] {
   const issues: string[] = [];
