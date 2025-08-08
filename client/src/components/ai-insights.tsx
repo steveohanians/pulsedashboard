@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle, MessageCircle, Plus, Tag, Trash2 } from "lucide-react";
+import { Info, Sparkles, TrendingUp, Lightbulb, Copy, RotateCcw, Check, X, CheckCircle, AlertTriangle, AlertCircle, MessageCircle, Plus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -656,7 +656,7 @@ export function AIInsights({
                     className="text-slate-500 hover:text-red-600 h-7 px-2"
                     title="Clear insights"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   </Button>
                 )}
               </div>
