@@ -1335,31 +1335,26 @@ export default function AdminPanel() {
                                   </div>
                                   <div>
                                     <Label htmlFor="role">Role</Label>
-                                    <Select name="role" defaultValue={user.role}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                        <SelectItem value="User">User</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                    <NativeSelect 
+                                      name="role" 
+                                      defaultValue={user.role}
+                                      options={[
+                                        { value: "Admin", label: "Admin" },
+                                        { value: "User", label: "User" }
+                                      ]}
+                                    />
                                   </div>
                                   <div>
                                     <Label htmlFor="clientId">Assigned Client</Label>
-                                    <Select name="clientId" defaultValue={user.clientId || "none"}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select a client" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">No Client (Admin Only)</SelectItem>
-                                        {clients?.map((client: any) => (
-                                          <SelectItem key={client.id} value={client.id}>
-                                            {client.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                    <NativeSelect 
+                                      name="clientId" 
+                                      defaultValue={user.clientId || "none"}
+                                      options={[
+                                        { value: "none", label: "No Client (Admin Only)" },
+                                        ...(clients?.map((client: any) => ({ value: client.id, label: client.name })) || [])
+                                      ]}
+                                      placeholder="Select a client"
+                                    />
                                   </div>
                                   <div className="flex justify-between">
                                     <Button 
@@ -2149,37 +2144,29 @@ export default function AdminPanel() {
                                   </div>
                                   <div>
                                     <Label htmlFor="industryVertical">Industry Vertical *</Label>
-                                    <Select name="industryVertical" value={editingIndustryVertical} onValueChange={setEditingIndustryVertical}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                    <NativeSelect 
+                                      name="industryVertical" 
+                                      value={editingIndustryVertical} 
+                                      onChange={(e) => setEditingIndustryVertical(e.target.value)}
+                                      options={
+                                        filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
                                           .sort((a, b) => a.order - b.order)
-                                          .map((option) => (
-                                          <SelectItem key={option.id} value={option.value}>
-                                            {option.value}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                          .map((option) => ({ value: option.value, label: option.value })) || []
+                                      }
+                                    />
                                   </div>
                                   <div>
                                     <Label htmlFor="businessSize">Business Size *</Label>
-                                    <Select name="businessSize" value={editingBusinessSize} onValueChange={setEditingBusinessSize}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                    <NativeSelect 
+                                      name="businessSize" 
+                                      value={editingBusinessSize} 
+                                      onChange={(e) => setEditingBusinessSize(e.target.value)}
+                                      options={
+                                        filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
                                           .sort((a, b) => a.order - b.order)
-                                          .map((option) => (
-                                          <SelectItem key={option.id} value={option.value}>
-                                            {option.value}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                          .map((option) => ({ value: option.value, label: option.value })) || []
+                                      }
+                                    />
                                   </div>
                                   <div className="flex justify-end space-x-2">
                                     <Button 
@@ -2342,43 +2329,27 @@ export default function AdminPanel() {
                                     </div>
                                     <div>
                                       <Label htmlFor="industry">Industry Vertical</Label>
-                                      <Select 
+                                      <NativeSelect 
                                         value={editingIndustryVertical || company.industryVertical} 
-                                        onValueChange={setEditingIndustryVertical}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                        onChange={(e) => setEditingIndustryVertical(e.target.value)}
+                                        options={
+                                          filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
                                             .sort((a, b) => a.order - b.order)
-                                            .map((option) => (
-                                            <SelectItem key={option.id} value={option.value}>
-                                              {option.value}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                            .map((option) => ({ value: option.value, label: option.value })) || []
+                                        }
+                                      />
                                     </div>
                                     <div>
                                       <Label htmlFor="businessSize">Business Size</Label>
-                                      <Select 
+                                      <NativeSelect 
                                         value={editingBusinessSize || company.businessSize} 
-                                        onValueChange={setEditingBusinessSize}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                        onChange={(e) => setEditingBusinessSize(e.target.value)}
+                                        options={
+                                          filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
                                             .sort((a, b) => a.order - b.order)
-                                            .map((option) => (
-                                            <SelectItem key={option.id} value={option.value}>
-                                              {option.value}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                            .map((option) => ({ value: option.value, label: option.value })) || []
+                                        }
+                                      />
                                     </div>
                                     <div className="flex justify-end space-x-2">
                                       <Button 
@@ -2868,40 +2839,27 @@ export default function AdminPanel() {
                                       </div>
                                       <div>
                                         <Label htmlFor="edit-cd-industry">Industry Vertical *</Label>
-                                        <Select 
+                                        <NativeSelect 
                                           value={editingCdIndustryVertical || editingItem?.industryVertical} 
-                                          onValueChange={setEditingCdIndustryVertical}
-                                        >
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
+                                          onChange={(e) => setEditingCdIndustryVertical(e.target.value)}
+                                          options={
+                                            filterOptions?.filter(option => option.category === 'industryVerticals' && option.active)
                                               .sort((a, b) => a.order - b.order)
-                                              .map((option) => (
-                                              <SelectItem key={option.id} value={option.value}>
-                                                {option.value}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                              .map((option) => ({ value: option.value, label: option.value })) || []
+                                          }
+                                        />
                                       </div>
                                       <div>
                                         <Label htmlFor="edit-cd-businessSize">Business Size *</Label>
-                                        <Select name="businessSize" defaultValue={editingItem?.businessSize}>
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
+                                        <NativeSelect 
+                                          name="businessSize" 
+                                          defaultValue={editingItem?.businessSize}
+                                          options={
+                                            filterOptions?.filter(option => option.category === 'businessSizes' && option.active)
                                               .sort((a, b) => a.order - b.order)
-                                              .map((option) => (
-                                              <SelectItem key={option.id} value={option.value}>
-                                                {option.value}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                              .map((option) => ({ value: option.value, label: option.value })) || []
+                                          }
+                                        />
                                       </div>
 
                                       <div className="flex justify-between">
