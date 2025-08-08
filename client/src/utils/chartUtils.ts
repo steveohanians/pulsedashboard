@@ -1,11 +1,7 @@
-// Consolidated chart utility functions
-// Used across multiple chart components to reduce duplication
+// Chart utilities consolidating functions used across multiple components
 
 import { logger } from '@/utils/logger';
 
-/**
- * Common tooltip content style for consistent chart tooltips
- */
 export const TOOLTIP_STYLES = {
   container: {
     backgroundColor: 'hsl(var(--popover))',
@@ -38,8 +34,7 @@ export const TOOLTIP_STYLES = {
   }
 };
 
-// Consolidated chart color constants
-// Used across multiple chart components for consistent styling
+// Chart color constants for consistent styling
 export const CHART_COLORS = {
   // Data source colors
   Client: 'hsl(var(--color-client))',
@@ -66,38 +61,8 @@ export const CHART_COLORS = {
   Default: 'hsl(var(--color-default))'
 };
 
-// Specific device colors for device distribution charts
-export const DEVICE_COLORS = {
-  Desktop: CHART_COLORS.Desktop,
-  Mobile: CHART_COLORS.Mobile,
-  Tablet: CHART_COLORS.Tablet,
-  Other: CHART_COLORS.Other
-};
+// Use CHART_COLORS directly - device, traffic, and data source colors are all available there
 
-// Traffic channel colors for channel distribution charts
-export const TRAFFIC_CHANNEL_COLORS = {
-  'Organic Search': CHART_COLORS['Organic Search'],
-  'Direct': CHART_COLORS['Direct'],
-  'Social Media': CHART_COLORS['Social Media'],
-  'Paid Search': CHART_COLORS['Paid Search'],
-  'Email': CHART_COLORS['Email'],
-  'Referral': CHART_COLORS['Referral'],
-  'Other': CHART_COLORS.Other
-};
-
-// Data source colors for metrics charts
-export const DATA_SOURCE_COLORS = {
-  Client: CHART_COLORS.Client,
-  CD_Avg: CHART_COLORS.CD_Avg,
-  Industry_Avg: CHART_COLORS.Industry_Avg,
-  Industry: CHART_COLORS.Industry,
-  Competitor: CHART_COLORS.Competitor
-};
-
-/**
- * Format metric values for display in tooltips and charts
- * Supports percentage, duration, and numeric formatting
- */
 export function formatMetricValue(value: number, metricName: string): string {
   const roundedValue = Math.round(value * 10) / 10;
   
@@ -112,10 +77,6 @@ export function formatMetricValue(value: number, metricName: string): string {
   return `${roundedValue}`;
 }
 
-/**
- * Convert raw metric values for processing (consolidates chartDataProcessor convertValue)
- * Handles percentage conversion and time unit conversion
- */
 export function convertMetricValue(
   rawValue: number, 
   options: { convertToPercentage?: boolean; convertToMinutes?: boolean }
@@ -131,36 +92,16 @@ export function convertMetricValue(
   return rawValue;
 }
 
-/**
- * Generate fallback values based on metric type (moved from chartDataProcessor.ts)
- */
-export function getMetricFallback(metricName: string): number {
-  const fallbacks: Record<string, number> = {
-    'Bounce Rate': 42.3,
-    'Session Duration': 3.2,
-    'Pages per Session': 2.8,
-    'Sessions per User': 1.6
-  };
-  return fallbacks[metricName] || 0;
-}
+// Removed getMetricFallback - use getDefaultMetricValue instead
 
-/**
- * Determine if metric should be converted to percentage (moved from chartDataProcessor.ts)
- */
 export function shouldConvertToPercentage(metricName: string): boolean {
   return metricName === 'Bounce Rate';
 }
 
-/**
- * Determine if metric should be converted to minutes (moved from chartDataProcessor.ts)
- */
 export function shouldConvertToMinutes(metricName: string): boolean {
   return metricName === 'Session Duration';
 }
 
-/**
- * Generate deterministic seeded random number for consistent chart variations
- */
 export function seededRandom(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -171,9 +112,6 @@ export function seededRandom(seed: string): number {
   return Math.abs(hash) / 2147483647; // Normalize to 0-1
 }
 
-/**
- * Generate temporal variation for chart data (authentic data only)
- */
 export function generateTemporalVariationSync(
   baseValue: number, 
   dates: string[], 
@@ -185,9 +123,6 @@ export function generateTemporalVariationSync(
   return [];
 }
 
-/**
- * Calculate Y-axis domain for charts with proper scaling
- */
 export function calculateYAxisDomain(data: any[], dataKey: string): [number, number] {
   if (!data || data.length === 0) return [0, 100];
   
@@ -201,9 +136,6 @@ export function calculateYAxisDomain(data: any[], dataKey: string): [number, num
   return [Math.max(0, min - padding), max + padding];
 }
 
-/**
- * Generate chart colors for competitive analysis
- */
 export function generateChartColors(competitors: any[]): Record<string, string> {
   const colors = [
     'hsl(var(--color-competitor-1))',
@@ -226,10 +158,6 @@ export function generateChartColors(competitors: any[]): Record<string, string> 
   return result;
 }
 
-/**
- * Chart visibility state management
- * Consolidates visibility patterns from multiple chart components
- */
 export function createChartVisibilityState(clientKey: string, companyName: string, competitors: any[]) {
   const initial: Record<string, boolean> = {
     [clientKey]: true,
@@ -244,9 +172,6 @@ export function createChartVisibilityState(clientKey: string, companyName: strin
   return initial;
 }
 
-/**
- * Update chart visibility state when competitors change
- */
 export function updateChartVisibilityForCompetitors(
   prevState: Record<string, boolean>, 
   competitors: any[]
@@ -260,13 +185,6 @@ export function updateChartVisibilityForCompetitors(
   return updated;
 }
 
-/**
- * Chart data helper functions moved from chartDataHelpers.ts for consolidation
- */
-
-/**
- * Deduplicate metrics by channel to avoid duplicate database entries
- */
 export function deduplicateByChannel<T extends { channel?: string }>(
   metrics: T[]
 ): T[] {
@@ -280,9 +198,6 @@ export function deduplicateByChannel<T extends { channel?: string }>(
   return Array.from(channelMap.values());
 }
 
-/**
- * Format period display text for better UX (dynamic based on current date)
- */
 export function formatPeriodDisplay(period: string): string {
   const now = new Date();
   
@@ -304,9 +219,6 @@ export function formatPeriodDisplay(period: string): string {
   return period;
 }
 
-/**
- * Get default values for metrics when data is missing
- */
 export function getDefaultMetricValue(metricName: string, sourceType: string): number {
   const defaults: Record<string, Record<string, number>> = {
     "Bounce Rate": {
@@ -334,9 +246,6 @@ export function getDefaultMetricValue(metricName: string, sourceType: string): n
   return defaults[metricName]?.[sourceType] || 0;
 }
 
-/**
- * Check if a value represents a percentage
- */
 export function isPercentageMetric(metricName: string): boolean {
   return metricName.toLowerCase().includes('rate') || 
          metricName.toLowerCase().includes('percentage');

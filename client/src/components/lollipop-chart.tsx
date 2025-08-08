@@ -1,5 +1,5 @@
 import React from 'react';
-import { DEVICE_COLORS } from '@/utils/chartUtils';
+import { CHART_COLORS } from '@/utils/chartUtils';
 
 /** Device distribution data structure for Desktop and Mobile percentages */
 interface DeviceDistribution {
@@ -183,7 +183,7 @@ export function LollipopChart({
                   >
                     {devices.map((device, deviceIndex) => {
                       const value = entity.data[device];
-                      const color = DEVICE_COLORS[device];
+                      const color = CHART_COLORS[device];
                       const percentage = Math.round(value * 100);
                       
                       return (
@@ -273,7 +273,7 @@ export function LollipopChart({
             <div key={device} className="flex items-center space-x-1.5">
               <div 
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: DEVICE_COLORS[device] }}
+                style={{ backgroundColor: CHART_COLORS[device] }}
               />
               <span className="text-xs text-gray-600 whitespace-nowrap">{device}</span>
             </div>

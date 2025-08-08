@@ -1,16 +1,10 @@
-// Consolidated chart utilities to eliminate duplicate functions across chart components
-// This eliminates seededRandom, generatePeriodLabel, and data generation patterns
-
 import { seededRandom, seededRandomRange, seededVariance } from '@shared/seededRandom';
 import { logger } from '@/utils/logger';
 
-// Re-export shared seeded random functions for chart utilities
 export { seededRandom, seededRandomRange, seededVariance };
 
-/**
- * Generate period label from YYYY-MM format
- * Consolidates duplicate functions from bar-chart.tsx and time-series-chart.tsx
- */
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export function generatePeriodLabel(period: string): string {
   // Handle grouped period format: YYYY-MM-group-N
   if (period.includes('-group-')) {
@@ -19,19 +13,15 @@ export function generatePeriodLabel(period: string): string {
       const [monthPart, groupNum] = groupParts;
       const [year, month] = monthPart.split('-');
       if (year && month) {
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const groupNumber = parseInt(groupNum);
-        
-        // Calculate approximate date range for the group (each group ~5-6 days)
-        const groupSize = 5; // Average group size
+        const groupSize = 5;
         const startDay = (groupNumber - 1) * groupSize + 1;
         const endDay = Math.min(groupNumber * groupSize, 31);
         
         if (startDay === endDay) {
-          return `${monthNames[parseInt(month) - 1]} ${startDay}`;
+          return `${MONTH_NAMES[parseInt(month) - 1]} ${startDay}`;
         } else {
-          return `${monthNames[parseInt(month) - 1]} ${startDay}-${endDay}`;
+          return `${MONTH_NAMES[parseInt(month) - 1]} ${startDay}-${endDay}`;
         }
       }
     }
@@ -49,22 +39,15 @@ export function generatePeriodLabel(period: string): string {
     }
   }
   
-  // Handle YYYY-MM format (monthly data)
   const [year, month] = period.split('-');
   if (year && month) {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const shortYear = year.slice(-2);
-    return `${monthNames[parseInt(month) - 1]} ${shortYear}`;
+    return `${MONTH_NAMES[parseInt(month) - 1]} ${shortYear}`;
   }
   
   return period; // fallback
 }
 
-/**
- * Generate Pacific Time date periods for charts
- * Consolidates duplicate PT calculation logic from multiple chart components
- */
 export function generatePacificTimePeriods(timePeriod: string) {
   const now = new Date();
   const ptFormatter = new Intl.DateTimeFormat('en-US', {
@@ -79,18 +62,16 @@ export function generatePacificTimePeriods(timePeriod: string) {
   const dates: string[] = [];
   
   if (timePeriod === "Last Month") {
-    // Show last month data points (dynamic based on PT current date - 1 month)
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1);
     const endDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date(endDate);
-      date.setDate(date.getDate() - (i * 5)); // Every 5 days
+      date.setDate(date.getDate() - (i * 5));
       dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
   } else if (timePeriod === "Last Quarter") {
-    // Show current quarter months (dynamic PT)
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1);
     const currentQuarter = Math.floor(targetMonth.getMonth() / 3) + 1;
     const quarterStartMonth = (currentQuarter - 1) * 3;
     
@@ -98,41 +79,31 @@ export function generatePacificTimePeriods(timePeriod: string) {
       const quarterMonth = quarterStartMonth + i;
       if (quarterMonth <= targetMonth.getMonth()) {
         const monthDate = new Date(targetMonth.getFullYear(), quarterMonth, 1);
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        dates.push(`${monthNames[quarterMonth]} ${String(targetMonth.getFullYear()).slice(-2)}`);
+        dates.push(`${MONTH_NAMES[quarterMonth]} ${String(targetMonth.getFullYear()).slice(-2)}`);
       }
     }
   } else if (timePeriod === "Last Year") {
-    // Show 12 months ending with PT target month (dynamic)
-    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+    const targetMonth = new Date(ptYear, ptMonth - 1, 1);
     for (let i = 11; i >= 0; i--) {
       const monthDate = new Date(targetMonth);
       monthDate.setMonth(targetMonth.getMonth() - i);
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      dates.push(`${monthNames[monthDate.getMonth()]} ${String(monthDate.getFullYear()).slice(-2)}`);
+      dates.push(`${MONTH_NAMES[monthDate.getMonth()]} ${String(monthDate.getFullYear()).slice(-2)}`);
     }
   }
   
   return dates;
 }
 
-/**
- * Fetch stored daily GA4 metrics for time series charts
- * Retrieves real daily data from the database
- */
 export async function fetchStoredDailyMetrics(
   clientId: string,
   period: string,
   metricName: string
 ): Promise<number[]> {
   try {
-    // Get the daily metrics from our stored cache
     const response = await fetch(`/api/metrics/daily/${clientId}/${period}/${encodeURIComponent(metricName)}`);
     
     if (!response.ok) {
-      logger.debug(`No stored daily data found for ${metricName}, falling back to synthetic`);
+      logger.debug(`No stored daily data found for ${metricName}`);
       return [];
     }
     
@@ -149,10 +120,6 @@ export async function fetchStoredDailyMetrics(
   }
 }
 
-/**
- * Generate temporal variation using real GA4 data when available
- * Falls back to synthetic data when real data is not available
- */
 export async function generateTemporalVariation(
   baseValue: number, 
   dates: string[], 
@@ -161,12 +128,10 @@ export async function generateTemporalVariation(
   clientId?: string,
   period?: string
 ): Promise<number[]> {
-  // Try to fetch real daily data if client info is provided
   if (clientId && period && metricName) {
     const realData = await fetchStoredDailyMetrics(clientId, period, metricName);
     if (realData.length > 0) {
       logger.debug(`Using real GA4 daily data for ${metricName}: ${realData.length} days`);
-      // Ensure we have the right number of data points for our dates
       return realData.slice(0, dates.length);
     }
   }
@@ -175,9 +140,6 @@ export async function generateTemporalVariation(
   return [];
 }
 
-/**
- * Synchronous version for backwards compatibility
- */
 export function generateTemporalVariationSync(
   baseValue: number, 
   dates: string[], 
@@ -188,10 +150,6 @@ export function generateTemporalVariationSync(
   return [];
 }
 
-/**
- * Chart visibility state management hook pattern
- * Consolidates the visibleLines/visibleBars pattern from time-series-chart.tsx and bar-chart.tsx
- */
 export function createChartVisibilityState(clientKey: string, companyName: string, competitors: any[]) {
   const initial: Record<string, boolean> = {
     [clientKey]: true,
@@ -206,10 +164,6 @@ export function createChartVisibilityState(clientKey: string, companyName: strin
   return initial;
 }
 
-/**
- * Update chart visibility state when competitors change
- * Consolidates the useEffect pattern from multiple chart components
- */
 export function updateChartVisibilityForCompetitors(
   prevState: Record<string, boolean>, 
   competitors: any[]
@@ -223,19 +177,14 @@ export function updateChartVisibilityForCompetitors(
   return updated;
 }
 
-/**
- * Generate chart colors for competitors
- * Consolidates color assignment patterns from chart components
- */
 export function generateChartColors(clientKey: string, competitors: any[]) {
   const colors: Record<string, string> = {
-    [clientKey]: 'hsl(329, 86%, 54%)', // Primary brand color
-    'Industry Avg': '#9ca3af', // Light grey
-    'Clear Digital Clients Avg': '#4b5563', // Dark grey
+    [clientKey]: 'hsl(329, 86%, 54%)',
+    'Industry Avg': '#9ca3af',
+    'Clear Digital Clients Avg': '#4b5563',
   };
   
-  // Additional colors for competitors
-  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444']; // Purple, cyan, red
+  const competitorColors = ['#8b5cf6', '#06b6d4', '#ef4444'];
   
   competitors.forEach((comp, index) => {
     colors[comp.label] = competitorColors[index % competitorColors.length];
@@ -244,10 +193,6 @@ export function generateChartColors(clientKey: string, competitors: any[]) {
   return colors;
 }
 
-/**
- * Calculate optimized Y-axis domain for charts
- * Consolidates Y-axis calculation logic from chart components
- */
 export function calculateYAxisDomain(data: any[], clientKey: string, competitors: any[], companyName: string = 'Clear Digital'): [number, number] {
   const allValues: number[] = [];
   
@@ -262,24 +207,16 @@ export function calculateYAxisDomain(data: any[], clientKey: string, competitors
   
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
-  
-  // Always start from 0 for better visual context and comparison
-  const padding = maxValue * 0.1; // 10% padding from top
+  const padding = maxValue * 0.1;
   return [0, Math.ceil(maxValue + padding)];
 }
 
-/**
- * Channel data aggregation helper
- * Consolidates channel aggregation logic from dashboard.tsx and time-series-chart.tsx
- */
 export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> {
   const channelSums = new Map();
   const channelCounts = new Map();
   
   sourceMetrics.forEach((metric, index) => {
-    // Handle both individual channel records and legacy JSON format
     if (metric.channel) {
-      // Individual channel record (new format)
       const channelName = metric.channel;
       const value = parseFloat(metric.value);
       
@@ -291,9 +228,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
         channelCounts.set(channelName, 1);
       }
     } else if (metric.value && Array.isArray(metric.value)) {
-      // GA4 data as direct array (new format)
       metric.value.forEach((channelData: any) => {
-        // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
         if (channelData.channel && channelData.percentage !== undefined) {
           const channelName = channelData.channel;
           const value = parseFloat(channelData.percentage);
@@ -308,12 +243,10 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
         }
       });
     } else if (metric.value && typeof metric.value === 'string') {
-      // GA4 JSON format (legacy) - use correct field names
       try {
         const channelsData = JSON.parse(metric.value);
         if (Array.isArray(channelsData)) {
           channelsData.forEach((channelData: any) => {
-            // GA4 data structure: { channel: "Direct", percentage: 64.7, sessions: 4439 }
             if (channelData.channel && channelData.percentage !== undefined) {
               const channelName = channelData.channel;
               const value = parseFloat(channelData.percentage);
@@ -329,13 +262,11 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
           });
         }
       } catch (e) {
-        // Fallback for invalid JSON - skip this metric
         logger.warn('Invalid JSON in metric value:', metric.value);
       }
     }
   });
   
-  // Calculate averages
   const channelMap = new Map();
   Array.from(channelSums.entries()).forEach(([channelName, sum]) => {
     const count = channelCounts.get(channelName) || 1;
@@ -345,11 +276,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
   return channelMap;
 }
 
-/**
- * Sort traffic channels by legend order for consistent display
- */
 export function sortChannelsByLegendOrder(channelMap: Map<string, number>): Array<{name: string; value: number; percentage: number}> {
-  // Define the preferred order to match legend display (left to right)
   const channelOrder = [
     'Organic Search',
     'Direct', 
@@ -362,19 +289,17 @@ export function sortChannelsByLegendOrder(channelMap: Map<string, number>): Arra
   
   const sortedChannels: Array<{name: string; value: number; percentage: number}> = [];
   
-  // Add channels in the preferred order
   channelOrder.forEach(channelName => {
     if (channelMap.has(channelName)) {
       const value = channelMap.get(channelName)!;
       sortedChannels.push({
         name: channelName,
         value: value,
-        percentage: value // For traffic channels, value is already the percentage
+        percentage: value
       });
     }
   });
   
-  // Add any channels that weren't in our predefined order (shouldn't happen with GA4 data)
   channelMap.forEach((value, channelName) => {
     if (!channelOrder.includes(channelName)) {
       sortedChannels.push({

@@ -1,10 +1,5 @@
-/**
- * Global utilities for processing chart data across portfolio, competitor, and benchmark companies
- * Consolidates proven fetching, parsing, fallback, and conversion logic
- */
-
 import { parseMetricValue } from '@/utils/metricParser';
-import { convertMetricValue, getMetricFallback, shouldConvertToPercentage, shouldConvertToMinutes } from '@/utils/chartUtils';
+import { convertMetricValue, getDefaultMetricValue, shouldConvertToPercentage, shouldConvertToMinutes } from '@/utils/chartUtils';
 import { getCompanyId, formatCompanyLabel } from '@/utils/sharedUtilities';
 
 export interface CompanyMetricData {
@@ -20,13 +15,9 @@ export interface MetricProcessingOptions {
   sourceType: 'Portfolio' | 'Competitor' | 'Benchmark';
   fallbackValue?: number;
   convertToPercentage?: boolean;
-  convertToMinutes?: boolean; // for session duration
+  convertToMinutes?: boolean;
 }
 
-/**
- * Extract and process company metrics for chart display
- * Handles both individual companies and averages based on displayMode
- */
 export function processCompanyMetrics(
   companies: any[],
   metrics: any[],
@@ -42,7 +33,6 @@ export function processCompanyMetrics(
   } = options;
 
   if (displayMode === 'average') {
-    // Portfolio mode: Calculate average across all companies
     const companyMetrics = companies.map(company => {
       const companyMetric = metrics.find((m: any) => 
         getCompanyId(m, sourceType) === company.id && m.metricName === metricName
@@ -71,7 +61,6 @@ export function processCompanyMetrics(
       sourceType
     }];
   } else {
-    // Individual mode: Show each company separately
     return companies.map(company => {
       const companyMetric = metrics.find((m: any) => 
         getCompanyId(m, sourceType) === company.id && m.metricName === metricName
@@ -93,10 +82,6 @@ export function processCompanyMetrics(
   }
 }
 
-/**
- * Process device distribution data for companies
- * Handles the 2-device model (Desktop + Mobile) with proper percentage calculation
- */
 export function processDeviceDistribution(
   companies: any[],
   metrics: any[],
@@ -113,7 +98,7 @@ export function processDeviceDistribution(
       m.metricName === 'Device Distribution'
     );
     
-    const deviceDistribution = { Desktop: 50, Mobile: 50 }; // Default fallback
+    const deviceDistribution = { Desktop: 50, Mobile: 50 };
     
     if (deviceMetrics.length > 0) {
       let desktop = 0;
@@ -127,23 +112,17 @@ export function processDeviceDistribution(
         }
       });
       
-      // Handle cases where we only have one device type
       if (desktop > 0 || mobile > 0) {
-        // If we have both values, normalize to 100%
         if (desktop > 0 && mobile > 0) {
           const total = desktop + mobile;
           deviceDistribution.Desktop = (desktop / total) * 100;
           deviceDistribution.Mobile = (mobile / total) * 100;
         } 
-        // If we only have desktop, mobile is the complement
         else if (desktop > 0 && mobile === 0) {
-          // Assume desktop percentage is already out of 100%
           deviceDistribution.Desktop = Math.min(desktop, 100);
           deviceDistribution.Mobile = Math.max(100 - desktop, 0);
         }
-        // If we only have mobile, desktop is the complement  
         else if (mobile > 0 && desktop === 0) {
-          // Assume mobile percentage is already out of 100%
           deviceDistribution.Mobile = Math.min(mobile, 100);
           deviceDistribution.Desktop = Math.max(100 - mobile, 0);
         }

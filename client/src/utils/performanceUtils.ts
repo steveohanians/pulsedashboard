@@ -1,11 +1,5 @@
-// Unified performance monitoring utilities
-// Consolidates timing, measurement, and monitoring functionality
-
 import { logger } from '@/utils/logger';
 
-/**
- * General purpose performance monitoring with metrics tracking
- */
 class PerformanceMonitor {
   private metrics: Map<string, number> = new Map();
   private startTime: number = Date.now();
@@ -21,7 +15,6 @@ class PerformanceMonitor {
     const duration = Date.now() - startTime;
     this.metrics.set(`${label}_duration`, duration);
     
-    // Log slow operations for optimization
     if (duration > 1000) {
       logger.warn(`🐌 Slow operation: ${label} took ${duration}ms`);
     }
@@ -40,7 +33,6 @@ class PerformanceMonitor {
   }
 
   markDashboardComplete() {
-    // Performance tracking disabled per user request
     return 0;
   }
 
@@ -49,9 +41,6 @@ class PerformanceMonitor {
   }
 }
 
-/**
- * Render completion timing with DOM element verification
- */
 class RenderTimer {
   private startTime: number = 0;
   private endTime: number = 0;
@@ -64,14 +53,12 @@ class RenderTimer {
     this.endTime = Date.now();
     const totalTime = this.endTime - this.startTime;
     
-    // Verify content is rendered
     const rechartWrappers = document.querySelectorAll('[data-testid="recharts-wrapper"]');
     const metricElements = document.querySelectorAll('[id^="metric-"]');
     const chartContainers = document.querySelectorAll('.recharts-wrapper');
     const hasContent = rechartWrappers.length > 0 || chartContainers.length > 0;
     const hasMetrics = metricElements.length > 0;
     
-    // Store results for retrieval
     localStorage.setItem('lastRenderTime', totalTime.toString());
     localStorage.setItem('lastRenderDetails', JSON.stringify({
       time: totalTime,
@@ -89,9 +76,6 @@ class RenderTimer {
   }
 }
 
-/**
- * Browser performance API integration for detailed metrics
- */
 class BrowserPerformanceTimer {
   private navigationStart: number = 0;
   private firstContentfulPaint: number = 0;
@@ -153,22 +137,16 @@ class BrowserPerformanceTimer {
   }
 }
 
-// Export singleton instances for consistent usage
 export const performanceMonitor = new PerformanceMonitor();
 export const renderTimer = new RenderTimer();
 export const browserPerformanceTimer = new BrowserPerformanceTimer();
 
-/**
- * Bundle size optimization utilities - consolidated from bundle-optimizer.ts
- */
 export const loadChartingLibrary = async () => {
-  // Lazy load recharts only when needed
   const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = await import('recharts');
   return { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer };
 };
 
 export const loadPDFLibraries = async () => {
-  // Only load PDF libraries when export is clicked
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import('html2canvas'),
     import('jspdf')
@@ -176,5 +154,4 @@ export const loadPDFLibraries = async () => {
   return { html2canvas, jsPDF };
 };
 
-// Export classes for custom instantiation if needed
 export { PerformanceMonitor, RenderTimer, BrowserPerformanceTimer };

@@ -1,41 +1,23 @@
-// Centralized shared utilities
-// Consolidates common utility functions found across multiple frontend files
+// Shared utilities for frontend components
 
-/**
- * Text formatting utilities
- */
 export const textUtils = {
-  /**
-   * Truncate text with ellipsis
-   */
   truncate: (text: string, maxLength: number): string => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   },
 
-  /**
-   * Capitalize first letter
-   */
   capitalize: (text: string): string => {
     if (!text) return '';
     return text.charAt(0).toUpperCase() + text.slice(1);
   },
 
-  /**
-   * Convert snake_case to Title Case
-   */
+  // Convert snake_case to Title Case
   snakeToTitle: (text: string): string => {
     return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   },
 };
 
-/**
- * Local storage utilities
- */
 export const storageUtils = {
-  /**
-   * Get item from localStorage with type safety
-   */
   getItem: <T>(key: string, defaultValue: T): T => {
     try {
       const item = localStorage.getItem(key);
@@ -45,9 +27,6 @@ export const storageUtils = {
     }
   },
 
-  /**
-   * Set item in localStorage with error handling
-   */
   setItem: (key: string, value: unknown): boolean => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
@@ -57,9 +36,6 @@ export const storageUtils = {
     }
   },
 
-  /**
-   * Remove item from localStorage
-   */
   removeItem: (key: string): void => {
     try {
       localStorage.removeItem(key);
@@ -69,13 +45,13 @@ export const storageUtils = {
   },
 };
 
-/**
- * Company utility functions
- */
+// Clean domain names for display (remove protocols and www)
+function cleanDomainName(domain: string): string {
+  return domain
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '');
+}
 
-/**
- * Get the appropriate company ID field based on source type
- */
 export function getCompanyId(metric: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string | null {
   switch (sourceType) {
     case 'Portfolio':
@@ -89,24 +65,16 @@ export function getCompanyId(metric: any, sourceType: 'Portfolio' | 'Competitor'
   }
 }
 
-/**
- * Format company label based on type and domain
- */
 export function formatCompanyLabel(company: any, sourceType: 'Portfolio' | 'Competitor' | 'Benchmark'): string {
+  const cleanedDomain = company.domain ? cleanDomainName(company.domain) : null;
+  
   if (sourceType === 'Portfolio') {
-    return company.name || company.domain?.replace('https://', '').replace('http://', '') || 'Unknown';
+    return company.name || cleanedDomain || 'Unknown';
   } else {
-    return company.domain?.replace('https://', '').replace('http://', '') || company.name || 'Unknown';
+    return cleanedDomain || company.name || 'Unknown';
   }
 }
 
-/**
- * General utilities moved from chartDataHelpers.ts for consolidation
- */
-
-/**
- * Helper function to safely parse JSON values
- */
 export function safeParseJSON(value: string): unknown[] {
   try {
     const parsed = JSON.parse(value);
@@ -116,18 +84,9 @@ export function safeParseJSON(value: string): unknown[] {
   }
 }
 
-/**
- * Clean domain names for display (remove protocols and www)
- */
-export function cleanDomainName(domain: string): string {
-  return domain
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '');
-}
+// Export the domain cleaner for external use
+export { cleanDomainName };
 
-/**
- * Debounce utility
- */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
@@ -140,9 +99,6 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   };
 }
 
-/**
- * Throttle utility - consolidated from frontend-optimizer.ts
- */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number

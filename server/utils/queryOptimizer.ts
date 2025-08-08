@@ -1,9 +1,7 @@
-// Database query optimization utilities
 import { storage } from "../storage";
 import { parseMetricValue, parseMetricPercentage } from "./metricParser";
 import logger from "./logger";
 
-// Cache for frequently accessed data
 const queryCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 export function getCachedData(key: string): any | null {
@@ -28,7 +26,6 @@ export function setCachedData(key: string, data: any, ttlMs: number = 60000): vo
 
 export function clearCache(pattern?: string): void {
   if (pattern) {
-    // Clear specific cache entries matching pattern
     const keysToDelete = [];
     for (const key of Array.from(queryCache.keys())) {
       if (key.includes(pattern)) {
@@ -38,7 +35,6 @@ export function clearCache(pattern?: string): void {
     keysToDelete.forEach(key => queryCache.delete(key));
     console.log(`Cache cleared: deleted ${keysToDelete.length} keys matching pattern "${pattern}"`);
   } else {
-    // Clear all cache entries
     const totalKeys = queryCache.size;
     queryCache.clear();
     console.log(`Cache cleared: deleted all ${totalKeys} keys`);
@@ -49,17 +45,12 @@ export function debugCacheKeys(): string[] {
   return Array.from(queryCache.keys());
 }
 
-/**
- * Generate authentic CD_Avg device distribution data from demo client data
- * This ensures authentic data integrity by using real client data rather than synthetic fallbacks
- */
 async function generateCdAvgDeviceDistributionIfMissing(
   clientId: string, 
   periodsToQuery: string[], 
   processedData: any[]
 ): Promise<void> {
   try {
-    // Check if CD_Avg device distribution data already exists
     const existingCdAvgDeviceData = processedData.filter(
       m => m.metricName === 'Device Distribution' && m.sourceType === 'CD_Avg'
     );
@@ -69,7 +60,6 @@ async function generateCdAvgDeviceDistributionIfMissing(
       return;
     }
 
-    // Get all client device distribution data to calculate authentic averages
     const clientDeviceData = processedData.filter(
       m => m.metricName === 'Device Distribution' && m.sourceType === 'Client'
     );
@@ -79,7 +69,6 @@ async function generateCdAvgDeviceDistributionIfMissing(
       return;
     }
 
-    // Calculate authentic averages by device type across all periods
     const deviceAverages = new Map<string, number[]>();
     
     clientDeviceData.forEach(metric => {
@@ -91,13 +80,11 @@ async function generateCdAvgDeviceDistributionIfMissing(
       }
     });
 
-    // Generate CD_Avg metrics for each period using authentic calculated averages
     for (const period of periodsToQuery) {
       for (const [deviceName, values] of Array.from(deviceAverages.entries())) {
         if (values.length > 0) {
           const avgPercentage = values.reduce((sum: number, val: number) => sum + val, 0) / values.length;
           
-          // Store authentic CD_Avg device distribution data in database
           await storage.createMetric({
             clientId: null,
             metricName: 'Device Distribution',
@@ -107,7 +94,6 @@ async function generateCdAvgDeviceDistributionIfMissing(
             channel: deviceName
           });
 
-          // Add to processed data for immediate use
           processedData.push({
             metricName: 'Device Distribution',
             value: avgPercentage,
@@ -135,16 +121,13 @@ async function generateCdAvgDeviceDistributionIfMissing(
   }
 }
 
-// Optimized filters query with caching
 export async function getFiltersOptimized() {
   const cacheKey = 'filters';
   // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
   // TEMPORARILY DISABLED: if (cached) return cached;
   
-  // Get benchmark companies data for filters
   const benchmarkCompanies = await storage.getBenchmarkCompanies();
   
-  // Build filters from benchmark companies
   const businessSizeOrder = [
     "Small / Startup (25-100 employees)",
     "Mid-Market (100-500 employees)", 
@@ -165,11 +148,10 @@ export async function getFiltersOptimized() {
     timePeriods: ["Last Month", "Last Quarter", "Last Year", "Custom Date Range"]
   };
   
-  setCachedData(cacheKey, data, 5 * 60 * 1000); // 5 minutes
+  setCachedData(cacheKey, data, 5 * 60 * 1000);
   return data;
 }
 
-// Optimized dashboard query with parallel fetching and minimal data
 export async function getDashboardDataOptimized(
   client: any,
   periodsToQuery: string[],
@@ -179,7 +161,6 @@ export async function getDashboardDataOptimized(
 ) {
   logger.info('🔴 DASHBOARD FUNCTION CALLED - CLIENT: ' + client.id);
   
-  // TEMPORARY: Clear query cache to force fresh CD_Avg traffic channel processing
   clearCache();
   logger.info('🚛 QUERY CACHE CLEARED - Forcing fresh CD_Avg traffic channel processing');
 
@@ -187,25 +168,19 @@ export async function getDashboardDataOptimized(
   // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
   // TEMPORARILY DISABLED: if (cached) return cached;
   
-  // Prepare filters for industry data
   const filters = { businessSize, industryVertical };
   
-  // For "Last Month" period, try daily data first, fallback to monthly data
   if (periodsToQuery.includes('2025-07') || periodsToQuery.includes('2025-06')) {
     const lastMonthPeriod = periodsToQuery.find(p => p === '2025-07' || p === '2025-06');
     if (lastMonthPeriod) {
       try {
-        // First try to get daily metrics
         const dailyMetrics = await storage.getDailyClientMetrics(client.id, lastMonthPeriod);
         if (dailyMetrics.length > 0) {
-          // Cache the daily data for charts to use
           setCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`, dailyMetrics, 5 * 60 * 1000);
         } else {
-          // Fallback: Get monthly metrics for the period
           console.log(`No daily metrics found for ${lastMonthPeriod}, falling back to monthly metrics`);
           const monthlyMetrics = await storage.getMetricsByClient(client.id, lastMonthPeriod);
           if (monthlyMetrics.length > 0) {
-            // Cache monthly data as fallback
             setCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`, monthlyMetrics, 5 * 60 * 1000);
           }
         }
@@ -215,18 +190,14 @@ export async function getDashboardDataOptimized(
     }
   }
 
-  // For large datasets (>10 periods), use sequential batches to avoid connection timeout
-  // For smaller datasets, use parallel queries for performance
   let dataPromise;
   
   if (periodsToQuery.length > 10) {
-    // Sequential processing for large historical datasets
     dataPromise = (async () => {
       const [competitors] = await Promise.all([
         storage.getCompetitorsByClient(client.id)
       ]);
       
-      // Process periods in smaller batches to avoid connection timeout
       const batchSize = 8;
       const allMetricsArrays = [];
       const allCompetitorMetricsArrays = [];
@@ -251,7 +222,6 @@ export async function getDashboardDataOptimized(
       return [allMetricsArrays, competitors, allCompetitorMetricsArrays, allFilteredIndustryMetricsArrays, allFilteredCdAvgMetricsArrays];
     })();
   } else {
-    // Parallel processing for smaller datasets
     dataPromise = Promise.all([
       Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
       storage.getCompetitorsByClient(client.id),
@@ -266,7 +236,6 @@ export async function getDashboardDataOptimized(
     ]);
   }
   
-  // Add timeout to prevent hanging - longer timeout for large historical datasets
   const timeoutMs = periodsToQuery.length > 10 ? 30000 : 15000;
   const timeoutPromise = new Promise((_, reject) => 
     setTimeout(() => reject(new Error('Database query timeout')), timeoutMs)
@@ -280,7 +249,6 @@ export async function getDashboardDataOptimized(
     allFilteredCdAvgMetricsArrays
   ] = await Promise.race([dataPromise, timeoutPromise]) as any;
   
-  // Process and structure the data
   const processedData = processMetricsData(
     allMetricsArrays,
     allCompetitorMetricsArrays,
@@ -291,11 +259,9 @@ export async function getDashboardDataOptimized(
   
 
   
-  // Create timeSeriesData for multi-period queries OR "Last Month" (for daily data visualization)
   const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || timePeriod === 'Last Month';
   let timeSeriesData = shouldCreateTimeSeriesData ? groupMetricsByPeriod(processedData) : undefined;
   
-  // For "Last Month", also include daily data if available, but group into 6 periods (every 5-6 days)
   if (timePeriod === 'Last Month' && timeSeriesData) {
     try {
       const lastMonthPeriod = periodsToQuery[0]; // Should be 2025-07
@@ -304,14 +270,10 @@ export async function getDashboardDataOptimized(
       if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
         logger.debug(`📊 Found ${cachedDailyData.length} cached daily metrics for grouping`);
         
-        // Debug Session Duration in cached data
         const sessionDurationMetrics = cachedDailyData.filter(m => m.metricName === 'Session Duration');
         logger.debug(`Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
         
-        // Group daily data into 6 periods (every 5-6 days) with averaged values, matching session duration groupings
         const dailyByDate: Record<string, any[]> = {};
-        
-        // First, group by day
         cachedDailyData.forEach(metric => {
           const dayKey = metric.timePeriod; // Format: 2025-07-daily-20250701
           if (!dailyByDate[dayKey]) {
@@ -320,10 +282,9 @@ export async function getDashboardDataOptimized(
           dailyByDate[dayKey].push(metric);
         });
         
-        // Sort days and group into 6 periods (every ~5 days)
         const sortedDays = Object.keys(dailyByDate).sort();
         const daysInMonth = sortedDays.length;
-        const groupSize = Math.ceil(daysInMonth / 6); // ~5-6 days per group
+        const groupSize = Math.ceil(daysInMonth / 6);
         
         const groupedPeriods: Record<string, any[]> = {};
         
@@ -334,9 +295,8 @@ export async function getDashboardDataOptimized(
           
           if (daysInGroup.length === 0) break;
           
-          // Create a period label (e.g., "Jul 1-5", "Jul 26-31")
-          const firstDay = daysInGroup[0].split('-daily-')[1]; // 20250701
-          const lastDay = daysInGroup[daysInGroup.length - 1].split('-daily-')[1]; // 20250705
+          const firstDay = daysInGroup[0].split('-daily-')[1];
+          const lastDay = daysInGroup[daysInGroup.length - 1].split('-daily-')[1];
           
           const firstDate = new Date(parseInt(firstDay.substring(0, 4)), parseInt(firstDay.substring(4, 6)) - 1, parseInt(firstDay.substring(6, 8)));
           const lastDate = new Date(parseInt(lastDay.substring(0, 4)), parseInt(lastDay.substring(4, 6)) - 1, parseInt(lastDay.substring(6, 8)));
@@ -344,7 +304,6 @@ export async function getDashboardDataOptimized(
           const periodKey = `${lastMonthPeriod}-group-${i + 1}`;
           groupedPeriods[periodKey] = [];
           
-          // Collect all metrics from all days in this group
           const allMetricsInGroup: Record<string, number[]> = {};
           
           daysInGroup.forEach(dayKey => {
@@ -356,7 +315,6 @@ export async function getDashboardDataOptimized(
               const parsedValue = parseMetricValue(metric.value);
               if (parsedValue !== null) {
                 allMetricsInGroup[metricKey].push(parsedValue);
-                // Debug Session Duration specifically
                 if (metric.metricName === 'Session Duration') {
                   logger.debug(`Session Duration daily value added: ${parsedValue} from ${dayKey}`);
                 }
@@ -364,7 +322,6 @@ export async function getDashboardDataOptimized(
             });
           });
           
-          // Calculate averages for each metric in this group
           Object.keys(allMetricsInGroup).forEach(metricKey => {
             const [metricName] = metricKey.split('-');
             const values = allMetricsInGroup[metricKey];
@@ -386,20 +343,14 @@ export async function getDashboardDataOptimized(
           });
         }
         
-        // Replace the single-period data with grouped periods
         if (Object.keys(groupedPeriods).length > 0) {
           logger.debug(`Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
-          // For "Last Month" with daily data, we need to populate CD Average for all grouped periods
-          // Get ONLY authentic CD_Avg data - do not use CD_Portfolio data as fallback
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
           
-          // Add CD Average metrics to each grouped period so they appear as flat lines
           Object.keys(groupedPeriods).forEach(periodKey => {
             cdAvgMetrics.forEach(metric => {
-              // Extract percentage from CD_Avg traffic channels for grouped periods
               let processedValue = metric.value;
               if ((metric.metricName === 'Traffic Channels' || metric.metricName === 'Device Distribution') && metric.sourceType === 'CD_Avg') {
-                // Handle both string JSON and already parsed objects
                 if (typeof metric.value === 'string' && metric.value.includes('{')) {
                   try {
                     const parsed = JSON.parse(metric.value);
@@ -416,15 +367,14 @@ export async function getDashboardDataOptimized(
                     processedValue = 0;
                   }
                 } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
-                  // Data already parsed by parseMetricPercentage()
                   processedValue = Number(metric.value.percentage) || 0;
                 }
               }
               
               groupedPeriods[periodKey].push({
                 metricName: metric.metricName,
-                value: processedValue, // Use processed value instead of raw
-                sourceType: 'CD_Avg', // Standardize to CD_Avg for chart display
+                value: processedValue,
+                sourceType: 'CD_Avg',
                 timePeriod: periodKey,
                 channel: metric.channel,
                 competitorId: null
@@ -441,18 +391,12 @@ export async function getDashboardDataOptimized(
     }
   }
   
-  // Debug: Check what's actually in timeSeriesData for first period
   if (timeSeriesData && Object.keys(timeSeriesData).length > 0) {
     const firstPeriod = Object.keys(timeSeriesData)[0];
     const firstPeriodData = timeSeriesData[firstPeriod];
     const competitorCount = firstPeriodData.filter(m => m.sourceType === 'Competitor').length;
-
   }
 
-  // CD_Avg device distribution should come from authentic CD Portfolio company data only
-  // Removed fallback logic to maintain data integrity
-
-  // Extract traffic channel and device distribution data separately for chart components
   const trafficChannelMetrics = processedData.filter(m => m.metricName === 'Traffic Channels');
   const deviceDistributionMetrics = processedData.filter(m => m.metricName === 'Device Distribution');
   
@@ -720,10 +664,6 @@ function processMetricsData(
   
 
   
-  // Debug input data to processTrafficChannelData
-  // Metrics processing summary logged
-
-  // AGGRESSIVE DEBUGGING: Check CD_Avg raw data before processing
   const cdAvgRaw = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
   logger.debug('CD_AVG RAW BEFORE PROCESSING:', {
     count: cdAvgRaw.length,
@@ -735,7 +675,6 @@ function processMetricsData(
     }))
   });
 
-  // Debug competitor metrics before processing
   console.error('🚨 COMPETITOR METRICS PIPELINE DEBUG:', {
     rawCompetitorCount: allCompetitorMetrics.length,
     periodsQueried: periodsToQuery,
@@ -757,7 +696,6 @@ function processMetricsData(
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
   
-  // Debug competitor metrics after processing
   const processedCompetitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
   console.log('🔍 COMPETITOR METRICS DEBUG AFTER PROCESSING:', {
     count: processedCompetitorMetrics.length,
@@ -773,7 +711,6 @@ function processMetricsData(
   return processedData;
 }
 
-// Group metrics by time period for time series charts
 function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
   const grouped: Record<string, any[]> = {};
   
@@ -790,17 +727,15 @@ function groupMetricsByPeriod(metrics: any[]): Record<string, any[]> {
   return grouped;
 }
 
-// Separate function for heavy data (charts, metrics) - lazy loaded
 export async function getDashboardMetricsOptimized(clientId: string, filters: any) {
   const cacheKey = `metrics-${clientId}-${JSON.stringify(filters)}`;
   // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
   // TEMPORARILY DISABLED: if (cached) return cached;
   
-  // This function needs to be implemented - placeholder for now
   const metrics: any[] = [];
   const benchmarks: any[] = [];
   
   const metricsData = { metrics, benchmarks };
-  setCachedData(cacheKey, metricsData, 2 * 60 * 1000); // 2 minutes
+  setCachedData(cacheKey, metricsData, 2 * 60 * 1000);
   return metricsData;
 }

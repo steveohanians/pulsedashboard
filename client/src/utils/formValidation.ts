@@ -1,15 +1,5 @@
-/**
- * Centralized form validation utilities
- * Consolidates validation patterns found across form components
- * Provides consistent validation schemas and helper functions
- */
-
 import { z } from 'zod';
 
-/**
- * Common validation schemas for reuse across forms
- * Consolidates repeated validation patterns for consistency
- */
 export const commonValidations = {
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -17,7 +7,6 @@ export const commonValidations = {
   required: z.string().min(1, "This field is required"),
   optional: z.string().optional(),
 
-  // Business-specific validations
   companyName: z.string()
     .min(2, "Company name must be at least 2 characters")
     .max(100, "Company name must be less than 100 characters"),
@@ -29,32 +18,17 @@ export const commonValidations = {
       "Please enter a public website URL"
     ),
 
-  // Dynamic validation - validates against filter_options API
   industryVertical: z.string().min(1, "Please select a valid industry vertical"),
   businessSize: z.string().min(1, "Please select a valid business size"),
 };
 
-/**
- * Form field validation helpers
- * Standardizes field validation across components with immediate feedback
- */
 export const fieldValidators = {
-  /**
-   * Validate email format and common business rules
-   * @param value Email string to validate
-   * @returns Error message or null if valid
-   */
   email: (value: string) => {
     const emailSchema = commonValidations.email;
     const result = emailSchema.safeParse(value);
     return result.success ? null : result.error.errors[0].message;
   },
 
-  /**
-   * Validate password strength with detailed requirements
-   * @param value Password string to validate
-   * @returns Array of missing requirements or null if valid
-   */
   password: (value: string) => {
     const errors: string[] = [];
 
@@ -74,9 +48,6 @@ export const fieldValidators = {
     return errors.length > 0 ? `Password must contain: ${errors.join(", ")}` : null;
   },
 
-  /**
-   * Validate URL format and accessibility
-   */
   url: (value: string) => {
     if (!value) return null;
 
@@ -91,9 +62,6 @@ export const fieldValidators = {
     }
   },
 
-  /**
-   * Validate required fields with custom messages
-   */
   required: (value: any, fieldName: string = "This field") => {
     if (!value || (typeof value === 'string' && value.trim() === '')) {
       return `${fieldName} is required`;
@@ -102,10 +70,6 @@ export const fieldValidators = {
   },
 };
 
-/**
- * Common form schemas
- * Pre-built schemas for frequently used forms
- */
 export const formSchemas = {
   login: z.object({
     email: commonValidations.email,
@@ -157,14 +121,7 @@ export const formSchemas = {
   }),
 };
 
-/**
- * Form error formatting utilities
- * Standardizes error display across forms
- */
 export const formatFormErrors = {
-  /**
-   * Convert Zod errors to field-specific error messages
-   */
   fromZodError: (error: z.ZodError): Record<string, string> => {
     const fieldErrors: Record<string, string> = {};
 
@@ -176,9 +133,6 @@ export const formatFormErrors = {
     return fieldErrors;
   },
 
-  /**
-   * Convert API errors to displayable format
-   */
   fromApiError: (error: any): string => {
     if (typeof error === 'string') return error;
     if (error?.message) return error.message;
@@ -186,45 +140,26 @@ export const formatFormErrors = {
     return "An unexpected error occurred. Please try again.";
   },
 
-  /**
-   * Get field-specific error message
-   */
   getFieldError: (errors: Record<string, string>, fieldName: string): string | undefined => {
     return errors[fieldName];
   },
 };
 
-/**
- * Form state management utilities
- * Helpers for managing form state consistently
- */
 export const formHelpers = {
-  /**
-   * Check if form has any errors
-   */
   hasErrors: (errors: Record<string, string>): boolean => {
     return Object.keys(errors).length > 0;
   },
 
-  /**
-   * Get first error message for display
-   */
   getFirstError: (errors: Record<string, string>): string | undefined => {
     const keys = Object.keys(errors);
     return keys.length > 0 ? errors[keys[0]] : undefined;
   },
 
-  /**
-   * Clear specific field errors
-   */
   clearFieldError: (errors: Record<string, string>, fieldName: string): Record<string, string> => {
     const { [fieldName]: removed, ...rest } = errors;
     return rest;
   },
 
-  /**
-   * Validate single field
-   */
   validateField: (value: any, schema: z.ZodSchema): string | null => {
     const result = schema.safeParse(value);
     return result.success ? null : result.error.errors[0]?.message || "Invalid value";

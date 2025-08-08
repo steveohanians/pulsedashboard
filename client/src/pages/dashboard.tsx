@@ -23,7 +23,7 @@ import { MetricInsightBox } from "@/components/metric-insight-box";
 import { CompetitorModal } from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
-import { TRAFFIC_CHANNEL_COLORS, DEVICE_COLORS } from "@/utils/chartUtils";
+import { CHART_COLORS } from "@/utils/chartUtils";
 import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartGenerators";
@@ -33,17 +33,16 @@ import {
   processDeviceDistribution
 } from "@/utils/chartDataProcessor";
 import { 
-  getMetricFallback,
   shouldConvertToPercentage,
   shouldConvertToMinutes 
 } from "@/utils/chartUtils";
 // PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 
-// Using TRAFFIC_CHANNEL_COLORS from consolidated constants
+
 
 const getChannelColor = (channelName: string): string => {
-  return TRAFFIC_CHANNEL_COLORS[channelName as keyof typeof TRAFFIC_CHANNEL_COLORS] || TRAFFIC_CHANNEL_COLORS.Other;
+  return CHART_COLORS[channelName as keyof typeof CHART_COLORS] || CHART_COLORS.Other;
 };
 
 export default function Dashboard() {
@@ -530,7 +529,7 @@ export default function Dashboard() {
             name: channel.name,
             value: value,
             percentage: value,
-            color: TRAFFIC_CHANNEL_COLORS[channel.name as keyof typeof TRAFFIC_CHANNEL_COLORS] || TRAFFIC_CHANNEL_COLORS.Other
+            color: CHART_COLORS[channel.name as keyof typeof CHART_COLORS] || CHART_COLORS.Other
           };
         });
 
@@ -1711,7 +1710,7 @@ export default function Dashboard() {
                             metricName,
                             displayMode: 'individual',
                             sourceType: 'Competitor',
-                            fallbackValue: getMetricFallback(metricName),
+                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
                             convertToPercentage: shouldConvertToPercentage(metricName),
                             convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
@@ -1730,7 +1729,7 @@ export default function Dashboard() {
                             metricName,
                             displayMode: 'individual',
                             sourceType: 'Competitor',
-                            fallbackValue: getMetricFallback(metricName),
+                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
                             convertToPercentage: shouldConvertToPercentage(metricName),
                             convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
@@ -1761,7 +1760,7 @@ export default function Dashboard() {
                             metricName,
                             displayMode: 'individual',
                             sourceType: 'Competitor',
-                            fallbackValue: getMetricFallback(metricName),
+                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
                             convertToPercentage: shouldConvertToPercentage(metricName),
                             convertToMinutes: shouldConvertToMinutes(metricName)
                           })}
@@ -1814,7 +1813,7 @@ export default function Dashboard() {
                               metricName,
                               displayMode: 'individual',
                               sourceType: 'Competitor',
-                              fallbackValue: getMetricFallback(metricName),
+                              fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
                               convertToPercentage: shouldConvertToPercentage(metricName),
                               convertToMinutes: shouldConvertToMinutes(metricName)
                             })}
@@ -1831,7 +1830,7 @@ export default function Dashboard() {
                               metricName,
                               displayMode: 'individual',
                               sourceType: 'Competitor',
-                              fallbackValue: getMetricFallback(metricName),
+                              fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
                               convertToPercentage: shouldConvertToPercentage(metricName),
                               convertToMinutes: shouldConvertToMinutes(metricName)
                             })}

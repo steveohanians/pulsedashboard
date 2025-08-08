@@ -1,8 +1,4 @@
-/**
- * Client-side input validation for user context - consolidated patterns
- * Uses shared validation patterns to ensure consistency with server-side validation
- * This provides immediate feedback to users before sending to the server
- */
+// Client-side input validation using shared patterns for consistency
 
 import {
   PROMPT_INJECTION_PATTERNS,
@@ -18,40 +14,38 @@ export interface ValidationResult {
   error?: string;
 }
 
-/**
- * Validates user input on the client side
- * Provides immediate feedback before server submission
- */
 export function validateUserInput(input: string): ValidationResult {
   const warnings: string[] = [];
   let isValid = true;
 
-  // Length check using consolidated limits
+  // Length and empty input checks
   if (input.length > VALIDATION_LIMITS.MAX_INPUT_LENGTH) {
     warnings.push(`Input exceeds ${VALIDATION_LIMITS.MAX_INPUT_LENGTH} characters (${input.length} characters)`);
   }
 
-  // Empty or too short check
   if (!input.trim() || input.trim().length < VALIDATION_LIMITS.MIN_INPUT_LENGTH) {
-    return {
-      isValid: false,
-      warnings: [],
-      error: "Please provide meaningful context (at least 3 characters)"
-    };
+    return { isValid: false, warnings: [], error: "Please provide meaningful context (at least 3 characters)" };
   }
 
-  // Prompt injection detection using consolidated patterns
+  // Pattern validation checks
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(input)) {
-      return {
-        isValid: false,
-        warnings: [],
-        error: "Input contains patterns that could interfere with AI analysis"
-      };
+      return { isValid: false, warnings: [], error: "Input contains patterns that could interfere with AI analysis" };
     }
   }
 
-  // HTML/Script detection using consolidated patterns
+  for (const pattern of PROFANITY_PATTERNS) {
+    if (pattern.test(input)) {
+      return { isValid: false, warnings: [], error: "Content contains inappropriate language" };
+    }
+  }
+
+  for (const pattern of OFF_TOPIC_PATTERNS) {
+    if (pattern.test(input)) {
+      return { isValid: false, warnings: [], error: "Content appears off-topic for business analytics" };
+    }
+  }
+
   for (const pattern of HTML_SCRIPT_PATTERNS) {
     if (pattern.test(input)) {
       warnings.push("HTML or script content detected and will be removed");
@@ -59,46 +53,16 @@ export function validateUserInput(input: string): ValidationResult {
     }
   }
 
-  // Profanity detection using consolidated patterns
-  for (const pattern of PROFANITY_PATTERNS) {
-    if (pattern.test(input)) {
-      return {
-        isValid: false,
-        warnings: [],
-        error: "Content contains inappropriate language"
-      };
-    }
-  }
-
-  // Off-topic detection using consolidated patterns
-  for (const pattern of OFF_TOPIC_PATTERNS) {
-    if (pattern.test(input)) {
-      return {
-        isValid: false,
-        warnings: [],
-        error: "Content appears off-topic for business analytics"
-      };
-    }
-  }
-
-  // Excessive special characters
+  // Special character check
   const specialCharCount = (input.match(/[{}$`\\]/g) || []).length;
   if (specialCharCount > 10) {
     warnings.push("Input contains many special characters which may be modified");
   }
 
-  // Removed validation warnings per user request - keeping only character count
-
-  return {
-    isValid,
-    warnings,
-  };
+  return { isValid, warnings };
 }
 
-/**
- * Sanitizes input for display purposes only
- * Server-side sanitization is the authoritative version
- */
+// Sanitizes input for display only - server-side is authoritative
 export function previewSanitizedInput(input: string): string {
   return input
     .trim()

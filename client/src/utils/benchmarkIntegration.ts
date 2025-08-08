@@ -10,7 +10,7 @@ import {
   processDeviceDistribution
 } from './chartDataProcessor';
 import { 
-  getMetricFallback,
+  getDefaultMetricValue,
   shouldConvertToPercentage,
   shouldConvertToMinutes 
 } from './chartUtils';
@@ -31,7 +31,7 @@ export function generateBenchmarkChartData(
     metricName,
     displayMode: 'individual', // Show each benchmark company separately
     sourceType: 'Benchmark',
-    fallbackValue: getMetricFallback(metricName),
+    fallbackValue: getDefaultMetricValue(metricName, 'Benchmark'),
     convertToPercentage: shouldConvertToPercentage(metricName),
     convertToMinutes: shouldConvertToMinutes(metricName)
   });
@@ -100,7 +100,7 @@ const newApproachExample = `
     metricName,
     displayMode: 'individual',
     sourceType: 'Benchmark',
-    fallbackValue: getMetricFallback(metricName),
+    fallbackValue: getDefaultMetricValue(metricName, 'Benchmark'),
     convertToPercentage: shouldConvertToPercentage(metricName),
     convertToMinutes: shouldConvertToMinutes(metricName)
   })}

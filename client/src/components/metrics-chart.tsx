@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DATA_SOURCE_COLORS } from '@/utils/chartUtils';
+import { CHART_COLORS } from '@/utils/chartUtils';
 
 interface MetricsChartProps {
   metricName: string;
@@ -36,7 +36,7 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
   const chartDataPoints = Object.entries(data).map(([key, value]) => ({
     name: key,
     value: Math.round(value * 10) / 10,
-    fill: DATA_SOURCE_COLORS[key as keyof typeof DATA_SOURCE_COLORS] || 'hsl(var(--color-default))'
+    fill: CHART_COLORS[key as keyof typeof CHART_COLORS] || 'hsl(var(--color-default))'
   }));
 
   return (
