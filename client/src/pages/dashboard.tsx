@@ -1442,8 +1442,8 @@ export default function Dashboard() {
                     month: '2-digit'
                   });
                   const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
                   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
                   displayText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 } else if (timePeriod === "Last Quarter") {
@@ -1455,8 +1455,8 @@ export default function Dashboard() {
                     month: '2-digit'
                   });
                   const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
                   const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
                   
                   // Calculate start month (2 months before target month)
@@ -1475,8 +1475,8 @@ export default function Dashboard() {
                     month: '2-digit'
                   });
                   const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')!.value);
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
+                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
                   
                   // End date is previous month (July 2025)
                   const endDate = new Date(ptYear, ptMonth - 1, 1);
