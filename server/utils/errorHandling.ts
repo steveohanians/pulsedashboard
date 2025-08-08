@@ -1,21 +1,5 @@
 /**
- * Error Handling Utilities - Enterprise-grade error management system for comprehensive application observability.
- * Provides structured error handling, contextual logging, and standardized API error responses across the entire platform.
- * 
- * Core Features:
- * - Structured error creation with comprehensive context tracking
- * - Standardized error codes for consistent error categorization
- * - Environment-aware error response formatting
- * - Comprehensive logging integration for monitoring and debugging
- * - Type-safe error handling patterns for enhanced developer experience
- * - Middleware integration for automatic error processing
- * 
- * Error Management Architecture:
- * - Hierarchical error classification (Authentication, Data, External Services, General)
- * - Context preservation throughout error lifecycle for debugging
- * - Secure error sanitization for production environments
- * - Standardized HTTP status code mapping for REST API compliance
- * - Structured logging with error correlation for monitoring systems
+ * Enterprise error management with structured error handling and contextual logging.
  * 
  * Error Categories:
  * - Authentication & Authorization: Session management, access control, admin requirements
@@ -27,80 +11,35 @@
  * Production Considerations:
  * - Sensitive data sanitization in error responses
  * - Stack trace filtering for security
- * - Structured error correlation for monitoring integration
- * - Performance-optimized error handling patterns
- * 
- * Integration Patterns:
- * - Express middleware for automatic error processing
- * - Async handler wrapping for promise-based route handling
- * - Quick response helpers for common error scenarios
- * - Context-aware error creation with operation tracking
- * 
- * Monitoring & Observability:
- * - Comprehensive error logging with structured metadata
- * - Error correlation tracking across request lifecycle
- * - Performance impact monitoring for error handling overhead
- * - Error pattern analysis for system health assessment
- * 
- * @module ErrorHandling
+ * - Context preservation throughout error lifecycle for debugging
  */
 
 import { Response } from 'express';
 import logger from './logger';
 
-// ============================
-// TYPE DEFINITIONS AND INTERFACES
-// ============================
-
-/**
- * Error context interface for comprehensive error tracking and debugging.
- * Captures essential request and operation context for error analysis.
- */
 export interface ErrorContext {
-  /** Operation being performed when error occurred */
   operation: string;
-  /** Client ID associated with the operation */
   clientId?: string;
-  /** User ID associated with the operation */
   userId?: string;
-  /** Full endpoint path for API errors */
   endpoint?: string;
-  /** ISO timestamp of error occurrence */
   timestamp?: string;
 }
 
-/**
- * Structured error format for consistent error handling across the application.
- * Provides comprehensive error information while maintaining security boundaries.
- */
 export interface StructuredError {
-  /** Standardized error code for categorization */
   code: string;
-  /** Human-readable error message */
   message: string;
-  /** Additional error details (sanitized for production) */
-  details?: any;
-  /** User-actionable hint for error resolution */
+  details?: any; // Sanitized for production
   hint?: string;
-  /** ISO timestamp of error creation */
   timestamp: string;
-  /** Error context for debugging and monitoring */
   context?: ErrorContext;
 }
 
-// ============================
-// ERROR CODE DEFINITIONS
-// ============================
-
 /**
- * Comprehensive error code enumeration for consistent error categorization throughout the application.
- * Provides standardized error identification with hierarchical organization for enhanced debugging.
- * 
- * Categories and Usage:
+ * Standardized error codes for consistent categorization.
  * 
  * Authentication & Authorization:
  * - AUTH_REQUIRED: User not authenticated, requires login
- * - ACCESS_DENIED: Authenticated but insufficient permissions
+ * - ACCESS_DENIED: Authenticated but insufficient permissions  
  * - INVALID_SESSION: Session expired or corrupted
  * - ADMIN_REQUIRED: Operation requires administrative privileges
  * 

@@ -1,62 +1,23 @@
 /**
- * Production Logger - Centralized logging utility for comprehensive system observability.
- * Provides structured logging with environment-aware behavior, specialized handlers, and consistent formatting.
- * 
- * Core Features:
- * - Environment-aware debug logging (development only)
- * - Structured message formatting with ISO timestamps
- * - Metadata support for contextual information
- * - Specialized handlers for database and security events
- * - JSON serialization for complex data structures
- * - Consistent log level management and formatting
+ * Production logger with environment-aware behavior and structured formatting.
+ * Debug messages suppressed in production for performance.
  * 
  * Environment Behavior:
  * - Development: All log levels including debug messages
  * - Production: Error, warning, and info levels only (debug suppressed)
- * - Automatic NODE_ENV detection for environment-specific behavior
- * 
- * Log Levels (in order of severity):
- * - ERROR: System errors, exceptions, and critical failures
- * - WARN: Warning conditions and potential issues  
- * - INFO: General application information and events
- * - DEBUG: Detailed debugging information (development only)
  * 
  * Specialized Handlers:
  * - Database operations logging with context preservation
  * - Security event logging with high severity and enhanced metadata
- * - Structured metadata serialization for complex objects
- * 
- * Usage Patterns:
- * - Standard logging: logger.info('Message', { key: 'value' })
- * - Database events: logger.database('Query executed', { table: 'users' })
- * - Security events: logger.security('Login attempt', { username, ip })
- * 
- * @module Logger
  */
 
-// ============================
-// TYPE DEFINITIONS AND CONSTANTS
-// ============================
-
-/**
- * Log level enumeration for consistent level management.
- * Defines available log levels with their string representations.
- */
 interface LogLevel {
-  /** Critical errors and system failures */
   ERROR: 'error';
-  /** Warning conditions and potential issues */
   WARN: 'warn';
-  /** General application information */
   INFO: 'info';
-  /** Detailed debugging information (development only) */
   DEBUG: 'debug';
 }
 
-/**
- * Log level configuration with string mappings for consistent formatting.
- * Used throughout the logger for level identification and message formatting.
- */
 const LOG_LEVELS: LogLevel = {
   ERROR: 'error',
   WARN: 'warn',
@@ -64,43 +25,9 @@ const LOG_LEVELS: LogLevel = {
   DEBUG: 'debug'
 };
 
-// ============================
-// CORE LOGGER CLASS
-// ============================
-
-/**
- * Production logger implementation with environment-aware behavior and structured formatting.
- * Provides comprehensive logging capabilities with specialized handlers for different event types.
- * 
- * Key Features:
- * - Automatic environment detection for debug behavior control
- * - Consistent timestamp formatting using ISO 8601 standard
- * - Structured metadata serialization for complex objects
- * - Level-based message formatting with uppercase identifiers
- * - Environment-specific debug message suppression
- */
 class Logger {
-  /** Environment flag for development-specific behavior (debug logging) */
   private isDevelopment = process.env.NODE_ENV === 'development';
   
-  /**
-   * Formats log messages with consistent structure and metadata serialization.
-   * Creates standardized log entries with ISO timestamps and optional contextual data.
-   * 
-   * Format Structure:
-   * [YYYY-MM-DDTHH:mm:ss.sssZ] LEVEL: message {metadata}
-   * 
-   * Features:
-   * - ISO 8601 timestamp formatting for consistent time representation
-   * - Uppercase level identifiers for visual scanning
-   * - JSON serialization of metadata objects for structured logging
-   * - Null-safe metadata handling
-   * 
-   * @param level - Log level string for message identification
-   * @param message - Primary log message content
-   * @param meta - Optional metadata object for contextual information
-   * @returns Formatted log string ready for output
-   */
   private formatMessage(level: string, message: string, meta?: any): string {
     const timestamp = new Date().toISOString();
     const baseMsg = `[${timestamp}] ${level.toUpperCase()}: ${message}`;

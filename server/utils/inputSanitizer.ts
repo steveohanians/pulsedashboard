@@ -1,14 +1,5 @@
 /**
- * Input Sanitizer - Comprehensive security utility for validating and sanitizing user input in AI-powered analytics contexts.
- * Provides multi-layered protection against prompt injection attacks, XSS vulnerabilities, and content quality issues.
- * 
- * Security Features:
- * - Prompt injection detection and blocking using pattern-based analysis
- * - XSS prevention through HTML/script tag removal and escaping
- * - Content appropriateness filtering (profanity, off-topic detection)  
- * - Business context relevance validation for analytics-focused discussions
- * - Template literal and curly brace escaping for prompt template safety
- * - Quality assessment for vague or repetitive content
+ * Security utility for validating and sanitizing user input in AI-powered analytics contexts.
  * 
  * Multi-Layer Defense Strategy:
  * 1. Length validation and truncation for DoS prevention
@@ -23,11 +14,8 @@
  * 
  * AI Context Security:
  * - Protects against adversarial prompts that attempt to manipulate AI behavior
- * - Ensures user inputs maintain business analytics focus
  * - Prevents context pollution from irrelevant or harmful content
  * - Maintains data integrity in AI-generated insights
- * 
- * @module InputSanitizer
  */
 
 import { logger } from './logger';
@@ -42,40 +30,16 @@ import {
   type ValidationResult
 } from '@shared/validationPatterns';
 
-// ============================
-// TYPE DEFINITIONS
-// ============================
-
-/**
- * Result of input sanitization process with security flags and warnings.
- * Provides comprehensive feedback on input safety and modifications made.
- */
 export interface SanitizationResult {
-  /** Sanitized and safe version of the input text */
   sanitized: string;
-  /** Whether input was blocked due to security concerns */
   isBlocked: boolean;
-  /** Array of warnings about content issues or modifications */
   warnings: string[];
 }
-
-// ============================
-// SECURITY CONFIGURATION CONSTANTS
-// ============================
 
 /**
  * Business and analytics relevance keywords for context validation.
  * Ensures user inputs maintain focus on legitimate business analytics discussions.
- * 
- * Categories:
- * - Core Metrics: traffic, users, customers, visitors, conversion, bounce, session
- * - Marketing: marketing, campaign, advertising, SEO, analytics, metrics, performance
- * - Business: business, company, product, service, sales, revenue, growth
- * - Technical: mobile, desktop, browser, page, content, UX, UI, design
- * - Infrastructure: technical, server, downtime, loading, speed, optimization
- * - Competitive: competitor, industry, market, benchmark, comparison, target
- * 
- * Keywords selected based on common analytics dashboard terminology and business intelligence vocabulary.
+ * Keywords selected based on common analytics dashboard terminology.
  */
 const BUSINESS_RELEVANCE_KEYWORDS = [
   'website', 'traffic', 'users', 'customers', 'visitors', 'conversion', 'bounce', 'session',
@@ -86,23 +50,9 @@ const BUSINESS_RELEVANCE_KEYWORDS = [
   'competitor', 'industry', 'market', 'benchmark', 'comparison', 'target'
 ];
 
-// ============================
-// CORE SANITIZATION FUNCTIONS
-// ============================
-
 /**
- * Performs comprehensive sanitization of user input with multi-layered security validation.
  * Primary defense against prompt injection, XSS attacks, and content quality issues in AI contexts.
- * 
- * Security Layers:
- * - Length validation with truncation for DoS prevention
- * - Prompt injection pattern detection using sophisticated regex analysis
- * - Profanity and inappropriate content filtering
- * - Off-topic content detection to maintain business focus
- * - Business relevance scoring for analytics context validation
- * - Content quality assessment for meaningful interactions
- * - HTML/script tag removal for XSS prevention
- * - Template literal and brace escaping for prompt template safety
+ * CRITICAL: All security layers must execute - skipping any layer creates vulnerability gaps.
  * - Whitespace normalization and cleanup
  * 
  * Threat Models Addressed:

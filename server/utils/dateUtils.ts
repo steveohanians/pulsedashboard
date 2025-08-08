@@ -1,78 +1,31 @@
 /**
- * Date Utilities - Comprehensive time period handling for dashboard analytics.
- * Provides dynamic period mapping, display formatting, and chart labeling functionality.
- * 
- * Core Features:
- * - Dynamic period mapping based on Pacific Time calculations
- * - Automatic dashboard period updates as time progresses
- * - Chart-friendly period label generation
- * - Display-ready time period formatting for UI components
- * - Database integration for recent data period detection
- * 
- * Time Period Logic:
- * - Uses Pacific Time for consistent period calculations
- * - Generates Last Month, Last Quarter, and Last Year periods
- * - Provides chronological ordering for proper chart display
- * - Handles edge cases for month/year boundaries
- * 
- * @module DateUtils
+ * Date utilities for dashboard analytics with Pacific Time-based period calculations.
+ * Handles edge cases for month/year boundaries and provides chronological ordering for charts.
  */
 
 import logger from "./logger";
 import { parsePacificTimeDate } from "./timePeriodsGenerator";
 
-// ============================
-// CONSTANTS
-// ============================
-
-/** Standard month abbreviations for chart labels */
 const MONTH_ABBREVIATIONS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ] as const;
 
-/** Number of months in a quarter */
 const QUARTER_MONTHS = 3;
-
-/** Number of months in a year */
 const YEAR_MONTHS = 12;
 
-// ============================
-// INTERNAL HELPER FUNCTIONS
-// ============================
-
-/**
- * Formats a date object into YYYY-MM period string.
- * 
- * @param date - Date object to format
- * @returns Period string in YYYY-MM format
- */
 function formatDateToPeriod(date: Date): string {
   const year = date.getFullYear();
   const month = date.getMonth() + 1; // Convert from 0-indexed to 1-indexed
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-/**
- * Creates a new date offset by the specified number of months.
- * 
- * @param baseDate - Base date to offset from
- * @param monthOffset - Number of months to offset (negative for past, positive for future)
- * @returns New Date object offset by the specified months
- */
 function createDateWithMonthOffset(baseDate: Date, monthOffset: number): Date {
   const offsetDate = new Date(baseDate);
   offsetDate.setMonth(offsetDate.getMonth() + monthOffset);
   return offsetDate;
 }
 
-/**
- * Generates an array of period strings for a specified number of months ending at a target date.
- * 
- * @param targetDate - End date for the period range
- * @param monthCount - Number of months to include in the range
- * @returns Array of period strings in chronological order
- */
 function generatePeriodRange(targetDate: Date, monthCount: number): string[] {
   const periods: string[] = [];
   
@@ -84,25 +37,10 @@ function generatePeriodRange(targetDate: Date, monthCount: number): string[] {
   return periods;
 }
 
-// ============================
-// PERIOD MAPPING FUNCTIONS
-// ============================
-
 /**
- * Generates dynamic time period mappings based on Pacific Time for consistent dashboard analytics.
- * Creates comprehensive period arrays for Last Month, Last Quarter, and Last Year views.
- * 
- * Features:
- * - Pacific Time-based calculations for consistent cross-timezone analytics
- * - Automatic period advancement as time progresses
- * - Chronologically ordered periods for proper chart display
- * - Comprehensive logging for debugging and monitoring
- * - Support for multiple period types (Month, Quarter, Year, Custom)
- * 
- * Period Logic:
- * - Last Month: Single month period (previous complete month)
- * - Last Quarter: Exactly 3 months ending with the last complete month
- * - Last Year: Exactly 12 months ending with the last complete month
+ * Generates dynamic time period mappings based on Pacific Time.
+ * Period Logic: Last Month (single), Last Quarter (3 months), Last Year (12 months).
+ * All periods end with the last complete month to ensure data completeness.
  * - Custom Date Range: Defaults to last complete month
  * 
  * @returns Object mapping period type names to arrays of period strings in YYYY-MM format

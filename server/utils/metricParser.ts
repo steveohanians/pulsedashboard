@@ -1,55 +1,17 @@
 /**
- * Metric Parser - Robust utilities for parsing heterogeneous metric data from multiple sources.
- * Handles conversion between different metric value formats (numbers, JSON objects, strings) 
- * commonly encountered in analytics data from GA4, SEMrush, and internal calculations.
- * 
- * Core Features:
- * - Safe parsing of mixed data types (numbers, strings, JSON objects)
- * - Percentage data extraction with optional session counts
- * - Comprehensive error handling with structured logging
- * - Null-safe operations with fallback strategies
- * - Support for SEMrush competitor metrics and CD_Avg aggregated data
- * 
- * Data Sources Support:
- * - GA4 Analytics: Plain numeric values and percentage objects
- * - SEMrush: JSON-encoded metric objects with value/percentage properties
- * - CD_Avg: Calculated average metrics in JSON format
- * - Competitor Data: Various formats depending on data provider
- * 
- * @module MetricParser
+ * Robust utilities for parsing heterogeneous metric data from GA4, SEMrush, and internal calculations.
+ * Handles mixed data types (numbers, JSON objects, strings) with null-safe operations.
  */
 
 import logger from './logger';
 
-// ============================
-// TYPE DEFINITIONS
-// ============================
-
-/**
- * Structured metric value object for JSON-encoded metrics.
- * Commonly used by SEMrush API responses and internal aggregated calculations.
- */
 export interface MetricValueObject {
-  /** Primary numeric value of the metric */
   value: number;
-  /** Optional data source identifier */
   source?: string;
-  /** Optional percentage representation (for traffic/device metrics) */
-  percentage?: number;
-  /** Optional session count (for percentage-based metrics) */
-  sessions?: number;
+  percentage?: number; // For traffic/device metrics
+  sessions?: number; // For percentage-based metrics
 }
 
-// ============================
-// INTERNAL HELPER FUNCTIONS
-// ============================
-
-/**
- * Safely converts a numeric value to a valid number, handling edge cases.
- * 
- * @param value - Value to convert to number
- * @returns Valid number or null if conversion fails
- */
 function safeNumberConversion(value: any): number | null {
   if (typeof value === 'number') {
     return isNaN(value) ? null : value;
@@ -63,13 +25,6 @@ function safeNumberConversion(value: any): number | null {
   return null;
 }
 
-/**
- * Attempts to parse a string as JSON with structured error handling.
- * 
- * @param jsonString - String to parse as JSON
- * @param originalValue - Original value for logging context
- * @returns Parsed object or null if parsing fails
- */
 function safeJsonParse(jsonString: string, originalValue: any): any | null {
   try {
     const parsed = JSON.parse(jsonString);
@@ -77,7 +32,6 @@ function safeJsonParse(jsonString: string, originalValue: any): any | null {
     // Log successful parsing for debugging
     if (typeof parsed === 'object' && parsed !== null && 'value' in parsed) {
       logger.debug('Metric JSON parsing successful', {
-        originalValue: typeof originalValue === 'string' ? originalValue.substring(0, 50) + '...' : originalValue,
         hasValueProperty: 'value' in parsed,
         parsedType: typeof parsed.value
       });
@@ -87,7 +41,6 @@ function safeJsonParse(jsonString: string, originalValue: any): any | null {
   } catch (error) {
     // Log parsing failures with context
     logger.debug('Metric JSON parsing failed', {
-      originalValue: typeof originalValue === 'string' ? originalValue.substring(0, 100) + '...' : originalValue,
       errorMessage: error instanceof Error ? error.message : String(error)
     });
     
@@ -95,13 +48,9 @@ function safeJsonParse(jsonString: string, originalValue: any): any | null {
   }
 }
 
-// ============================
-// NUMERIC VALUE PARSING FUNCTIONS
-// ============================
-
 /**
  * Safely parses metric values from heterogeneous data sources into numeric format.
- * Handles multiple input formats commonly encountered in analytics data processing.
+ * Handles GA4 (numbers), SEMrush (JSON objects), and CD_Avg (aggregated JSON) formats.
  * 
  * Features:
  * - Multi-format support: numbers, strings, JSON objects
