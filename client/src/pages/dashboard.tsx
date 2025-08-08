@@ -231,47 +231,34 @@ export default function Dashboard() {
     return result;
   };
 
-  // 2. Enhanced cache invalidation function  
+  // 2. Targeted cache invalidation without full cache clear  
   const invalidateInsightsCache = async (clientId: string) => {
-    logger.info("🔄 Starting enhanced cache invalidation");
+    logger.info("🔄 Starting targeted cache invalidation");
     
-    // More aggressive cache clearing - remove all cached data immediately
+    // Remove specific insight cache entries
     queryClient.removeQueries({ queryKey: [`/api/insights/${clientId}`] });
     queryClient.removeQueries({ queryKey: ["/api/insights"] });
-    queryClient.removeQueries({ queryKey: ["/api/dashboard"] });
-    queryClient.removeQueries({ queryKey: ["/api/metric-insights"] });
     
-    logger.info("🗑️ Removed all cached queries");
+    logger.info("🗑️ Removed insight cache entries");
     
-    // Also invalidate in case of any remaining cache entries
+    // Invalidate to trigger refetch
     queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/insights"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
     
-    logger.info("♻️ Invalidated remaining cache entries");
+    logger.info("♻️ Invalidated insight cache keys");
     
-    // Clear the query cache entirely for insights
-    queryClient.clear();
-    
-    logger.info("🧹 Cleared entire query cache");
-    
-    // Force immediate refetch of critical data
+    // Force immediate refetch of insights data
     try {
-      const [dashboardResult, insightsResult] = await Promise.all([
-        dashboardQuery.refetch(),
-        refetchInsights()
-      ]);
-      
-      logger.info("✅ Refetch completed", { 
-        dashboardSuccess: dashboardResult.isSuccess,
-        insightsSuccess: insightsResult.isSuccess 
+      const insightsResult = await refetchInsights();
+      logger.info("✅ Insights refetch completed", { 
+        success: insightsResult.isSuccess,
+        dataLength: (insightsResult.data as any)?.insights?.length || 0
       });
     } catch (error) {
-      logger.error("❌ Refetch failed", error);
+      logger.error("❌ Insights refetch failed", error);
     }
     
-    logger.info("✅ Enhanced cache invalidation completed");
+    logger.info("✅ Targeted cache invalidation completed");
   };
 
   // 3. Enhanced UI state reset function with forced re-render
@@ -334,10 +321,7 @@ export default function Dashboard() {
     },
     onSuccess: (result) => {
       logger.info("🎉 Systematic clearing completed successfully", result);
-      
-      // Force a complete page refresh to ensure all components reset
-      logger.info("🔄 Forcing page refresh to ensure complete UI reset");
-      window.location.reload();
+      logger.info("✅ UI should now show clean state with generate buttons");
     },
     onError: (error) => {
       logger.error("❌ Systematic clearing failed", { 

@@ -88,31 +88,36 @@ export function MetricInsightBox({ metricName, clientId, timePeriod, metricData,
    * Effect hook for loading stored insights with preloaded optimization.
    * Prioritizes preloaded insights to minimize API calls and improve performance.
    * Handles status reporting to parent components for dashboard coordination.
+   * Responds to preloadedInsight changes to reset component when insights are cleared.
    */
   useEffect(() => {
     const loadStoredInsight = async () => {
-      // Prioritize preloaded insights for performance optimization
-      if (preloadedInsight) {
-        logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
-
-        setInsight({
-          contextText: preloadedInsight.contextText,
-          insightText: preloadedInsight.insightText,
-          recommendationText: preloadedInsight.recommendationText,
-          status: preloadedInsight.status,
-          isTyping: false,
-          isFromStorage: true
-        });
-        
-        // Notify parent component of performance status for dashboard coordination
-        if (preloadedInsight.status && onStatusChange) {
-          onStatusChange(preloadedInsight.status);
+      // Check if preloadedInsight was cleared (null/undefined)
+      if (!preloadedInsight) {
+        logger.component('MetricInsightBox', `No preloaded insight for ${metricName} - resetting to generate state`);
+        setInsight(null);
+        if (onStatusChange) {
+          onStatusChange(undefined);
         }
         return;
       }
 
-      // No fallback loading - maintain authentic data integrity
-      logger.component('MetricInsightBox', `No preloaded insight available for ${metricName} - will show generate button`);
+      // Use preloaded insights for performance optimization
+      logger.component('MetricInsightBox', `Using preloaded insight for ${metricName}`);
+
+      setInsight({
+        contextText: preloadedInsight.contextText,
+        insightText: preloadedInsight.insightText,
+        recommendationText: preloadedInsight.recommendationText,
+        status: preloadedInsight.status,
+        isTyping: false,
+        isFromStorage: true
+      });
+      
+      // Notify parent component of performance status for dashboard coordination
+      if (preloadedInsight.status && onStatusChange) {
+        onStatusChange(preloadedInsight.status);
+      }
     };
     
     loadStoredInsight();
