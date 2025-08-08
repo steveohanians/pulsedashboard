@@ -534,7 +534,7 @@ export function AIInsights({
                 {hasCustomContext && (
                   <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300 rounded-md text-xs border border-blue-200 dark:border-blue-800">
                     <Sparkles className="h-3 w-3" />
-                    <span>Enhanced</span>
+                    <span>With Context</span>
                   </div>
                 )}
                 
