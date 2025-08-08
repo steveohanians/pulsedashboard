@@ -4,12 +4,10 @@ import "./global.css";
 
 // Nuclear option: completely disable error overlay and runtime error plugin
 (window as any).process = { env: { NODE_ENV: 'production', DISABLE_OVERLAY: 'true' } };
-(import.meta as any).env = { 
-  ...import.meta.env, 
-  NODE_ENV: 'production',
-  VITE_DISABLE_ERROR_OVERLAY: 'true',
-  DISABLE_ERROR_OVERLAY: 'true'
-};
+// Note: import.meta.env is read-only, so we can't reassign it
+if (typeof window !== 'undefined') {
+  (window as any).VITE_DISABLE_ERROR_OVERLAY = 'true';
+}
 
 // Override __REPLIT_ERROR_PLUGIN_ENABLED if it exists
 (window as any).__REPLIT_ERROR_PLUGIN_ENABLED = false;
