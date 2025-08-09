@@ -123,14 +123,15 @@ router.post('/cleanup-and-fetch/:clientId', requireAuth, requireAdminAuth, async
     await clearSyntheticDataForClient(clientId);
     
     // Step 2: Call smart GA4 fetcher (compat mode uses legacy service sequence)
-    const results = GA4_COMPAT_MODE 
-      ? await smartGA4DataFetcher({ clientId }) // Legacy behavior: no force unless explicitly enabled
-      : (GA4_FORCE_ENABLED 
-          ? await smartGA4DataFetcher({ 
-              clientId, 
-              force: true // Force bypass cache and refresh data
-            })
-          : await smartGA4DataFetcher({ clientId })); // Historical behavior
+    let fetchOptions: { clientId: string; force?: boolean } = { clientId };
+
+    if (GA4_COMPAT_MODE) {
+      fetchOptions = { clientId };
+    } else if (GA4_FORCE_ENABLED) {
+      fetchOptions = { clientId, force: true };
+    }
+
+    const results = await smartGA4DataFetcher(fetchOptions);
     
     // Log completion with audit trail
     logger.info(`Cleanup and fetch completed for ${clientId}`, {
