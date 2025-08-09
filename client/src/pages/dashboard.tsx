@@ -107,19 +107,21 @@ export default function Dashboard() {
     return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  interface DashboardMetric {
+    metricName: string;
+    value: string | number;
+    sourceType: string;
+    channel?: string;
+    competitorId?: string;
+  }
+
   interface DashboardData {
     client: {
       id: string;
       name: string;
       websiteUrl: string;
     };
-    metrics?: Array<{
-      metricName: string;
-      value: string;
-      sourceType: string;
-      channel?: string;
-      competitorId?: string;
-    }> | Record<string, Record<string, number>>;
+    metrics: DashboardMetric[];
     averagedMetrics?: Record<string, Record<string, number>>;
     timeSeriesData?: Record<string, Array<{
       metricName: string;
@@ -171,9 +173,9 @@ export default function Dashboard() {
 
   // Data processing and validation
   useEffect(() => {
-    if (dashboardData?.metrics && Array.isArray(dashboardData.metrics)) {
+    if (dashboardData?.metrics) {
       // Validate data structure for consistent processing
-      const competitorMetrics = dashboardData.metrics.filter((m: any) => m.sourceType === 'Competitor');
+      const competitorMetrics = dashboardData.metrics.filter((m: DashboardMetric) => m.sourceType === 'Competitor');
       if (competitorMetrics.length === 0) {
         console.warn('No competitor data available for analysis');
       }
@@ -321,9 +323,8 @@ export default function Dashboard() {
   }, [filtersData, businessSize, industryVertical]);
 
   const client = dashboardData?.client;
-  const rawMetrics = dashboardData?.metrics || [];
-  const metrics = Array.isArray(rawMetrics) ? rawMetrics : [];
-  const averagedMetrics = !Array.isArray(rawMetrics) ? rawMetrics : {};
+  const metrics = dashboardData?.metrics || [];
+  const averagedMetrics = dashboardData?.averagedMetrics || {};
   const timeSeriesData = dashboardData?.timeSeriesData;
   const isTimeSeries = dashboardData?.isTimeSeries;
   const periods = dashboardData?.periods;
@@ -344,8 +345,8 @@ export default function Dashboard() {
     }
     
     // DEBUG: Check raw metrics for Bounce Rate specifically
-    const bounceRateMetrics = Array.isArray(dashboardData?.metrics) ? 
-      dashboardData.metrics.filter((m: any) => m.metricName === 'Bounce Rate') : [];
+    const bounceRateMetrics = dashboardData?.metrics ? 
+      dashboardData.metrics.filter((m: DashboardMetric) => m.metricName === 'Bounce Rate') : [];
     // Bounce rate metrics processed
     
     // Calculate averages when multiple time periods are involved
