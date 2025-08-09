@@ -73,7 +73,7 @@ iframe[src*="__vite_plugin_runtime_error"] {
     --color-channel-social: 266 85% 58%;    /* Social Media - Purple */
     --color-channel-paid: 43 96% 56%;       /* Paid Search - Yellow */
     --color-channel-email: 329 86% 54%;     /* Email - Pink */
-    --color-channel-referral: 197 94% 43%;  /* Referral - Cyan */
+    --color-channel-referral: 22 95% 53%;  /* Referral - Burnt Orange #E67E22 */
     --color-channel-other: 220 9% 46%;      /* Other channels - Gray */
 
     /* Performance Indicator Colors */
