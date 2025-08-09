@@ -49,6 +49,7 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **Company Management**: Comprehensive company deletion system, robust company creation and validation including duplicate domain checking and SEMrush API health checks.
 - **Metrics Schema**: Overhauled with `cd_portfolio_company_id` and `benchmark_company_id` for proper three-way linking.
 - **Global Chart Data Processing Architecture**: Extracted fetching, parsing, fallback, and conversion logic into reusable utilities.
+- **Unified Color Management System**: Centralized color assignment across all six chart components with specialized functions (getChannelColors, getDeviceColors, getMetricsColors, getTimeSeriesColors, getCompetitorColorsArray) while preserving individual chart palettes and ensuring consistent colors for shared series.
 - **AI Insights Persistence**: Database-backed insights loading for persistence across sessions and page refreshes. Enhanced AI context for traffic channels and comprehensive JSON parsing.
 - **Utility Consolidation**: Systematic consolidation and refactoring of utility functions across the application to reduce code duplication and improve maintainability.
 - **Background Processing Concurrency Safety**: Enhanced background processor with separate retry queue, atomic retry operations, and elimination of concurrent modification issues during queue processing.
