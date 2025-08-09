@@ -14,7 +14,7 @@ import {
   insertGA4ServiceAccountSchema,
   updateGA4ServiceAccountSchema,
   insertGA4PropertyAccessSchema 
-} from '../../shared/schema';
+} from '@shared/schema';
 import { ga4ServiceAccountManager } from '../services/ga4/ServiceAccountManager';
 import { requireAuth, requireAdmin } from '../middleware/authMiddleware';
 import logger from '../utils/logging/logger';

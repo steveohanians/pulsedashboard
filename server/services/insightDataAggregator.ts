@@ -1,7 +1,7 @@
 import logger from '../utils/logging/logger.js';
 import type { IStorage } from '../storage.js';
 import type { Metric, Competitor } from '@shared/schema';
-import { parseMetricValue } from '../utils/metricParser.js';
+import { parseMetricValue } from '../utils/metricParser';
 
 export interface AggregatedMetricData {
   metricName: string;
