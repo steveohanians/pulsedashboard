@@ -1,0 +1,36 @@
+Goal: Verify that switching OPENAI_MODEL from "gpt-4o" to "gpt-5" keeps the AI insights JSON shape compatible with what the dashboard expects.
+
+Do the following WITHOUT changing existing app behavior:
+
+1) Locate the current JSON contract used for AI insights:
+   - Search server/services/openai.ts and server/services/ga4/** for where the OpenAI response is parsed or mapped.
+   - Search shared/* (e.g., shared/responsePatterns.ts, shared/schema.ts, shared/dataTransformers.ts) for any Zod/TypeScript types describing the insights payload.
+   - Search client for the consumer: client/src/components/dashboard/** and pages/insights.tsx (or similar) to see which keys the UI reads.
+
+2) Create a new script scripts/ai-schema-compat.ts that:
+   - Loads the schema/type for insights (prefer existing Zod schema; if none, define a strict Zod schema inferred from the current consumers).
+   - Invokes the existing OpenAI insight generation function(s) with 3–5 representative prompts covering:
+       a) single metric numeric output
+       b) device distribution output
+       c) traffic channel breakdown
+       d) competitor comparison
+   - Reads model name from process.env.OPENAI_MODEL.
+   - Validates each response against the schema.
+   - Prints a PASS/FAIL table per case; on FAIL:
+       * print the precise Zod error path + expected vs received types
+       * output a minimal “coercion suggestion” (see step 4) but DO NOT apply yet.
+   - Exit code 0 on full PASS, 1 if any FAIL.
+
+3) Wire an npm script in package.json:
+   "ai:compat": "ts-node --transpile-only scripts/ai-schema-compat.ts"
+
+4) Generate a suggested coercion function (but do not use it yet) inside scripts/ai-schema-compat.ts:
+   function coerceInsightToSchema(input: unknown): Insight { /* add minimal key renames, number/string coercions, enum normalization */ }
+   - Only print the function text when there are mismatches.
+
+5) Output:
+   - The new file scripts/ai-schema-compat.ts
+   - The package.json diff with the new script
+   - A short README note printed to console: how to run with GPT-4o vs GPT-5:
+       OPENAI_MODEL=gpt-4o npm run ai:compat
+       OPENAI_MODEL=gpt-5  npm run ai:compat
