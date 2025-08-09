@@ -1,6 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 import { parseMetricValue } from '../../utils/metricParser';
+import { generateTemporalVariationSync, getTimeSeriesColors, getCompetitorColorsArray } from '@/utils/chartUtils';
 
 // Custom diamond dot component
 import { DiamondDot } from '../shared/DiamondDot';
@@ -338,19 +339,9 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
 
   const clientKey = clientUrl || 'Client';
   
-  // Define colors for each area
-  const colors: Record<string, string> = {
-    [clientKey]: 'hsl(var(--color-client))',
-    'Industry Avg': 'hsl(var(--color-industry-avg))',
-    'Clear Digital Clients Avg': 'hsl(var(--color-cd-avg))',
-  };
-
-  // Additional colors for competitors using CSS variables
-  const competitorColors = [
-    'hsl(var(--color-competitor-1))',
-    'hsl(var(--color-competitor-2))', 
-    'hsl(var(--color-competitor-3))'
-  ];
+  // Use unified color system for consistent colors across charts
+  const colors = getTimeSeriesColors(clientKey, competitors);
+  const competitorColors = getCompetitorColorsArray();
 
   // Calculate fixed Y-axis domain based on all data
   const allValues: number[] = [];

@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { generateTemporalVariationSync, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain } from '@/utils/chartUtils';
+import { generateTemporalVariationSync, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, getTimeSeriesColors, getCompetitorColorsArray } from '@/utils/chartUtils';
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 import { logger } from '@/utils/logger';
 
@@ -297,19 +297,9 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
 
   const clientKey = clientUrl || 'Client';
   
-  // Define colors for each line
-  const colors: Record<string, string> = {
-    [clientKey]: 'hsl(var(--color-client))',
-    'Industry Avg': 'hsl(var(--color-industry-avg))',
-    'Clear Digital Clients Avg': 'hsl(var(--color-cd-avg))',
-  };
-
-  // Additional colors for competitors using CSS variables
-  const competitorColors = [
-    'hsl(var(--color-competitor-1))',
-    'hsl(var(--color-competitor-2))', 
-    'hsl(var(--color-competitor-3))'
-  ];
+  // Use unified color system for consistent colors across charts
+  const colors = getTimeSeriesColors(clientKey, competitors);
+  const competitorColors = getCompetitorColorsArray();
 
   // Calculate optimized Y-axis domain based on all data with better scaling
   const allValues: number[] = [];

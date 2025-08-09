@@ -1,0 +1,68 @@
+Goal
+Unify color assignment across SIX charts while allowing each chart to have its own palette, and ensuring series that should match across charts still share consistent colors. No behavioral changes besides color source wiring.
+
+Constraints
+- Minimal diffs; do not refactor unrelated logic.
+- No new third-party libs.
+- Keep accessibility and existing theme behavior (light/dark) intact.
+- Preserve existing final colors per chart (except intentional changes already approved, e.g., Referral).
+
+Step 1 — Inventory (NO edits yet)
+- List the six chart components/ids (file paths) and, for each chart:
+  - Which series/categories it renders (e.g., Direct, Organic, Referral, Social, Paid, Email).
+  - Where each series’ color currently comes from (JS constants, CSS vars, palette arrays, theme tokens).
+  - The resolved color value at runtime (hex or hsl()).
+- Identify series that are meant to be visually consistent across charts (e.g., “Direct” should look the same wherever it appears).
+
+Step 2 — Plan (NO edits yet)
+- Propose a centralized configuration:
+  - Create a `CHART_PALETTES` object keyed by chart key (e.g., 'trafficByChannel', 'conversions', …).
+  - Each chart key maps series names → color strings. Example:
+    {
+      trafficByChannel: { Direct: "var(--color-channel-direct)", Referral: "var(--color-channel-referral)", ... },
+      conversions:      { Direct: "var(--color-channel-direct)", Referral: "var(--color-channel-referral-alt)", ... }
+    }
+- If we already use semantic CSS vars (e.g., --color-channel-*), prefer those as the source; otherwise, use existing hex as fallback.
+- Add a tiny helper `getChartColor(chartKey: string, seriesKey: string)` that:
+  1) Looks up CHART_PALETTES[chartKey]?.[seriesKey],
+  2) If it’s a CSS variable token (HSL channel), returns `hsl(var(--token))`,
+  3) Else returns the hex fallback,
+  4) Is SSR-safe (returns fallback when document is unavailable).
+- Show which files will be touched and expected line deltas (aim net-neutral or negative). STOP and wait for my confirmation before editing.
+
+Step 3 — Implement (SMALL diffs only)
+1) Create `client/src/utils/getChartColor.ts` with the SSR-safe resolver (supports CSS var HSL channels like `--color-channel-referral: 28 80% 52%` and returns `hsl(var(--color-channel-referral))`; if a value is a hex, just return it).
+2) Create `client/src/config/chartPalettes.ts` exporting CHART_PALETTES for all six charts. Populate with the EXACT current resolved colors to preserve visuals (except the already-approved Referral change).
+3) In each chart component/config, replace hardcoded colors with:
+   `color: getChartColor('<chartKey>', '<SeriesName>')`
+4) If any chart currently pulls from generic `--chart-*` tokens for a semantic series, switch to the semantic or per-chart entry in CHART_PALETTES.
+5) Do NOT modify non-color logic. Do NOT remove generic `--chart-*` tokens; they can remain for non-semantic visuals.
+
+Rules (anti-bloat)
+- No new abstractions beyond the single helper + CHART_PALETTES.
+- No renames/moves of unrelated files.
+- Keep comment noise low; add a short header above CHART_PALETTES explaining how to change colors per chart in ONE place.
+
+Verification
+- Type check: tsc -noEmit
+- Lint: eslint .
+- Tests: npm test -s (if present)
+- Runtime:
+  - Open each of the 6 charts; confirm colors match pre-refactor (except the intentional Referral update).
+  - Confirm shared series (e.g., Direct) look consistent across charts where intended.
+  - Toggle theme if applicable to ensure CSS vars still resolve correctly.
+
+Output
+- Inventory report (six charts: files, series, current color sources, resolved values).
+- Plan summary (which files to create/edit).
+- SMALL unified diffs:
+  - client/src/utils/getChartColor.ts (new)
+  - client/src/config/chartPalettes.ts (new)
+  - Per-chart edits (only color lines changed)
+- Rationale (2–3 sentences) for how this eliminates drift while allowing per-chart variation.
+- Verification results.
+- Post-fix audit: confirm there are no leftover hardcoded color constants for these charts, and document the single place to change colors per chart (chartPalettes.ts).
+
+Stop conditions
+- If a chart’s color source is ambiguous or mixed (JS + CSS), STOP and show me the competing sources with a recommendation.
+- If any edit would change non-color behavior or dataset ordering, STOP and ask.

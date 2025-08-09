@@ -119,19 +119,114 @@ export function calculateYAxisDomain(data: any[], dataKey: string): [number, num
   return [Math.max(0, min - padding), max + padding];
 }
 
+/**
+ * Unified Color Management System for Chart Components
+ * 
+ * Provides centralized color assignment for all chart types while allowing
+ * each chart to maintain its own palette. Ensures consistent colors for
+ * shared series across different chart implementations.
+ */
+
+// Base entity colors used across multiple charts
+const BASE_ENTITY_COLORS = {
+  client: 'hsl(var(--color-client))',
+  cdAvg: 'hsl(var(--color-cd-avg))',
+  industryAvg: 'hsl(var(--color-industry-avg))',
+  competitor1: 'hsl(var(--color-competitor-1))',
+  competitor2: 'hsl(var(--color-competitor-2))',
+  competitor3: 'hsl(var(--color-competitor-3))',
+} as const;
+
+// Traffic channel specific colors for StackedBarChart
+const TRAFFIC_CHANNEL_COLORS = {
+  'Direct': 'hsl(var(--color-channel-direct))',
+  'Organic Search': 'hsl(var(--color-channel-organic))',
+  'Social Media': 'hsl(var(--color-channel-social))',
+  'Paid Search': 'hsl(var(--color-channel-paid))',
+  'Email': 'hsl(var(--color-channel-email))',
+  'Referral': 'hsl(var(--color-channel-referral))',
+  'Other': 'hsl(var(--color-channel-other))',
+} as const;
+
+// Device specific colors for LollipopChart
+const DEVICE_COLORS = {
+  'Desktop': 'hsl(var(--color-device-desktop))',
+  'Mobile': 'hsl(var(--color-device-mobile))',
+} as const;
+
+/**
+ * Get unified colors for time-series based charts (TimeSeriesChart, AreaChart, BarChart)
+ */
+export function getTimeSeriesColors(clientKey: string, competitors: any[], companyName?: string): Record<string, string> {
+  const colors: Record<string, string> = {
+    [clientKey]: BASE_ENTITY_COLORS.client,
+    'Industry Avg': BASE_ENTITY_COLORS.industryAvg,
+    'Clear Digital Clients Avg': BASE_ENTITY_COLORS.cdAvg,
+  };
+  
+  // Add company-specific CD average if company name provided
+  if (companyName) {
+    colors[`${companyName} Clients Avg`] = BASE_ENTITY_COLORS.cdAvg;
+  }
+  
+  // Add competitor colors
+  const competitorColors = [
+    BASE_ENTITY_COLORS.competitor1,
+    BASE_ENTITY_COLORS.competitor2,
+    BASE_ENTITY_COLORS.competitor3,
+  ];
+  
+  competitors.forEach((competitor, index) => {
+    colors[competitor.label] = competitorColors[index % competitorColors.length];
+  });
+  
+  return colors;
+}
+
+/**
+ * Get colors for traffic channel chart (StackedBarChart)
+ */
+export function getTrafficChannelColors(): Record<string, string> {
+  return { ...TRAFFIC_CHANNEL_COLORS };
+}
+
+/**
+ * Get colors for device distribution chart (LollipopChart)
+ */
+export function getDeviceColors(): Record<string, string> {
+  return { ...DEVICE_COLORS };
+}
+
+/**
+ * Get colors for metrics chart (MetricsChart) - maintains existing CHART_COLORS behavior
+ */
+export function getMetricsColors(): Record<string, string> {
+  return { ...CHART_COLORS };
+}
+
+/**
+ * Get competitor colors array for gradient definitions and similar uses
+ */
+export function getCompetitorColorsArray(): string[] {
+  return [
+    BASE_ENTITY_COLORS.competitor1,
+    BASE_ENTITY_COLORS.competitor2,
+    BASE_ENTITY_COLORS.competitor3,
+  ];
+}
+
+// Legacy function maintained for compatibility
 export function generateChartColors(competitors: any[]): Record<string, string> {
   const colors = [
-    'hsl(var(--color-competitor-1))',
-    'hsl(var(--color-competitor-2))', 
-    'hsl(var(--color-competitor-3))',
-    'hsl(var(--color-competitor-4))',
-    'hsl(var(--color-competitor-5))'
+    BASE_ENTITY_COLORS.competitor1,
+    BASE_ENTITY_COLORS.competitor2,
+    BASE_ENTITY_COLORS.competitor3,
   ];
   
   const result: Record<string, string> = {
-    'Client': 'hsl(var(--color-client))',
-    'CD_Avg': 'hsl(var(--color-cd-avg))',
-    'Industry_Avg': 'hsl(var(--color-industry-avg))'
+    'Client': BASE_ENTITY_COLORS.client,
+    'CD_Avg': BASE_ENTITY_COLORS.cdAvg,
+    'Industry_Avg': BASE_ENTITY_COLORS.industryAvg,
   };
   
   competitors.forEach((competitor, index) => {

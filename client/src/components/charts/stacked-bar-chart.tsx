@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
+import { getTrafficChannelColors } from "@/utils/chartUtils";
 
 /** Data structure for each bar in the stacked chart */
 interface StackedBarData {
@@ -30,18 +31,10 @@ interface StackedBarChartProps {
 }
 
 /** 
- * Predefined color scheme for traffic channels using CSS custom properties.
+ * Get unified traffic channel colors from the centralized color management system.
  * Ensures consistent visual identity across all chart instances.
  */
-const CHANNEL_COLORS = {
-  'Organic Search': 'hsl(var(--color-channel-organic))',
-  'Direct': 'hsl(var(--color-channel-direct))',
-  'Social Media': 'hsl(var(--color-channel-social))',
-  'Paid Search': 'hsl(var(--color-channel-paid))',
-  'Email': 'hsl(var(--color-channel-email))',
-  'Referral': 'hsl(var(--color-channel-referral))',
-  'Other': 'hsl(var(--color-channel-other))',
-};
+const getChannelColors = () => getTrafficChannelColors();
 
 /**
  * Interactive stacked bar chart component for traffic channel distribution visualization.
@@ -127,7 +120,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       style={{ 
                         width: '8px', 
                         height: '8px', 
-                        backgroundColor: CHANNEL_COLORS[hoveredSegment.channelName as keyof typeof CHANNEL_COLORS] || '#6b7280',
+                        backgroundColor: getChannelColors()[hoveredSegment.channelName] || '#6b7280',
                         borderRadius: '50%'
                       }}
                     />
@@ -150,7 +143,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
                       width: `${channel.percentage}%`,
-                      backgroundColor: CHANNEL_COLORS[channel.name as keyof typeof CHANNEL_COLORS] || channel.color,
+                      backgroundColor: getChannelColors()[channel.name] || channel.color,
                       borderTopLeftRadius: isFirst ? '6px' : '0',
                       borderBottomLeftRadius: isFirst ? '6px' : '0',
                       borderTopRightRadius: isLast ? '6px' : '0',
@@ -175,7 +168,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
       </div>
 
       <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 border-t border-gray-200 mt-4">
-        {Object.entries(CHANNEL_COLORS).map(([channel, color]) => (
+        {Object.entries(getChannelColors()).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-1.5 sm:gap-2">
             <div 
               className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm flex-shrink-0"

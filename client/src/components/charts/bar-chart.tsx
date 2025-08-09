@@ -42,7 +42,7 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { generateTemporalVariationSync } from '@/utils/chartUtils';
+import { generateTemporalVariationSync, getTimeSeriesColors } from '@/utils/chartUtils';
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 
 /**
@@ -405,25 +405,9 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
     return result;
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
 
-  // Define colors for each bar series (with dynamic company name)
+  // Use unified color system for consistent colors across charts
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
-  const colors: Record<string, string> = {
-    [clientKey]: 'hsl(var(--color-client))',
-    'Industry Avg': 'hsl(var(--color-industry-avg))',
-    [`${companyName} Clients Avg`]: 'hsl(var(--color-cd-avg))',
-  };
-
-  // Additional colors for competitors using CSS variables
-  const competitorColors = [
-    'hsl(var(--color-competitor-1))',
-    'hsl(var(--color-competitor-2))', 
-    'hsl(var(--color-competitor-3))'
-  ];
-  
-  // Add competitor colors to the main colors object
-  competitors.forEach((comp, index) => {
-    colors[comp.label] = competitorColors[index % competitorColors.length];
-  });
+  const colors = getTimeSeriesColors(clientKey, competitors, companyName);
   
   // Calculate fixed Y-axis domain based on all data (regardless of visibility)
   const allValues: number[] = [];
