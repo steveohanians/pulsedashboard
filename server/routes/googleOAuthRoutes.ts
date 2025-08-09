@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import googleOAuthService from '../services/googleOAuthService';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 const router = Router();
 

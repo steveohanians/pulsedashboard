@@ -6,7 +6,7 @@
 import { db } from '../db';
 import { metrics, clients, type InsertMetric } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 export interface GA4RawData {
   sessions: number;

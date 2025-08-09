@@ -5,7 +5,7 @@
  */
 
 import { storage } from '../../storage';
-import logger from '../../utils/logger';
+import logger from '../../utils/logging/logger';
 import { METRIC_NAMES } from './constants';
 import type { GA4MetricData, GA4DailyMetric, ExistingDataStatus, DataPeriod } from './types';
 

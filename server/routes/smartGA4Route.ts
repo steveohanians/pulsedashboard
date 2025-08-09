@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { GA4DataManager } from '../services/ga4';
 import { isAuthenticated } from '../middleware/auth';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 const router = Router();
 

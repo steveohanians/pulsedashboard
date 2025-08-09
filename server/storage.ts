@@ -21,7 +21,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import { DatabaseRepository } from "./utils/databaseUtils";
-import logger from "./utils/logger";
+import logger from "./utils/logging/logger";
 import crypto from 'crypto';
 
 const PostgresSessionStore = connectPg(session);

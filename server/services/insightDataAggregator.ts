@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../utils/logging/logger.js';
 import type { IStorage } from '../storage.js';
 import type { Metric, Competitor } from '@shared/schema';
 import { parseMetricValue } from '../utils/metricParser.js';

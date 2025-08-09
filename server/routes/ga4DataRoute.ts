@@ -4,7 +4,7 @@ import { GA4DataManager } from '../services/ga4/GA4DataManager';
 import { db } from '../db';
 import { ga4PropertyAccess, clients } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 import { ErrorResponses, asyncErrorHandler } from '../utils/errorHandling';
 import { adminRequired } from '../middleware/authMiddleware';
 

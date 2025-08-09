@@ -1,4 +1,4 @@
-import logger from './logger';
+import logger from './logging/logger';
 
 // Background processing queue for heavy operations
 interface ProcessingJob {

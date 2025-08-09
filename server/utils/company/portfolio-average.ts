@@ -1,6 +1,6 @@
 
 
-import logger from '../logger';
+import logger from '../logging/logger';
 import type { InsertMetric } from '@shared/schema';
 import { neon } from '@neondatabase/serverless';
 

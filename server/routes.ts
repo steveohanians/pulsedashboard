@@ -8,9 +8,9 @@ import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, inse
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
-import logger from "./utils/logger";
+import logger from "./utils/logging/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
-import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
+import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/query-optimization/queryOptimizer";
 import { parseMetricValue } from "./utils/metricParser";
 
 // Environment flag for backward compatibility

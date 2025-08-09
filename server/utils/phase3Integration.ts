@@ -1,8 +1,8 @@
 import { IStorage } from "../storage";
-import logger from "../utils/logger";
-import { GlobalValidationOrchestrator, ValidationResult } from "./globalValidationOrchestrator";
-import { updateCompanyWithValidation, updateCompaniesWithValidation } from "./updateValidationUtils";
-import { validateCompetitorPortfolioConflicts, validateBenchmarkDiversity, validateClientUniqueness } from "./advancedValidationWorkflows";
+import logger from "./logging/logger";
+import { GlobalValidationOrchestrator, ValidationResult } from "./validation/globalValidationOrchestrator";
+import { updateCompanyWithValidation, updateCompaniesWithValidation } from "./validation/updateValidationUtils";
+import { validateCompetitorPortfolioConflicts, validateBenchmarkDiversity, validateClientUniqueness } from "./validation/advancedValidationWorkflows";
 import { semrushService } from "../services/semrush/semrushService";
 
 

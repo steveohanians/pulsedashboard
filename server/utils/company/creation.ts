@@ -1,7 +1,7 @@
 
 
 import { z } from "zod";
-import logger from "../logger";
+import logger from "../logging/logger";
 import { backgroundProcessor } from "../background-processor";
 
 export type CompanyType = 'portfolio' | 'competitor' | 'benchmark' | 'client';

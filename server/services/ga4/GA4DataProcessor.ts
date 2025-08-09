@@ -4,7 +4,7 @@
  * Handles processing and transformation of raw GA4 API responses.
  */
 
-import logger from '../../utils/logger';
+import logger from '../../utils/logging/logger';
 import type { GA4MetricData, GA4DailyMetric } from './types';
 
 export class GA4DataProcessor {

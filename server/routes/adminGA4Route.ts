@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 import { GA4DataManager } from '../services/ga4/GA4DataManager';
 import { generateDynamicPeriodMapping } from '../utils/dateUtils';
 // Error handler wrapper for async routes

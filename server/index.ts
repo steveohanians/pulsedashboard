@@ -10,7 +10,7 @@ import { setupHealthCheck } from "./middleware/healthCheck";
 import { generalLimiter } from "./middleware/rateLimiter";
 import { setupPreloading } from "./middleware/preload";
 // Compression handled by Vite in production
-import logger from "./utils/logger";
+import logger from "./utils/logging/logger";
 
 // Make boot time available globally
 (global as any).SERVER_BOOT_TIME = SERVER_BOOT_TIME;

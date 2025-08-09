@@ -3,7 +3,7 @@
  * Handles mixed data types (numbers, JSON objects, strings) with null-safe operations.
  */
 
-import logger from './logger';
+import logger from './logging/logger';
 
 export interface MetricValueObject {
   value: number;

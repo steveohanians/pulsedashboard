@@ -3,7 +3,7 @@
 
 import { db } from '../db';
 import { eq, and, or, sql, SQL } from 'drizzle-orm';
-import logger from './logger';
+import logger from './logging/logger';
 
 /**
  * Generic CRUD operations builder

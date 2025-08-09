@@ -15,7 +15,7 @@
  */
 
 import { Response } from 'express';
-import logger from './logger';
+import logger from './logging/logger';
 
 export interface ErrorContext {
   operation: string;

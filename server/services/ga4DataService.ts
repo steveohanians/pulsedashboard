@@ -1,6 +1,6 @@
 // Using existing Google Auth setup from ga4ServiceAccountManager
 import { storage } from '../storage';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 interface GA4MetricData {
   bounceRate: number;

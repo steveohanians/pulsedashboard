@@ -5,7 +5,7 @@
  * high-level interface for fetching, processing, and storing GA4 data.
  */
 
-import logger from '../../utils/logger';
+import logger from '../../utils/logging/logger';
 import { GA4AuthenticationService } from './GA4AuthenticationService';
 import { GA4APIService } from './GA4APIService';
 import { GA4DataProcessor } from './GA4DataProcessor';

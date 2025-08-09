@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.ts';
+import logger from '../../utils/logging/logger.ts';
 import { semrushService } from './semrushService.ts';
 import { semrushDataProcessor } from './dataProcessor.ts';
 import type { IStorage } from '../../storage.js';

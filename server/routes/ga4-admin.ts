@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { GA4DataManager } from '../services/ga4/GA4DataManager';
 import { requireAuth, requireAdmin } from '../middleware/authMiddleware';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 const router = Router();
 const ga4Manager = new GA4DataManager();

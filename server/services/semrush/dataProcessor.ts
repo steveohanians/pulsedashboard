@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.ts';
+import logger from '../../utils/logging/logger.ts';
 import type { SemrushMetricData } from './semrushService.ts';
 import type { InsertMetric } from '@shared/schema.js';
 

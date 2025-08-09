@@ -17,7 +17,7 @@ import {
 } from '../../shared/schema';
 import { ga4ServiceAccountManager } from '../services/ga4ServiceAccountManager';
 import { requireAuth, requireAdmin } from '../middleware/authMiddleware';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 const router = Router();
 

@@ -10,7 +10,7 @@
 
 // Google APIs integration will be enabled when googleapis package is installed
 // import { google } from 'googleapis';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 export interface GA4MetricData {
   metricName: string;

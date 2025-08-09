@@ -2,7 +2,7 @@
 // Consolidates request logging patterns found across server files
 
 import { Request, Response, NextFunction } from 'express';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 interface LogOptions {
   includeBody?: boolean;

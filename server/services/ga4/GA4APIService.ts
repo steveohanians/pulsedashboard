@@ -4,7 +4,7 @@
  * Handles all direct API calls to Google Analytics Data API.
  */
 
-import logger from '../../utils/logger';
+import logger from '../../utils/logging/logger';
 import { GA4_ENDPOINTS, GA4_METRICS, GA4_DIMENSIONS } from './constants';
 import type { GA4PropertyAccess } from './types';
 

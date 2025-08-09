@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.js';
+import logger from '../../utils/logging/logger.js';
 import { semrushService } from './semrushService.js';
 import { semrushDataProcessor } from './dataProcessor.js';
 import type { IStorage } from '../../storage.js';

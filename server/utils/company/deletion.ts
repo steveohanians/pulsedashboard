@@ -8,7 +8,7 @@ import {
   competitors, 
   benchmarkCompanies 
 } from "@shared/schema";
-import logger from "../logger";
+import logger from "../logging/logger";
 
 export type CompanyType = 'portfolio' | 'competitor' | 'benchmark';
 

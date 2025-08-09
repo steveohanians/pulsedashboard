@@ -3,8 +3,8 @@
  * Handles edge cases for month/year boundaries and provides chronological ordering for charts.
  */
 
-import logger from "./logger";
-import { parsePacificTimeDate } from "./timePeriodsGenerator";
+import logger from "./logging/logger";
+import { parsePacificTimeDate } from "./data-generation/timePeriodsGenerator";
 
 const MONTH_ABBREVIATIONS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

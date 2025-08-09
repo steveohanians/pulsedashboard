@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { authLimiter } from "./middleware/rateLimiter";
 import { APP_CONFIG, requireSessionSecret } from "./config";
-import logger from "./utils/logger";
+import logger from "./utils/logging/logger";
 
 declare global {
   namespace Express {

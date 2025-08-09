@@ -18,7 +18,7 @@ import {
   UpdateGA4ServiceAccount,
   UpdateGA4PropertyAccess
 } from '../../shared/schema';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 export interface GA4AccessConfig {
   serviceAccountId: string;

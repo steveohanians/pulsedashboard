@@ -5,7 +5,7 @@
  */
 
 import { storage } from '../../storage';
-import logger from '../../utils/logger';
+import logger from '../../utils/logging/logger';
 import { GA4_ENDPOINTS } from './constants';
 import type { GA4PropertyAccess, TokenRefreshResult } from './types';
 

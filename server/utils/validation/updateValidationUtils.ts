@@ -1,6 +1,6 @@
-import { IStorage } from "../storage";
-import logger from "../utils/logger";
-import { CompanyType } from "./company/validation";
+import { IStorage } from "../../storage";
+import logger from "../logging/logger";
+import { CompanyType } from "../company/validation";
 import { GlobalValidationOrchestrator, EntityUpdateData, UpdateValidationOptions, ValidationResult } from "./globalValidationOrchestrator";
 
 

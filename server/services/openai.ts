@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import logger from "../utils/logger";
+import logger from "../utils/logging/logger";
 import { storage } from "../storage";
 import type { MetricPrompt } from "@shared/schema";
 

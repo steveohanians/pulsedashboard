@@ -8,7 +8,7 @@
 import { db } from '../db';
 import { ga4ServiceAccounts } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 export interface OAuthTokens {
   access_token: string;

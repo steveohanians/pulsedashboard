@@ -1,5 +1,5 @@
 import { IStorage } from "../../storage";
-import logger from "../logger";
+import logger from "../logging/logger";
 
 export type CompanyType = 'competitor' | 'portfolio' | 'benchmark' | 'client';
 
