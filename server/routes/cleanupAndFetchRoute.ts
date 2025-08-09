@@ -4,6 +4,16 @@ import { smartGA4DataFetcher } from '../services/smartGA4DataFetcher';
 import logger from '../utils/logger';
 import type { User } from '@shared/schema';
 
+// Environment flag controls for rollback safety
+const GA4_FORCE_ENABLED = process.env.GA4_FORCE_ENABLED === 'true';
+const GA4_STRICT_CLIENTID_VALIDATION = process.env.GA4_STRICT_CLIENTID_VALIDATION === 'true';
+
+// Log active flags on startup
+logger.info('Cleanup Route Feature Flags:', {
+  GA4_FORCE_ENABLED,
+  GA4_STRICT_CLIENTID_VALIDATION
+});
+
 // Extended request interface with proper User typing
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -30,7 +40,7 @@ const requireAdminAuth = (req: AuthenticatedRequest, res: Response, next: NextFu
   
   // Only admin users or users working on their own data can cleanup
   const { clientId } = req.params;
-  if (req.user.role !== 'admin' && req.user.clientId !== clientId) {
+  if (req.user.role !== 'Admin' && req.user.clientId !== clientId) {
     return res.status(403).json({ 
       ok: false,
       error: "Insufficient permissions for this operation" 
@@ -41,9 +51,15 @@ const requireAdminAuth = (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 /**
- * Validate clientId format for security
+ * Validate clientId format for security (conditional based on flag)
  */
 function validateClientId(clientId: string): boolean {
+  if (!GA4_STRICT_CLIENTID_VALIDATION) {
+    // Historical behavior: basic validation only
+    return typeof clientId === 'string' && clientId.length > 0;
+  }
+  
+  // New strict validation when flag enabled
   return typeof clientId === 'string' && 
          clientId.length > 0 && 
          clientId.length <= 100 && 
@@ -104,11 +120,13 @@ router.post('/cleanup-and-fetch/:clientId', requireAuth, requireAdminAuth, async
     // Step 1: Clear existing synthetic/derived caches for the given clientId only
     await clearSyntheticDataForClient(clientId);
     
-    // Step 2: Call smart GA4 fetcher with force=true
-    const results = await smartGA4DataFetcher({ 
-      clientId, 
-      force: true // Force bypass cache and refresh data
-    });
+    // Step 2: Call smart GA4 fetcher (conditionally with force based on flag)
+    const results = GA4_FORCE_ENABLED 
+      ? await smartGA4DataFetcher({ 
+          clientId, 
+          force: true // Force bypass cache and refresh data
+        })
+      : await smartGA4DataFetcher({ clientId }); // Historical behavior
     
     // Log completion with audit trail
     logger.info(`Cleanup and fetch completed for ${clientId}`, {

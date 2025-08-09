@@ -3,6 +3,18 @@ import { GA4DataService } from './ga4DataService';
 import logger from '../utils/logger';
 import type { Metric } from '@shared/schema';
 
+// Environment flag controls for rollback safety
+const GA4_FORCE_ENABLED = process.env.GA4_FORCE_ENABLED === 'true';
+const GA4_LOCKS_ENABLED = process.env.GA4_LOCKS_ENABLED === 'true';
+const GA4_STRICT_CLIENTID_VALIDATION = process.env.GA4_STRICT_CLIENTID_VALIDATION === 'true';
+
+// Log active flags on startup
+logger.info('GA4 Feature Flags:', {
+  GA4_FORCE_ENABLED,
+  GA4_LOCKS_ENABLED,
+  GA4_STRICT_CLIENTID_VALIDATION
+});
+
 // Lock tracking with proper typing for better maintainability
 interface LockInfo {
   promise: Promise<{ success: boolean; dataType: 'daily' | 'monthly'; error?: string }>;
@@ -55,9 +67,15 @@ function releaseLock(lockKey: string): void {
 }
 
 /**
- * Validate clientId format for security
+ * Validate clientId format for security (conditional based on flag)
  */
 function validateClientId(clientId: string): boolean {
+  if (!GA4_STRICT_CLIENTID_VALIDATION) {
+    // Historical behavior: basic validation only
+    return typeof clientId === 'string' && clientId.length > 0;
+  }
+  
+  // New strict validation when flag enabled
   return typeof clientId === 'string' && 
          clientId.length > 0 && 
          clientId.length <= 100 && 
@@ -118,9 +136,11 @@ export class SmartGA4DataFetcher {
       const periods = this.generate15MonthPeriods();
       logger.info(`Starting smart 15-month data fetch for ${periods.length} periods`);
 
-      // NEW: Check existing data status for all periods (skip if force is true)
+      // Check existing data status for all periods (skip if force is true AND flag enabled)
       let existingDataStatus = new Map<string, ExistingDataStatus[]>();
-      if (!force) {
+      const shouldBypassCache = GA4_FORCE_ENABLED && force;
+      
+      if (!shouldBypassCache) {
         existingDataStatus = await this.checkExistingData(clientId, periods);
       } else {
         logger.info('Force mode enabled: bypassing cached data checks');
@@ -131,23 +151,28 @@ export class SmartGA4DataFetcher {
         const lockKey = `${clientId}:${period.period}`;
         
         try {
-          // Acquire lock for this specific period
-          const lockAcquired = await acquireLock(lockKey);
-          
-          if (!lockAcquired) {
-            result.errors.push(`Skipped ${period.period}: concurrent fetch in progress`);
-            continue;
+          // Conditionally acquire lock for this specific period
+          if (GA4_LOCKS_ENABLED) {
+            const lockAcquired = await acquireLock(lockKey);
+            
+            if (!lockAcquired) {
+              result.errors.push(`Skipped ${period.period}: concurrent fetch in progress`);
+              continue;
+            }
+            
+            // Track acquired lock for cleanup
+            acquiredLocks.add(lockKey);
           }
 
-          // Track acquired lock for cleanup
-          acquiredLocks.add(lockKey);
-
           // Create and store the fetch promise with proper typing
-          const fetchPromise = this.processPeriodData(clientId, period, existingDataStatus, force);
-          activeFetches.set(lockKey, {
-            promise: fetchPromise,
-            timestamp: Date.now()
-          });
+          const fetchPromise = this.processPeriodData(clientId, period, existingDataStatus, shouldBypassCache);
+          
+          if (GA4_LOCKS_ENABLED) {
+            activeFetches.set(lockKey, {
+              promise: fetchPromise,
+              timestamp: Date.now()
+            });
+          }
 
           try {
             const processed = await fetchPromise;
@@ -162,16 +187,18 @@ export class SmartGA4DataFetcher {
               result.errors.push(`Failed to process ${period.period}: ${processed.error || 'Unknown error'}`);
             }
           } finally {
-            // Always release lock after processing
-            releaseLock(lockKey);
-            acquiredLocks.delete(lockKey);
+            // Always release lock after processing (if locks enabled)
+            if (GA4_LOCKS_ENABLED) {
+              releaseLock(lockKey);
+              acquiredLocks.delete(lockKey);
+            }
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           result.errors.push(`Error processing ${period.period}: ${errorMessage}`);
           
-          // Ensure lock is released on error
-          if (acquiredLocks.has(lockKey)) {
+          // Ensure lock is released on error (if locks enabled)
+          if (GA4_LOCKS_ENABLED && acquiredLocks.has(lockKey)) {
             releaseLock(lockKey);
             acquiredLocks.delete(lockKey);
           }
@@ -186,9 +213,11 @@ export class SmartGA4DataFetcher {
       result.success = false;
       result.errors.push(`Overall fetch failed: ${errorMessage}`);
     } finally {
-      // Ensure all acquired locks are released on any exit path
-      for (const lockKey of Array.from(acquiredLocks)) {
-        releaseLock(lockKey);
+      // Ensure all acquired locks are released on any exit path (if locks enabled)
+      if (GA4_LOCKS_ENABLED) {
+        for (const lockKey of Array.from(acquiredLocks)) {
+          releaseLock(lockKey);
+        }
       }
     }
 
