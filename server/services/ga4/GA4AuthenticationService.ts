@@ -10,6 +10,8 @@ import { GA4_ENDPOINTS } from './constants';
 import type { GA4PropertyAccess, TokenRefreshResult } from './types';
 
 export class GA4AuthenticationService {
+  // Map to track active token refresh promises to prevent race conditions
+  private refreshPromises = new Map<string, Promise<TokenRefreshResult>>();
   
   /**
    * Get authenticated GA4 property access for a client
@@ -38,8 +40,35 @@ export class GA4AuthenticationService {
           return null;
         }
 
+        // Check if race condition prevention is enabled
+        const lockEnabled = process.env.GA4_TOKEN_REFRESH_LOCK_ENABLED !== 'false';
+        
         try {
-          const refreshedTokens = await this.refreshAccessToken(serviceAccount.refreshToken);
+          let refreshedTokens: TokenRefreshResult;
+          
+          if (lockEnabled) {
+            // Race condition prevention: check if refresh is already in progress
+            const refreshKey = serviceAccount.id;
+            
+            if (this.refreshPromises.has(refreshKey)) {
+              logger.info(`Token refresh already in progress for service account ${serviceAccount.id}, waiting...`);
+              refreshedTokens = await this.refreshPromises.get(refreshKey)!;
+            } else {
+              // Create and store refresh promise
+              const refreshPromise = this.refreshAccessToken(serviceAccount.refreshToken);
+              this.refreshPromises.set(refreshKey, refreshPromise);
+              
+              try {
+                refreshedTokens = await refreshPromise;
+              } finally {
+                // Always clean up the promise
+                this.refreshPromises.delete(refreshKey);
+              }
+            }
+          } else {
+            // Legacy behavior: direct refresh without locking
+            refreshedTokens = await this.refreshAccessToken(serviceAccount.refreshToken);
+          }
           
           // Update service account with new tokens
           await this.updateServiceAccountTokens(
