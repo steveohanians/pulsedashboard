@@ -187,10 +187,10 @@ export function LollipopChart({
                       const percentage = Math.round(value * 100);
                       
                       return (
-                        <div key={device} className="absolute w-full" style={{ top: `${24 + deviceIndex * 4 - 6}px` }}>
+                        <div key={device} className="absolute w-full" style={{ top: `${24 + deviceIndex * 8 - 6}px` }}>
                           {/* Line from start to dot */}
                           <div 
-                            className="absolute h-0.5 top-1/2 transform -translate-y-1/2"
+                            className="absolute h-1 top-1/2 transform -translate-y-1/2"
                             style={{ 
                               left: '0%',
                               width: `${(value / (showFullScale ? 1 : scaleMax)) * 100}%`,
