@@ -398,7 +398,11 @@ export default function AdminPanel() {
   const sendPasswordResetMutation = useMutation({
     mutationFn: async (userId: string) => {
       const res = await apiRequest("POST", `/api/admin/users/${userId}/send-password-reset`);
-      return res.json();
+      const result = await res.json();
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Password reset response:", result);
+      }
+      return result;
     },
     onSuccess: () => {
       toast({

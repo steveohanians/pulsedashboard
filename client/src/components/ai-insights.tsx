@@ -201,8 +201,7 @@ export function AIInsights({
         }
       }
     } catch (error) {
-      console.error("[AIInsights] Error loading context:", error);
-      toast({ title: "Error", description: "Failed to load existing context", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to load insight context", variant: "destructive" });
     } finally {
       setIsLoadingContext(false);
     }

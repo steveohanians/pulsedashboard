@@ -24,6 +24,12 @@ export interface CompanyCreationOptions<T = any> {
   };
 }
 
+interface DomainValidatedData {
+  [key: string]: any;
+  domain?: string;
+  websiteUrl?: string;
+}
+
 export interface CreationResult<T = any> {
   success: boolean;
   company?: T;
@@ -87,7 +93,8 @@ export async function createCompanyWithWorkflows<T>(
       
       if (domainValidationResult.normalizedDomain) {
         const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
-        (validatedData as any)[domainField] = domainValidationResult.normalizedDomain;
+        const typedData = validatedData as DomainValidatedData;
+        typedData[domainField] = domainValidationResult.normalizedDomain;
       }
     }
 
@@ -260,8 +267,9 @@ async function performDomainValidation(
   clientId?: string
 ): Promise<{ isValid: boolean; error?: string; normalizedDomain?: string }> {
   const domainField = companyType === 'competitor' ? 'domain' : 'websiteUrl';
-  const domain = (validatedData as any)[domainField];
-  const label = (validatedData as any).label || (validatedData as any).name;
+  const typedData = validatedData as DomainValidatedData;
+  const domain = typedData[domainField];
+  const label = typedData.label || typedData.name;
 
   if (!domain) {
     return { isValid: true };
