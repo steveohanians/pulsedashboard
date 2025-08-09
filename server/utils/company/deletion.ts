@@ -1,6 +1,6 @@
 
 
-import { db } from "../db";
+import { db } from "../../db";
 import { eq, and, or, ne } from "drizzle-orm";
 import { 
   metrics, 
@@ -8,7 +8,7 @@ import {
   competitors, 
   benchmarkCompanies 
 } from "@shared/schema";
-import logger from "./logger";
+import logger from "../logger";
 
 export type CompanyType = 'portfolio' | 'competitor' | 'benchmark';
 
