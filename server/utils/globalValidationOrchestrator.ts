@@ -1,5 +1,5 @@
 import { IStorage } from "../storage";
-import logger from "../utils/logger";
+import logger from "./logger";
 import { GlobalCompanyValidator, CompanyType, ISemrushValidator } from "./company/validation";
 
 
@@ -37,7 +37,7 @@ export class GlobalValidationOrchestrator {
   private validationCache: Map<string, { result: ValidationResult; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  constructor(private storage: IStorage, private semrushValidator: ISemrushValidator) {
+  constructor(private storage: IStorage, private semrushValidator?: ISemrushValidator) {
     this.validator = new GlobalCompanyValidator(storage, semrushValidator);
   }
 

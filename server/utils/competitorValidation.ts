@@ -1,5 +1,5 @@
 import { IStorage } from "../storage";
-import { GlobalCompanyValidator } from "./globalCompanyValidation";
+import { GlobalCompanyValidator } from "./company/validation";
 
 /**
  * Competitor-specific validation utilities (uses global validator)

@@ -1,8 +1,8 @@
 
 
 import { z } from "zod";
-import logger from "./logger";
-import { backgroundProcessor } from "./background-processor";
+import logger from "../logger";
+import { backgroundProcessor } from "../background-processor";
 
 export type CompanyType = 'portfolio' | 'competitor' | 'benchmark' | 'client';
 
@@ -226,7 +226,7 @@ async function performFilterValidation(
   }
 
   try {
-    const { FilterValidator } = await import("./filterValidation");
+    const { FilterValidator } = await import("../filterValidation");
     const validator = new FilterValidator(storage);
     const filterValidation = await validator.validateEntity({
       businessSize: validatedData.businessSize,
@@ -268,7 +268,7 @@ async function performDomainValidation(
   }
 
   try {
-    const { GlobalCompanyValidator } = await import("./globalCompanyValidation");
+    const { GlobalCompanyValidator } = await import("./validation");
     const validator = new GlobalCompanyValidator(storage);
     
     const effectiveClientId = clientId || 'demo-client-id';
@@ -377,7 +377,7 @@ export async function createPortfolioCompanyEnhanced(
       name: 'SEMrush Integration',
       isBackground: true,
       handler: async (company) => {
-        const { PortfolioIntegration } = await import('../services/semrush/portfolioIntegration');
+        const { PortfolioIntegration } = await import('../../services/semrush/portfolioIntegration');
         const integration = new PortfolioIntegration(storage);
         return await integration.processNewPortfolioCompany(company);
       }
@@ -393,7 +393,7 @@ export async function createCompetitorEnhanced(
   insertSchema: z.ZodSchema
 ): Promise<CreationResult> {
   try {
-    const { CompetitorValidator } = await import('./competitorValidation');
+    const { CompetitorValidator } = await import('../competitorValidation');
     const validator = new CompetitorValidator(storage);
     
     const validationResult = await validator.validateCompetitorCreation(
@@ -446,7 +446,7 @@ export async function createCompetitorEnhanced(
       name: 'SEMrush Competitor Integration',
       isBackground: false,
       handler: async (competitor) => {
-        const { CompetitorIntegration } = await import('../services/semrush/competitorIntegration');
+        const { CompetitorIntegration } = await import('../../services/semrush/competitorIntegration');
         const integration = new CompetitorIntegration(storage);
         return await integration.processNewCompetitor(competitor);
       }

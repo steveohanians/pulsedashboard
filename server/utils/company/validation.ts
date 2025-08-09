@@ -1,5 +1,5 @@
-import { IStorage } from "../storage";
-import logger from "../utils/logger";
+import { IStorage } from "../../storage";
+import logger from "../logger";
 
 export type CompanyType = 'competitor' | 'portfolio' | 'benchmark' | 'client';
 
@@ -11,7 +11,7 @@ export interface ISemrushValidator {
 export class GlobalCompanyValidator {
   constructor(
     private storage: IStorage,
-    private semrushValidator: ISemrushValidator
+    private semrushValidator?: ISemrushValidator
   ) {}
 
 
@@ -172,7 +172,7 @@ export class GlobalCompanyValidator {
     error?: string;
     apiHealthStatus?: string;
   }> {
-    if (companyType === 'client') {
+    if (companyType === 'client' || !this.semrushValidator) {
       return {
         isValid: true,
         apiHealthStatus: 'skipped'

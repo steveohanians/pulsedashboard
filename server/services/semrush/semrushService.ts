@@ -36,7 +36,7 @@ export interface SemrushApiResponse {
 }
 
 import { requireSemrushApiKey } from '../../config';
-import { ISemrushValidator } from '../../utils/globalCompanyValidation';
+import { ISemrushValidator } from '../../utils/company/validation';
 
 export class SemrushService implements ISemrushValidator {
   private apiKey: string;
