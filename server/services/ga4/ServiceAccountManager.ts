@@ -6,7 +6,7 @@
  */
 
 import { eq, and } from 'drizzle-orm';
-import { db } from '../db';
+import { db } from '../../db';
 import { 
   ga4ServiceAccounts, 
   ga4PropertyAccess, 
@@ -17,8 +17,8 @@ import {
   InsertGA4PropertyAccess,
   UpdateGA4ServiceAccount,
   UpdateGA4PropertyAccess
-} from '../../shared/schema';
-import logger from '../utils/logging/logger';
+} from '@shared/schema';
+import logger from '../../utils/logging/logger';
 
 export interface GA4AccessConfig {
   serviceAccountId: string;

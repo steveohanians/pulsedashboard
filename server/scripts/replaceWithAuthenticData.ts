@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import { GA4DataService } from '../services/ga4DataService';
+import { GA4DataService } from '../services/ga4/PulseDataService';
 import logger from '../utils/logging/logger';
 
 /**

@@ -1,5 +1,5 @@
 import { storage } from '../storage.js';
-import { GA4DataService } from '../services/ga4DataService.js';
+import { GA4DataService } from '../services/ga4/PulseDataService.js';
 import logger from '../utils/logging/logger.js';
 
 /**

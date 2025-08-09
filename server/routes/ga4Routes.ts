@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { ga4DataProcessor } from '../services/ga4DataProcessor';
+import { ga4DataProcessor } from '../services/ga4/PulseDataProcessor';
 import { adminRequired } from '../middleware/authMiddleware';
 import { asyncErrorHandler } from '../utils/errorHandling';
 import logger from '../utils/logging/logger';

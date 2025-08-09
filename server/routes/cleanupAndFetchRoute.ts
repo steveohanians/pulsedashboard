@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
-import { smartGA4DataFetcher } from '../services/smartGA4DataFetcher';
+import { smartGA4DataFetcher } from '../services/ga4/SmartDataFetcher';
 import logger from '../utils/logging/logger';
 import type { User } from '@shared/schema';
 
