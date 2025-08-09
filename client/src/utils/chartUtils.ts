@@ -47,7 +47,7 @@ export const CHART_COLORS = {
   'Social Media': 'hsl(var(--color-competitor-1))',
   'Paid Search': 'hsl(var(--chart-3))',
   'Email': 'hsl(var(--chart-5))',
-  'Referral': 'hsl(var(--chart-4))',
+  'Referral': '#E67E22',
   Default: 'hsl(var(--color-default))'
 };
 
