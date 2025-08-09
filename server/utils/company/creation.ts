@@ -233,7 +233,7 @@ async function performFilterValidation(
   }
 
   try {
-    const { FilterValidator } = await import("../filterValidation");
+    const { FilterValidator } = await import("../validation/filterValidation");
     const validator = new FilterValidator(storage);
     const filterValidation = await validator.validateEntity({
       businessSize: validatedData.businessSize,
@@ -401,7 +401,7 @@ export async function createCompetitorEnhanced(
   insertSchema: z.ZodSchema
 ): Promise<CreationResult> {
   try {
-    const { CompetitorValidator } = await import('../competitorValidation');
+    const { CompetitorValidator } = await import('../validation/competitorValidation');
     const validator = new CompetitorValidator(storage);
     
     const validationResult = await validator.validateCompetitorCreation(
@@ -440,7 +440,10 @@ export async function createCompetitorEnhanced(
       domain: requestBody.domain
     });
     
-
+    return {
+      success: false,
+      error: 'Pre-creation validation failed: ' + (validationError as Error).message
+    };
   }
 
   return await createCompanyWithWorkflows({
