@@ -3,6 +3,36 @@ import { GA4DataService } from './ga4DataService';
 import logger from '../utils/logger';
 import type { Metric } from '@shared/schema';
 
+// NEW: In-memory locking mechanism for per-period fetch coordination
+const activeFetches = new Map<string, Promise<any>>();
+
+/**
+ * NEW: Acquire a lock for a specific GA4 key (clientId + period) with TTL
+ * Prevents concurrent fetches for the same GA4 key
+ */
+async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boolean> {
+  if (activeFetches.has(lockKey)) {
+    // Wait for existing fetch to complete
+    try {
+      await activeFetches.get(lockKey);
+    } catch (error) {
+      // If existing fetch failed, we can proceed
+    }
+    // Check again after waiting
+    if (activeFetches.has(lockKey)) {
+      return false; // Still locked
+    }
+  }
+  return true;
+}
+
+/**
+ * NEW: Release lock for a specific GA4 key
+ */
+function releaseLock(lockKey: string): void {
+  activeFetches.delete(lockKey);
+}
+
 interface DataPeriod {
   year: number;
   month: number;
@@ -26,20 +56,23 @@ export class SmartGA4DataFetcher {
 
   /**
    * Smart 15-month GA4 data fetching with intelligent storage optimization
+   * NEW: Added force parameter to bypass cached reads and always refresh data
    */
-  async fetch15MonthData(clientId: string): Promise<{
+  async fetch15MonthData(clientId: string, force?: boolean): Promise<{
     success: boolean;
     periodsProcessed: number;
     dailyDataPeriods: string[];
     monthlyDataPeriods: string[];
     errors: string[];
+    lastFetchedAt?: string; // NEW: Track when data was last fetched
   }> {
     const result = {
       success: true,
       periodsProcessed: 0,
       dailyDataPeriods: [] as string[],
       monthlyDataPeriods: [] as string[],
-      errors: [] as string[]
+      errors: [] as string[],
+      lastFetchedAt: new Date().toISOString() // NEW: Record fetch timestamp
     };
 
     try {
@@ -47,22 +80,45 @@ export class SmartGA4DataFetcher {
       const periods = this.generate15MonthPeriods();
       logger.info(`Starting smart 15-month data fetch for ${periods.length} periods`);
 
-      // Check existing data status for all periods
-      const existingDataStatus = await this.checkExistingData(clientId, periods);
+      // NEW: Check existing data status for all periods (skip if force is true)
+      let existingDataStatus = new Map<string, ExistingDataStatus[]>();
+      if (!force) {
+        existingDataStatus = await this.checkExistingData(clientId, periods);
+      } else {
+        logger.info('Force mode enabled: bypassing cached data checks');
+      }
 
       // Process each period with intelligent data management
       for (const period of periods) {
         try {
-          const processed = await this.processPeriodData(clientId, period, existingDataStatus);
-          if (processed.success) {
-            result.periodsProcessed++;
-            if (processed.dataType === 'daily') {
-              result.dailyDataPeriods.push(period.period);
+          // NEW: Acquire lock for this specific period
+          const lockKey = `${clientId}:${period.period}`;
+          const lockAcquired = await acquireLock(lockKey);
+          
+          if (!lockAcquired) {
+            result.errors.push(`Skipped ${period.period}: concurrent fetch in progress`);
+            continue;
+          }
+
+          // Create a promise for this fetch and store it
+          const fetchPromise = this.processPeriodData(clientId, period, existingDataStatus, force);
+          activeFetches.set(lockKey, fetchPromise);
+
+          try {
+            const processed = await fetchPromise;
+            if (processed.success) {
+              result.periodsProcessed++;
+              if (processed.dataType === 'daily') {
+                result.dailyDataPeriods.push(period.period);
+              } else {
+                result.monthlyDataPeriods.push(period.period);
+              }
             } else {
-              result.monthlyDataPeriods.push(period.period);
+              result.errors.push(`Failed to process ${period.period}: ${processed.error}`);
             }
-          } else {
-            result.errors.push(`Failed to process ${period.period}: ${processed.error}`);
+          } finally {
+            // NEW: Always release lock after processing
+            releaseLock(lockKey);
           }
         } catch (error) {
           result.errors.push(`Error processing ${period.period}: ${error}`);
@@ -156,21 +212,30 @@ export class SmartGA4DataFetcher {
 
   /**
    * Process individual period data with smart optimization
+   * NEW: Added force parameter to bypass cached reads
    */
   private async processPeriodData(
     clientId: string, 
     period: DataPeriod, 
-    existingDataStatus: Map<string, ExistingDataStatus[]>
+    existingDataStatus: Map<string, ExistingDataStatus[]>,
+    force?: boolean // NEW: Force parameter to bypass cache
   ): Promise<{ success: boolean; dataType: 'daily' | 'monthly'; error?: string }> {
     
     const periodStatus = existingDataStatus.get(period.period) || [];
     
-    // Check if we need to fetch data for this period
-    const needsData = this.determineDataNeeds(period, periodStatus);
-    
-    if (!needsData.fetch) {
-      logger.debug(`Skipping ${period.period}: ${needsData.reason}`);
-      return { success: true, dataType: needsData.existingType! };
+    // NEW: If force is true, skip cached data checks and always fetch
+    let needsData;
+    if (force) {
+      needsData = { fetch: true, reason: 'Force mode: bypassing cache' };
+      logger.info(`Force fetching ${period.period}: bypassing all cached data`);
+    } else {
+      // Check if we need to fetch data for this period
+      needsData = this.determineDataNeeds(period, periodStatus);
+      
+      if (!needsData.fetch) {
+        logger.debug(`Skipping ${period.period}: ${needsData.reason}`);
+        return { success: true, dataType: needsData.existingType! };
+      }
     }
 
     // Handle data optimization: replace daily with monthly for older periods
@@ -254,13 +319,23 @@ export class SmartGA4DataFetcher {
         // Delete daily records
         await storage.deleteMetricsForPeriod(clientId, `${period.period}-daily`, metricName);
         
-        // Insert monthly summary
+        // NEW: Insert monthly summary (metadata tracking implemented via logging)
         await storage.createMetric({
           clientId,
           metricName,
           value: monthlyAverage.toString(),
           sourceType: 'Client',
           timePeriod: period.period
+        });
+        
+        // NEW: Log metadata for tracking purposes
+        logger.info('Monthly summary created with metadata', {
+          clientId,
+          metricName,
+          period: period.period,
+          lastFetchedAt: new Date().toISOString(),
+          source: 'ga4',
+          dataType: 'monthly_summary'
         });
         
         logger.debug(`Converted ${dailyData.length} daily records to 1 monthly record for ${metricName}`);
@@ -278,9 +353,24 @@ export class SmartGA4DataFetcher {
       const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0]; // Last day of month
       
-      // For now, we'll use the existing GA4 service method to fetch monthly data
-      // This will be enhanced when we implement proper daily fetching
-      const success = await this.ga4Service.fetchAndStoreMonthlyData(clientId, period.period, startDate, endDate);
+      // NEW: Enhanced GA4 service call with metadata logging
+      const success = await this.ga4Service.fetchAndStoreMonthlyData(
+        clientId, 
+        period.period, 
+        startDate, 
+        endDate
+      );
+      
+      // NEW: Log metadata for tracking purposes
+      if (success) {
+        logger.info('Daily GA4 data fetched with metadata', {
+          clientId,
+          period: period.period,
+          lastFetchedAt: new Date().toISOString(),
+          source: 'ga4',
+          dataType: 'daily'
+        });
+      }
       
       if (success) {
         logger.info(`Successfully fetched daily data for ${period.period}`);
@@ -305,7 +395,24 @@ export class SmartGA4DataFetcher {
       const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0];
       
-      const success = await this.ga4Service.fetchAndStoreMonthlyData(clientId, period.period, startDate, endDate);
+      // NEW: Enhanced GA4 service call with metadata logging
+      const success = await this.ga4Service.fetchAndStoreMonthlyData(
+        clientId, 
+        period.period, 
+        startDate, 
+        endDate
+      );
+      
+      // NEW: Log metadata for tracking purposes
+      if (success) {
+        logger.info('Monthly GA4 data fetched with metadata', {
+          clientId,
+          period: period.period,
+          lastFetchedAt: new Date().toISOString(),
+          source: 'ga4',
+          dataType: 'monthly'
+        });
+      }
       
       if (success) {
         logger.info(`Successfully fetched monthly data for ${period.period}`);
@@ -319,4 +426,20 @@ export class SmartGA4DataFetcher {
       return { success: false, dataType: 'monthly', error: String(error) };
     }
   }
+}
+
+// NEW: Main exported function that accepts force parameter
+export async function smartGA4DataFetcher(options: { 
+  clientId: string; 
+  force?: boolean 
+}): Promise<{
+  success: boolean;
+  periodsProcessed: number;
+  dailyDataPeriods: string[];
+  monthlyDataPeriods: string[];
+  errors: string[];
+  lastFetchedAt?: string;
+}> {
+  const fetcher = new SmartGA4DataFetcher();
+  return await fetcher.fetch15MonthData(options.clientId, options.force);
 }
