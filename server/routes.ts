@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createHash } from "crypto";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
@@ -15,6 +16,16 @@ import { parseMetricValue } from "./utils/metricParser";
 
 // Environment flag for backward compatibility
 const GA4_COMPAT_MODE = process.env.GA4_COMPAT_MODE !== 'false'; // Default true for backward compatibility
+
+// Dashboard result interface for type safety
+interface DashboardResult {
+  client: any;
+  metrics?: any[];
+  competitors: any[];
+  insights: any[];
+  timestamp: number;
+  dataFreshness: 'live' | 'cached';
+}
 
 /**
  * Enhanced parser for distribution metrics (Device Distribution, Traffic Channels)
@@ -229,20 +240,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Dashboard endpoint with performance caching
+  // Dashboard endpoint with intelligent caching
   app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
-    console.error('🔵 DASHBOARD ROUTE HIT - CLIENT: ' + req.params.clientId);
     try {
-      console.error('🔵 INSIDE TRY BLOCK');
       const { clientId } = req.params;
       let { 
         timePeriod = "Last Month", 
         businessSize = "All", 
         industryVertical = "All" 
       } = req.query;
-      
-      // 🚫 PERFORMANCE CACHING COMPLETELY DISABLED FOR DEBUGGING
-      console.error('🚫 ALL CACHING DISABLED - FRESH DATA PROCESSING');
       
       // Generate dynamic period mapping based on current date
       const { generateDynamicPeriodMapping } = await import("./utils/dateUtils");
@@ -295,13 +301,10 @@ export function registerRoutes(app: Express): Server {
         industryVertical: industryVertical as string
       };
 
-      // GA4 INTEGRATION: Manual refresh only - no automatic fetching on dashboard load
-
-      // Cache clearing moved to getDashboardDataOptimized function
-
-      // 🚀 OPTIMIZATION 3: Use optimized query function with timeout protection
-      console.error(`🚨 DASHBOARD ROUTE: About to call getDashboardDataOptimized for client ${clientId}, periods:`, periodsToQuery);
+      // Check caching configuration
+      const cacheEnabled = process.env.DASHBOARD_CACHE_ENABLED === 'true';
       
+      // Use optimized query function with timeout protection
       const result = await getDashboardDataOptimized(
         client,
         periodsToQuery,
@@ -310,46 +313,48 @@ export function registerRoutes(app: Express): Server {
         timePeriod as string
       );
       
-      console.error(`🚨 DASHBOARD RESULT: Got ${result.metrics?.length || 0} total metrics`);
-      
-      // Debug competitor metrics specifically
-      const competitorMetrics = result.metrics?.filter(m => m.sourceType === 'Competitor') || [];
-      console.error(`🚨 COMPETITOR METRICS IN RESULT: ${competitorMetrics.length} found`);
-      
-      if (competitorMetrics.length > 0) {
-        console.error(`🚨 SAMPLE COMPETITOR METRIC:`, {
-          name: competitorMetrics[0].metricName,
-          value: competitorMetrics[0].value,
-          valueType: typeof competitorMetrics[0].value,
-          timePeriod: competitorMetrics[0].timePeriod,
-          competitorId: competitorMetrics[0].competitorId
-        });
-      }
-
-      // 🚀 OPTIMIZATION 4: Queue AI insights generation in background (non-blocking)
+      // Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {
         clientId,
         timePeriod: periodsToQuery[0],
         metrics: result.metrics
       }, 2); // Medium priority
 
-      // 🚫 CACHING DISABLED - NO RESULT STORAGE
-      
-      // Add fresh timestamp to force frontend refresh
-      (result as any).timestamp = Date.now();
-      (result as any).dataFreshness = 'live';
+      // Create typed dashboard result
+      const dashboardResult: DashboardResult = {
+        ...result,
+        timestamp: Date.now(),
+        dataFreshness: 'live'
+      };
       
       // Apply compatibility layer for legacy dashboard clients before final response
-      const compatibleResult = GA4_COMPAT_MODE ? applyDashboardCompatibilityLayer(result) : result;
+      const compatibleResult = GA4_COMPAT_MODE ? applyDashboardCompatibilityLayer(dashboardResult) : dashboardResult;
+      
+      // Set cache headers and handle ETag
+      if (cacheEnabled) {
+        const etag = createHash('md5').update(JSON.stringify(compatibleResult)).digest('hex');
+        
+        // Check If-None-Match header for 304 response
+        if (req.headers['if-none-match'] === etag) {
+          res.status(304).end();
+          return;
+        }
+        
+        // Set caching headers
+        res.set({
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+          'ETag': etag
+        });
+      } else {
+        // Disable caching
+        res.set('Cache-Control', 'no-store');
+      }
       
       // JSON serialization safety check to prevent malformed responses
       try {
-        console.error('Testing JSON serialization...');
         const testSerialized = JSON.stringify(compatibleResult);
-        console.error('JSON serialization test passed');
         return res.json(compatibleResult);
       } catch (serializationError) {
-        console.error('JSON serialization failed:', (serializationError as Error).message);
         logger.error("JSON serialization error in dashboard response", { 
           error: (serializationError as Error).message,
           resultKeys: Object.keys(result),
@@ -357,7 +362,7 @@ export function registerRoutes(app: Express): Server {
         });
         
         // Create a safe fallback response
-        const safeResult = {
+        const safeResult: DashboardResult = {
           client: result.client,
           competitors: result.competitors || [],
           insights: result.insights || [],
@@ -375,7 +380,6 @@ export function registerRoutes(app: Express): Server {
         
         return res.json(safeResult);
       }
-
 
     } catch (error) {
       logger.error("Dashboard error", { error: (error as Error).message, stack: (error as Error).stack, clientId: req.params.clientId });
