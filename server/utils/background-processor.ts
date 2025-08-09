@@ -14,6 +14,7 @@ interface ProcessingJob {
 
 class BackgroundProcessor {
   private queue: ProcessingJob[] = [];
+  private retryQueue: ProcessingJob[] = [];
   private processing = false;
   private readonly MAX_CONCURRENT = 3;
   private activeJobs = 0;
@@ -68,14 +69,15 @@ class BackgroundProcessor {
     
     this.processing = true;
     
-    while (this.queue.length > 0 && this.activeJobs < this.MAX_CONCURRENT) {
-      const job = this.queue.shift();
+    while ((this.retryQueue.length > 0 || this.queue.length > 0) && this.activeJobs < this.MAX_CONCURRENT) {
+      // Process retries first, then regular queue
+      const job = this.retryQueue.shift() || this.queue.shift();
       if (!job) break;
       
       this.activeJobs++;
       this.processJob(job).finally(() => {
         this.activeJobs--;
-        if (this.queue.length === 0 && this.activeJobs === 0) {
+        if (this.queue.length === 0 && this.retryQueue.length === 0 && this.activeJobs === 0) {
           this.processing = false;
         }
       });
@@ -109,11 +111,14 @@ class BackgroundProcessor {
     } catch (error) {
       logger.error(`Background job failed: ${job.id}`, { error, job });
       
-      if (job.retries < job.maxRetries) {
-        job.retries++;
+      // Atomically increment retries and check if should retry
+      const currentRetries = ++job.retries;
+      
+      if (currentRetries <= job.maxRetries) {
         job.priority = Math.max(1, job.priority - 1); // Lower priority on retry
-        this.queue.unshift(job); // Add back to front for retry
-        logger.info(`Retrying background job: ${job.id} (attempt ${job.retries})`);
+        this.retryQueue.push(job); // Add to retry queue instead of main queue
+        this.retryQueue.sort((a, b) => b.priority - a.priority); // Higher priority first
+        logger.info(`Retrying background job: ${job.id} (attempt ${currentRetries})`);
       } else {
         logger.error(`Background job failed permanently: ${job.id}`);
       }
@@ -154,9 +159,17 @@ class BackgroundProcessor {
   getStatus() {
     return {
       queueLength: this.queue.length,
+      retryQueueLength: this.retryQueue.length,
       activeJobs: this.activeJobs,
       processing: this.processing,
       jobs: this.queue.map(job => ({
+        id: job.id,
+        type: job.type,
+        priority: job.priority,
+        retries: job.retries,
+        age: Date.now() - job.createdAt
+      })),
+      retryJobs: this.retryQueue.map(job => ({
         id: job.id,
         type: job.type,
         priority: job.priority,
@@ -169,7 +182,8 @@ class BackgroundProcessor {
   // Clear queue (for testing/debugging)
   clearQueue(): void {
     this.queue = [];
-    logger.info('Background processing queue cleared');
+    this.retryQueue = [];
+    logger.info('Background processing queue and retry queue cleared');
   }
 }
 

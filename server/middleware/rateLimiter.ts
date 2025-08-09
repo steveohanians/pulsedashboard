@@ -16,13 +16,19 @@ function createRateLimiter(windowMs: number, maxRequests: number, errorMessage: 
     
     // Clean expired entries
     if (rateLimitStore.size > 1000) {
-      const keysToDelete: string[] = [];
-      rateLimitStore.forEach((record, key) => {
+      // Snapshot entries to avoid concurrent modification during iteration
+      const entries = Array.from(rateLimitStore.entries());
+      const expiredKeys: string[] = [];
+      
+      // Compute expired keys from snapshot
+      for (const [key, record] of entries) {
         if (now > record.resetTime) {
-          keysToDelete.push(key);
+          expiredKeys.push(key);
         }
-      });
-      keysToDelete.forEach(key => rateLimitStore.delete(key));
+      }
+      
+      // Delete expired keys after iteration
+      expiredKeys.forEach(key => rateLimitStore.delete(key));
     }
     
     let record = rateLimitStore.get(key);
