@@ -1,4 +1,4 @@
-import logger from '../../utils/logging/logger.ts';
+import logger from '../../utils/logging/logger';
 
 export interface SemrushMetricData {
   bounceRate: number;
