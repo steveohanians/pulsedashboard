@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
-import { parseMetricValue } from '../utils/metricParser';
+import { parseMetricValue } from '../../utils/metricParser';
 
 /** Props interface for MetricBarChart component configuration */
 interface BarChartProps {

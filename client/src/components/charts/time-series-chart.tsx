@@ -4,10 +4,10 @@ import { generateTemporalVariationSync, createChartVisibilityState, updateChartV
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 import { logger } from '@/utils/logger';
 
-import { parseMetricValue } from '../utils/metricParser';
+import { parseMetricValue } from '../../utils/metricParser';
 
 // Use shared DiamondDot component
-import { DiamondDot } from './shared/DiamondDot';
+import { DiamondDot } from '../shared/DiamondDot';
 
 /** Props interface for TimeSeriesChart component configuration */
 interface TimeSeriesChartProps {

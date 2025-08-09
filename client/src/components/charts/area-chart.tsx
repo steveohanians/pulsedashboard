@@ -1,9 +1,9 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { parseMetricValue } from '../utils/metricParser';
+import { parseMetricValue } from '../../utils/metricParser';
 
 // Custom diamond dot component
-import { DiamondDot } from './shared/DiamondDot';
+import { DiamondDot } from '../shared/DiamondDot';
 
 /** Props interface for SessionDurationAreaChart component configuration and data visualization */
 interface AreaChartProps {

@@ -12,12 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { MetricsChart } from "@/components/metrics-chart";
-import { TimeSeriesChart } from "@/components/time-series-chart";
-import { SessionDurationAreaChart } from "@/components/area-chart";
-import { MetricBarChart } from "@/components/bar-chart";
-import { StackedBarChart } from "@/components/stacked-bar-chart";
-import { LollipopChart } from "@/components/lollipop-chart";
+import { MetricsChart } from "@/components/charts/metrics-chart";
+import { TimeSeriesChart } from "@/components/charts/time-series-chart";
+import { SessionDurationAreaChart } from "@/components/charts/area-chart";
+import { MetricBarChart } from "@/components/charts/bar-chart";
+import { StackedBarChart } from "@/components/charts/stacked-bar-chart";
+import { LollipopChart } from "@/components/charts/lollipop-chart";
 import { AIInsights } from "@/components/ai-insights";
 import { ComprehensiveInsightsDisplay } from "@/components/comprehensive-insights-display";
 import { MetricInsightBox } from "@/components/metric-insight-box";
