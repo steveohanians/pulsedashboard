@@ -9,20 +9,39 @@ export interface MetricValueObject {
   sessions?: number;
 }
 
-// Import the canonical server-side parser
-import { parseMetricValue as serverParseMetricValue } from '../../../server/utils/metricParser';
-
 /**
- * Client-side wrapper for parseMetricValue that maintains UI compatibility.
- * Uses the canonical server implementation but converts null to 0 for display purposes.
+ * Client-side parseMetricValue that maintains UI compatibility.
+ * Duplicated from server logic but converts null to 0 for display purposes.
  * 
  * @param value - Raw metric value to parse
  * @returns Parsed number value (0 fallback for UI display)
- * @deprecated Consider migrating to handle null values properly in UI components
  */
 export function parseMetricValue(value: any): number {
-  const result = serverParseMetricValue(value);
-  return result ?? 0; // Convert null to 0 for UI compatibility
+  if (value === null || value === undefined) {
+    return 0; // UI fallback
+  }
+
+  if (typeof value === 'number') {
+    return isNaN(value) ? 0 : value;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'object' && parsed !== null && 'value' in parsed) {
+        return typeof parsed.value === 'number' ? parsed.value : parseFloat(parsed.value) || 0;
+      }
+      return parseFloat(value) || 0;
+    } catch {
+      return parseFloat(value) || 0;
+    }
+  }
+
+  if (typeof value === 'object' && value !== null && 'value' in value) {
+    return typeof value.value === 'number' ? value.value : parseFloat(value.value) || 0;
+  }
+
+  return 0; // UI fallback
 }
 
 /**
