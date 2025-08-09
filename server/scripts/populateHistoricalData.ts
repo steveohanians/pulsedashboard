@@ -1,6 +1,6 @@
 import { storage } from '../storage.js';
 import { GA4DataService } from '../services/ga4DataService.js';
-import logger from '../utils/logger.js';
+import logger from '../utils/logging/logger.js';
 
 /**
  * Populate all 15 months of historical GA4 data for demo-client-id

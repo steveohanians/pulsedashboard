@@ -1,4 +1,4 @@
-import logger from "./logger";
+import logger from "../logging/logger";
 import { seededRandom, generateCompositeSeed, createPeriodSeed, applyBusinessSizeVariation } from "@shared/seededRandom";
 
 // Core utility functions for data generation

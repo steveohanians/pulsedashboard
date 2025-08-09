@@ -1,6 +1,6 @@
 // Database connection pooling optimization
 import { Pool } from 'pg';
-import { logger } from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 interface PoolConfig {
   max: number;

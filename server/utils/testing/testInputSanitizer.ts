@@ -2,8 +2,8 @@
  * Test suite for input sanitization system
  * Run this to verify security measures are working properly
  */
-import { sanitizeUserInput, validateContextInput } from './inputSanitizer';
-import logger from './logger';
+import { sanitizeUserInput, validateContextInput } from '../validation/inputSanitizer';
+import logger from '../logging/logger';
 
 interface TestCase {
   name: string;

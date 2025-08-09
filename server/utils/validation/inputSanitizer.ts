@@ -18,7 +18,7 @@
  * - Maintains data integrity in AI-generated insights
  */
 
-import { logger } from './logger';
+import logger from '../logging/logger';
 import { 
   PROMPT_INJECTION_PATTERNS, 
   HTML_SCRIPT_PATTERNS, 

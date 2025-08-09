@@ -264,7 +264,7 @@ async function executePostUpdateWorkflows(
 ): Promise<void> {
   try {
     if (companyType === 'portfolio') {
-      const { PortfolioIntegration } = await import('../services/semrush/portfolioIntegration');
+      const { PortfolioIntegration } = await import('../../services/semrush/portfolioIntegration');
       const portfolioIntegration = new PortfolioIntegration(storage);
       await portfolioIntegration.updatePortfolioAverages();
       

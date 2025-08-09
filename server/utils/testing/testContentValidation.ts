@@ -2,8 +2,8 @@
  * Comprehensive test suite for content validation system
  * Tests profanity filtering, topic relevance, and quality checks
  */
-import { sanitizeUserInput, validateContextInput } from './inputSanitizer';
-import logger from './logger';
+import { sanitizeUserInput, validateContextInput } from '../validation/inputSanitizer';
+import logger from '../logging/logger';
 
 interface ContentTestCase {
   name: string;

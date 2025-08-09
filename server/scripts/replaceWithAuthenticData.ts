@@ -1,6 +1,6 @@
 import { storage } from '../storage';
 import { GA4DataService } from '../services/ga4DataService';
-import logger from '../utils/logger';
+import logger from '../utils/logging/logger';
 
 /**
  * Replace all synthetic data with authentic GA4 data for demo-client-id
