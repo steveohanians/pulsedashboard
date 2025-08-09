@@ -847,7 +847,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Import and apply input sanitization
-      const { validateContextInput } = await import("./utils/validation/inputSanitizer");
+      const { validateContextInput } = await import("./utils/inputSanitizer");
       const sanitizationResult = validateContextInput(userContext);
       
       // Block request if input is unsafe
@@ -938,7 +938,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Import and apply input sanitization
-      const { validateContextInput } = await import("./utils/validation/inputSanitizer");
+      const { validateContextInput } = await import("./utils/inputSanitizer");
       const sanitizationResult = validateContextInput(userContext || '');
       
       // Block request if input is unsafe
@@ -1671,7 +1671,7 @@ export function registerRoutes(app: Express): Server {
       
       // Validate filter options if they are being updated
       if (req.body.businessSize || req.body.industryVertical) {
-        const { FilterValidator } = await import("./utils/validation/filterValidation");
+        const { FilterValidator } = await import("./utils/filterValidation");
         const validator = new FilterValidator(storage);
         
         // Get current client data to fill in missing fields for validation

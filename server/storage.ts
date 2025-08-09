@@ -470,8 +470,8 @@ export class DatabaseStorage implements IStorage {
     // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
     // Use the data generation logic to create filtered metrics that match the selected filters
-    const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/data-generation/dataGeneratorCore');
-    const { generateTimePeriods } = await import('./utils/data-generation/timePeriodsGenerator');
+    const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
+    const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
     const timePeriods = generateTimePeriods();
     
     const filteredMetrics: Metric[] = [];
@@ -1404,7 +1404,7 @@ export class DatabaseStorage implements IStorage {
       performanceCache.clear();
       
       // Clear query optimizer cache
-      const { clearCache } = await import('./utils/query-optimization/queryOptimizer');
+      const { clearCache } = await import('./utils/queryOptimizer');
       clearCache();
       
       logger.info('All performance caches cleared successfully');
