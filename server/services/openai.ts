@@ -19,7 +19,9 @@ MANDATORY numbered lists in this exact format:
 
 CRITICAL: Do NOT use paragraph format for recommendations. Use ONLY numbered list format (1., 2., 3.).`;
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// To switch models, set OPENAI_MODEL in .env (e.g., OPENAI_MODEL=gpt-5)
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY!
 });
@@ -196,7 +198,7 @@ CRITICAL FORMATTING REQUIREMENTS:
 - NEVER suggest specific percentage improvements or exact performance increases - use qualitative language like "meaningful improvement", "significant enhancement", or "substantial optimization"`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: OPENAI_MODEL,
       messages: [
         {
           role: "user",
@@ -436,7 +438,7 @@ Focus on strategic direction and business impact across all digital marketing ch
     summaryPrompt += `\n\nProvide strategic overview in JSON format with fields: context, insight, recommendation.${FORMATTING_INSTRUCTIONS}`;
 
     const summaryResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: OPENAI_MODEL,
       messages: [
         {
           role: "user",
@@ -700,7 +702,7 @@ async function generateInsightsWithCustomPromptAndContext(
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: OPENAI_MODEL,
       messages: [
         {
           role: "user",
@@ -889,7 +891,7 @@ Focus on highest-impact improvements that enhance metric performance and busines
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: OPENAI_MODEL,
       messages: [
         {
           role: "user",
@@ -983,7 +985,7 @@ Focus on trend implications, competitive positioning, and strategic optimization
     prompt += `\n\nProvide analysis in JSON format with fields: context, insight, recommendation.${FORMATTING_INSTRUCTIONS}`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: OPENAI_MODEL,
       messages: [
         {
           role: "user",
@@ -1187,7 +1189,7 @@ Provide analysis for ${metricName} when no custom prompt template is available. 
     .replace(/\{\{metricDisplayName\}\}/g, metricName);
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: OPENAI_MODEL,
     messages: [
       {
         role: "user",
