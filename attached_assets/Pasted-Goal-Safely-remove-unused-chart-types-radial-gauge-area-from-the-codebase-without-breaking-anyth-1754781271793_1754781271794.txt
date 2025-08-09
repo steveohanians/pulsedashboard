@@ -1,0 +1,58 @@
+Goal
+Safely remove unused chart types (radial, gauge, area) from the codebase without breaking anything else.
+
+Non-goals
+- Do NOT touch charts that are still used.
+- Do NOT remove shared utilities that other charts depend on.
+
+Step 1 — Inventory & Proof (NO edits yet)
+- List every file, export, and component related to: radial chart, gauge chart, area chart.
+- For each item, show:
+  - All importers (files/lines) OR “no importers found”
+  - Any dynamic imports, string-based lookups, or registry-based references
+  - Any Storybook/demo-only references
+- Produce a dependency graph snippet (import graph) for these chart items.
+- If any item is used by a shared util (e.g., color scales, formatters), FLAG it as shared and exclude from removal.
+
+Step 2 — Plan (NO edits yet)
+- Propose a minimal, reversible plan:
+  - If truly unused: move files to `client/deprecated/charts/<type>/` first (quarantine)
+  - Update any `index.ts` barrels to remove re-exports
+  - After green checks, optionally delete quarantined files in a second commit
+- List exactly which files will be moved or edited, with expected line deltas (aim net-negative).
+
+Guardrails
+- No edits outside chart modules and their barrels.
+- Do NOT modify logic in shared utilities; only remove references to unused charts.
+- Keep diffs SMALL (moved/removed lines only).
+- If any ambiguity remains about usage, STOP and ask.
+
+Step 3 — Implementation (Quarantine first)
+1) Move unused files to `client/deprecated/charts/<type>/` (radial, gauge, area).
+2) Remove their exports from any `index.ts`/barrel files.
+3) Ensure any routes/docs/storybook entries referencing them are updated or removed if unused.
+
+Step 4 — Verification (must pass)
+- Type check: `tsc -noEmit`
+- Lint: `eslint .`
+- Tests: `npm test -s` (or project test command)
+- Unused exports scan: run `ts-prune` (or equivalent) and report for chart-related modules
+- Import graph: run `madge` or `depcruise` on chart folders; confirm no broken edges/new cycles
+- App smoke: start dev server, load all pages that render charts you DO use; confirm they render as before.
+
+Output
+- Inventory table (file → importers count; dynamic usage? yes/no)
+- Minimal plan (bullets)
+- SMALL unified diffs:
+  - Barrel/index edits removing exports
+  - File moves (renames) to deprecated/
+- Verification results (pass/fail with brief notes)
+- Post-fix audit:
+  - Confirm no references remain to radial/gauge/area outside deprecated/
+  - Confirm no shared utils were removed
+  - Document how to permanently delete `client/deprecated/charts/**` after a release
+
+Stop conditions
+- Any sign of dynamic usage or registry lookup of these charts
+- Any failing type/lint/test result
+- Any touched file outside the chart modules or barrels

@@ -44,9 +44,6 @@ interface AreaChartProps {
   periods?: string[];
 }
 
-// Generate deterministic seeded random number and temporal variation
-import { generateTemporalVariationSync } from '@/utils/chartUtils';
-
 /** Data point structure for area chart visualization with competitive benchmarking */
 interface AreaDataPoint {
   /** Formatted date label for x-axis display */
