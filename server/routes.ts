@@ -1340,7 +1340,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Use enhanced global creation utility for comprehensive workflow orchestration  
-      const { createCompetitorEnhanced } = await import('./utils/companyCreationUtils');
+      const { createCompetitorEnhanced } = await import('./utils/company/creation');
       const result = await createCompetitorEnhanced(
         req.body,
         req.user,
@@ -1624,7 +1624,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/admin/clients", requireAdmin, async (req, res) => {
     try {
       // Use enhanced global creation utility for comprehensive workflow orchestration
-      const { createClientEnhanced } = await import('./utils/companyCreationUtils');
+      const { createClientEnhanced } = await import('./utils/company/creation');
       const result = await createClientEnhanced(
         req.body,
         req.user!,
@@ -1733,7 +1733,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/admin/cd-portfolio', adminLimiter, requireAdmin, async (req, res) => {
     try {
       // Use enhanced global creation utility for comprehensive workflow orchestration
-      const { createPortfolioCompanyEnhanced } = await import('./utils/companyCreationUtils');
+      const { createPortfolioCompanyEnhanced } = await import('./utils/company/creation');
       const result = await createPortfolioCompanyEnhanced(
         req.body,
         req.user!,
@@ -2523,7 +2523,7 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
     try {
       // Use enhanced global creation utility for comprehensive validation
-      const { createBenchmarkCompanyEnhanced } = await import('./utils/companyCreationUtils');
+      const { createBenchmarkCompanyEnhanced } = await import('./utils/company/creation');
       const result = await createBenchmarkCompanyEnhanced(
         req.body,
         req.user!,
@@ -2969,7 +2969,7 @@ export function registerRoutes(app: Express): Server {
     try {
       logger.info('🔧 Admin initiated portfolio averages fix', { userId: req.user?.id });
       
-      const { PortfolioAverageFix } = await import('./utils/portfolioAverageFix');
+      const { PortfolioAverageFix } = await import('./utils/company/portfolio-average');
       
       // Get a report first
       await PortfolioAverageFix.getAveragingReport('2025-06');

@@ -261,7 +261,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCompetitor(id: string): Promise<void> {
     // Use enhanced global deletion utility for comprehensive cleanup
-    const { deleteCompetitorEnhanced } = await import('./utils/companyDeletionUtils');
+    const { deleteCompetitorEnhanced } = await import('./utils/company/deletion');
     await deleteCompetitorEnhanced(id, this);
   }
 
@@ -283,7 +283,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBenchmarkCompany(id: string): Promise<void> {
     // Use enhanced global deletion utility for comprehensive cleanup
-    const { deleteBenchmarkCompanyEnhanced } = await import('./utils/companyDeletionUtils');
+    const { deleteBenchmarkCompanyEnhanced } = await import('./utils/company/deletion');
     await deleteBenchmarkCompanyEnhanced(id, this);
   }
 
@@ -303,7 +303,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCdPortfolioCompany(id: string): Promise<void> {
     // Use enhanced global deletion utility for comprehensive cleanup
-    const { deletePortfolioCompanyEnhanced } = await import('./utils/companyDeletionUtils');
+    const { deletePortfolioCompanyEnhanced } = await import('./utils/company/deletion');
     await deletePortfolioCompanyEnhanced(id, this);
     return; // Skip original logic below, now handled by global utility
     

@@ -1,6 +1,6 @@
 import { IStorage } from "../storage";
 import logger from "../utils/logger";
-import { CompanyType, ISemrushValidator } from "./globalCompanyValidation";
+import { CompanyType, ISemrushValidator } from "./company/validation";
 import { ValidationResult, GlobalValidationOrchestrator } from "./globalValidationOrchestrator";
 
 
