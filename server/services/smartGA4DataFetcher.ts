@@ -3,34 +3,65 @@ import { GA4DataService } from './ga4DataService';
 import logger from '../utils/logger';
 import type { Metric } from '@shared/schema';
 
-// NEW: In-memory locking mechanism for per-period fetch coordination
-const activeFetches = new Map<string, Promise<any>>();
+// Lock tracking with proper typing for better maintainability
+interface LockInfo {
+  promise: Promise<{ success: boolean; dataType: 'daily' | 'monthly'; error?: string }>;
+  timestamp: number;
+}
+
+// In-memory locking mechanism for per-period fetch coordination
+const activeFetches = new Map<string, LockInfo>();
 
 /**
- * NEW: Acquire a lock for a specific GA4 key (clientId + period) with TTL
- * Prevents concurrent fetches for the same GA4 key
+ * Acquire a lock for a specific GA4 key (clientId + period) with TTL enforcement
+ * Prevents concurrent fetches for the same GA4 key and cleans up stale locks
  */
 async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boolean> {
-  if (activeFetches.has(lockKey)) {
-    // Wait for existing fetch to complete
-    try {
-      await activeFetches.get(lockKey);
-    } catch (error) {
-      // If existing fetch failed, we can proceed
-    }
-    // Check again after waiting
-    if (activeFetches.has(lockKey)) {
-      return false; // Still locked
+  const now = Date.now();
+  
+  // Clean up expired locks to prevent memory leaks
+  for (const [key, lockInfo] of activeFetches.entries()) {
+    if (now - lockInfo.timestamp > ttlMs) {
+      activeFetches.delete(key);
+      logger.warn(`Cleaned up expired lock: ${key}`);
     }
   }
-  return true;
+  
+  const existingLock = activeFetches.get(lockKey);
+  if (existingLock) {
+    // Wait for existing fetch to complete, but with timeout protection
+    try {
+      await Promise.race([
+        existingLock.promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Lock timeout')), ttlMs))
+      ]);
+    } catch (error) {
+      // If existing fetch failed or timed out, clean up and proceed
+      activeFetches.delete(lockKey);
+    }
+    
+    // Double-check lock status after waiting
+    return !activeFetches.has(lockKey);
+  }
+  
+  return true; // No existing lock, can proceed
 }
 
 /**
- * NEW: Release lock for a specific GA4 key
+ * Release lock for a specific GA4 key
  */
 function releaseLock(lockKey: string): void {
   activeFetches.delete(lockKey);
+}
+
+/**
+ * Validate clientId format for security
+ */
+function validateClientId(clientId: string): boolean {
+  return typeof clientId === 'string' && 
+         clientId.length > 0 && 
+         clientId.length <= 100 && 
+         /^[a-zA-Z0-9-_]+$/.test(clientId);
 }
 
 interface DataPeriod {
@@ -56,7 +87,7 @@ export class SmartGA4DataFetcher {
 
   /**
    * Smart 15-month GA4 data fetching with intelligent storage optimization
-   * NEW: Added force parameter to bypass cached reads and always refresh data
+   * Enhanced with force parameter to bypass cached reads and always refresh data
    */
   async fetch15MonthData(clientId: string, force?: boolean): Promise<{
     success: boolean;
@@ -64,16 +95,23 @@ export class SmartGA4DataFetcher {
     dailyDataPeriods: string[];
     monthlyDataPeriods: string[];
     errors: string[];
-    lastFetchedAt?: string; // NEW: Track when data was last fetched
+    lastFetchedAt: string;
   }> {
+    // Input validation for security
+    if (!validateClientId(clientId)) {
+      throw new Error('Invalid clientId format');
+    }
+
     const result = {
       success: true,
       periodsProcessed: 0,
       dailyDataPeriods: [] as string[],
       monthlyDataPeriods: [] as string[],
       errors: [] as string[],
-      lastFetchedAt: new Date().toISOString() // NEW: Record fetch timestamp
+      lastFetchedAt: new Date().toISOString()
     };
+
+    const acquiredLocks = new Set<string>(); // Track locks for cleanup
 
     try {
       // Generate 15-month period list (current month + 14 previous months)
@@ -90,9 +128,10 @@ export class SmartGA4DataFetcher {
 
       // Process each period with intelligent data management
       for (const period of periods) {
+        const lockKey = `${clientId}:${period.period}`;
+        
         try {
-          // NEW: Acquire lock for this specific period
-          const lockKey = `${clientId}:${period.period}`;
+          // Acquire lock for this specific period
           const lockAcquired = await acquireLock(lockKey);
           
           if (!lockAcquired) {
@@ -100,9 +139,15 @@ export class SmartGA4DataFetcher {
             continue;
           }
 
-          // Create a promise for this fetch and store it
+          // Track acquired lock for cleanup
+          acquiredLocks.add(lockKey);
+
+          // Create and store the fetch promise with proper typing
           const fetchPromise = this.processPeriodData(clientId, period, existingDataStatus, force);
-          activeFetches.set(lockKey, fetchPromise);
+          activeFetches.set(lockKey, {
+            promise: fetchPromise,
+            timestamp: Date.now()
+          });
 
           try {
             const processed = await fetchPromise;
@@ -114,23 +159,37 @@ export class SmartGA4DataFetcher {
                 result.monthlyDataPeriods.push(period.period);
               }
             } else {
-              result.errors.push(`Failed to process ${period.period}: ${processed.error}`);
+              result.errors.push(`Failed to process ${period.period}: ${processed.error || 'Unknown error'}`);
             }
           } finally {
-            // NEW: Always release lock after processing
+            // Always release lock after processing
             releaseLock(lockKey);
+            acquiredLocks.delete(lockKey);
           }
         } catch (error) {
-          result.errors.push(`Error processing ${period.period}: ${error}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          result.errors.push(`Error processing ${period.period}: ${errorMessage}`);
+          
+          // Ensure lock is released on error
+          if (acquiredLocks.has(lockKey)) {
+            releaseLock(lockKey);
+            acquiredLocks.delete(lockKey);
+          }
         }
       }
 
       logger.info(`Smart fetch completed: ${result.periodsProcessed}/${periods.length} periods processed`);
       
     } catch (error) {
-      logger.error('Smart 15-month data fetch failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Smart 15-month data fetch failed:', { error: errorMessage, clientId });
       result.success = false;
-      result.errors.push(`Overall fetch failed: ${error}`);
+      result.errors.push(`Overall fetch failed: ${errorMessage}`);
+    } finally {
+      // Ensure all acquired locks are released on any exit path
+      for (const lockKey of acquiredLocks) {
+        releaseLock(lockKey);
+      }
     }
 
     return result;
@@ -353,30 +412,26 @@ export class SmartGA4DataFetcher {
       const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0]; // Last day of month
       
-      // NEW: Enhanced GA4 service call with metadata logging
-      const success = await this.ga4Service.fetchAndStoreMonthlyData(
+      // Enhanced GA4 service call with metadata logging
+      const success = await this.ga4Service.fetchAndStoreDailyData(
         clientId, 
         period.period, 
         startDate, 
         endDate
       );
       
-      // NEW: Log metadata for tracking purposes
       if (success) {
-        logger.info('Daily GA4 data fetched with metadata', {
+        // Consolidated success logging with metadata
+        logger.info(`Successfully fetched daily GA4 data for ${period.period}`, {
           clientId,
           period: period.period,
           lastFetchedAt: new Date().toISOString(),
           source: 'ga4',
           dataType: 'daily'
         });
-      }
-      
-      if (success) {
-        logger.info(`Successfully fetched daily data for ${period.period}`);
         return { success: true, dataType: 'daily' };
       } else {
-        return { success: false, dataType: 'daily', error: 'GA4 fetch failed' };
+        return { success: false, dataType: 'daily', error: 'GA4 API request failed' };
       }
       
     } catch (error) {
@@ -395,7 +450,7 @@ export class SmartGA4DataFetcher {
       const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0];
       
-      // NEW: Enhanced GA4 service call with metadata logging
+      // Enhanced GA4 service call with metadata logging
       const success = await this.ga4Service.fetchAndStoreMonthlyData(
         clientId, 
         period.period, 
@@ -403,22 +458,18 @@ export class SmartGA4DataFetcher {
         endDate
       );
       
-      // NEW: Log metadata for tracking purposes
       if (success) {
-        logger.info('Monthly GA4 data fetched with metadata', {
+        // Consolidated success logging with metadata
+        logger.info(`Successfully fetched monthly GA4 data for ${period.period}`, {
           clientId,
           period: period.period,
           lastFetchedAt: new Date().toISOString(),
           source: 'ga4',
           dataType: 'monthly'
         });
-      }
-      
-      if (success) {
-        logger.info(`Successfully fetched monthly data for ${period.period}`);
         return { success: true, dataType: 'monthly' };
       } else {
-        return { success: false, dataType: 'monthly', error: 'GA4 fetch failed' };
+        return { success: false, dataType: 'monthly', error: 'GA4 API request failed' };
       }
       
     } catch (error) {
@@ -428,7 +479,10 @@ export class SmartGA4DataFetcher {
   }
 }
 
-// NEW: Main exported function that accepts force parameter
+/**
+ * Main exported function for smart GA4 data fetching with force parameter support
+ * Provides a clean interface for external callers while maintaining internal class structure
+ */
 export async function smartGA4DataFetcher(options: { 
   clientId: string; 
   force?: boolean 
@@ -438,8 +492,12 @@ export async function smartGA4DataFetcher(options: {
   dailyDataPeriods: string[];
   monthlyDataPeriods: string[];
   errors: string[];
-  lastFetchedAt?: string;
+  lastFetchedAt: string;
 }> {
+  if (!options || !options.clientId) {
+    throw new Error('ClientId is required');
+  }
+  
   const fetcher = new SmartGA4DataFetcher();
   return await fetcher.fetch15MonthData(options.clientId, options.force);
 }
