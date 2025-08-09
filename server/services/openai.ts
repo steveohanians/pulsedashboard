@@ -31,13 +31,28 @@ interface MetricAnalysis {
   status: 'success' | 'needs_improvement' | 'warning';
 }
 
+// Type definitions for metric values
+interface DeviceDistribution {
+  device: string;
+  percentage: number;
+  sessions?: number;
+}
+
+interface TrafficChannel {
+  channel: string;
+  percentage: number;
+}
+
+type MetricValue = number | DeviceDistribution[] | TrafficChannel[];
+type CompetitorValue = number | DeviceDistribution[] | TrafficChannel[];
+
 async function generateInsightsWithCustomPrompt(
   customPrompt: MetricPrompt,
   metricName: string,
-  clientValue: any, // Changed to handle both numbers and distribution arrays
+  clientValue: MetricValue,
   cdAverage: number,
   industryAverage: number,
-  competitorValues: any[], // Changed to handle both numbers and distribution arrays
+  competitorValues: CompetitorValue[],
   industryVertical: string,
   businessSize: string,
   clientName: string,
@@ -112,14 +127,16 @@ async function generateInsightsWithCustomPrompt(
     }
     
     if (metricName === 'Session Duration') {
-      const clientMinutes = Math.floor(clientValue / 60);
-      const clientSeconds = Math.round(clientValue % 60);
+      // Type guard: Session Duration should always be numeric
+      const numericClientValue = typeof clientValue === 'number' ? clientValue : 0;
+      const clientMinutes = Math.floor(numericClientValue / 60);
+      const clientSeconds = Math.round(numericClientValue % 60);
       const cdMinutes = Math.floor(cdAverage / 60);
       const cdSecondsRem = Math.round(cdAverage % 60);
       const industryMinutes = Math.floor(industryAverage / 60);
       const industrySecondsRem = Math.round(industryAverage % 60);
       
-      formattedClientValue = `${clientValue} seconds (${clientMinutes}m ${clientSeconds}s)`;
+      formattedClientValue = `${numericClientValue} seconds (${clientMinutes}m ${clientSeconds}s)`;
       formattedCdAverage = `${cdAverage} seconds (${cdMinutes}m ${cdSecondsRem}s)`;
       formattedIndustryAverage = `${industryAverage} seconds (${industryMinutes}m ${industrySecondsRem}s)`;
       
@@ -127,9 +144,11 @@ async function generateInsightsWithCustomPrompt(
       if (competitorValues.length > 0) {
         formattedCompetitorsText = competitorValues.map((val, idx) => {
           const name = competitorNames?.[idx] || `Competitor ${idx + 1}`;
-          const minutes = Math.floor(val / 60);
-          const seconds = Math.round(val % 60);
-          return `${name}: ${val} seconds (${minutes}m ${seconds}s)`;
+          // Type guard: Competitor values for Session Duration should be numeric
+          const numericVal = typeof val === 'number' ? val : 0;
+          const minutes = Math.floor(numericVal / 60);
+          const seconds = Math.round(numericVal % 60);
+          return `${name}: ${numericVal} seconds (${minutes}m ${seconds}s)`;
         }).join(', ');
       }
     }
@@ -189,7 +208,26 @@ CRITICAL FORMATTING REQUIREMENTS:
       max_tokens: 600
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    // Safe JSON parsing with error handling
+    let result;
+    try {
+      result = JSON.parse(response.choices[0].message.content || '{}');
+    } catch (parseError) {
+      logger.error('Failed to parse OpenAI response JSON', {
+        error: (parseError as Error).message,
+        responseContent: response.choices[0].message.content,
+        metricName,
+        customPromptId: customPrompt.metricName
+      });
+      
+      // Return warning object instead of throwing
+      return {
+        context: "Unable to generate context analysis due to response format error.",
+        insight: "Unable to generate insights due to response format error.",
+        recommendation: "1. Please try regenerating insights\n2. Contact support if the issue persists\n3. Review metric data for any unusual formatting",
+        status: "warning"
+      };
+    }
     
     // Calculate proper status based on performance
     const calculatedStatus = determineMetricStatus(
