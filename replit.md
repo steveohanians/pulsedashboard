@@ -88,3 +88,10 @@ Pulse Dashboard™ employs a modern full-stack architecture with a clear separat
 - **Concurrent Safety**: Race condition prevention with proper lock coordination logic
 - **Data Integrity**: Atomic operations where possible with rollback capability
 - **Production Logging**: Structured logging with contextual information for debugging
+
+### Rollback Gate Refinement (2025-08-09) ✅ COMPLETED
+**🔓 Initial Data Fetch Fix:**
+- **Smart Bypass Logic**: Modified GA4 data fetcher to distinguish between initial fetch vs force refresh
+- **New Client Support**: Allow initial data fetching for clients with no existing data regardless of GA4_FORCE_ENABLED flag
+- **Rollback Safety Maintained**: Force refresh of existing data still requires GA4_FORCE_ENABLED=true for safety
+- **Intelligent Detection**: System now checks for existing data before applying force restrictions, enabling new client onboarding while protecting existing deployments

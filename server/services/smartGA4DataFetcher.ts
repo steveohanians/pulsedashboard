@@ -136,14 +136,24 @@ export class SmartGA4DataFetcher {
       const periods = this.generate15MonthPeriods();
       logger.info(`Starting smart 15-month data fetch for ${periods.length} periods`);
 
-      // Check existing data status for all periods (skip if force is true AND flag enabled)
+      // Check existing data status for all periods first
       let existingDataStatus = new Map<string, ExistingDataStatus[]>();
-      const shouldBypassCache = GA4_FORCE_ENABLED && force;
+      existingDataStatus = await this.checkExistingData(clientId, periods);
       
-      if (!shouldBypassCache) {
-        existingDataStatus = await this.checkExistingData(clientId, periods);
-      } else {
-        logger.info('Force mode enabled: bypassing cached data checks');
+      // Determine if this is an initial fetch (no existing data) vs force refresh (overwriting data)
+      const hasAnyExistingData = Array.from(existingDataStatus.values())
+        .some(periodStatuses => periodStatuses.some(status => status.dataType !== 'none'));
+      
+      const shouldBypassCache = force && (GA4_FORCE_ENABLED || !hasAnyExistingData);
+      
+      if (shouldBypassCache) {
+        if (!hasAnyExistingData) {
+          logger.info('Initial data fetch for new client: proceeding without existing data');
+        } else {
+          logger.info('Force mode enabled: bypassing cached data checks for existing client data');
+        }
+        // Clear existing data status for force fetch
+        existingDataStatus = new Map<string, ExistingDataStatus[]>();
       }
 
       // Process each period with intelligent data management
