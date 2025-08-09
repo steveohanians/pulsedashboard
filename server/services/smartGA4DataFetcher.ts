@@ -20,7 +20,7 @@ async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boo
   const now = Date.now();
   
   // Clean up expired locks to prevent memory leaks
-  for (const [key, lockInfo] of activeFetches.entries()) {
+  for (const [key, lockInfo] of Array.from(activeFetches.entries())) {
     if (now - lockInfo.timestamp > ttlMs) {
       activeFetches.delete(key);
       logger.warn(`Cleaned up expired lock: ${key}`);
@@ -187,7 +187,7 @@ export class SmartGA4DataFetcher {
       result.errors.push(`Overall fetch failed: ${errorMessage}`);
     } finally {
       // Ensure all acquired locks are released on any exit path
-      for (const lockKey of acquiredLocks) {
+      for (const lockKey of Array.from(acquiredLocks)) {
         releaseLock(lockKey);
       }
     }
@@ -413,7 +413,7 @@ export class SmartGA4DataFetcher {
       const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0]; // Last day of month
       
       // Enhanced GA4 service call with metadata logging
-      const success = await this.ga4Service.fetchAndStoreDailyData(
+      const success = await this.ga4Service.fetchAndStoreMonthlyData(
         clientId, 
         period.period, 
         startDate, 

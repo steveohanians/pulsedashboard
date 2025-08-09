@@ -2,14 +2,11 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import { smartGA4DataFetcher } from '../services/smartGA4DataFetcher';
 import logger from '../utils/logger';
+import type { User } from '@shared/schema';
 
-// Properly typed authentication middleware with authorization
+// Extended request interface with proper User typing
 interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-    clientId: string;
-  };
+  user?: User;
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
