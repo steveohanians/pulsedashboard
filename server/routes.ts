@@ -13,6 +13,9 @@ import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/queryOptimizer";
 import { parseMetricValue } from "./utils/metricParser";
 
+// Environment flag for backward compatibility
+const GA4_COMPAT_MODE = process.env.GA4_COMPAT_MODE !== 'false'; // Default true for backward compatibility
+
 /**
  * Enhanced parser for distribution metrics (Device Distribution, Traffic Channels)
  * Returns full distribution data for comprehensive AI analysis
@@ -336,12 +339,15 @@ export function registerRoutes(app: Express): Server {
       (result as any).timestamp = Date.now();
       (result as any).dataFreshness = 'live';
       
+      // Apply compatibility layer for legacy dashboard clients before final response
+      const compatibleResult = GA4_COMPAT_MODE ? applyDashboardCompatibilityLayer(result) : result;
+      
       // JSON serialization safety check to prevent malformed responses
       try {
         console.error('Testing JSON serialization...');
-        const testSerialized = JSON.stringify(result);
+        const testSerialized = JSON.stringify(compatibleResult);
         console.error('JSON serialization test passed');
-        return res.json(result);
+        return res.json(compatibleResult);
       } catch (serializationError) {
         console.error('JSON serialization failed:', (serializationError as Error).message);
         logger.error("JSON serialization error in dashboard response", { 
@@ -2995,3 +3001,72 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+/**
+ * Apply backward compatibility layer to dashboard data
+ * Ensures legacy timePeriod formats and removes new fields that could break strict clients
+ */
+function applyDashboardCompatibilityLayer(data: any): any {
+  if (!data) return data;
+  
+  // Clone the data to avoid mutations
+  const compatData = JSON.parse(JSON.stringify(data));
+  
+  // Process metrics array for compatibility
+  if (compatData.metrics && Array.isArray(compatData.metrics)) {
+    compatData.metrics = compatData.metrics.map((metric: any) => {
+      // Ensure legacy timePeriod format (already correct in current system)
+      if (metric.timePeriod) {
+        // Keep existing format: "YYYY-MM" for monthly, "YYYY-MM-daily" for daily
+        // Current system already uses correct legacy format
+      }
+      
+      // Ensure legacy sourceType (already correct: Client, Competitor, CD_Avg)
+      // No changes needed as current system uses correct values
+      
+      // Remove any new metadata fields that could break legacy clients
+      const cleanMetric = { ...metric };
+      delete cleanMetric.metadata;
+      delete cleanMetric.lastFetchedAt;
+      delete cleanMetric.source;
+      delete cleanMetric.dataType;
+      
+      return cleanMetric;
+    });
+  }
+  
+  // Remove top-level metadata fields that could break legacy parsing
+  delete compatData.metadata;
+  delete compatData.lastFetchedAt;
+  delete compatData.source;
+  delete compatData.dataType;
+  
+  // Keep timestamp and dataFreshness as they were added for frontend optimization
+  // and are handled by existing frontend code
+  
+  return compatData;
+}
+
+/*
+ * BACKWARD COMPATIBILITY NOTES FOR GA4_COMPAT_MODE=true (default):
+ * 
+ * Legacy Keys Preserved in Dashboard Response:
+ * - metrics[].timePeriod: "YYYY-MM" for monthly, "YYYY-MM-daily" for daily periods  
+ * - metrics[].sourceType: "Client", "Competitor", "CD_Avg" (unchanged from historical)
+ * - metrics[].metricName: Core metric names unchanged
+ * - metrics[].value: Numerical/string values in original format
+ * - metrics[].competitorId: String IDs for competitor metrics
+ * - client, competitors, insights: Original structure preserved
+ * 
+ * Compat Mode Dashboard Behaviors:
+ * - Removes new metadata fields (metadata, lastFetchedAt, source, dataType) from metrics
+ * - Preserves exact timePeriod naming conventions used by legacy dashboard
+ * - Maintains original JSON response structure without extensions  
+ * - No new fields that could cause strict JSON parsers to fail
+ * - Keeps timestamp/dataFreshness for frontend optimization (handled by existing code)
+ * 
+ * When GA4_COMPAT_MODE=false:
+ * - Enhanced metadata fields available in all responses
+ * - Future extensibility for new data structures and tracking
+ * - Extended logging and audit capabilities throughout the pipeline
+ */

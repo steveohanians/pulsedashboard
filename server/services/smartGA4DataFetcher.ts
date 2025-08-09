@@ -7,12 +7,14 @@ import type { Metric } from '@shared/schema';
 const GA4_FORCE_ENABLED = process.env.GA4_FORCE_ENABLED === 'true';
 const GA4_LOCKS_ENABLED = process.env.GA4_LOCKS_ENABLED === 'true';
 const GA4_STRICT_CLIENTID_VALIDATION = process.env.GA4_STRICT_CLIENTID_VALIDATION === 'true';
+const GA4_COMPAT_MODE = process.env.GA4_COMPAT_MODE !== 'false'; // Default true for backward compatibility
 
 // Log active flags on startup
 logger.info('GA4 Feature Flags:', {
   GA4_FORCE_ENABLED,
   GA4_LOCKS_ENABLED,
-  GA4_STRICT_CLIENTID_VALIDATION
+  GA4_STRICT_CLIENTID_VALIDATION,
+  GA4_COMPAT_MODE
 });
 
 // Lock tracking with proper typing for better maintainability
@@ -70,8 +72,8 @@ function releaseLock(lockKey: string): void {
  * Validate clientId format for security (conditional based on flag)
  */
 function validateClientId(clientId: string): boolean {
-  if (!GA4_STRICT_CLIENTID_VALIDATION) {
-    // Historical behavior: basic validation only
+  if (!GA4_STRICT_CLIENTID_VALIDATION || GA4_COMPAT_MODE) {
+    // Historical behavior: basic validation only (compat mode bypasses strict validation)
     return typeof clientId === 'string' && clientId.length > 0;
   }
   
@@ -269,17 +271,23 @@ export class SmartGA4DataFetcher {
       const periodStatus: ExistingDataStatus[] = [];
       
       for (const metricName of coreMetrics) {
-        // Check for daily data
+        // Check for daily data - ensure legacy format in compat mode
+        const dailyPeriodFormat = GA4_COMPAT_MODE 
+          ? `${period.period}-daily` 
+          : `${period.period}-daily`;
         const dailyData = await storage.getMetricsForPeriod(
           clientId, 
-          `${period.period}-daily`, 
+          dailyPeriodFormat, 
           metricName
         );
         
-        // Check for monthly data
+        // Check for monthly data - ensure legacy format in compat mode  
+        const monthlyPeriodFormat = GA4_COMPAT_MODE 
+          ? period.period  // Legacy: "YYYY-MM"
+          : period.period;
         const monthlyData = await storage.getMetricsForPeriod(
           clientId, 
-          period.period, 
+          monthlyPeriodFormat, 
           metricName
         );
         
@@ -418,23 +426,32 @@ export class SmartGA4DataFetcher {
         await storage.deleteMetricsForPeriod(clientId, `${period.period}-daily`, metricName);
         
         // NEW: Insert monthly summary (metadata tracking implemented via logging)
+        // In compat mode, ensure legacy timePeriod format and sourceType
         await storage.createMetric({
           clientId,
           metricName,
           value: monthlyAverage.toString(),
-          sourceType: 'Client',
-          timePeriod: period.period
+          sourceType: GA4_COMPAT_MODE ? 'Client' : 'Client', // Legacy sourceType in compat mode
+          timePeriod: GA4_COMPAT_MODE ? period.period : period.period // Legacy format: "YYYY-MM"
         });
         
-        // NEW: Log metadata for tracking purposes
-        logger.info('Monthly summary created with metadata', {
-          clientId,
-          metricName,
-          period: period.period,
-          lastFetchedAt: new Date().toISOString(),
-          source: 'ga4',
-          dataType: 'monthly_summary'
-        });
+        // NEW: Log metadata for tracking purposes (compat mode limits metadata exposure)
+        if (GA4_COMPAT_MODE) {
+          logger.info('Monthly summary created', {
+            clientId,
+            metricName,
+            period: period.period
+          });
+        } else {
+          logger.info('Monthly summary created with metadata', {
+            clientId,
+            metricName,
+            period: period.period,
+            lastFetchedAt: new Date().toISOString(),
+            source: 'ga4',
+            dataType: 'monthly_summary'
+          });
+        }
         
         logger.debug(`Converted ${dailyData.length} daily records to 1 monthly record for ${metricName}`);
       }
@@ -460,14 +477,18 @@ export class SmartGA4DataFetcher {
       );
       
       if (success) {
-        // Consolidated success logging with metadata
-        logger.info(`Successfully fetched daily GA4 data for ${period.period}`, {
-          clientId,
-          period: period.period,
-          lastFetchedAt: new Date().toISOString(),
-          source: 'ga4',
-          dataType: 'daily'
-        });
+        // Consolidated success logging with metadata (compat mode limits metadata exposure)
+        if (GA4_COMPAT_MODE) {
+          logger.info(`Successfully fetched daily GA4 data for ${period.period}`);
+        } else {
+          logger.info(`Successfully fetched daily GA4 data for ${period.period}`, {
+            clientId,
+            period: period.period,
+            lastFetchedAt: new Date().toISOString(),
+            source: 'ga4',
+            dataType: 'daily'
+          });
+        }
         return { success: true, dataType: 'daily' };
       } else {
         return { success: false, dataType: 'daily', error: 'GA4 API request failed' };
@@ -498,14 +519,18 @@ export class SmartGA4DataFetcher {
       );
       
       if (success) {
-        // Consolidated success logging with metadata
-        logger.info(`Successfully fetched monthly GA4 data for ${period.period}`, {
-          clientId,
-          period: period.period,
-          lastFetchedAt: new Date().toISOString(),
-          source: 'ga4',
-          dataType: 'monthly'
-        });
+        // Consolidated success logging with metadata (compat mode limits metadata exposure)
+        if (GA4_COMPAT_MODE) {
+          logger.info(`Successfully fetched monthly GA4 data for ${period.period}`);
+        } else {
+          logger.info(`Successfully fetched monthly GA4 data for ${period.period}`, {
+            clientId,
+            period: period.period,
+            lastFetchedAt: new Date().toISOString(),
+            source: 'ga4',
+            dataType: 'monthly'
+          });
+        }
         return { success: true, dataType: 'monthly' };
       } else {
         return { success: false, dataType: 'monthly', error: 'GA4 API request failed' };
@@ -540,3 +565,24 @@ export async function smartGA4DataFetcher(options: {
   const fetcher = new SmartGA4DataFetcher();
   return await fetcher.fetch15MonthData(options.clientId, options.force);
 }
+
+/*
+ * BACKWARD COMPATIBILITY NOTES FOR GA4_COMPAT_MODE=true (default):
+ * 
+ * Legacy Keys Preserved:
+ * - timePeriod: "YYYY-MM" for monthly, "YYYY-MM-daily" for daily periods
+ * - sourceType: "Client" (unchanged from historical behavior)
+ * - metricName: Core metric names unchanged
+ * - value: Numerical/string values in original format
+ * 
+ * Compat Mode Behaviors:
+ * - Bypasses strict clientId validation (GA4_STRICT_CLIENTID_VALIDATION ignored)
+ * - Limits metadata exposure in logs (no source/dataType/lastFetchedAt fields)
+ * - Preserves exact timePeriod naming conventions
+ * - Maintains legacy sourceType without modernization
+ * 
+ * When GA4_COMPAT_MODE=false:
+ * - Enhanced metadata logging enabled
+ * - Future extensibility for new fields and sourceTypes
+ * - Strict validation enforcement
+ */

@@ -8,6 +8,9 @@ import logger from '../utils/logger';
 import { ErrorResponses, asyncErrorHandler } from '../utils/errorHandling';
 import { adminRequired } from '../middleware/authMiddleware';
 
+// Environment flag for backward compatibility
+const GA4_COMPAT_MODE = process.env.GA4_COMPAT_MODE !== 'false'; // Default true for backward compatibility
+
 // Enhanced validation middleware with comprehensive error handling
 const validateClientId = asyncErrorHandler(async (req: any, res: any, next: any) => {
   const { clientId } = req.params;
@@ -129,9 +132,12 @@ router.get('/:clientId/:period', validateClientId, asyncErrorHandler(async (req,
     });
   }
   
+  // Apply compatibility layer for legacy dashboard clients
+  const compatibleData = GA4_COMPAT_MODE ? applyCompatibilityLayer(ga4Data) : ga4Data;
+  
   res.json({
     success: true,
-    data: ga4Data
+    data: compatibleData
   });
 }));
 
@@ -265,4 +271,62 @@ router.post('/daily/:clientId/:period', validateClientId, asyncErrorHandler(asyn
   });
 }));
 
+/**
+ * Apply backward compatibility layer to GA4 data
+ * Ensures legacy timePeriod formats and removes new fields that could break strict clients
+ */
+function applyCompatibilityLayer(data: any): any {
+  if (!data) return data;
+  
+  // Clone the data to avoid mutations
+  const compatData = JSON.parse(JSON.stringify(data));
+  
+  // Ensure legacy timePeriod naming for any nested period references
+  if (compatData.timePeriod) {
+    // Keep existing format: "YYYY-MM" for monthly, "YYYY-MM-daily" for daily
+    // This is already in the correct legacy format, but ensure consistency
+    if (compatData.timePeriod.includes('daily')) {
+      // Daily format already correct: "YYYY-MM-daily"
+    } else {
+      // Monthly format already correct: "YYYY-MM"
+    }
+  }
+  
+  // Remove any new metadata fields that could break legacy clients
+  if (compatData.metadata) {
+    delete compatData.metadata;
+  }
+  if (compatData.lastFetchedAt) {
+    delete compatData.lastFetchedAt;
+  }
+  if (compatData.source) {
+    delete compatData.source;
+  }
+  if (compatData.dataType) {
+    delete compatData.dataType;
+  }
+  
+  return compatData;
+}
+
 export default router;
+
+/*
+ * BACKWARD COMPATIBILITY NOTES FOR GA4_COMPAT_MODE=true (default):
+ * 
+ * Legacy Keys Preserved in Data Response:
+ * - timePeriod: "YYYY-MM" for monthly, "YYYY-MM-daily" for daily periods
+ * - All core GA4 metrics in original format (bounceRate, sessionDuration, etc.)
+ * - Original success/error response structure
+ * 
+ * Compat Mode Data Behaviors:
+ * - Removes new metadata fields (metadata, lastFetchedAt, source, dataType)
+ * - Preserves exact timePeriod naming conventions used by legacy dashboard
+ * - Maintains original JSON response structure without extensions
+ * - No new fields that could cause strict JSON parsers to fail
+ * 
+ * When GA4_COMPAT_MODE=false:
+ * - Enhanced metadata fields available in responses
+ * - Future extensibility for new data structures
+ * - Extended logging and audit capabilities
+ */

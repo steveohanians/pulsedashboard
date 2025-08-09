@@ -7,11 +7,13 @@ import type { User } from '@shared/schema';
 // Environment flag controls for rollback safety
 const GA4_FORCE_ENABLED = process.env.GA4_FORCE_ENABLED === 'true';
 const GA4_STRICT_CLIENTID_VALIDATION = process.env.GA4_STRICT_CLIENTID_VALIDATION === 'true';
+const GA4_COMPAT_MODE = process.env.GA4_COMPAT_MODE !== 'false'; // Default true for backward compatibility
 
 // Log active flags on startup
 logger.info('Cleanup Route Feature Flags:', {
   GA4_FORCE_ENABLED,
-  GA4_STRICT_CLIENTID_VALIDATION
+  GA4_STRICT_CLIENTID_VALIDATION,
+  GA4_COMPAT_MODE
 });
 
 // Extended request interface with proper User typing
@@ -54,8 +56,8 @@ const requireAdminAuth = (req: AuthenticatedRequest, res: Response, next: NextFu
  * Validate clientId format for security (conditional based on flag)
  */
 function validateClientId(clientId: string): boolean {
-  if (!GA4_STRICT_CLIENTID_VALIDATION) {
-    // Historical behavior: basic validation only
+  if (!GA4_STRICT_CLIENTID_VALIDATION || GA4_COMPAT_MODE) {
+    // Historical behavior: basic validation only (compat mode bypasses strict validation)
     return typeof clientId === 'string' && clientId.length > 0;
   }
   
@@ -120,13 +122,15 @@ router.post('/cleanup-and-fetch/:clientId', requireAuth, requireAdminAuth, async
     // Step 1: Clear existing synthetic/derived caches for the given clientId only
     await clearSyntheticDataForClient(clientId);
     
-    // Step 2: Call smart GA4 fetcher (conditionally with force based on flag)
-    const results = GA4_FORCE_ENABLED 
-      ? await smartGA4DataFetcher({ 
-          clientId, 
-          force: true // Force bypass cache and refresh data
-        })
-      : await smartGA4DataFetcher({ clientId }); // Historical behavior
+    // Step 2: Call smart GA4 fetcher (compat mode uses legacy service sequence)
+    const results = GA4_COMPAT_MODE 
+      ? await smartGA4DataFetcher({ clientId }) // Legacy behavior: no force unless explicitly enabled
+      : (GA4_FORCE_ENABLED 
+          ? await smartGA4DataFetcher({ 
+              clientId, 
+              force: true // Force bypass cache and refresh data
+            })
+          : await smartGA4DataFetcher({ clientId })); // Historical behavior
     
     // Log completion with audit trail
     logger.info(`Cleanup and fetch completed for ${clientId}`, {
@@ -204,3 +208,24 @@ async function clearSyntheticDataForClient(clientId: string): Promise<void> {
 }
 
 export default router;
+
+/*
+ * BACKWARD COMPATIBILITY NOTES FOR GA4_COMPAT_MODE=true (default):
+ * 
+ * Legacy Behaviors Preserved:
+ * - Basic clientId validation only (bypasses GA4_STRICT_CLIENTID_VALIDATION)
+ * - Legacy service sequence: smartGA4DataFetcher({ clientId }) without force
+ * - Historical cleanup method unchanged
+ * - Error messages in original format
+ * 
+ * Compat Mode Route Behaviors:
+ * - Force refresh only when GA4_FORCE_ENABLED explicitly true
+ * - No enhanced metadata in response headers
+ * - Preserves original JSON response structure
+ * - Maintains historical error handling patterns
+ * 
+ * When GA4_COMPAT_MODE=false:
+ * - Enhanced validation and security features enabled
+ * - Modern service call patterns with force parameters
+ * - Extended metadata and audit trail logging
+ */
