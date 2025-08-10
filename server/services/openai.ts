@@ -33,32 +33,16 @@ function normalizeCompletionOptions<T extends Record<string, any>>(
 ): T {
   const out: any = { ...opts };
   const isGpt5 = model.toLowerCase().startsWith("gpt-5");
-  
-  if (isGpt5) {
-    // GPT-5 requires max_completion_tokens instead of max_tokens
-    if (typeof out.max_tokens === "number") {
-      out.max_completion_tokens = out.max_tokens;
-      delete out.max_tokens;
+  if (isGpt5 && typeof out.max_tokens === "number") {
+    out.max_completion_tokens = out.max_tokens;
+    delete out.max_tokens;
 
-      if (process.env.NODE_ENV !== "production") {
-        logger.debug(
-          `Translated max_tokens → max_completion_tokens for model ${model} (value=${out.max_completion_tokens})`
-        );
-      }
-    }
-
-    // GPT-5 does not allow explicit temperature settings - only supports default temperature: 1
-    if (typeof out.temperature === "number") {
-      delete out.temperature;
-
-      if (process.env.NODE_ENV !== "production") {
-        logger.debug(
-          `Removed temperature parameter for model ${model} (GPT-5 only supports default temperature: 1)`
-        );
-      }
+    if (process.env.NODE_ENV !== "production") {
+      logger.debug(
+        `Translated max_tokens → max_completion_tokens for model ${model} (value=${out.max_completion_tokens})`
+      );
     }
   }
-  
   return out as T;
 }
 
