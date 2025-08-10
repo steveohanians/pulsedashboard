@@ -1,0 +1,112 @@
+Here’s a single, condensed, copy-paste prompt you can use with a fresh Replit agent session. It’s tailored to your repo structure and makes the agent map backend, frontend, schema, env, and GA4 flows in one run, with proof of coverage and saved docs. Just paste it as-is:
+
+```
+Goal: Build a complete understanding of this repository (backend, frontend, schema, env, GA4 data flows) BEFORE changing any code. Produce a single reference doc and a 1-page summary. Do NOT modify source files.
+
+Repo structure (key paths to read):
+- Root configs: package.json, package-lock.json, tsconfig.json, vite.config.ts, tailwind.config.ts, postcss.config.js, .env.example (and .env if accessible), .replit, replit.md, drizzle.config.ts, components.json
+- Backend: server/index.ts, server/routes.ts, server/vite.ts, server/auth.ts, server/db.ts, server/storage.ts
+  - server/middleware/**
+  - server/routes/** (adminGA4Route.ts, cleanupAndFetchRoute.ts, ga4-admin.ts, ga4DataRoute.ts, ga4Routes.ts, ga4ServiceAccountRoutes.ts, googleOAuthRoutes.ts, smartGA4Route.ts)
+  - server/services/** (ga4/** including GA4APIService.ts, GA4AuthenticationService.ts, GA4DataManager.ts, GA4DataProcessor.ts, GA4StorageService.ts, PulseDataService.ts, PulseDataProcessor.ts, Integration.ts, SmartDataFetcher.ts, constants.ts, types.ts; semrush/**; insightDataAggregator.ts; googleOAuthService.ts; openai.ts)
+  - server/utils/** (company/**, data-generation/**, logging/**, query-optimization/**, testing/**, validation/**, background-processor.ts, databaseUtils.ts, dateUtils.ts, errorHandling.ts, metricParser.ts, phase3Integration.ts)
+  - server/scripts/** (populateHistoricalData.ts, replaceWithAuthenticData.ts)
+- Frontend: client/src/App.tsx, client/src/main.tsx, client/src/index.html, client/src/global.css
+  - client/src/pages/** (admin.tsx, dashboard.tsx, insights.tsx, login.tsx, not-found.tsx)
+  - client/src/components/** (admin/**, charts/**, dashboard/**, shared/**, ui/**)
+  - client/src/hooks/** (use-analytics.tsx, use-auth.tsx, use-preload.tsx, useApiRequest.ts, etc.)
+  - client/src/lib/** (queryClient.ts, utils.ts)
+  - client/src/utils/** (chartDataTransformers.ts, chartHelpers.ts, dateFormatting.ts, errorHandling.ts, formattingHelpers.ts, metricParser.ts, sharedUtilities.ts)
+- Shared modules: shared/**
+- Scripts: scripts/** (data-diagnostics.js, execute-ga4-data-sync.js, regenerate-cohesity-data.ts, test-ga4-operations.js)
+
+If docs/repo_reference.md already exists, read it first and update/expand rather than duplicate.
+
+Tasks (single run, may do in batches if needed):
+1) File-by-file summaries (Backend + Frontend + Shared + Config)
+   For every file under the scope above, output:
+   - File path
+   - Purpose (1–2 sentences)
+   - Exports (functions/classes/types) with a brief role
+   - Key internal imports (which local modules it depends on)
+   - External libraries used
+   Produce batches labeled “Batch X of N” until 100% coverage.
+
+2) API Index (server/routes/** + wiring in server/index.ts and server/routes.ts)
+   For each route handler:
+   - Method, path, middlewares
+   - Params/query
+   - Response shape (top-level keys/types)
+   - Cache headers/validators (Cache-Control, ETag, Last-Modified, SWR)
+   - Note any feature flags affecting behavior
+
+3) Data Access Index
+   - Where DB/storage is accessed (server/db.ts, server/storage.ts, services, utils)
+   - Tables/collections/keys touched (name + fields)
+   - Caching layers used (in-memory, Redis, header-based, etc.) and invalidation points
+
+4) Frontend API Consumers
+   - Find ALL fetch/axios/React Query/SWR/Apollo calls in client/src/**
+   - For each call: file + line, endpoint, method, params/query, expected JSON keys the UI reads, client-side caching options (queryClient config, staleTime, refetch)
+   - Map dashboard components (client/src/components/dashboard/** and pages/dashboard.tsx) to their endpoints and required keys (e.g., timePeriod, metricName, value) and any transforms (metricParser.ts, chartDataTransformers.ts)
+
+5) Schema & Migrations
+   - From shared/schema.ts (and related shared files), server/db.ts, server/storage.ts, server/services/ga4/GA4StorageService.ts, migrations or drizzle references:
+   - List tables/collections: fields (name, type, nullability, defaults), indexes, relationships
+   - Enumerate domain constants/enums (metric names, timePeriod formats, sourceType values)
+   - Identify which fields underpin GA4 endpoints and the exact keys the frontend expects (align with #4)
+
+6) GA4 End-to-End Flow Maps (at least 3)
+   - Flow A: A time-series chart (e.g., client/src/components/charts/time-series-chart.tsx)
+   - Flow B: A distribution or comparison chart (e.g., device-distribution-chart.tsx or comparison-chart.tsx)
+   - Flow C: Admin cleanup + refetch (cleanupAndFetchRoute.ts + ga4 routes + services like SmartDataFetcher.ts/GA4DataManager.ts/GA4StorageService.ts)
+   For each flow, number steps:
+     Component → API call → route/handler → service(s) → DB/storage → response → UI render
+     Include cache/headers and any env flag branches (e.g., GA4_FORCE_ENABLED, GA4_COMPAT_MODE).
+     Call out breakpoints or inconsistencies (e.g., timePeriod naming drift “YYYY-MM” vs “YYYY-MM-daily”).
+
+7) Env Vars & Config Effects
+   - Search for process.env usage repo-wide; list each var, where used, default behavior, and effect on caching/data ingestion/UI (e.g., GA4_FORCE_ENABLED, GA4_LOCKS_ENABLED, GA4_COMPAT_MODE)
+   - Summarize Vite/Tailwind/build impacts relevant to runtime behavior
+
+8) Proof of Coverage
+   - Provide a Coverage Checklist listing every file path discovered under the specified scopes with a ✓ when summarized
+   - If any files could not be read (size/limits), list them explicitly so we can re-run with narrowed scope
+
+9) Artifacts (save outputs)
+   - Create/overwrite docs/repo_reference.md containing:
+     * Table of Contents
+     * Backend Map (file summaries, API index, data access index)
+     * Frontend Map (components, API consumers, dashboard GA4 flows)
+     * Schema Reference (tables/collections, enums/constants, GA4/Charts field map)
+     * Data Flow Maps (the 3+ flows)
+     * Env Vars & Config Effects
+     * Coverage Checklist
+     * Open Questions & Assumptions
+   - Create/overwrite docs/repo_reference_summary.md (≤1 page) with:
+     * System overview
+     * Critical endpoints and consumers
+     * Key env flags and their effects
+     * Top 3 risk areas to watch
+
+10) Sanity checklist (no code changes)
+   - Output 5 curl commands (with placeholders for HOST and CLIENT_ID) for the most-used GA4 endpoints identified. Each shows:
+     * HTTP status, Cache-Control, ETag
+     * jq filters printing first item keys (e.g., .[0] | keys)
+   - Output a small file tree of the key frontend components tied to those endpoints
+   - List the minimum env vars required for the dashboard to function in staging
+
+Important constraints:
+- This is a comprehension task only. Do NOT modify any source code.
+- Be explicit when a response JSON shape or timePeriod format is inferred vs confirmed.
+- If the repository is too large for a single pass, process in clearly labeled batches until complete.
+- Begin by stating the total number of files discovered under the scopes, then proceed.
+
+Deliverables:
+- Printed report sections inline
+- Saved docs:
+  - docs/repo_reference.md
+  - docs/repo_reference_summary.md
+
+When done, ask if I want a focused follow-up (e.g., GA4 compatibility adapter or caching header verification) using these new maps.
+```
