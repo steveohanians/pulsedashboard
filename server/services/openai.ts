@@ -20,7 +20,10 @@ FINAL / OVERRIDING INSTRUCTIONS (win on conflict):
 ` as const;
 
 // To switch models, set OPENAI_MODEL in .env (e.g., OPENAI_MODEL=gpt-5)
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+// Function to get current model dynamically to support runtime changes
+function getCurrentModel(): string {
+  return process.env.OPENAI_MODEL || "gpt-4o";
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -353,10 +356,10 @@ async function generateInsightsWithCustomPrompt(
       max_tokens: 600,
       messages: [{ role: "user" as const, content: prompt }],
     };
-    const compatOpts = normalizeCompletionOptions(baseOpts, OPENAI_MODEL);
+    const compatOpts = normalizeCompletionOptions(baseOpts, getCurrentModel());
 
     const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: getCurrentModel(),
       ...compatOpts,
     });
 
@@ -601,10 +604,10 @@ export async function generateComprehensiveInsights(
     };
     const summaryCompatOpts = normalizeCompletionOptions(
       summaryBaseOpts,
-      OPENAI_MODEL,
+      getCurrentModel(),
     );
     const summaryResponse = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: getCurrentModel(),
       ...summaryCompatOpts,
     });
     const summaryResult = JSON.parse(
@@ -727,9 +730,10 @@ async function generateEnhancedMetricInsights(
       max_tokens: 400,
       messages: [{ role: "user" as const, content: prompt }],
     };
-    const compatOpts = normalizeCompletionOptions(baseOpts, OPENAI_MODEL);
+    const currentModel = getCurrentModel();
+    const compatOpts = normalizeCompletionOptions(baseOpts, currentModel);
     const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: currentModel,
       ...compatOpts,
     });
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -874,10 +878,10 @@ async function generateInsightsWithCustomPromptAndContext(
       max_tokens: 800,
       messages: [{ role: "user" as const, content: prompt }],
     };
-    const compatOpts = normalizeCompletionOptions(baseOpts, OPENAI_MODEL);
+    const compatOpts = normalizeCompletionOptions(baseOpts, getCurrentModel());
 
     const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: getCurrentModel(),
       ...compatOpts,
     });
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -994,10 +998,10 @@ async function generateDefaultInsightsWithContext(
       max_tokens: 600,
       messages: [{ role: "user" as const, content: prompt }],
     };
-    const compatOpts = normalizeCompletionOptions(baseOpts, OPENAI_MODEL);
+    const compatOpts = normalizeCompletionOptions(baseOpts, getCurrentModel());
 
     const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: getCurrentModel(),
       ...compatOpts,
     });
     const result = JSON.parse(response.choices[0].message.content || "{}");

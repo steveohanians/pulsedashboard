@@ -2965,14 +2965,8 @@ export function registerRoutes(app: Express): Server {
       res.json({ 
         success: true, 
         model,
-        message: "Model updated successfully. Application restart required to apply changes." 
+        message: "Model updated successfully and applied immediately." 
       });
-
-      // Trigger graceful restart after response is sent
-      setTimeout(() => {
-        logger.info("Triggering application restart for OpenAI model change", { model });
-        process.exit(0); // Let the process manager restart the application
-      }, 1000);
 
     } catch (error) {
       logger.error("Error updating OpenAI model", { error: (error as Error).message });
