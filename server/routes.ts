@@ -2861,6 +2861,70 @@ export function registerRoutes(app: Express): Server {
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
 
   app.use("/api", cleanupAndFetchRoute);
+
+  // OpenAI Model Management Endpoints
+  app.get("/api/admin/openai-model", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== "Admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const currentModel = process.env.OPENAI_MODEL || "gpt-4o";
+      
+      res.json({ 
+        currentModel,
+        availableModels: ["gpt-4o", "gpt-5"]
+      });
+    } catch (error) {
+      logger.error("Error getting OpenAI model", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/openai-model", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== "Admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { model } = req.body;
+      
+      // Validate model selection
+      if (!model || !["gpt-4o", "gpt-5"].includes(model)) {
+        return res.status(400).json({ message: "Invalid model selection" });
+      }
+
+      logger.info("OpenAI model change requested", { 
+        currentModel: process.env.OPENAI_MODEL || "gpt-4o",
+        newModel: model,
+        admin: req.user.id 
+      });
+
+      // Update environment variable
+      process.env.OPENAI_MODEL = model;
+
+      logger.info("OpenAI model updated successfully", { 
+        newModel: model,
+        admin: req.user.id 
+      });
+
+      res.json({ 
+        success: true, 
+        model,
+        message: "Model updated successfully. Application restart required to apply changes." 
+      });
+
+      // Trigger graceful restart after response is sent
+      setTimeout(() => {
+        logger.info("Triggering application restart for OpenAI model change", { model });
+        process.exit(0); // Let the process manager restart the application
+      }, 1000);
+
+    } catch (error) {
+      logger.error("Error updating OpenAI model", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
   
   // Simple GA4 refresh endpoint for demo client (no auth required)
   app.post("/api/refresh-ga4-data", async (req, res) => {
@@ -3074,3 +3138,5 @@ function applyDashboardCompatibilityLayer(data: any): any {
  * - Future extensibility for new data structures and tracking
  * - Extended logging and audit capabilities throughout the pipeline
  */
+
+export { setupRoutes };

@@ -24,6 +24,7 @@ import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-fo
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
+import { ModelToggle } from "@/components/ModelToggle";
 import { logger } from "@/utils/logger";
 
 // Dialog component for editing business size with controlled state
@@ -3248,6 +3249,9 @@ export default function AdminPanel() {
               {/* AI Prompts Management */}
               <TabsContent value="prompts">
                 <div className="space-y-6">
+                  {/* AI Model Configuration */}
+                  <ModelToggle />
+                  
                   {/* Global Template Section */}
                   <Card>
                     <CardHeader>
