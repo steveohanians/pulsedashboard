@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { createHash } from "crypto";
+import fs from "fs/promises";
+import path from "path";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
@@ -25,6 +27,57 @@ interface DashboardResult {
   insights: any[];
   timestamp: number;
   dataFreshness: 'live' | 'cached';
+}
+
+/**
+ * Updates or adds an environment variable to the .env file
+ */
+async function updateEnvFile(key: string, value: string): Promise<void> {
+  const envPath = path.join(process.cwd(), '.env');
+  
+  try {
+    // Read existing .env file
+    let envContent = '';
+    try {
+      envContent = await fs.readFile(envPath, 'utf8');
+    } catch (error) {
+      // File doesn't exist, create new one
+      logger.info('Creating new .env file');
+    }
+
+    // Parse existing lines
+    const lines = envContent.split('\n');
+    let found = false;
+    
+    // Update existing key or prepare to add new one
+    const updatedLines = lines.map(line => {
+      if (line.startsWith(`${key}=`)) {
+        found = true;
+        return `${key}=${value}`;
+      }
+      return line;
+    });
+
+    // Add new key if not found
+    if (!found) {
+      updatedLines.push(`${key}=${value}`);
+    }
+
+    // Write back to file
+    await fs.writeFile(envPath, updatedLines.join('\n'), 'utf8');
+    
+    // Also update the runtime environment immediately
+    process.env[key] = value;
+    
+    logger.info('Environment file and runtime updated successfully', { key, value });
+  } catch (error) {
+    logger.error('Failed to update environment file', { 
+      key, 
+      value, 
+      error: (error as Error).message 
+    });
+    throw new Error(`Failed to persist environment variable: ${(error as Error).message}`);
+  }
 }
 
 /**
@@ -2900,8 +2953,9 @@ export function registerRoutes(app: Express): Server {
         admin: req.user.id 
       });
 
-      // Update environment variable
+      // Update both runtime environment and persist to .env file
       process.env.OPENAI_MODEL = model;
+      await updateEnvFile("OPENAI_MODEL", model);
 
       logger.info("OpenAI model updated successfully", { 
         newModel: model,
