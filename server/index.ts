@@ -2,31 +2,6 @@
 const SERVER_BOOT_TIME = Date.now();
 console.log(`🚀 [SERVER-BOOT] Server starting at: ${new Date(SERVER_BOOT_TIME).toISOString()}`);
 
-// Load environment variables from .env file manually
-import fs from 'fs';
-import path from 'path';
-
-try {
-  const envPath = path.join(process.cwd(), '.env');
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  const envLines = envContent.split('\n');
-  
-  for (const line of envLines) {
-    const trimmedLine = line.trim();
-    if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
-      const [key, ...valueParts] = trimmedLine.split('=');
-      const value = valueParts.join('=');
-      if (key && value !== undefined && !process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-  
-  console.log(`🔧 [ENV-LOADER] Loaded OPENAI_MODEL: ${process.env.OPENAI_MODEL || 'default (gpt-4o)'}`);
-} catch (error) {
-  console.log(`⚠️ [ENV-LOADER] Could not load .env file: ${(error as Error).message}`);
-}
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
