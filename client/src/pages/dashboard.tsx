@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QueryKeys } from "@shared/http/contracts";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,7 +157,7 @@ export default function Dashboard() {
   const effectiveTimePeriod = timePeriod === "Custom Date Range" && customDateRange ? customDateRange : timePeriod;
   
   const dashboardQuery = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/${user?.clientId}`, effectiveTimePeriod, businessSize, industryVertical],
+    queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
     queryFn: () => fetch(`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`)
       .then(res => res.json()),
     enabled: !!user?.clientId,
@@ -183,14 +184,14 @@ export default function Dashboard() {
   }, [dashboardData?.metrics]);
 
   const { data: filtersData } = useQuery<FiltersData>({
-    queryKey: ["/api/filters", businessSize, industryVertical],
-    queryFn: () => fetch(`/api/filters?currentBusinessSize=${encodeURIComponent(businessSize)}&currentIndustryVertical=${encodeURIComponent(industryVertical)}`)
+    queryKey: QueryKeys.filters(),
+    queryFn: () => fetch(`/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`)
       .then(res => res.json()),
   });
 
   // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
-    queryKey: [`/api/insights/${user?.clientId}`],
+    queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -248,8 +249,8 @@ export default function Dashboard() {
         logger.warn("Failed to clear localStorage:", error);
       }
       // Invalidate and refetch all related queries with correct key patterns
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
       queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
       // Force refetch all data immediately
@@ -294,8 +295,8 @@ export default function Dashboard() {
     onSuccess: () => {
       logger.info("Delete mutation onSuccess triggered");
       // Invalidate cache first, then refetch - ensures UI updates properly
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/insights/${user?.clientId}`] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
       queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
       queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
       // Force refetch all data immediately
