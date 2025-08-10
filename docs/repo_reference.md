@@ -1,483 +1,545 @@
-# Pulse Dashboard™ - Comprehensive Repository Reference
+# Repository Reference - Pulse Dashboard™
+*Comprehensive architectural documentation and development guide*
 
-## **Repository Architecture Overview**
+## Table of Contents
 
-Pulse Dashboard™ is a full-stack analytics benchmarking dashboard with 210 files organized in a modular, production-ready architecture emphasizing performance, data integrity, and GA4 integration.
-
-### **Core Technologies**
-- **Backend**: Node.js/Express with TypeScript, Drizzle ORM, PostgreSQL
-- **Frontend**: React 18, TanStack Query, Wouter routing, shadcn/ui, Recharts
-- **Database**: PostgreSQL via Neon serverless with 17 tables and performance indexes
-- **Authentication**: Passport.js with session-based auth via connect-pg-simple
-- **Data Sources**: Google Analytics 4, SEMrush, DataForSEO
-- **AI Integration**: OpenAI API for insights generation
-
----
-
-## **1. FILE-BY-FILE SUMMARIES**
-
-### **Root Configuration (5 files)**
-
-**`package.json`**
-- Purpose: Main project configuration for Node.js/React full-stack application
-- Key Dependencies: Express, React 18, TypeScript, Drizzle ORM, TanStack Query, shadcn/ui, Recharts
-- Scripts: `dev` (development server), `build` (production build), `db:push` (schema migrations)
-- External Libraries: @neondatabase/serverless, openai, passport, multer, recharts, wouter
-
-**`tsconfig.json`**
-- Purpose: TypeScript compiler configuration for monorepo
-- Key Features: ESNext modules, strict mode, path aliases (@/* for client, @shared/* for shared)
-- Exports: Compiler configuration
-
-**`vite.config.ts`**
-- Purpose: Vite build configuration with React and development plugins
-- Exports: defineConfig with React plugin, runtime error overlay, cartographer
-- External Libraries: Vite, @vitejs/plugin-react
-
-**`tailwind.config.ts`**
-- Purpose: Tailwind CSS configuration with custom chart color variables
-- Key Features: Dark mode support, CSS variable integration, animation plugins
-- Exports: TailwindCSS configuration
-
-**`drizzle.config.ts`**
-- Purpose: Drizzle ORM configuration for database migrations
-- Key Features: PostgreSQL dialect, schema and migration paths
-- External Libraries: drizzle-kit
-
-### **Backend Core (50+ files)**
-
-**`server/index.ts`**
-- Purpose: Main Express server entry point with middleware setup and performance monitoring
-- Exports: Express app with security, rate limiting, health checks, logging
-- Key Features: Global boot time tracking, JSON response capture, database connection testing
-
-**`server/routes.ts`**
-- Purpose: Central API route definitions and business logic coordination
-- Exports: registerRoutes function, dashboard API endpoints, authentication routes
-- Key Features: Environment flag compatibility (GA4_COMPAT_MODE), dashboard data optimization, distribution metric parsing
-
-**`server/storage.ts`**
-- Purpose: Database abstraction layer and storage interface definition
-- Exports: IStorage interface, DatabaseStorage class, session store
-- Key Features: Comprehensive CRUD operations, session management, GA4 property access
-
-**`server/auth.ts`**
-- Purpose: Authentication and session management with Passport.js
-- Exports: setupAuth function, password hashing/validation
-- Key Features: Local strategy authentication, secure password handling, session configuration
-
-**`server/config.ts`**
-- Purpose: Centralized environment configuration with type safety
-- Exports: APP_CONFIG object, helper functions, validation
-- Key Features: Production safety flags, company branding, metric ranges, security settings
-
-**`server/db.ts`**
-- Purpose: Database connection and Drizzle ORM setup
-- Exports: db instance, connection pool
-- External Libraries: @neondatabase/serverless, drizzle-orm
-
-### **GA4 Services Directory (15+ files)**
-
-**`server/services/ga4/SmartDataFetcher.ts`**
-- Purpose: Intelligent 15-month GA4 data fetching with optimization
-- Key Features: Lock management, TTL enforcement, existing data checking, batch processing
-- Exports: SmartGA4DataFetcher class
-
-**`server/services/ga4/GA4DataManager.ts`**
-- Purpose: High-level GA4 data coordination and processing
-- Key Features: Period data fetching, metric transformation, error handling
-- Exports: GA4DataManager class
-
-**`server/services/ga4/PulseDataService.ts`**
-- Purpose: Core GA4 API service with authentication and data retrieval
-- Key Features: OAuth token management, metric fetching, device distribution processing
-- Exports: GA4DataService class
-
-**`server/services/ga4/ServiceAccountManager.ts`**
-- Purpose: GA4 service account management and token refresh
-- Key Features: Service account validation, token lifecycle management
-- Exports: ServiceAccountManager class
-
-### **Shared Schema & Types (3 files)**
-
-**`shared/schema.ts`**
-- Purpose: Database schema definitions using Drizzle ORM
-- Exports: 17 table definitions, enums, types, Zod validation schemas
-- Key Features: Performance indexes, JSONB storage for metrics, GA4 integration tables
-- Tables: clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts
-
-### **Frontend Core (80+ files)**
-
-**`client/src/App.tsx`**
-- Purpose: Main React application with routing and providers
-- Key Features: React Query provider, authentication context, error boundary, analytics tracking
-- Exports: Main App component
-
-**`client/src/pages/dashboard.tsx`**
-- Purpose: Main dashboard page with charts, filters, and data visualization
-- Key Features: State management, chart rendering, PDF export, AI insights integration
-- Exports: Dashboard component
-
-**`client/src/lib/queryClient.ts`**
-- Purpose: React Query client configuration and API utilities
-- Key Features: HTTP request handling, error management, authentication support
-- Exports: queryClient, apiRequest function
-
-**`client/src/hooks/use-auth.tsx`**
-- Purpose: Authentication hook and context provider
-- Key Features: Login/logout mutations, user state management, session handling
-- Exports: AuthProvider, useAuth hook
-
-### **Chart Components (8 files)**
-
-**`client/src/components/charts/time-series-chart.tsx`**
-- Purpose: Time series visualization with authentic data integration
-- Key Features: Line/bar chart rendering, competitor comparison, temporal data processing
-- Exports: TimeSeriesChart component
-
-**`client/src/components/charts/metrics-chart.tsx`**
-- Purpose: Metrics visualization with bar charts for performance data
-- Key Features: Traffic/device distribution handling, authentic data placeholders
-- Exports: MetricsChart component
-
-**`client/src/components/charts/area-chart.tsx`**
-- Purpose: Session duration area chart visualization
-- Key Features: Area chart for time-based metrics, authentic data integration
-- Exports: SessionDurationAreaChart component
-
-**`client/src/utils/chartUtils.ts`**
-- Purpose: Chart utility functions and color management
-- Key Features: Unified color system, metric formatting, chart data processing
-- Exports: Color constants, formatting functions, chart utilities
+1. [Project Overview](#project-overview)
+2. [Backend Infrastructure Map](#backend-infrastructure-map)
+3. [Frontend Architecture Map](#frontend-architecture-map)
+4. [Configuration & Environment](#configuration--environment)
+5. [Database Schema Reference](#database-schema-reference)
+6. [Data Flow Maps](#data-flow-maps)
+7. [Development Guidelines](#development-guidelines)
+8. [Open Questions & Assumptions](#open-questions--assumptions)
 
 ---
 
-## **2. API INDEX**
+## Project Overview
 
-### **Authentication Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| POST | `/api/register` | User registration | User object | email, password, name |
-| POST | `/api/login` | User authentication | User object | email, password |
-| POST | `/api/logout` | Session termination | Success message | Authenticated session |
-| GET | `/api/user` | Current user info | User object or null | Session cookie |
+Pulse Dashboard™ is a full-stack analytics benchmarking platform that transforms complex digital marketing insights into actionable intelligence. Built with enterprise-grade performance requirements, it integrates GA4 data, competitor analysis, and AI-powered recommendations for B2B clients.
 
-### **Dashboard Data Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| GET | `/api/dashboard/:clientId` | Main dashboard data | DashboardData object | Client ID |
-| GET | `/api/filters` | Filter options | FilterOptions array | None |
-| GET | `/api/ai-insights/:clientId` | AI insights data | AIInsight array | Client ID |
+### Core Technologies
+- **Frontend**: React 18 + TypeScript, Tailwind CSS + shadcn/ui, TanStack Query, Wouter routing
+- **Backend**: Node.js + Express.js + TypeScript (ESM), Passport.js authentication
+- **Database**: PostgreSQL via Neon serverless, Drizzle ORM
+- **Charts**: Recharts with custom optimization layer
+- **AI Integration**: OpenAI API with database-backed insights persistence
 
-### **Client Management Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| GET | `/api/clients` | List all clients | Client array | Admin role |
-| POST | `/api/clients` | Create new client | Client object | Admin role |
-| PUT | `/api/clients/:id` | Update client | Client object | Admin role |
-| DELETE | `/api/clients/:id` | Delete client | Success message | Admin role |
-
-### **Competitor Management Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| GET | `/api/competitors/:clientId` | Client competitors | Competitor array | Client ID |
-| POST | `/api/competitors` | Add competitor | Competitor object | Admin role |
-| DELETE | `/api/competitors/:id` | Remove competitor | Success message | Admin role |
-
-### **GA4 Data Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| POST | `/api/ga4-data/fetch/:clientId` | Trigger GA4 fetch | Success status | Admin role |
-| GET | `/api/ga4-data/status/:clientId` | GA4 sync status | Status object | Client ID |
-| POST | `/api/ga4-data/verify/:clientId` | Verify GA4 access | Verification result | Admin role |
-
-### **Health & Monitoring Endpoints**
-| Method | Endpoint | Purpose | Response | Requirements |
-|--------|----------|---------|----------|--------------|
-| GET | `/api/health` | System health check | Health status | None |
-| GET | `/api/health/detailed` | Detailed health info | Detailed status | Admin role |
+### Architecture Principles
+- **Performance First**: Sub-3-second load times, intelligent caching, background processing
+- **Data Integrity**: Authentic GA4/SEMrush data only, no synthetic fallbacks
+- **White-Label Ready**: Environment-driven branding and configuration
+- **Scalable Design**: Modular services, background job processing, connection pooling
 
 ---
 
-## **3. DATA ACCESS INDEX**
+## Backend Infrastructure Map
 
-### **Database Tables & Access Patterns**
+*Based on comprehensive analysis of 50+ server files*
 
-**Core Entity Access:**
-- `clients` - Primary client data with industry/size filters
-- `users` - Authentication and role-based access control
-- `metrics` - Time-series data with sourceType differentiation
-- `competitors` - Client-specific competitive data
-- `benchmarkCompanies` - Industry reference data
-- `cdPortfolioCompanies` - Portfolio benchmark data
+### Core Services Architecture
 
-**GA4 Integration Access:**
-- `ga4PropertyAccess` - Client-to-GA4 property mapping
-- `ga4ServiceAccounts` - OAuth service account management
-- Direct GA4 API calls via Google Analytics Data API v1
+#### **Authentication & Session Management**
+- **`server/auth.ts`**: Passport.js configuration with local strategy
+- **`server/middleware/rateLimiter.ts`**: Request throttling (auth: 5/min, upload: 10/min, admin: 30/min)
+- **Session Storage**: PostgreSQL via `connect-pg-simple` with configurable TTL
 
-**AI & Insights Access:**
-- `aiInsights` - Persistent AI-generated insights
-- `globalPromptTemplate` - AI prompt management
-- `metricPrompts` - Metric-specific AI prompts
-- `insightContexts` - Context data for AI processing
+#### **Database Layer**
+- **`server/db.ts`**: Neon PostgreSQL connection with pooling
+- **`server/storage.ts`**: IStorage interface abstraction (450+ lines)
+- **`shared/schema.ts`**: 17 tables with Drizzle ORM + Zod validation
+- **Migration Management**: `drizzle-kit` with `./migrations` output
 
-**Configuration Access:**
-- `filterOptions` - Dynamic filter configurations
-- Environment variables for feature flags and API keys
-- Session store via connect-pg-simple
+#### **GA4 Integration Services** (`server/services/ga4/`)
+- **`GA4DataManager.ts`**: High-level orchestration and data management
+- **`GA4APIService.ts`**: Google Analytics API client with OAuth handling
+- **`GA4StorageService.ts`**: Database persistence with optimization logic
+- **`GA4DataProcessor.ts`**: Transform GA4 responses to internal format
+- **`SmartDataFetcher.ts`**: 15-month intelligent data fetching with concurrency control
+- **`PulseDataService.ts`**: Legacy service wrapper for compatibility
 
-### **Query Optimization Patterns**
-- Query caching with TTL (60s default)
-- Parallel database queries for dashboard data
-- Background processing for AI insights
-- Connection pooling via Neon serverless
-- Indexed queries on frequently accessed fields
+#### **Route Structure** (`server/routes/`)
+- **`server/routes.ts`**: Main API endpoints (600+ lines)
+- **`ga4Routes.ts`**: GA4-specific endpoints with admin controls
+- **`ga4DataRoute.ts`**: Data fetching and management endpoints
+- **`smartGA4Route.ts`**: Intelligent GA4 operations
+- **`cleanupAndFetchRoute.ts`**: Admin cleanup and data refresh operations
+
+#### **Utility & Supporting Services**
+- **`server/utils/background-processor.ts`**: Async job processing (AI insights, data operations)
+- **`server/cache/performance-cache.ts`**: 5-minute TTL memory cache with cleanup
+- **`server/utils/query-optimization/queryOptimizer.ts`**: Database query optimization and caching
+- **`server/services/openai.ts`**: AI insights generation with prompt management
+- **`server/services/semrush/`**: SEMrush API integration for competitor data
+- **`server/utils/logging/logger.ts`**: Structured logging with environment-based levels
+
+### Key API Endpoints
+
+#### **Dashboard & Data Retrieval**
+```
+GET  /api/dashboard/:clientId              # Main dashboard data with caching
+GET  /api/insights/:clientId               # AI insights loading
+GET  /api/filters                          # Dynamic filter options
+GET  /api/clients                          # Client management (admin)
+```
+
+#### **GA4 Operations**
+```
+POST /api/ga4/fetch/:clientId              # Manual GA4 data fetch
+POST /api/cleanup-and-fetch/:clientId      # Clear cache + fetch fresh data
+GET  /api/ga4/status/:clientId             # GA4 integration status
+POST /api/ga4/property-access              # GA4 property setup
+```
+
+#### **Data Management**
+```
+POST /api/competitors                      # Add competitor
+DELETE /api/competitors/:id               # Remove competitor
+POST /api/metrics/bulk                    # Bulk metrics import
+DELETE /api/debug/clear-all-insights      # Clear AI insights (debug)
+```
+
+### Environment-Driven Configuration
+
+#### **GA4 Feature Flags**
+- `GA4_FORCE_ENABLED`: Bypass availability checks
+- `GA4_COMPAT_MODE`: Enable backward compatibility (default: true)
+- `GA4_STRICT_CLIENTID_VALIDATION`: Enhanced input validation
+- `GA4_LOCKS_ENABLED`: Concurrent fetch protection
+
+#### **Performance Controls**
+- `DASHBOARD_CACHE_ENABLED`: Response caching toggle
+- `NODE_ENV`: Affects logging, error handling, plugin loading
+- `SESSION_SECRET`: Session encryption key
+- `DATABASE_URL`: PostgreSQL connection string
 
 ---
 
-## **4. FRONTEND API CONSUMERS**
+## Frontend Architecture Map
 
-### **React Query Hooks & Endpoints**
+*Based on analysis of 100+ client-side files*
 
-**Dashboard Data Flow:**
+### Component Architecture
+
+#### **Core Pages** (`client/src/pages/`)
+- **`dashboard.tsx`**: Main analytics dashboard (800+ lines)
+- **`login.tsx`**: Authentication interface
+- **`admin.tsx`**: Admin management panel
+- **`insights.tsx`**: AI insights management
+- **`data-management.tsx`**: Data import/export tools
+- **`competitors.tsx`**: Competitor management interface
+- **`reports.tsx`**: Report generation and export
+
+#### **Chart Components** (`client/src/components/charts/`)
+- **`time-series-chart.tsx`**: Historical data visualization with authentic time series
+- **`metrics-chart.tsx`**: KPI comparison charts
+- **`bar-chart.tsx`**: General performance metrics
+- **`lollipop-chart.tsx`**: Device distribution visualization
+- **`stacked-bar-chart.tsx`**: Traffic channel breakdown
+- **`area-chart.tsx`**: Session duration visualization
+- **`ChartContainer.tsx`**: Responsive chart wrapper
+- **`PerformanceIndicator.tsx`**: Real-time status indicators
+
+#### **UI Component System** (`client/src/components/ui/`)
+Built on shadcn/ui foundation with 40+ components:
+- **Form Controls**: Button, Input, Select, Checkbox, Switch
+- **Layout**: Card, Dialog, Sheet, Tabs, Accordion
+- **Feedback**: Toast, Alert, Progress, Spinner
+- **Data Display**: Table, Badge, Avatar, Tooltip
+- **Navigation**: Command, Menu, Breadcrumb
+
+#### **Utility Functions** (`client/src/utils/`)
+- **`chartUtils.ts`**: Color management, chart configurations, data processing
+- **`chartDataProcessor.ts`**: Metric parsing and normalization
+- **`chartGenerators.ts`**: Time period generation and formatting
+- **`metricParser.ts`**: Safe value parsing with type validation
+- **`sharedUtilities.ts`**: Common helper functions
+
+### State Management & Data Flow
+
+#### **TanStack Query Configuration**
 ```typescript
-// Main dashboard query
-useQuery({ queryKey: ["/api/dashboard", clientId, timePeriod] })
+// Query keys follow hierarchical pattern
+["/api/dashboard", clientId, timePeriod, businessSize, industryVertical]
+["/api/insights", clientId]
+["/api/filters", businessSize, industryVertical]
 
-// Filter options
-useQuery({ queryKey: ["/api/filters"] })
-
-// AI insights
-useQuery({ queryKey: ["/api/ai-insights", clientId, timePeriod] })
+// Cache configuration
+staleTime: 0,           // Always fetch fresh dashboard data
+gcTime: 0,              // No client-side caching for dashboard
+refetchOnMount: 'always' // Ensure data freshness
 ```
 
-**Authentication Flow:**
+#### **Hook Architecture** (`client/src/hooks/`)
+- **`use-auth.ts`**: Authentication state management
+- **`use-toast.ts`**: Global notification system
+- **Custom query hooks**: Wrap API calls with proper error handling
+
+### Routing & Navigation
+**Router**: Wouter (lightweight React routing)
 ```typescript
-// User session check
-useQuery({ queryKey: ["/api/user"], queryFn: getQueryFn({ on401: "returnNull" }) })
-
-// Login mutation
-useMutation({ mutationFn: (credentials) => apiRequest("POST", "/api/login", credentials) })
-
-// Logout mutation
-useMutation({ mutationFn: () => apiRequest("POST", "/api/logout") })
+// Route definitions in App.tsx
+<Route path="/dashboard" component={Dashboard} />
+<Route path="/admin" component={Admin} />
+<Route path="/insights" component={Insights} />
 ```
 
-**Admin Operations:**
+### Theme & Styling
+- **Dark Mode**: CSS variables with class-based toggling
+- **Responsive Design**: Tailwind CSS with mobile-first approach
+- **Component Theming**: shadcn/ui with custom color palette
+- **Chart Colors**: Centralized color management for consistency
+
+---
+
+## Configuration & Environment
+
+*Analysis of 25+ environment variables and build configuration*
+
+### Critical Environment Variables
+
+#### **Database & Core Services**
+```bash
+DATABASE_URL=postgresql://...              # Required - Neon PostgreSQL connection
+SESSION_SECRET=...                         # Required - Session encryption key  
+NODE_ENV=production|development            # Affects security headers, logging
+```
+
+#### **External API Integration**
+```bash
+OPENAI_API_KEY=...                        # Required - AI insights generation
+GOOGLE_SERVICE_ACCOUNT_KEY=...            # GA4 API access credentials
+SEMRUSH_API_KEY=...                       # Competitor data integration
+```
+
+#### **Feature Flags & Performance**
+```bash
+GA4_FORCE_ENABLED=true|false              # Bypass GA4 availability checks
+GA4_COMPAT_MODE=true|false                # Backward compatibility (default: true)
+DASHBOARD_CACHE_ENABLED=true|false        # Response caching toggle
+```
+
+### Build Configuration
+
+#### **Vite Configuration** (`vite.config.ts`)
+- **SSR**: Express server integration for API routes
+- **Aliases**: Path mapping for imports (`@/` → `client/src/`)
+- **Plugins**: React, TypeScript, Tailwind CSS processing
+- **Dev Server**: Proxy configuration for API routes
+
+#### **TypeScript Configuration** (`tsconfig.json`)
+- **Module Resolution**: Node16 for ESM compatibility
+- **Strict Mode**: Full type checking enabled
+- **Path Mapping**: Consistent with Vite aliases
+
+#### **Package Management** (`package.json`)
+- **Scripts**: Development, build, and deployment commands
+- **Dependencies**: 60+ production packages
+- **Dev Dependencies**: Build tools, type definitions, testing
+
+### Security Configuration
+- **Helmet**: Security headers in production
+- **CORS**: Configurable origin policies
+- **Rate Limiting**: Per-endpoint throttling
+- **Session Security**: Secure cookies, CSRF protection
+
+---
+
+## Database Schema Reference
+
+*Complete analysis of 17 tables with relationships and indexes*
+
+### Core Entities
+
+#### **clients** (Primary customer entities)
+```sql
+CREATE TABLE clients (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  websiteUrl TEXT NOT NULL,
+  industryVertical TEXT NOT NULL,
+  businessSize TEXT NOT NULL,
+  ga4PropertyId TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  createdAt TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Indexes for filtering performance
+CREATE INDEX idx_clients_industry_vertical ON clients(industryVertical);
+CREATE INDEX idx_clients_business_size ON clients(businessSize);
+```
+
+#### **metrics** (Core data storage with JSONB flexibility)
+```sql
+CREATE TABLE metrics (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  clientId VARCHAR REFERENCES clients(id),
+  competitorId VARCHAR REFERENCES competitors(id),
+  cdPortfolioCompanyId VARCHAR REFERENCES cdPortfolioCompanies(id),
+  benchmarkCompanyId VARCHAR REFERENCES benchmarkCompanies(id),
+  metricName TEXT NOT NULL,
+  value JSONB NOT NULL,              -- Flexible data structure
+  sourceType sourceTypeEnum NOT NULL, -- Client, CD_Avg, Competitor, etc.
+  timePeriod TEXT NOT NULL,          -- YYYY-MM format
+  channel VARCHAR(50),               -- For traffic channels breakdown
+  createdAt TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Performance indexes for frequent queries
+CREATE INDEX idx_metrics_client_metric ON metrics(clientId, metricName);
+CREATE INDEX idx_metrics_time_period ON metrics(timePeriod);
+```
+
+### GA4 Integration Tables
+
+#### **ga4PropertyAccess** (Client-specific GA4 setup)
+```sql
+CREATE TABLE ga4PropertyAccess (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  clientId VARCHAR UNIQUE NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  serviceAccountId VARCHAR NOT NULL REFERENCES ga4ServiceAccounts(id),
+  propertyId TEXT NOT NULL,
+  propertyName TEXT,
+  accessLevel TEXT,                  -- Viewer, Analyst, Editor
+  accessVerified BOOLEAN NOT NULL DEFAULT false,
+  lastVerified TIMESTAMP,
+  syncStatus TEXT NOT NULL DEFAULT 'pending' -- pending, success, failed, blocked
+);
+```
+
+### Enums & Constants
+
+#### **sourceTypeEnum**
+```sql
+CREATE TYPE sourceTypeEnum AS ENUM (
+  'Client',           -- User's actual data
+  'CD_Portfolio',     -- Clear Digital portfolio companies
+  'CD_Avg',           -- Calculated portfolio average
+  'Industry',         -- Industry reference companies  
+  'Competitor',       -- Client-specific competitors
+  'Industry_Avg',     -- Calculated industry average
+  'Competitor_Avg'    -- Calculated competitor average
+);
+```
+
+#### **Standard Metric Names**
 ```typescript
-// Client management
-useQuery({ queryKey: ["/api/clients"] })
-useMutation({ mutationFn: (client) => apiRequest("POST", "/api/clients", client) })
-
-// Competitor management
-useMutation({ mutationFn: (competitor) => apiRequest("POST", "/api/competitors", competitor) })
+const METRIC_NAMES = {
+  BOUNCE_RATE: 'Bounce Rate',
+  SESSION_DURATION: 'Session Duration', 
+  PAGES_PER_SESSION: 'Pages per Session',
+  SESSIONS_PER_USER: 'Sessions per User',
+  TRAFFIC_CHANNELS: 'Traffic Channels',
+  DEVICE_DISTRIBUTION: 'Device Distribution'
+};
 ```
 
-### **Chart Data Processing**
-- `processCompanyMetrics()` - Transforms raw metrics for chart consumption
-- `processDeviceDistribution()` - Device data aggregation
-- `generateTimeSeriesData()` - Time series chart data preparation
-- `aggregateChannelData()` - Traffic channel data processing
+### Data Formats & Patterns
+
+#### **Time Period Formats**
+- **Monthly**: `YYYY-MM` (e.g., `2025-07`)
+- **Daily**: `YYYY-MM-daily-YYYYMMDD` (e.g., `2025-07-daily-20250715`)
+
+#### **JSONB Value Structures**
+```json
+// Simple metrics
+{"value": 45.2, "units": "%"}
+
+// Traffic Channels (array)
+[
+  {"channel": "Organic Search", "sessions": 1250, "percentage": 35.7},
+  {"channel": "Direct", "sessions": 890, "percentage": 25.4}
+]
+
+// Device Distribution (array)  
+[
+  {"device": "Desktop", "sessions": 2100, "percentage": 60.0},
+  {"device": "Mobile", "sessions": 1200, "percentage": 34.3}
+]
+```
 
 ---
 
-## **5. SCHEMA & MIGRATIONS**
+## Data Flow Maps
 
-### **Database Schema Architecture**
-- **17 Tables** with comprehensive indexing for performance
-- **JSONB Storage** for flexible metric value structures
-- **Foreign Key Relationships** maintaining referential integrity
-- **Enum Types** for standardized sourceType and status values
+*End-to-end tracing for key features*
 
-### **Key Relationships**
+### Flow 1: TimeSeriesChart Data Retrieval
+
 ```
-clients (1) ←→ (n) users
-clients (1) ←→ (n) competitors  
-clients (1) ←→ (n) metrics
-clients (1) ←→ (1) ga4PropertyAccess
-clients (1) ←→ (n) aiInsights
-
-ga4ServiceAccounts (1) ←→ (n) ga4PropertyAccess
+Frontend Trigger → API Request → Route Handler → Service Layer → Database → Response
+     ↓                ↓             ↓              ↓            ↓          ↓
+dashboard.tsx     GET /api/     routes.ts      queryOptimizer  metrics    JSON with
+useQuery hook  dashboard/:id   requireAuth    getDashboard     table     timeSeriesData
+Lines 158-168   timePeriod=    Lines 244-384  Optimized       SELECT     + caching
+                3 Months       Cache check    Parallel        with       headers
+                filters        Auth + period  queries         indexes
 ```
 
-### **Migration Strategy**
-- **Drizzle Kit** for schema management
-- **`npm run db:push`** for direct schema updates
-- **No manual SQL migrations** - ORM-driven approach
-- **Environment-based** migration execution
+**Key Processing Steps**:
+1. **Frontend**: TanStack Query with cache disabled for freshness
+2. **Route**: Dynamic period mapping + client validation  
+3. **Service**: Optimized batch fetching with performance cache
+4. **Database**: Indexed queries for metrics, competitors, insights
+5. **Response**: Structured JSON with ETag headers
+
+### Flow 2: Device Distribution (LollipopChart)
+
+```
+Same Dashboard Query → Special JSONB Parsing → Device Data Extraction → Chart Props
+          ↓                      ↓                       ↓                 ↓
+  metrics table            parseDistribution        processDevice      LollipopChart
+  JSONB values             MetricValue()           Distribution()      component
+  Array vs Object          Lines 34-117            dashboard.tsx       with colors
+  format handling          Client: full array      Lines 800-950       + responsive
+                          CD_Avg: percentage                           layout
+```
+
+**Data Structure Complexity**:
+- **Client Data**: Full array `[{device: "Desktop", percentage: 89.5}]`
+- **Benchmark Data**: Object per device `{percentage: 27.87, source: "cd_portfolio_average"}`
+- **Frontend Processing**: Normalizes formats for consistent chart rendering
+
+### Flow 3: Admin Cleanup & Refetch
+
+```
+Admin Button → POST Request → Concurrency Lock → GA4 Services → Database Clear → Fresh Fetch
+     ↓             ↓              ↓                ↓              ↓             ↓
+handleRefresh  /cleanup-and-  cleanupInProgress SmartDataFetcher clearClient   GA4 API call
+dashboard.tsx  fetch/:id      global semaphore  fetch15MonthData MetricsByPeriod authentic data
+Lines 58-86    cleanupAndFetch authentication   with force=true  storage layer  + cache clear
+Button click   Route.ts       + admin check     GA4APIService   SQL DELETE      background AI
+```
+
+**Security & Concurrency**:
+- **Global Lock**: Prevents concurrent cleanup operations
+- **Admin Auth**: Role-based access control + client ownership validation
+- **Input Validation**: Enhanced clientId format checking with environment flags
+- **Cache Invalidation**: Multi-layer cache clearing (performance, query, frontend)
 
 ---
 
-## **6. GA4 END-TO-END FLOW MAPS**
+## Development Guidelines
 
-### **Flow 1: GA4 Data Ingestion Pipeline**
-```
-GA4 Property → Service Account OAuth → GA4 Data API → SmartDataFetcher → 
-Database Metrics → Query Optimization → Dashboard API → React Charts
-```
+### Code Organization Principles
 
-**Components Involved:**
-- `GA4DataService` - API communication
-- `SmartDataFetcher` - Intelligent fetching with locks
-- `GA4DataManager` - Data coordination
-- `storage.createMetric()` - Database persistence
-- `queryOptimizer` - Caching and optimization
-- Chart components - Data visualization
+#### **Separation of Concerns**
+- **Frontend**: Pure presentation layer, no business logic
+- **Routes**: Thin controllers, authentication/validation only
+- **Services**: Business logic, external API integration
+- **Storage**: Data persistence abstraction layer
 
-### **Flow 2: Authentication & Session Management**
-```
-User Login → Passport Local Strategy → Session Creation → 
-Database Session Store → Authentication Middleware → Protected Routes
-```
+#### **Type Safety**
+```typescript
+// Shared types between frontend/backend
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
 
-**Components Involved:**
-- `passport-local` strategy in `auth.ts`
-- `connect-pg-simple` session store
-- `authMiddleware` for route protection
-- React `useAuth` hook for frontend state
-
-### **Flow 3: AI Insights Generation**
-```
-Dashboard Load → Metric Analysis → OpenAI API → Insight Processing → 
-Database Persistence → Real-time Display → Session Persistence
+// Zod validation schemas
+const insertMetricSchema = createInsertSchema(metrics).omit({
+  id: true,
+  createdAt: true
+});
 ```
 
-**Components Involved:**
-- AI insight background processor
-- OpenAI API integration
-- `aiInsights` table for persistence
-- React Query for real-time updates
-- Context-aware prompt management
+#### **Error Handling**
+- **Structured Logging**: Winston with configurable levels
+- **Error Boundaries**: React error boundaries for frontend
+- **API Consistency**: Standard error response format
+- **Graceful Degradation**: Empty states instead of failures
+
+### Performance Optimization
+
+#### **Database Optimization**
+- **Indexes**: Composite indexes for common query patterns
+- **Connection Pooling**: Neon serverless with connection limits
+- **Query Batching**: Parallel data fetching where possible
+- **JSONB Usage**: Flexible schema with GIN indexes
+
+#### **Caching Strategy**
+- **Performance Cache**: 5-minute TTL for dashboard data
+- **Query Cache**: Optimized query results caching
+- **Frontend Cache**: TanStack Query with strategic invalidation
+- **CDN Ready**: Static assets with versioning
+
+#### **Background Processing**
+```typescript
+// Non-blocking AI insight generation
+backgroundProcessor.enqueue('AI_INSIGHT', {
+  clientId,
+  metricName: 'Session Duration',
+  priority: 1
+});
+```
+
+### Security Best Practices
+
+#### **Authentication & Authorization**
+- **Session-Based Auth**: Secure cookies with PostgreSQL storage
+- **Role-Based Access**: Admin vs User permissions
+- **Input Validation**: Zod schemas for all API inputs
+- **Rate Limiting**: Per-endpoint throttling
+
+#### **Data Protection**
+- **Environment Variables**: Sensitive data in environment only
+- **SQL Injection Prevention**: Parameterized queries via Drizzle
+- **XSS Protection**: Content Security Policy headers
+- **CSRF Protection**: SameSite cookie configuration
 
 ---
 
-## **7. ENVIRONMENT VARIABLES & CONFIG EFFECTS**
+## Open Questions & Assumptions
 
-### **Critical Environment Variables**
+### Current Assumptions
 
-**Database Configuration:**
-- `DATABASE_URL` - PostgreSQL connection string
-- `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` - Database credentials
+#### **Data Flow Assumptions**
+1. **GA4 Data Freshness**: Assumes GA4 data is updated daily, but actual refresh frequency may vary
+2. **Time Zone Handling**: Currently assumes UTC for all timestamp operations
+3. **Data Retention**: 15-month historical data assumption may need adjustment based on storage costs
+4. **Competitor Data Currency**: Assumes competitor data from SEMrush is sufficiently current for benchmarking
 
-**Authentication & Security:**
-- `SESSION_SECRET` - Session encryption key (required in production)
-- `NODE_ENV` - Environment mode affecting security settings
+#### **Performance Assumptions**
+1. **Cache TTL**: 5-minute cache TTL balances freshness vs performance, but may need tuning
+2. **Database Connection Limits**: Assumes Neon serverless can handle concurrent load during peak usage
+3. **Memory Usage**: In-memory caching assumes single-instance deployment
+4. **Background Job Processing**: Assumes single-threaded job processing is sufficient for current load
 
-**External API Integration:**
-- `OPENAI_API_KEY` - AI insights generation
-- `SEMRUSH_API_KEY` - SEO competitive data
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` - GA4 OAuth
+#### **Environment & Deployment Assumptions**
+1. **Single Region**: Currently assumes single-region deployment, may need multi-region considerations
+2. **Environment Parity**: Assumes development/staging environments match production configuration
+3. **Backup Strategy**: Database backup strategy not explicitly documented in codebase
+4. **Monitoring & Alerting**: Production monitoring setup not evident in codebase
 
-**Feature Flags:**
-- `GA4_COMPAT_MODE` - Backward compatibility mode (default: true)
-- `GA4_FORCE_ENABLED` - Force GA4 features
-- `GA4_LOCKS_ENABLED` - Concurrent fetch protection
+### Open Questions Requiring Clarification
 
-**Branding & Demo:**
-- `COMPANY_NAME`, `COMPANY_LEGAL_NAME` - White-label customization
-- `DEMO_CLIENT_ID` - Default demo client
-- `VITE_*` - Frontend environment variables
+#### **Business Logic Questions**
+1. **Metric Aggregation**: How should competing values for the same metric+period be handled? (current: last-write-wins)
+2. **Competitor Data Staleness**: What's the acceptable age for competitor benchmark data?
+3. **Industry Classification**: How are industry verticals and business sizes standardized across data sources?
+4. **Data Quality Thresholds**: What constitutes sufficient data quality for generating insights?
 
-### **Config Effects on System Behavior**
+#### **Technical Architecture Questions**
+1. **Scaling Strategy**: How will the application scale beyond single-instance deployment?
+2. **Data Migration**: How will schema changes be managed in production without downtime?
+3. **Error Recovery**: What's the strategy for recovering from GA4 API outages or rate limits?
+4. **Multi-Tenancy**: Is the current client isolation sufficient for enterprise deployment?
 
-**Production vs Development:**
-- Security headers and HTTPS cookies in production
-- Sample data permanently disabled
-- Session security enhanced
-- Error logging verbosity adjusted
+#### **Security & Compliance Questions**
+1. **Data Retention**: Are there regulatory requirements for data retention/deletion?
+2. **Access Auditing**: Should all data access be logged for compliance purposes?
+3. **Encryption at Rest**: Are additional encryption requirements needed beyond PostgreSQL defaults?
+4. **Third-Party Data**: What are the terms of service limitations for GA4 and SEMrush data usage?
 
-**Feature Flag Impact:**
-- `GA4_COMPAT_MODE=false` enables strict validation
-- `GA4_LOCKS_ENABLED=true` prevents concurrent GA4 fetches
-- Demo mode affects data visibility and user permissions
-
----
-
-## **8. PROOF OF COVERAGE**
-
-### **Backend Coverage (50+ files)**
-✅ **Core Server**: index.ts, routes.ts, storage.ts, auth.ts, config.ts, db.ts  
-✅ **GA4 Services**: 15+ files including SmartDataFetcher, DataManager, PulseDataService  
-✅ **Utilities**: logging, error handling, query optimization, background processing  
-✅ **Middleware**: authentication, rate limiting, security headers  
-✅ **Routes**: ga4DataRoute, admin routes, dashboard endpoints  
-
-### **Frontend Coverage (80+ files)**
-✅ **Core App**: App.tsx, dashboard.tsx, admin-panel.tsx  
-✅ **Components**: 8 chart types, UI components, forms, modals  
-✅ **Hooks**: use-auth, use-analytics, custom data hooks  
-✅ **Utils**: chart utilities, data processing, logger, formatters  
-✅ **Pages**: authentication, dashboard, admin, password reset  
-
-### **Shared & Config Coverage (10+ files)**
-✅ **Schema**: Complete database schema with 17 tables  
-✅ **Configuration**: TypeScript, Vite, Tailwind, Drizzle, package.json  
-✅ **Environment**: .env.example with all required variables  
-
-### **Documentation Coverage**
-✅ **210 files analyzed** across backend, frontend, shared, and configuration  
-✅ **API endpoints mapped** with authentication requirements  
-✅ **Data flow documented** for GA4, authentication, and AI insights  
-✅ **Environment variables cataloged** with system impact analysis  
+#### **Performance & Reliability Questions**
+1. **Load Testing**: What are the expected concurrent user limits and peak load patterns?
+2. **Failover Strategy**: How should the application handle database or external API failures?
+3. **Cache Warming**: Should there be a cache warming strategy for better user experience?
+4. **Resource Limits**: What are the memory and CPU constraints for the deployment environment?
 
 ---
 
-## **9. SANITY CHECKLIST**
-
-### **Architecture Validation**
-- ✅ **Full-stack TypeScript** consistency maintained
-- ✅ **Database schema** properly indexed and related
-- ✅ **Authentication flow** secure with session management
-- ✅ **API design** RESTful with proper error handling
-- ✅ **Frontend state management** via React Query
-- ✅ **Chart system** unified with authentic data emphasis
-
-### **GA4 Integration Validation**
-- ✅ **OAuth flow** properly implemented with token refresh
-- ✅ **Data fetching** intelligent with lock management
-- ✅ **Error handling** comprehensive with logging
-- ✅ **Backward compatibility** maintained via feature flags
-- ✅ **Performance optimization** with caching and indexing
-
-### **Production Readiness**
-- ✅ **Security headers** and HTTPS support
-- ✅ **Rate limiting** and DDoS protection
-- ✅ **Health checks** and monitoring endpoints
-- ✅ **Error logging** structured and comprehensive
-- ✅ **Session management** secure and scalable
-- ✅ **Environment configuration** type-safe and validated
-
-### **Data Integrity**
-- ✅ **Authentic data only** - no synthetic fallbacks
-- ✅ **GA4 API integration** for real data sourcing
-- ✅ **Database constraints** maintaining data consistency
-- ✅ **Error states** properly handled with user feedback
-- ✅ **Caching strategy** balances performance and freshness
-
----
-
-## **10. RECENT OPTIMIZATIONS**
-
-### **Code Cleanup (Completed)**
-- ✅ **Chart component removal**: Radial and gauge charts safely deleted (~11KB reduction)
-- ✅ **Duplicate import fixes**: TypeScript errors resolved
-- ✅ **Verification testing**: Application functionality confirmed
-
-### **Performance Enhancements**
-- ✅ **Query optimization**: Parallel database queries implemented
-- ✅ **Connection pooling**: Neon serverless integration optimized
-- ✅ **Background processing**: AI insights generated asynchronously
-- ✅ **Chart rendering**: Efficient data transformation pipelines
-
-### **Data Integrity Improvements**
-- ✅ **Authentic data emphasis**: Fallback data generation removed
-- ✅ **GA4 health monitoring**: Comprehensive pipeline validation
-- ✅ **Error state handling**: Graceful degradation implemented
-- ✅ **Empty state design**: Professional data absence indicators
-
----
-
-**Last Updated**: August 10, 2025  
-**Analysis Scope**: 210 files across full-stack architecture  
-**Verification Status**: ✅ Application confirmed operational with all optimizations
+**Generated**: August 10, 2025  
+**Version**: 1.0  
+**Status**: Complete architectural documentation covering backend, frontend, database, and data flows  
+**Coverage**: 200+ files analyzed across all domains  
+**Next Steps**: Address open questions and validate assumptions with stakeholders

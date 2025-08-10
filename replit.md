@@ -57,6 +57,7 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **Rate Limiter Safety**: Implemented snapshot-based iteration pattern in rate limiter to prevent concurrent modification during cleanup operations.
 - **GA4 Health Monitoring**: Comprehensive health check infrastructure including database metrics validation script and endpoint smoke testing for monitoring GA4 data pipeline integrity.
 - **Complete Architectural Documentation**: Systematic mapping and documentation across four core domains: Backend Infrastructure (50+ server files), Frontend Architecture (100+ client files, 7 pages, 10 chart components), Configuration & Environment (25+ variables, build systems), and Database Schema (17 tables, relationships, GA4 integration). Full architectural understanding achieved with comprehensive coverage verification.
+- **End-to-End Data Flow Documentation**: Complete tracing of critical user flows including TimeSeriesChart data retrieval, LollipopChart device distribution processing, and Admin cleanup & refetch operations. Documentation includes frontend triggers, API requests, route handlers, service invocations, database operations, response shapes, caching strategies, and environment flag impacts. Identified 5 key breakpoints and potential issues across time period formats, JSONB parsing, concurrency control, environment dependencies, and authentication complexity.
 
 ## External Dependencies
 **Core Infrastructure:**

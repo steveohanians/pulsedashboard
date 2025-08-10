@@ -1,333 +1,519 @@
 # Data Flow Maps v1
+*End-to-end flow tracing for key features in Pulse Dashboard™*
 
-This document traces end-to-end data flows from frontend chart components through API endpoints to database operations and back for key ClearSight dashboard features.
+## Flow 1: Dashboard GA4 Flow A - TimeSeriesChart Data Retrieval
 
-## Overview
+### Frontend Trigger
+**Component**: `client/src/components/charts/time-series-chart.tsx`  
+**Data Source**: Props passed from `client/src/pages/dashboard.tsx`  
+**Trigger Line**: Dashboard component's `useQuery` hook at line 158-168
 
-ClearSight employs a sophisticated data architecture with environment flags controlling backward compatibility and GA4 integration modes. All flows respect the **authentic data integrity principle** - no synthetic or fallback data is ever displayed.
+```typescript
+const dashboardQuery = useQuery<DashboardData>({
+  queryKey: [`/api/dashboard/${user?.clientId}`, effectiveTimePeriod, businessSize, industryVertical],
+  queryFn: () => fetch(`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`)
+    .then(res => res.json()),
+  enabled: !!user?.clientId,
+  staleTime: 0, // Force fresh data
+  refetchOnMount: 'always',
+  gcTime: 0, // Don't cache results
+});
+```
 
-### Environment Flags Impacting All Flows
+### API Request
+**Method**: `GET`  
+**Endpoint**: `/api/dashboard/:clientId`  
+**Query Parameters**:
+- `timePeriod`: string (e.g., "Last Month", "3 Months", custom date range)
+- `businessSize`: string (e.g., "All", "Small Business", "Large Enterprise")  
+- `industryVertical`: string (e.g., "All", "Technology", "Healthcare")
 
-- `GA4_COMPAT_MODE=true` (default): Ensures backward compatibility with legacy dashboard support
-- `GA4_FORCE_ENABLED=true`: Forces GA4 data fetching regardless of client configuration  
-- `GA4_LOCKS_ENABLED=true`: Enables concurrency control for GA4 fetch operations
-- `GA4_STRICT_CLIENTID_VALIDATION=true`: Enforces strict clientId format validation
+### Route Handler
+**File**: `server/routes.ts`  
+**Handler Function**: Lines 244-384  
+**Middleware**: `requireAuth` (authentication check)  
+**Authorization**: User must own client or be Admin
 
----
+#### Key Processing Steps:
+1. **Parameter Parsing** (Lines 247-251):
+   ```typescript
+   let { 
+     timePeriod = "Last Month", 
+     businessSize = "All", 
+     industryVertical = "All" 
+   } = req.query;
+   ```
 
-## Flow A: Time Series Chart (Sessions/Bounce Rate/Duration)
+2. **Dynamic Period Mapping** (Lines 253-286):
+   ```typescript
+   const periodMapping = generateDynamicPeriodMapping();
+   let periodsToQuery: string[];
+   if (typeof timePeriod === 'string' && periodMapping[timePeriod]) {
+     periodsToQuery = periodMapping[timePeriod];
+   }
+   ```
 
-**Frontend Component:** `client/src/components/charts/time-series-chart.tsx`
+3. **Client Validation** (Lines 293-296):
+   ```typescript
+   const client = await storage.getClient(clientId);
+   if (!client) {
+     return res.status(404).json({ message: "Client not found" });
+   }
+   ```
 
-### 1. Frontend Request Trigger
-- **Location:** `client/src/pages/dashboard.tsx:233` - Dashboard component loads with `useQuery`
-- **Trigger:** `useQuery` hook with memoized query key
-- **Query Key:** `["/api/dashboard/${clientId}?timePeriod=${timePeriod}&businessSize=${businessSize}&industryVertical=${industryVertical}"]`
-- **Data Fetching:** Uses default fetcher from `@/lib/queryClient`
+### Service Layer Invocations
+**Primary Service**: `server/utils/query-optimization/queryOptimizer.ts`  
+**Function**: `getDashboardDataOptimized()`
 
-### 2. HTTP Request Details
-- **Endpoint:** `GET /api/dashboard/{clientId}`
-- **Method:** GET
-- **Parameters:**
-  - Path: `clientId` (string)
-  - Query: `timePeriod`, `businessSize`, `industryVertical`
-- **Authentication:** `requireAuth` middleware validates session
-
-### 3. Backend Route Handler
-- **File:** `server/routes.ts:233`
-- **Handler:** Dashboard route with performance optimization
-- **Process Flow:**
-  ```
-  1. Authentication check (req.user validation)
-  2. Dynamic period mapping generation (server/utils/dateUtils.ts)
-  3. Client access validation (clientId vs user permissions)
-  4. Client retrieval from storage
-  5. Call getDashboardDataOptimized()
-  6. Background AI insights queuing
-  7. GA4 compatibility layer application
-  8. JSON serialization safety check
-  ```
-
-### 4. Service Layer Invocation
-- **Primary Service:** `server/utils/query-optimization/queryOptimizer.ts:getDashboardDataOptimized()`
-- **Process:**
-  ```
-  1. Cache key generation (currently disabled for debugging)
-  2. Parallel data fetching:
-     - Client metrics (storage.getClientMetrics)
-     - Competitor metrics (storage.getCompetitorMetrics) 
-     - Industry benchmarks (storage.getIndustryBenchmarks)
-     - CD portfolio averages (storage.getCdPortfolioMetrics)
-  3. Time series data aggregation by period
-  4. Metric value parsing and conversion
-  ```
-
-### 5. Database Operations
-- **Tables Accessed:**
-  - `metrics` - Primary metric storage with JSONB values
-  - `clients` - Client configuration and metadata
-  - `competitors` - Competitor definitions and associations
-  - `benchmark_companies` - Industry benchmark data
-  - `cd_portfolio_companies` - Clear Digital portfolio companies
-
-- **Key Queries:**
-  ```sql
-  -- Client metrics for time periods
-  SELECT * FROM metrics 
-  WHERE client_id = ? AND time_period IN (?) AND source_type = 'Client'
-  
-  -- Competitor metrics
-  SELECT * FROM metrics m
-  JOIN competitors c ON m.competitor_id = c.id
-  WHERE c.client_id = ? AND m.time_period IN (?)
-  
-  -- Portfolio averages
-  SELECT * FROM metrics 
-  WHERE source_type = 'CD_Avg' AND time_period IN (?)
-  ```
-
-### 6. Response Processing & Caching
-- **Data Shape:**
-  ```typescript
-  {
-    client: { id, name, websiteUrl },
-    metrics: Array<{
-      metricName: string,
-      value: string | number,
-      sourceType: 'Client' | 'Competitor' | 'CD_Avg' | 'Industry_Avg',
-      timePeriod: string,
-      channel?: string,
-      competitorId?: string
-    }>,
-    timeSeriesData: Record<string, Array<MetricData>>,
-    periods: string[],
-    timestamp: number,
-    dataFreshness: 'live'
+#### Caching Strategy:
+**Cache Check** (Lines 305-320):
+```typescript
+const cacheEnabled = process.env.DASHBOARD_CACHE_ENABLED === 'true';
+if (cacheEnabled) {
+  const cacheKey = performanceCache.generateDashboardKey(clientId, timePeriod, businessSize, industryVertical);
+  const cachedResult = performanceCache.get(cacheKey);
+  if (cachedResult) {
+    return res.json(cachedResult);
   }
-  ```
+}
+```
 
-- **Caching Headers:** 
-  ```
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  ```
+**Cache TTL**: 5 minutes (300,000ms)  
+**Cache Keys**: `dashboard:${clientId}:${timePeriod}:${businessSize}:${industryVertical}`
 
-### 7. Frontend Chart Processing
-- **Component:** `TimeSeriesChart` receives props from dashboard data
-- **Data Processing:**
-  ```
-  1. generateTimeSeriesData() - Line 66
-  2. Authentic time series data validation
-  3. Metric-specific conversions (Rate -> %, Duration -> minutes)
-  4. Period label generation (generatePeriodLabel)
-  5. Chart data point aggregation by period
-  6. Y-axis domain calculation
-  ```
+### Database Operations
+**Primary Tables**:
+1. **clients** - Client validation and metadata
+2. **metrics** - Time series data retrieval  
+3. **competitors** - Competitor data for comparison
+4. **aiInsights** - AI-generated insights loading
 
-### 8. Chart Rendering
-- **Library:** Recharts LineChart/BarChart
-- **Features:** Interactive visibility controls, responsive design, DiamondDot markers
-- **Empty State:** Shows "No authentic data available" instead of synthetic fallbacks
+#### Key Queries (via storage interface):
+```typescript
+// Core metrics retrieval
+const allMetrics = await storage.getMetricsByMultiplePeriods(clientId, periodsToQuery);
+
+// Competitor data fetching  
+const competitors = await storage.getCompetitorsByClient(clientId);
+
+// AI insights loading
+const insights = await storage.getAIInsights(clientId, currentPeriod);
+```
+
+#### TimeSeriesChart Specific Processing:
+**Source Types Retrieved**:
+- `Client`: User's actual data
+- `Competitor`: Benchmarking data  
+- `CD_Avg`: Clear Digital portfolio average
+- `Industry_Avg`: Industry benchmarks
+
+**Data Structure for TimeSeriesChart**:
+```typescript
+timeSeriesData?: Record<string, Array<{
+  metricName: string;        // "Session Duration"
+  value: string | number;    // 180.5 (seconds converted to minutes)
+  sourceType: string;        // "Client", "Competitor", "CD_Avg"
+  competitorId?: string;     // For competitor data points
+}>>
+```
+
+### Response Shape
+```typescript
+interface DashboardData {
+  client: { id: string; name: string; websiteUrl: string };
+  metrics: DashboardMetric[];
+  averagedMetrics?: Record<string, Record<string, number>>;
+  timeSeriesData?: Record<string, Array<{
+    metricName: string;
+    value: string | number;
+    sourceType: string;
+    competitorId?: string;
+  }>>;
+  competitors: Array<{ id: string; domain: string; label: string }>;
+  insights: Array<{ metricName: string; contextText: string; insightText: string }>;
+  isTimeSeries?: boolean;
+  periods?: string[];
+}
+```
+
+### Caching & Headers
+**Response Headers**:
+- `ETag`: Generated from data hash
+- `Cache-Control`: Based on `DASHBOARD_CACHE_ENABLED` flag
+- `X-Data-Source`: "live" or "cached"
+
+**SWR (Stale-While-Revalidate)**:
+- Frontend: `staleTime: 0` (always fetch fresh)
+- Backend: 5-minute cache with background updates
+
+### Environment Flags Impacting Flow
+1. **`GA4_COMPAT_MODE`**: Enables backward compatibility (default: true)
+2. **`DASHBOARD_CACHE_ENABLED`**: Controls response caching (default: false)
+3. **`GA4_FORCE_ENABLED`**: Forces GA4 service usage
+4. **`NODE_ENV`**: Affects logging verbosity and error handling
+
+### Frontend Chart Processing
+**TimeSeriesChart Component** receives props:
+```typescript
+interface TimeSeriesChartProps {
+  metricName: string;           // "Session Duration"
+  timePeriod: string;          // "3 Months"
+  clientData: number;          // Latest period value
+  industryAvg: number;         // Benchmark comparison
+  cdAvg: number;              // Portfolio average
+  timeSeriesData?: Record<string, Array<...>>;  // Historical data
+  periods?: string[];          // ["2025-05", "2025-06", "2025-07"]
+}
+```
+
+**Chart Data Processing** (Lines 66-120):
+- Parses `timeSeriesData` for authentic historical points
+- Groups by period and sourceType for line series
+- Converts Session Duration from seconds to minutes
+- Applies temporal variation for visual smoothing
 
 ---
 
-## Flow B: Stacked Bar Chart (Traffic Channels/Device Distribution)
+## Flow 2: Dashboard GA4 Flow B - LollipopChart Device Distribution
 
-**Frontend Component:** `client/src/components/charts/stacked-bar-chart.tsx`
+### Frontend Trigger
+**Component**: `client/src/components/charts/lollipop-chart.tsx`  
+**Data Source**: Device Distribution processing in `dashboard.tsx`  
+**Trigger Line**: Same dashboard query as Flow A, different data extraction
 
-### 1. Frontend Request Trigger
-- **Same as Flow A** - Uses identical dashboard data endpoint
-- **Data Source:** Same `/api/dashboard/{clientId}` response
-- **Distribution Data:** Extracted from metrics where `metricName = 'Traffic Channels'` or `'Device Distribution'`
+### Data Processing Pipeline
+**Frontend Processing** (dashboard.tsx lines 800-950):
+```typescript
+// Device distribution extraction from metrics
+const deviceDistributionData = useMemo(() => {
+  const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
+  return processDeviceDistribution(deviceMetrics, competitors);
+}, [metrics, competitors]);
+```
 
-### 2. Backend Distribution Processing
-- **Parser:** `server/routes.ts:parseDistributionMetricValue()` (Line 23)
-- **Special Handling:**
-  ```
-  1. Device Distribution: Preserves full array for Client data, extracts percentage for benchmarks
-  2. Traffic Channels: Maintains complete channel breakdown for AI analysis
-  3. JSONB parsing with error handling for malformed data
-  4. Source-type specific formatting (Client arrays vs benchmark objects)
-  ```
+### API Request 
+**Same as Flow A**: `GET /api/dashboard/:clientId`
 
-### 3. Database Storage Pattern
-- **Metrics Table Structure:**
-  ```sql
-  -- Traffic Channels stored as JSONB array
-  {
-    "value": [
-      {"name": "Organic Search", "sessions": 1500, "percentage": 45.2},
-      {"name": "Direct", "sessions": 800, "percentage": 24.1},
-      {"name": "Social Media", "sessions": 600, "percentage": 18.1}
-    ]
+### Route Handler Processing
+**Special Parsing**: `parseDistributionMetricValue()` function (Lines 34-117)
+
+```typescript
+function parseDistributionMetricValue(value: any, metricName: string): any {
+  if (metricName === 'Device Distribution') {
+    // Handle array format (Client data)
+    if (Array.isArray(parsedData)) {
+      return parsedData; // Full distribution array
+    }
+    
+    // Handle CD_Avg/Industry_Avg object format
+    if (parsedData && typeof parsedData === 'object' && 'percentage' in parsedData) {
+      return parsedData.percentage; // Extract percentage only
+    }
   }
-  
-  -- Device Distribution similar structure
-  {
-    "value": [
-      {"device": "Desktop", "sessions": 2100, "percentage": 63.5},
-      {"device": "Mobile", "sessions": 1200, "percentage": 36.5}
-    ]
+}
+```
+
+### Database Operations
+**Metrics Table Query**:
+```sql
+SELECT metricName, value, sourceType, timePeriod, channel, competitorId
+FROM metrics 
+WHERE clientId = ? 
+  AND metricName = 'Device Distribution'
+  AND timePeriod IN (?)
+ORDER BY sourceType, channel
+```
+
+**Value Storage in Database**:
+```json
+// Client data (JSONB array)
+[
+  {"device": "Desktop", "sessions": 2100, "percentage": 89.5},
+  {"device": "Mobile", "sessions": 200, "percentage": 10.5}
+]
+
+// CD_Avg data (JSONB object per device)
+{"source": "cd_portfolio_average", "sessions": 298312, "percentage": 27.87}
+```
+
+### Service Processing
+**Device Distribution Handler**:
+```typescript
+// Extract device percentages by sourceType
+const deviceData = {
+  client: { Desktop: 89.5, Mobile: 10.5 },
+  cdAvg: { Desktop: 81.4, Mobile: 27.9 },
+  competitors: [
+    { id: "comp1", label: "Competitor A", value: { Desktop: 75.0, Mobile: 25.0 }}
+  ]
+};
+```
+
+### Response Shape
+**Device Distribution Structure**:
+```typescript
+interface DeviceDistribution {
+  Desktop: number;  // Percentage 0-100
+  Mobile: number;   // Percentage 0-100
+}
+
+// Passed to LollipopChart
+interface LollipopChartProps {
+  data: DeviceDistribution;              // Client data
+  competitors: Array<CompetitorData>;    // Benchmark data
+  industryAvg: DeviceDistribution;       // Industry average
+  cdAvg: DeviceDistribution;            // Portfolio average
+}
+```
+
+### Frontend Chart Rendering
+**Color Management**: `getDeviceColors()` from `chartUtils.ts`
+```typescript
+const DEVICE_COLORS = {
+  Desktop: "hsl(var(--primary))",
+  Mobile: "hsl(var(--secondary))",
+  Tablet: "hsl(var(--accent))"
+};
+```
+
+**Chart Configuration**:
+- Horizontal bars with circular endpoints
+- Responsive to data availability
+- Normalized to 0-100% scale
+- Interactive hover states
+
+---
+
+## Flow 3: Admin Cleanup & Refetch Flow
+
+### Frontend Trigger
+**Component**: `client/src/pages/dashboard.tsx`  
+**Trigger Function**: `handleRefreshData()` (Lines 58-86)  
+**User Action**: Admin user clicks refresh button
+
+```typescript
+const handleRefreshData = async () => {
+  setIsRefreshing(true);
+  try {
+    await refetchDashboard(); // Invalidates cache and refetches
+    queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
+  } catch (error) {
+    // Error handling
+  } finally {
+    setIsRefreshing(false);
   }
-  ```
+};
+```
 
-### 4. Frontend Chart Processing
-- **Component:** `StackedBarChart` processes distribution arrays
-- **Data Transformation:**
-  ```
-  1. Channel/device data aggregation by source type
-  2. Percentage calculation for bar segments
-  3. Color mapping via CHANNEL_COLORS constant
-  4. Responsive bar sizing based on data length
-  5. Hover state management for tooltips
-  ```
+### API Request
+**Endpoint**: `POST /api/cleanup-and-fetch/:clientId`  
+**Route File**: `server/routes/cleanupAndFetchRoute.ts`  
+**Middleware Stack**:
+1. `requireAuth` - Authentication check
+2. `requireAdminAuth` - Admin authorization or client ownership
 
-### 5. Chart Rendering Features
-- **Interactive Elements:** Hover tooltips, responsive layout
-- **Color Scheme:** CSS custom properties for consistent theming
-- **Empty State:** "No data available" with informative icon
+### Route Handler Processing
+**Concurrency Control** (Lines 88-94):
+```typescript
+// Global cleanup lock
+if (cleanupInProgress) {
+  return res.status(409).json({
+    ok: false,
+    error: 'Cleanup operation already in progress. Please try again later.'
+  });
+}
+```
+
+**Input Validation** (Lines 100-115):
+```typescript
+if (!validateClientId(clientId)) {
+  return res.status(400).json({ 
+    ok: false,
+    error: 'Invalid client ID format' 
+  });
+}
+```
+
+### Service Invocations
+**Primary Service**: `server/services/ga4/SmartDataFetcher.ts`  
+**Method**: `fetch15MonthData(clientId, force: true)`
+
+#### SmartDataFetcher Processing Steps:
+
+1. **Lock Acquisition** (Lines 33-62):
+   ```typescript
+   async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boolean> {
+     // Prevents concurrent fetches for same clientId+period
+     // TTL: 5 minutes
+   }
+   ```
+
+2. **Data Status Check**:
+   ```typescript
+   const existingDataStatus = await this.checkExistingData(clientId, periods);
+   // Determines if data needs refresh or replacement
+   ```
+
+3. **GA4 API Service Call**:
+   ```typescript
+   const ga4Result = await this.ga4Service.fetchGA4Data(clientId, period);
+   ```
+
+### GA4 Service Chain
+**Service Files**:
+1. `GA4DataService` - API coordination
+2. `GA4APIService` - Google Analytics API calls  
+3. `GA4StorageService` - Database persistence
+4. `GA4DataProcessor` - Data transformation
+
+#### GA4APIService Processing:
+```typescript
+// Authenticate with Google service account
+const authResult = await this.authenticateServiceAccount(clientId);
+
+// Fetch metrics from GA4 API
+const metricsData = await this.fetchPeriodMetrics(propertyId, startDate, endDate);
+
+// Transform GA4 response to internal format
+const processedData = await this.transformGA4Response(metricsData);
+```
+
+### Database Operations
+**Tables Modified**:
+1. **metrics** - Clear old data, insert new GA4 data
+2. **ga4PropertyAccess** - Update sync status and timestamps
+
+#### Data Clearing:
+```typescript
+// Clear existing synthetic data  
+await storage.clearClientMetricsByPeriod(clientId, period);
+
+// Clear AI insights to trigger regeneration
+await storage.clearAIInsightsByClient(clientId);
+```
+
+#### Data Insertion:
+```typescript
+// Store main metrics
+await storage.createMetric({
+  clientId,
+  metricName: 'Session Duration',
+  value: processedValue,
+  sourceType: 'Client',
+  timePeriod: period
+});
+
+// Store traffic channels
+await storage.createMetric({
+  clientId,
+  metricName: 'Traffic Channels', 
+  value: JSON.stringify(channelDistribution),
+  sourceType: 'Client',
+  timePeriod: period
+});
+```
+
+### Response Shape
+```typescript
+interface CleanupResponse {
+  ok: boolean;
+  summary: string;
+  details: {
+    clientId: string;
+    periodsProcessed: number;
+    dailyDataPeriods: string[];
+    monthlyDataPeriods: string[];
+    errors: string[];
+    lastFetchedAt: string;
+  };
+  chartsRefreshed: string[];
+}
+```
+
+### Cache Invalidation
+**Performance Cache Clear**:
+```typescript
+// Clear dashboard cache for client
+performanceCache.clearPattern(clientId);
+
+// Clear query optimizer cache
+clearCache(clientId);
+```
+
+**Frontend Cache Invalidation**:
+```typescript
+// TanStack Query invalidation
+queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+queryClient.invalidateQueries({ queryKey: [`/api/insights/${clientId}`] });
+```
+
+### Environment Flags Impact
+1. **`GA4_FORCE_ENABLED`**: Bypasses service availability checks
+2. **`GA4_LOCKS_ENABLED`**: Controls concurrent fetch protection  
+3. **`GA4_STRICT_CLIENTID_VALIDATION`**: Enhanced input validation
+4. **`GA4_COMPAT_MODE`**: Maintains backward compatibility
+
+### Background Processing
+**AI Insights Regeneration**:
+```typescript
+// Enqueue AI insight generation jobs
+backgroundProcessor.enqueue('AI_INSIGHT', {
+  clientId,
+  metricName: 'Session Duration',
+  timePeriod: currentPeriod
+});
+```
+
+**Job Processing**:
+- Non-blocking execution
+- 3 retry attempts
+- Priority queue management
+- Automatic cleanup
 
 ---
 
-## Flow C: Admin Cleanup & Refetch (GA4 Data Synchronization)
+## Potential Issues & Breakpoints
 
-**Frontend Trigger:** Admin panel cleanup button or API call
+### 1. Time Period Format Drift
+**Issue**: Different components use varying time period formats
+- Frontend: "Last Month", "3 Months"  
+- Database: "2025-07" (YYYY-MM)
+- GA4 API: "2025-07-01" to "2025-07-31"
 
-### 1. Frontend Request Trigger
-- **Endpoint:** `POST /api/cleanup-and-fetch/{clientId}`
-- **Component:** Admin panel or direct API call
-- **Authentication:** Requires Admin role or client ownership
+**Risk**: Data retrieval mismatches, cache key inconsistencies
 
-### 2. Backend Route Handler
-- **File:** `server/routes/cleanupAndFetchRoute.ts:81`
-- **Security Features:**
-  ```
-  1. Concurrency control (cleanupInProgress lock)
-  2. Enhanced authentication (requireAdminAuth)
-  3. ClientId validation (conditional based on GA4_STRICT_CLIENTID_VALIDATION)
-  4. Comprehensive non-cacheable headers
-  ```
+### 2. JSONB Value Parsing
+**Issue**: Device Distribution and Traffic Channels stored as JSONB with varying structures
+- Client data: Array format `[{device: "Desktop", percentage: 89.5}]`
+- CD_Avg data: Object format `{percentage: 27.87, source: "cd_portfolio_average"}`
 
-### 3. Cleanup Process
-- **Step 1:** `clearSyntheticDataForClient(clientId)`
-  - Removes cached/derived data for specific client
-  - Preserves authentic GA4 data integrity
-  
-- **Step 2:** Smart GA4 data fetching based on compatibility mode
+**Risk**: Frontend parsing failures, chart rendering issues
 
-### 4. GA4 Service Invocation
-- **Service:** `server/services/ga4/SmartDataFetcher.ts`
-- **Method:** `fetch15MonthData(clientId, force=true)`
+### 3. Concurrent Access Control
+**Issue**: Multiple cleanup operations or cache invalidations
+- Global cleanup lock prevents concurrent admin operations
+- Cache clearing during active requests
 
-### 5. Smart Data Fetcher Process
-- **Lock Management:** 
-  ```
-  1. acquireLock() with TTL enforcement (Line 33)
-  2. Per-period fetch coordination
-  3. Cleanup of expired locks
-  4. Timeout protection (300s default)
-  ```
+**Risk**: Data inconsistency, partial updates, user-facing errors
 
-- **Data Validation:**
-  ```
-  1. Existing data status check per period
-  2. Daily vs monthly data type detection
-  3. Storage optimization (replace daily with monthly)
-  4. 15-month historical data logic
-  ```
+### 4. Environment Flag Dependencies
+**Issue**: Feature behavior changes based on environment variables
+- `GA4_COMPAT_MODE` affects data processing logic
+- `DASHBOARD_CACHE_ENABLED` changes response characteristics
 
-### 6. GA4 API Integration
-- **Service:** `GA4DataService` (PulseDataService.ts)
-- **Process:**
-  ```
-  1. Google Analytics 4 API authentication
-  2. Metric-specific API calls (sessions, bounce rate, duration, etc.)
-  3. Daily data fetching for current month
-  4. Monthly aggregation for historical periods
-  5. Device and channel distribution queries
-  ```
+**Risk**: Inconsistent behavior across environments, difficult debugging
 
-### 7. Database Operations
-- **Insert/Update Pattern:**
-  ```sql
-  -- New authentic metrics from GA4
-  INSERT INTO metrics (
-    client_id, metric_name, value, source_type, 
-    time_period, channel, created_at
-  ) VALUES (?, ?, ?, 'Client', ?, ?, NOW())
-  
-  -- Replace daily with monthly data
-  DELETE FROM metrics 
-  WHERE client_id = ? AND time_period = ? AND data_type = 'daily'
-  ```
+### 5. Authentication Flow Complexity
+**Issue**: Multiple auth layers with different validation rules
+- Route-level auth (`requireAuth`)
+- Admin authorization (`requireAdminAuth`)  
+- Client ownership validation
 
-### 8. Response & Cache Invalidation
-- **Response Format:**
-  ```typescript
-  {
-    success: boolean,
-    periodsProcessed: number,
-    dailyDataPeriods: string[],
-    monthlyDataPeriods: string[],
-    errors: string[],
-    lastFetchedAt: string
-  }
-  ```
-
-- **Cache Management:**
-  ```
-  1. Client-specific cache clearing
-  2. Dashboard data invalidation
-  3. Query cache reset for affected periods
-  4. Frontend query invalidation via React Query
-  ```
+**Risk**: Access control bypasses, authorization failures
 
 ---
 
-## Potential Breakpoints & Inconsistencies
-
-### 1. Time Period Naming Drift
-- **Issue:** Frontend uses "Last Month" while backend generates "2025-07" format
-- **Impact:** Period mapping mismatches in time series aggregation
-- **Location:** `generateDynamicPeriodMapping()` vs frontend display logic
-
-### 2. Metric Value Parsing Inconsistencies  
-- **Issue:** Multiple parsing functions (`parseMetricValue`, `parseDistributionMetricValue`)
-- **Impact:** Inconsistent data type handling across different chart components
-- **Location:** Routes vs chart components vs utility functions
-
-### 3. Environment Flag Coordination
-- **Issue:** GA4_COMPAT_MODE affects multiple layers but default behavior varies
-- **Impact:** Compatibility layer applications inconsistent between flows
-- **Location:** SmartDataFetcher vs routes vs frontend compatibility
-
-### 4. Concurrency Control Gaps
-- **Issue:** Dashboard route lacks locking while cleanup route has comprehensive controls
-- **Impact:** Potential race conditions during concurrent dashboard loads and data fetches
-- **Location:** Dashboard route vs cleanup route design patterns
-
-### 5. Error Handling Depth Variation
-- **Issue:** Deep error handling in GA4 services vs basic error responses in dashboard route
-- **Impact:** Inconsistent error experience across different failure scenarios
-- **Location:** Service layer vs route layer error handling strategies
-
----
-
-## Performance Optimizations
-
-### Active Optimizations
-1. **Query Parallelization:** Multiple storage calls executed concurrently
-2. **Background Processing:** AI insights generation queued non-blocking
-3. **Lock-based Concurrency:** Prevents duplicate GA4 fetches
-4. **React Query Caching:** Frontend-level data caching with stale-while-revalidate
-
-### Caching Strategy
-- **Frontend:** TanStack Query with 30s staleTime, 2min gcTime
-- **Backend:** In-memory query cache (currently disabled for debugging)
-- **Database:** Indexed queries on client_id, time_period, metric_name combinations
-
-### Load Time Targets
-- **Dashboard Initial:** < 2 seconds (vs legacy 22+ seconds)
-- **Chart Rendering:** < 500ms per component
-- **Data Refresh:** < 30 seconds for full 15-month sync
+**Generated**: August 10, 2025  
+**Version**: 1.0  
+**Coverage**: Complete end-to-end tracing for TimeSeriesChart, LollipopChart, and Admin operations  
+**Status**: ✅ Full data flow documentation with breakpoint analysis
