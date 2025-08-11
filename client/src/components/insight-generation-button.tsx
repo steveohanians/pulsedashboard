@@ -45,9 +45,17 @@ export function InsightGenerationButton({
         description: `Generated insights for ${data.context.metricsAnalyzed} metrics with ${data.context.competitorsTracked} competitors tracked.`,
       });
       
+      // Canonicalize period for query key
+      const canonicalPeriod = period && /^\d{4}-\d{2}$/.test(period) ? period :
+        period === "Last Month" ? (() => {
+          const now = new Date();
+          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+        })() : period;
+
       // Invalidate relevant queries to refresh the dashboard
       queryClient.invalidateQueries({ 
-        queryKey: ['/api/insights', clientId] 
+        queryKey: ['/api/ai-insights', clientId, canonicalPeriod] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['/api/dashboard', clientId] 

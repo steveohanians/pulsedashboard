@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,15 +56,30 @@ export function ComprehensiveInsightsDisplay({
   clientId, 
   period 
 }: ComprehensiveInsightsDisplayProps) {
+  // Canonicalize period for consistent query key
+  const canonicalPeriod = useMemo(() => {
+    if (!period) return period;
+    if (/^\d{4}-\d{2}$/.test(period)) return period;
+    if (period === "Last Month") {
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+    }
+    return period;
+  }, [period]);
+
   // Fetch existing insights
   const { data: insights, isLoading, refetch } = useQuery<StoredInsight[]>({
-    queryKey: ['/api/insights', clientId, period],
+    queryKey: ['/api/ai-insights', clientId, canonicalPeriod],
     queryFn: async () => {
-      const queryParams = period ? `?period=${period}` : '';
-      const response = await fetch(`/api/insights${queryParams}`);
+      const queryParams = canonicalPeriod ? `?period=${canonicalPeriod}` : '';
+      const response = await fetch(`/api/ai-insights/${clientId}${queryParams}`);
       if (!response.ok) throw new Error('Failed to fetch insights');
       return response.json();
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    gcTime: 0
   });
 
   // Separate dashboard overview from metric-specific insights

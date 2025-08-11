@@ -52,11 +52,23 @@ const OptimizedDashboard = memo(({ clientId, timePeriod, businessSize, industryV
 
   // Load all AI insights once at dashboard level to prevent rate limiting
 
+  // Canonicalize period for consistent query key
+  const canonicalPeriod = useMemo(() => {
+    if (/^\d{4}-\d{2}$/.test(timePeriod)) return timePeriod;
+    if (timePeriod === "Last Month") {
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+    }
+    return timePeriod;
+  }, [timePeriod]);
+
   const { data: insightsData, isLoading: insightsLoading, error: insightsError } = useQuery({
-    queryKey: [`/api/insights/${clientId}`],
+    queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
     enabled: !!clientId,
-    staleTime: 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0,
+    refetchOnMount: 'always',
+    gcTime: 0,
     retry: 1 // Reduce retries to prevent spam
   });
   

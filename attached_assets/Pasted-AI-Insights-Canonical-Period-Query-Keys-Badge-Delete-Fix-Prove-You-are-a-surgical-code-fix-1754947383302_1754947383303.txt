@@ -1,0 +1,145 @@
+AI Insights — Canonical Period, Query Keys, Badge & Delete — Fix + Prove
+You are a surgical code fixer. Do not refactor or touch unrelated code.
+Scope: AI Insights GET/DELETE, React Query keys, metric-insight-box behavior.
+
+Read These Files First (no edits yet)
+server/routes.ts — AI Insights GET & DELETE routes, auth middlewarebackend_map_v1
+
+server/storage.ts — insight retrieval & transactional deletesbackend_map_v1
+
+client/src/components/metric-insight-box.tsx — badge render, delete flow, reload behaviorfrontend_map_v1
+
+client/src/pages/dashboard.tsx — any insights fetch/invalidation nearby (search for “insight”, “invalidateQueries”)frontend_map_v1data_flow_maps_v1
+
+client/src/lib/queryClient.ts (or equivalent) — query client and helper keysfrontend_map_v1
+
+shared/schema.ts — aiInsights, insightContexts structure + indexesschema_reference_v1
+
+Confirmed Contract & Repo Facts (must honor)
+Query keys pattern for insights is ["/api/ai-insights", clientId, period] (period should be canonical YYYY-MM)frontend_map_v1.
+
+Time‑period drift is a known failure mode; database uses YYYY‑MM and must match route & keysschema_reference_v1data_flow_maps_v1.
+
+Delete must be transactional across aiInsights and insightContexts and include timePeriod in WHEREschema_reference_v1.
+
+Some flows invalidate with a wrong key (e.g., [`/api/insights/${clientId}`]) — fix to the canonical insights keydata_flow_maps_v1.
+
+Assertions to Check Before Editing (fail any = fix below)
+A. GET /api/ai-insights/:clientId?period=YYYY-MM returns an array of insights where each item includes a server‑computed hasContext:boolean derived from DB state (insightContexts row exists for (clientId, metricName, timePeriod))schema_reference_v1.
+B. GET prefers the context‑enhanced insight when both base and context variants exist for same (clientId, metricName, timePeriod); or the stored aiInsights row already contains the final, context‑applied text and is returned as such.
+C. DELETE /api/ai-insights/:clientId/:metricName?period=YYYY-MM deletes both aiInsights and insightContexts for that exact tuple in a single transaction, and responds { ok:true, deleted:{ insights:n, contexts:m } } with accurate countsschema_reference_v1.
+D. Frontend insights query key uses canonical YYYY‑MM (never “Last Month”) and invalidations target the exact same keyfrontend_map_v1.
+E. After DELETE success, metric-insight-box sets empty state immediately, then invalidates the correct key; hard reload shows no insight.
+F. Badge (“With context”) renders solely from server hasContext (not optimistic/local state) and is visible on reload when context exists.
+
+Apply These Minimal Diffs
+1) Canonical Period Helper (shared, used by client before building keys)
+If a canonicalizer already exists, use it. Otherwise add a tiny helper (client-only is fine) that maps UI selections (e.g., “Last Month”) → YYYY‑MM.
+
+Ensure every call site that fetches or invalidates insights uses canonical period.
+
+Edit (client): In file that builds keys for insights (either a keys helper or inside metric-insight-box.tsx):
+
+ts
+Copy
+Edit
+// Pseudocode addition
+import { toCanonicalMonth } from "@/utils/timePeriod"; // or add a small util here
+
+const periodYYYYMM = toCanonicalMonth(selectedPeriod);
+const insightsKey = ["/api/ai-insights", clientId, periodYYYYMM] as const;
+Set staleTime: 0, refetchOnMount: 'always', gcTime: 0 for the insights query to avoid resurrection from stale cache.
+
+2) Fix Any Wrong Invalidation Key(s)
+Search project for invalidations like [`/api/insights/${clientId}`] and replace with the exact key used to fetch insights:
+
+ts
+Copy
+Edit
+queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, periodYYYYMM] });
+Also fix any delete/regenerate flows to optimistically remove the specific metric from the cached array for that key before invalidation.
+
+3) Backend GET: compute hasContext + prefer context
+Edit (server/routes.ts or service it calls):
+
+In getAIInsightsForPeriod(clientId, period), perform a LEFT JOIN (or two queries) to determine if a row exists in insightContexts for (clientId, metricName) and this timePeriod. Return hasContext: true/false in each insight item.
+
+If versioning exists, order by createdAt DESC and pick the latest; otherwise ensure the single stored row already reflects context‑enhanced text.
+
+Output must match the frontend expectation in D & F above.
+
+Citations: aiInsights/insightContexts tables + indexes and timePeriod formatschema_reference_v1.
+
+4) Backend DELETE: strict tuple + transaction + counts
+Edit (server/storage.ts + route):
+
+Delete inside a single transaction and include clientId + metricName + timePeriod in WHERE for both tables.
+
+Return accurate deleted counts. Example (pseudocode):
+
+ts
+Copy
+Edit
+await db.transaction(async (tx) => {
+  const ins = await tx.delete(aiInsights)
+    .where(and(eq(aiInsights.clientId, cId), eq(aiInsights.metricName, mName), eq(aiInsights.timePeriod, period)))
+    .returning({ id: aiInsights.id });
+  const ctx = await tx.delete(insightContexts)
+    .where(and(eq(insightContexts.clientId, cId), eq(insightContexts.metricName, mName), /* period if modeled; else by relation */))
+    .returning({ id: insightContexts.id });
+
+  return { insights: ins.length, contexts: ctx.length };
+});
+Citations: required tuple columns and transactional behaviorschema_reference_v1.
+
+Add Proving Tests & Logs (must run locally in Replit)
+A) API Tests (supertest)
+Create server/tests/aiInsights.e2e.test.ts:
+
+Badge truth: Insert one aiInsights + matching insightContexts; GET must return hasContext:true.
+
+Prefer context on reload: If two insight rows or a stored context‑applied row exist, GET returns the context‑enhanced text.
+
+Delete tuple: After DELETE, GET returns no insight for that (clientId, metricName, period). Response counts reflect reality.
+
+B) Frontend Test (React Testing Library)
+Create client/src/__tests__/metric-insight-box.test.tsx:
+
+Mock GET response with hasContext:true → render shows “With context” badge.
+
+Click “Delete” → component shows empty state immediately; assert invalidateQueries called with [ "/api/ai-insights", clientId, "YYYY-MM" ].
+
+C) Debug Logs (temporary, remove after green)
+Log at GET resolver: incoming period, computed canonical, number of insights, hasContext counts.
+
+Log at DELETE: tuple and deleted counts.
+
+Manual Smoke Script (paste in terminal)
+bash
+Copy
+Edit
+# GET with canonical period
+curl -s "http://localhost:5000/api/ai-insights/demo-client-id?period=2025-07" | jq '.insights[] | {metricName, hasContext}'
+
+# DELETE a specific metric
+curl -s -X DELETE "http://localhost:5000/api/ai-insights/demo-client-id/Session%20Duration?period=2025-07" | jq
+
+# GET again (should be gone)
+curl -s "http://localhost:5000/api/ai-insights/demo-client-id?period=2025-07" | jq '.insights[] | select(.metricName=="Session Duration")'
+Definition of Done (agent must confirm with artifacts)
+✅ Diff for each edited file with minimal changes.
+
+✅ Test results: API + frontend tests passing (paste summary).
+
+✅ Screenshot or paste of curl outputs showing hasContext:true, then correct deleted counts, then no result after delete.
+
+✅ A brief note confirming all invalidations now use [ "/api/ai-insights", clientId, "YYYY-MM" ] and no lingering invalidations like [`/api/insights/${clientId}`] remaindata_flow_maps_v1.
+
+✅ Confirmation that query opts for insights use staleTime:0, refetchOnMount:'always', gcTime:0 to avoid stale resurrection.
+
+Do Not
+Do not modify GA4 dashboard flows, chart code, or unrelated routes/componentsrepo_reference-081025.
+
+Do not introduce new caching layers or feature flags.
+
+Do not change schema or enumsschema_reference_v1.
