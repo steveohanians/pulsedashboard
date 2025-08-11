@@ -209,9 +209,13 @@ export const QueryKeys = {
   dashboard: (clientId: string, timePeriod?: string) => 
     timePeriod ? ["/api/dashboard", clientId, timePeriod] : ["/api/dashboard", clientId],
   
-  // AI Insights with client and time period - EXACT FORMAT REQUIRED
-  aiInsights: (clientId: string, timePeriod: string) => 
-    ["/api/ai-insights", clientId, timePeriod],
+  // AI Insights with client and canonical period - EXACT FORMAT REQUIRED
+  aiInsights: (clientId: string, canonicalPeriod: string) => 
+    ["/api/ai-insights", clientId, canonicalPeriod],
+    
+  // For individual metric insights  
+  aiInsightByMetric: (clientId: string, metricName: string, canonicalPeriod: string) =>
+    ["/api/ai-insights", clientId, metricName, canonicalPeriod],
   
   // Filters with dependency parameters
   filters: (businessSize?: string, industryVertical?: string) => 

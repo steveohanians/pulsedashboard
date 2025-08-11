@@ -1418,46 +1418,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete specific AI insight
+  // Month-Pinned AI Insights GET endpoint with server-computed hasContext
+  app.get("/api/ai-insights/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { period } = req.query;
+      
+      // Import time period utilities
+      const { normalizeToCanonicalMonth } = await import("./utils/timePeriodUtils");
+      
+      // Validate ownership
+      if (req.user?.role !== "Admin" && req.user?.clientId !== clientId) {
+        return res.status(403).json({ 
+          error: "Forbidden", 
+          message: "You can only access insights for your own client" 
+        });
+      }
+      
+      if (!period) {
+        return res.status(400).json({ 
+          error: "Bad Request", 
+          message: "period query parameter is required" 
+        });
+      }
+      
+      // Normalize to canonical YYYY-MM format
+      const canonicalPeriod = normalizeToCanonicalMonth(period as string);
+      
+      // Get insights with computed hasContext from database state
+      const insights = await storage.getAIInsightsForPeriod(clientId, canonicalPeriod);
+      
+      logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
+      
+      res.json({ 
+        insights,
+        period: canonicalPeriod,
+        success: true 
+      });
+    } catch (error) {
+      logger.error("Error fetching AI insights:", error);
+      res.status(500).json({ 
+        error: "Internal Server Error",
+        message: "Failed to fetch AI insights" 
+      });
+    }
+  });
+
   // SINGLE TRANSACTIONAL DELETE ROUTE - as per specification requirement
   app.delete("/api/ai-insights/:clientId/:metricName", requireAuth, async (req, res) => {
     try {
       const { clientId, metricName } = req.params;
-      const { timePeriod } = req.query;
+      const { period } = req.query;
       
-      // Convert friendly time period to canonical format if needed
-      const canonicalTimePeriod = normalizeTimePeriod(timePeriod as string);
+      // Import time period utilities
+      const { normalizeToCanonicalMonth } = await import("./utils/timePeriodUtils");
       
       // Validate ownership - using the same auth pattern as other routes
-      if (req.user?.role !== "admin" && req.user?.clientId !== clientId) {
+      if (req.user?.role !== "Admin" && req.user?.clientId !== clientId) {
         return res.status(403).json({ 
           error: "Forbidden", 
           message: "You can only delete insights for your own client" 
         });
       }
       
-      if (!timePeriod) {
+      if (!period) {
         return res.status(400).json({ 
           error: "Bad Request", 
-          message: "timePeriod query parameter is required" 
+          message: "period query parameter is required" 
         });
       }
       
+      // Normalize to canonical YYYY-MM format 
+      const canonicalPeriod = normalizeToCanonicalMonth(period as string);
+      
       // Single transactional operation deletes both insights and contexts
-      await storage.deleteInsightAndContextTransactional(clientId, decodeURIComponent(metricName), canonicalTimePeriod);
+      const deleteResult = await storage.deleteInsightAndContextTransactional(
+        clientId, 
+        decodeURIComponent(metricName), 
+        canonicalPeriod
+      );
       
       // Clear performance cache for this client
       const cacheKey = `insights:${clientId}`;
       performanceCache.delete(cacheKey);
       
-      logger.info(`Single transactional delete completed for ${clientId}/${metricName}/${canonicalTimePeriod}`, {
+      logger.info(`Transactional delete completed for ${clientId}/${metricName}/${canonicalPeriod}`, {
         userId: req.user?.id,
-        clientId,
-        metricName,
-        timePeriod: canonicalTimePeriod
+        deleted: deleteResult
       });
       
       res.json({ 
-        success: true,
+        ok: true,
+        deleted: deleteResult,
         message: "Insight and context deleted successfully" 
       });
     } catch (error) {

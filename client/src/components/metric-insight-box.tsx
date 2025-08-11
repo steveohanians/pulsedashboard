@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
-import { QueryKeys } from "@/lib/queryKeys";
+import { QueryKeys } from "@/lib/queryClient";
 
 /** AI-generated insight data structure with performance status */
 interface InsightData {
@@ -12,6 +12,7 @@ interface InsightData {
   insightText?: string;
   recommendationText?: string;
   status?: "success" | "needs_improvement" | "warning";
+  hasContext?: boolean; // Server-computed badge state
 }
 
 /** Metric data structure for competitive analysis */
@@ -46,6 +47,22 @@ export function MetricInsightBox({
   >(null);
   const queryClient = useQueryClient();
 
+  // Normalize time period to canonical YYYY-MM format
+  const canonicalPeriod = useMemo(() => {
+    if (/^\d{4}-\d{2}$/.test(timePeriod)) {
+      return timePeriod;
+    }
+    if (timePeriod === "Last Month") {
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+    }
+    // Default fallback
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  }, [timePeriod]);
+
   // Memoize the display month label for consistency
   const dataMonthLabel = useMemo(() => {
     const now = new Date();
@@ -53,24 +70,48 @@ export function MetricInsightBox({
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
 
+  // Database-based insights query with no caching during development
+  const { data: insightsData, isLoading: isLoadingInsights } = useQuery({
+    queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod),
+    queryFn: async () => {
+      const response = await fetch(`/api/ai-insights/${clientId}?period=${canonicalPeriod}`);
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error("Failed to fetch insights");
+      }
+      return response.json();
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    gcTime: 0
+  });
+
+  // Find this metric's insight from the database response
+  const metricInsight = useMemo(() => {
+    if (!insightsData?.insights) return null;
+    return insightsData.insights.find((insight: any) => insight.metricName === metricName) || null;
+  }, [insightsData, metricName]);
+
   useEffect(() => {
     const loadStoredInsight = async () => {
       if (preloadedInsight) {
         logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
         
-        // Check if user has custom context for this metric
-        let hasCustomContext = false;
-        try {
-          const contextResponse = await fetch(
-            `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`
-          );
-          if (contextResponse.ok) {
-            const contextData = await contextResponse.json();
-            hasCustomContext = !!(contextData.userContext?.trim());
-            logger.component("MetricInsightBox", `Context check for ${metricName}: ${hasCustomContext ? 'has context' : 'no context'}`);
+        // Use server-computed hasContext if available, otherwise fallback to context check
+        let hasCustomContext = preloadedInsight.hasContext || false;
+        if (!hasCustomContext) {
+          try {
+            const contextResponse = await fetch(
+              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`
+            );
+            if (contextResponse.ok) {
+              const contextData = await contextResponse.json();
+              hasCustomContext = !!(contextData.userContext?.trim());
+              logger.component("MetricInsightBox", `Context check for ${metricName}: ${hasCustomContext ? 'has context' : 'no context'}`);
+            }
+          } catch (error) {
+            logger.component("MetricInsightBox", `Context check failed for ${metricName}:`, error);
           }
-        } catch (error) {
-          logger.component("MetricInsightBox", `Context check failed for ${metricName}:`, error);
         }
         
         setInsight({
@@ -164,7 +205,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight", {
@@ -194,7 +235,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight with context", {
@@ -307,12 +348,18 @@ export function MetricInsightBox({
           onStatusChange?.(undefined);
           try {
             // SINGLE TRANSACTIONAL DELETE - as per specification requirement
-            await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?timePeriod=${encodeURIComponent(timePeriod)}`, {
+            const response = await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`, {
               method: "DELETE",
             });
             
-            // Invalidate centralized query keys
-            queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
+            if (!response.ok) {
+              throw new Error("Failed to delete insight and context");
+            }
+            
+            const result = await response.json();
+            
+            // Invalidate centralized query keys with canonical period
+            queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
             queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
             
             logger.component("MetricInsightBox", "Single transactional delete completed successfully");

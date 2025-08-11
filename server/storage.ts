@@ -84,7 +84,7 @@ export interface IStorage {
   getBenchmarks(metricName: string, industryVertical: string, businessSize: string, timePeriod: string): Promise<Benchmark[]>;
   createBenchmark(benchmark: InsertBenchmark): Promise<Benchmark>;
   
-  // AI Insights
+  // AI Insights - Month-Pinned Persistence System
   getAIInsights(clientId: string, timePeriod: string): Promise<AIInsight[]>;
   getAIInsightsByClient(clientId: string, timePeriod?: string): Promise<AIInsight[]>;
   getAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<AIInsight[]>;
@@ -94,8 +94,12 @@ export interface IStorage {
   deleteAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<void>;
   clearAllAIInsights(): Promise<void>;
   
-  // SINGLE TRANSACTIONAL DELETE - as per specification requirement
-  deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<void>;
+  // Enhanced Methods for Month-Pinned Persistence
+  getAIInsightWithContext(clientId: string, metricName: string, timePeriod: string): Promise<AIInsight & { hasContext: boolean } | undefined>;
+  getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]>;
+  
+  // SINGLE TRANSACTIONAL DELETE - as per specification requirement  
+  deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }>;
 
   // Metric Versions
   getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined>;
@@ -1256,11 +1260,71 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
+  // Enhanced Methods for Month-Pinned Persistence
+  async getAIInsightWithContext(clientId: string, metricName: string, timePeriod: string): Promise<AIInsight & { hasContext: boolean } | undefined> {
+    const insight = await db.select().from(aiInsights).where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.metricName, metricName),
+        eq(aiInsights.timePeriod, timePeriod)
+      )
+    ).limit(1);
+
+    if (!insight[0]) {
+      return undefined;
+    }
+
+    // Check for context - either in aiInsights.contextText or separate insightContexts table
+    const hasContextInInsight = Boolean(insight[0].contextText?.trim());
+    
+    let hasContextInTable = false;
+    if (!hasContextInInsight) {
+      const contextRow = await db.select().from(insightContexts).where(
+        and(
+          eq(insightContexts.clientId, clientId),
+          eq(insightContexts.metricName, metricName)
+        )
+      ).limit(1);
+      hasContextInTable = contextRow.length > 0;
+    }
+
+    return {
+      ...insight[0],
+      hasContext: hasContextInInsight || hasContextInTable
+    };
+  }
+
+  async getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]> {
+    const insights = await db.select().from(aiInsights).where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.timePeriod, timePeriod)
+      )
+    );
+
+    // Batch check for contexts in insightContexts table
+    const metricNames = insights.map(i => i.metricName);
+    const contexts = metricNames.length > 0 ? 
+      await db.select().from(insightContexts).where(
+        and(
+          eq(insightContexts.clientId, clientId),
+          inArray(insightContexts.metricName, metricNames)
+        )
+      ) : [];
+    
+    const contextByMetric = new Set(contexts.map(c => c.metricName));
+
+    return insights.map(insight => ({
+      ...insight,
+      hasContext: Boolean(insight.contextText?.trim()) || contextByMetric.has(insight.metricName)
+    }));
+  }
+
   // SINGLE TRANSACTIONAL DELETE - as per specification requirement
-  async deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<void> {
+  async deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }> {
     return await db.transaction(async (tx) => {
-      // Delete from aiInsights table (both regular and versioned insights)
-      await tx.delete(aiInsights).where(
+      // Delete from aiInsights table with proper WHERE including timePeriod
+      const deletedInsights = await tx.delete(aiInsights).where(
         and(
           eq(aiInsights.clientId, clientId),
           eq(aiInsights.metricName, metricName),
@@ -1268,16 +1332,21 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-      // Delete from insightContexts table
-      await tx.delete(insightContexts).where(
+      // Delete from insightContexts table (no timePeriod column - clear by metric)
+      const deletedContexts = await tx.delete(insightContexts).where(
         and(
           eq(insightContexts.clientId, clientId),
-          eq(insightContexts.metricName, metricName),
-          eq(insightContexts.timePeriod, timePeriod)
+          eq(insightContexts.metricName, metricName)
         )
       );
       
-      logger.info(`Transactionally deleted insights and contexts for ${clientId}/${metricName}/${timePeriod}`);
+      const result = {
+        insights: deletedInsights.rowCount || 0,
+        contexts: deletedContexts.rowCount || 0
+      };
+      
+      logger.info(`Transactional delete completed for ${clientId}/${metricName}/${timePeriod}:`, result);
+      return result;
     });
   }
 
