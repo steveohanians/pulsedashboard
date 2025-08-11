@@ -127,8 +127,8 @@ export const InsightsResponseSchema = z.object({
 // ===== ERROR SCHEMAS =====
 
 export const ErrorResponseSchema = z.object({
+  code: z.enum(["UNAUTHENTICATED", "FORBIDDEN", "SCHEMA_MISMATCH", "GA4_AUTH", "GA4_QUOTA", "CLIENT_NOT_FOUND", "NO_DATA"]),
   message: z.string(),
-  code: z.string().optional(),
   details: z.unknown().optional()
 });
 

@@ -1,0 +1,115 @@
+You are updating a full‑stack TypeScript repo (Node/Express + Drizzle + Neon; React 18 + TanStack Query; GA4; OpenAI) to fix P0/P1 issues found by contract and auth tests.
+
+GOALS (Fix all of the following in one PR):
+A) P0 — Blockers
+  A1. Tenant isolation: /api/ai-insights/:clientId must enforce client ownership (deny cross-tenant).
+  A2. Dashboard schema: remove/null‑safe competitor fields; 200 OK for “Last 3/6 Months”.
+  A3. AI insights errors: return {status:"pending", ...} 200 OK when no insights exist; no 500s for valid inputs.
+  A4. GA4 admin routes: protect /api/admin/ga4/* with requireAuth→requireAdmin.
+
+B) P1 — High priority
+  B1. Standardized error payloads: all 401→{code:"UNAUTHENTICATED"}, 403→{code:"FORBIDDEN"}; remove “NO_CODE”.
+  B2. Time period drift: accept labels & tokens ("Last 3 Months", "last_3_months") via a canonical adapter used end‑to‑end.
+  B3. JSONB variance (device/channel): normalize server responses so contracts/zod pass without null/shape conflicts.
+  B4. Legacy cache keys: eliminate string-based query keys/invalidations; use centralized tuple QueryKeys only.
+
+FILES TO REVIEW (in this order):
+- server/auth.ts (requireAuth, requireAdmin)
+- server/routes.ts (dashboard, ai-insights, /api/admin/ga4/* and ga4-service-accounts/property-access)
+- server/storage.ts (selectors for dashboard/insights/competitors)
+- shared/http/contracts.ts (Zod: DashboardResponseSchema, InsightsResponseSchema, ErrorResponseSchema)
+- shared/timePeriod.ts (adapter: parseUILabel→canonical; toDbRange; toGa4Range)
+- server/services/ga4/* (ensure they consume canonical ranges)
+- client/src/lib/queryKeys.ts and any remaining callers (metric‑insight‑box.tsx, useApiRequest.ts)
+
+IMPLEMENTATION TASKS
+
+1) Standard error helper & middleware (auth.ts)
+   - Add sendError(res, status, code, message, details?).
+   - requireAuth: on unauthenticated → 401 with {code:"UNAUTHENTICATED", message}.
+   - requireAdmin: on non-admin → 403 with {code:"FORBIDDEN", message}.
+   - Ensure all routes use this helper (no bare 401/403).
+
+2) Tenant isolation for AI insights (routes.ts + storage.ts)
+   - In GET /api/ai-insights/:clientId, validate clientId param; call assertClientAccess(req.user, clientId) or equivalent.
+   - On failure: 403 FORBIDDEN (or 404 if you use not-found for isolation) with standardized payload.
+   - In storage.getAIInsightsByClient and any related selectors, enforce WHERE clientId = :clientId (never trust body/client input over param).
+
+3) AI insights pending vs error (routes.ts)
+   - Read latest version/snapshot for (clientId, timePeriod). If none present:
+     - enqueue generation, return 200 with {status:"pending", latestVersion, lastCompleteVersion?}.
+   - Only return 500 on unexpected exceptions; never for “not ready yet”.
+
+4) Dashboard response normalization (routes.ts + storage.ts)
+   - When assembling dashboard JSON, coalesce competitor text fields:
+     - Preferred: omit null fields (undefined) and mark schema optional, OR map null→'' consistently (choose one approach and align schema).
+   - Ensure 3/6‑month requests return 200 with valid data (see timePeriod adapter below).
+
+5) Time period canonical adapter (shared/timePeriod.ts; use everywhere)
+   - parseUILabel(labelOrToken): accept "Last 3 Months" / "last_3_months" (case/space/underscore tolerant) → canonical {granularity, months}.
+   - toDbRange(canonical, nowUTC) → {startMonth:"YYYY-MM", endMonth:"YYYY-MM"}.
+   - toGa4Range(canonical, nowUTC) → {startDate:"YYYY-MM-DD", endDate:"YYYY-MM-DD"}.
+   - Replace ad‑hoc parsing in routes/services with adapter outputs; 422 only for truly invalid inputs.
+
+6) JSONB variance smoothing (routes.ts)
+   - For device/channel distributions returned to the client, normalize to the agreed response shape used in Zod (single canonical envelope or a stable DTO).
+   - Do NOT change DB schema in this pass; normalize at the response boundary so Zod passes.
+
+7) Standardize GA4 admin route protection & error codes (routes.ts)
+   - /api/admin/ga4/*, /api/admin/ga4-service-accounts*, /api/admin/ga4-property-access*:
+     - Ensure requireAuth→requireAdmin are applied.
+     - Replace any responses with sendError(...), returning {code:"UNAUTHENTICATED"} or {code:"FORBIDDEN"} as appropriate.
+
+8) Cache key hygiene (client)
+   - Ensure client/src/lib/queryKeys.ts exports:
+     - dashboard: (clientId, tp) => ["/api/dashboard", clientId, tp] as const
+     - aiInsights: (clientId, tp) => ["/api/ai-insights", clientId, tp] as const
+     - filters: () => ["/api/filters"] as const
+   - Replace remaining offenders:
+     - client/src/components/metric-insight-box.tsx
+     - client/src/hooks/useApiRequest.ts
+   - No string-based invalidateQueries; use tuple keys and helpers only.
+
+ZOD CONTRACTS (shared/http/contracts.ts)
+- Align response schemas with the chosen competitor field strategy:
+  - If you omit nulls → z.string().optional() (or field omitted entirely).
+  - If you send empty strings → z.string() (no nulls).
+- Add ErrorResponseSchema:
+  code: z.enum(["UNAUTHENTICATED","FORBIDDEN","SCHEMA_MISMATCH","GA4_AUTH","GA4_QUOTA"])
+  message: z.string()
+  details?: z.any()
+- Request schema for timePeriod: accept both labels & tokens; adapter does the heavy lifting.
+
+TESTS & VERIFICATION (add/adjust; must pass before finishing)
+A) Supertest contract tests (server/__tests__/contracts.spec.ts)
+   - /api/dashboard/:clientId?timePeriod=last_3_months → 200, Zod pass.
+   - /api/dashboard/:clientId?timePeriod=last_6_months → 200, Zod pass.
+   - /api/ai-insights/:clientId?timePeriod=last_month:
+       - If none exist → 200 {status:"pending", ...} Zod pass (no 500).
+   - Negative: missing/invalid timePeriod → 422 {code:"SCHEMA_MISMATCH"}.
+   - Error payloads: anonymous admin route → 401 {code:"UNAUTHENTICATED"}; non-admin → 403 {code:"FORBIDDEN"}.
+
+B) Auth/tenant tests (server/__tests__/auth.spec.ts)
+   - Anonymous on /api/admin/ga4/* → 401 UNAUTHENTICATED.
+   - Non-admin on same → 403 FORBIDDEN.
+   - Cross-tenant GET /api/ai-insights/other-client-id → 403/404 with standardized code (assert one).
+   - Assert no route emits “NO_CODE”.
+
+C) Time period adapter unit tests (shared/__tests__/timePeriod.spec.ts)
+   - "Last 3 Months" and "last_3_months" map to identical dbRange/ga4Range.
+   - Edge cases: Feb 29 leap year, month-end boundaries (UTC).
+
+D) Cache key hygiene smoke (optional)
+   - Grep/assert no string-based query keys or invalidations remain.
+   - Metric Insight Box and useApiRequest use QueryKeys helpers.
+
+GUARDRAILS
+- Limit scope to files listed above; do not change DB schema.
+- Keep existing features and flags; no behavior changes outside described fixes.
+- Prefer normalization at response boundaries over large refactors.
+- Only return 500 for unexpected exceptions; prefer typed errors with codes.
+
+DELIVERABLES
+- Diffs for: server/auth.ts, server/routes.ts, server/storage.ts, shared/http/contracts.ts, shared/timePeriod.ts, client key offenders.
+- New/updated tests with passing output.
+- A brief summary listing: routes secured, tenant check added, schemas aligned, timePeriod accepted forms, and remaining TODOs (if any).

@@ -10,6 +10,32 @@ import { authLimiter } from "./middleware/rateLimiter";
 import { APP_CONFIG, requireSessionSecret } from "./config";
 import logger from "./utils/logging/logger";
 
+// Standardized error response helper
+export function sendError(res: any, status: number, code: string, message: string, details?: any) {
+  return res.status(status).json({
+    code,
+    message,
+    ...(details && { details })
+  });
+}
+
+// Tenant access validation helper
+export function assertClientAccess(user: any, clientId: string): void {
+  if (!user) {
+    throw new Error('UNAUTHENTICATED');
+  }
+  
+  // Admin users can access all clients
+  if (user.role === 'Admin') {
+    return;
+  }
+  
+  // Regular users can only access their own client
+  if (user.clientId !== clientId) {
+    throw new Error('FORBIDDEN');
+  }
+}
+
 declare global {
   namespace Express {
     interface User extends SelectUser {}
@@ -41,26 +67,17 @@ export function requireAuth(req: any, res: any, next: any) {
         req.login(adminUser, (err: any) => {
           if (err) {
             logger.warn('Development auto-login failed in requireAuth', { error: err.message });
-            return res.status(401).json({ 
-              code: "UNAUTHENTICATED", 
-              message: "Authentication required" 
-            });
+            return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
           }
           logger.info('Development auto-login successful in requireAuth', { userId: adminUser.id });
           return next();
         });
       } else {
-        return res.status(401).json({ 
-          code: "UNAUTHENTICATED", 
-          message: "Authentication required" 
-        });
+        return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
       }
     }).catch((error: Error) => {
       logger.warn('Failed to auto-authenticate in requireAuth', { error: error.message });
-      return res.status(401).json({ 
-        code: "UNAUTHENTICATED", 
-        message: "Authentication required" 
-      });
+      return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
     });
   }
   
@@ -70,10 +87,7 @@ export function requireAuth(req: any, res: any, next: any) {
       method: req.method,
       ip: req.ip
     });
-    return res.status(401).json({ 
-      code: "UNAUTHENTICATED", 
-      message: "Authentication required" 
-    });
+    return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
   }
   next();
 }
@@ -85,10 +99,7 @@ export function requireAdmin(req: any, res: any, next: any) {
       method: req.method,
       ip: req.ip
     });
-    return res.status(401).json({ 
-      code: "UNAUTHENTICATED", 
-      message: "Authentication required" 
-    });
+    return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
   }
   
   if (req.user.role !== "Admin") {
@@ -99,10 +110,7 @@ export function requireAdmin(req: any, res: any, next: any) {
       userRole: req.user.role,
       ip: req.ip
     });
-    return res.status(403).json({ 
-      code: "FORBIDDEN", 
-      message: "Admin access required" 
-    });
+    return sendError(res, 403, "FORBIDDEN", "Admin access required");
   }
   
   next();

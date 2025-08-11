@@ -95,7 +95,7 @@ export function useApiRequest<TData = unknown, TVariables = unknown>(
  * Consolidates query patterns across components
  */
 export function useApiQuery<TData = unknown>(
-  queryKey: string | string[],
+  queryKey: readonly unknown[],
   endpoint?: string,
   options: {
     enabled?: boolean;
@@ -107,11 +107,11 @@ export function useApiQuery<TData = unknown>(
   const { onError, showErrorToast = true } = options;
   const { toast } = useToast();
   
-  const keyArray = Array.isArray(queryKey) ? queryKey : [queryKey];
-  const actualEndpoint = endpoint || keyArray[0];
+  // Ensure query key is properly typed for TanStack Query v5
+  const actualEndpoint = endpoint || (queryKey[0] as string);
 
   const query = useQuery<TData>({
-    queryKey: keyArray,
+    queryKey: queryKey,
     queryFn: async (): Promise<TData> => {
       const response = await fetch(actualEndpoint);
       if (!response.ok) {
@@ -145,7 +145,7 @@ export function useApiQuery<TData = unknown>(
  * Handles optimistic updates with rollback on error
  */
 export function useOptimisticUpdate<TData, TVariables>(
-  queryKey: string[],
+  queryKey: readonly unknown[],
   endpoint: string,
   options: ApiRequestOptions & {
     optimisticUpdate?: (oldData: TData, variables: TVariables) => TData;

@@ -405,6 +405,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId } = req.params;
       
+      // P0: Tenant isolation - validate client access
+      const { assertClientAccess, sendError } = await import("./auth");
+      try {
+        assertClientAccess(req.user, clientId);
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        if (errorMessage === 'UNAUTHENTICATED') {
+          return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
+        } else if (errorMessage === 'FORBIDDEN') {
+          return sendError(res, 403, "FORBIDDEN", "Access denied to this client");
+        }
+      }
+      
       // Import canonical time period functions
       const { parseUILabel, generateCacheKey } = await import("../shared/timePeriod");
       
@@ -414,11 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rawTimePeriod = normalizeTimePeriod(req.query.timePeriod as string);
         canonicalTimePeriod = parseUILabel(rawTimePeriod);
       } catch (error) {
-        return res.status(422).json({
-          message: "Invalid time period format",
-          code: "SCHEMA_MISMATCH",
-          details: (error as Error).message
-        });
+        return sendError(res, 422, "SCHEMA_MISMATCH", "Invalid time period format", (error as Error).message);
       }
       
       // Validate client ID
