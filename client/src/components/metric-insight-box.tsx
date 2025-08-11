@@ -306,27 +306,18 @@ export function MetricInsightBox({
           setInsight(null);
           onStatusChange?.(undefined);
           try {
-            // Delete both regular insight and versioned insights, plus context
-            await Promise.all([
-              fetch(`/api/insights/${clientId}/${encodeURIComponent(metricName)}`, {
-                method: "DELETE",
-              }),
-              fetch(`/api/v2/ai-insights/${clientId}/${encodeURIComponent(metricName)}`, {
-                method: "DELETE",
-              }),
-              fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
-                method: "DELETE",
-              }),
-            ]);
+            // SINGLE TRANSACTIONAL DELETE - as per specification requirement
+            await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?timePeriod=${encodeURIComponent(timePeriod)}`, {
+              method: "DELETE",
+            });
             
-            // Invalidate all relevant queries
+            // Invalidate centralized query keys
             queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
-            queryClient.invalidateQueries({ queryKey: ["/api/v2/ai-insights", clientId, timePeriod] });
-            queryClient.invalidateQueries({ queryKey: ["/api/v2/ai-insights", clientId, "status", timePeriod] });
+            queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
             
-            logger.component("MetricInsightBox", "Successfully deleted insight, versioned insights, and context");
+            logger.component("MetricInsightBox", "Single transactional delete completed successfully");
           } catch (error) {
-            logger.warn("Failed to delete insight or context", { error });
+            logger.warn("Failed to delete insight and context via transactional operation", { error });
           }
         }}
       />

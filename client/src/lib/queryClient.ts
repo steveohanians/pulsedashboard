@@ -200,6 +200,31 @@ export const getQueryFn: <T>(options: {
   };
 
 /**
+ * Centralized query keys for consistent cache management
+ * Uses tuple format for proper cache invalidation patterns
+ * Following specification: ["/api/ai-insights", clientId, period]
+ */
+export const QueryKeys = {
+  // Dashboard data with client and time period
+  dashboard: (clientId: string, timePeriod?: string) => 
+    timePeriod ? ["/api/dashboard", clientId, timePeriod] : ["/api/dashboard", clientId],
+  
+  // AI Insights with client and time period - EXACT FORMAT REQUIRED
+  aiInsights: (clientId: string, timePeriod: string) => 
+    ["/api/ai-insights", clientId, timePeriod],
+  
+  // Filters with dependency parameters
+  filters: (businessSize?: string, industryVertical?: string) => 
+    ["/api/filters", businessSize || "All", industryVertical || "All"],
+  
+  // User data
+  user: () => ["/api/user"],
+  
+  // Server boot time for cache busting
+  serverBootTime: () => ["/api/server-boot-time"]
+};
+
+/**
  * Configured React Query client with optimized defaults for the application
  * - 5 minute stale time for caching
  * - No automatic refetching or retries

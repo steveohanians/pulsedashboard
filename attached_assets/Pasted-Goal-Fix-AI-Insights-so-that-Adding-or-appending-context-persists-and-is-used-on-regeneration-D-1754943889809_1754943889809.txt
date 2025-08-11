@@ -1,0 +1,100 @@
+Goal: Fix AI Insights so that:
+
+Adding or appending context persists and is used on regeneration,
+
+Deleting an insight clears both DB and UI (no ghosts on reload),
+
+The same generated insight (and its “With Context” badge) reliably reappears across reloads until next month’s data refresh.
+
+Repo context to review (in this order)
+
+Frontend
+
+client/src/components/metric-insight-box.tsx (badge logic, modal, mutate flows)frontend_map_v1
+
+client/src/components/ai-insights.tsx (list/loader/state)frontend_map_v1
+
+client/src/pages/dashboard.tsx (insights load + query keys; ensure period pinning)frontend_map_v1data_flow_maps_v1
+
+client/src/lib/queryClient.ts (query keys, cache invalidation)repo_reference-081025
+
+Backend
+
+server/routes.ts (AI insight routes, any newly added /api/v2/... DELETE)backend_map_v1
+
+server/services/openai.ts (generation path & prompt use)backend_map_v1
+
+server/storage.ts (repository methods for aiInsights & insightContexts)repo_reference-081025
+
+server/utils/background-processor.ts (queueing behavior)backend_map_v1
+
+Schema
+
+Tables: aiInsights, insightContexts (columns: clientId, metricName, timePeriod, contextText, etc.)schema_reference_v1schema_reference_v1
+
+Strict reasoning workflow (do not skip)
+
+Flow map (write before coding):
+UI button → modal → mutation → route → service/openai → storage (tables) → UI requery.
+Include exact React Query keys (must use ["/api/ai-insights", clientId, period])schema_reference_v1data_flow_maps_v1 and the dashboard query key for context of invalidationdata_flow_maps_v1.
+
+Badge truth source:
+Implement withContext = Boolean(persistedInsight?.contextText || joinedPersistedContextRow) on first render, not only after a mutate. Badge must appear without user interaction if context exists in DB for (clientId, metricName, timePeriod)schema_reference_v1.
+
+Read model (GET):
+Ensure UI fetches versioned insight for the pinned month (YYYY-MM) and metric. If the dashboard uses a friendly label (“Last Month”), convert to the canonical YYYY-MM on the server before DB access (avoid format drift)data_flow_maps_v1.
+
+Write model (POST/PUT append):
+“Add context” must append to insightContexts for (clientId, metricName, timePeriod) and set/merge contextText on the corresponding aiInsights row on regeneration. After success, invalidate only:
+
+["/api/ai-insights", clientId, period]
+
+["/api/dashboard", clientId, period] if the insight is embedded in that payloaddata_flow_maps_v1.
+
+Regenerate with context:
+The generate path in server/services/openai.ts must always read the latest persisted context (insightContexts.userContext and/or aiInsights.contextText) and include it in the prompt. Update aiInsights atomically with the new insightText, recommendationText, and contextText when regeneratingbackend_map_v1schema_reference_v1.
+
+Delete (single, transactional):
+Replace any “multi‑endpoint deletion” with one backend operation that in a single transaction deletes rows from aiInsights and insightContexts where (clientId, metricName, timePeriod) — or, if we need soft delete later, add a deletedAt column (not present now) and enforce it in queriesschema_reference_v1. Expose one DELETE route using the storage layer; keep auth/ownership checks at router levelbackend_map_v1.
+
+Caching:
+
+Frontend: ensure insights queries use no stale time during feature dev and are invalidated on mutate.
+
+Backend: if a performance cache is used for dashboard, clear the specific dashboard key that includes clientId and timePeriod when insights change, or disable dashboard caching during this workdata_flow_maps_v1.
+
+Acceptance criteria (verify with logs & UI)
+
+On page load (fresh session), for a metric that has saved context in DB, the “With Context” badge renders without clicking anything.
+
+Clicking Add Context → Regenerate updates the text and persists. Reloading the app shows the same insight + badge.
+
+Delete Insight removes both the DB rows and the UI content. Reloading shows no insight and no badge.
+
+Next month (simulate by forcing timePeriod), the previous month’s insight does not leak into the new period.
+
+Instrumentation to add (temporary)
+
+Backend debug logs: when GET’ing insights, log the resolved (clientId, metricName, timePeriod) and whether contextText was found.
+
+Frontend console debug: log the query key and the final withContext boolean per metric.
+
+Safety & constraints
+
+Use storage/repository utilities for all DB writes/reads; no raw SQL in routesrepo_reference-081025.
+
+Keep auth middleware (requireAuth, ownership/admin) on all routesbackend_map_v1.
+
+Do not broaden cache invalidation beyond the two keys noted.
+
+No new buttons or UX; only fix logic and data flow.
+
+Tests to run (manual ok)
+
+Add context → regenerate → hard reload → badge true.
+
+Append additional context → regenerate → badge stays true; insight text updates.
+
+Delete → DB rows gone → reload → no badge.
+
+Switch metrics and come back → state is consistent without extra fetches beyond the insights query.

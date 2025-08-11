@@ -93,6 +93,9 @@ export interface IStorage {
   deleteAIInsightByMetric(clientId: string, metricName: string): Promise<void>;
   deleteAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<void>;
   clearAllAIInsights(): Promise<void>;
+  
+  // SINGLE TRANSACTIONAL DELETE - as per specification requirement
+  deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<void>;
 
   // Metric Versions
   getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined>;
@@ -1251,6 +1254,31 @@ export class DatabaseStorage implements IStorage {
         eq(aiInsights.version, version)
       )
     );
+  }
+
+  // SINGLE TRANSACTIONAL DELETE - as per specification requirement
+  async deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<void> {
+    return await db.transaction(async (tx) => {
+      // Delete from aiInsights table (both regular and versioned insights)
+      await tx.delete(aiInsights).where(
+        and(
+          eq(aiInsights.clientId, clientId),
+          eq(aiInsights.metricName, metricName),
+          eq(aiInsights.timePeriod, timePeriod)
+        )
+      );
+
+      // Delete from insightContexts table
+      await tx.delete(insightContexts).where(
+        and(
+          eq(insightContexts.clientId, clientId),
+          eq(insightContexts.metricName, metricName),
+          eq(insightContexts.timePeriod, timePeriod)
+        )
+      );
+      
+      logger.info(`Transactionally deleted insights and contexts for ${clientId}/${metricName}/${timePeriod}`);
+    });
   }
 
   // Metric Versions

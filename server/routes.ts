@@ -1418,27 +1418,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete specific AI insight
-  app.delete("/api/insights/:clientId/:metricName", requireAuth, async (req, res) => {
+  // SINGLE TRANSACTIONAL DELETE ROUTE - as per specification requirement
+  app.delete("/api/ai-insights/:clientId/:metricName", requireAuth, async (req, res) => {
     try {
       const { clientId, metricName } = req.params;
-
-      // Verify user has access to this client
-      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Delete the insight from database (both regular and versioned)
-      await storage.deleteAIInsightByMetric(clientId, metricName);
+      const { timePeriod } = req.query;
       
-      // Clear the insights cache for this client
+      // Convert friendly time period to canonical format if needed
+      const canonicalTimePeriod = normalizeTimePeriod(timePeriod as string);
+      
+      // Validate ownership - using the same auth pattern as other routes
+      if (req.user?.role !== "admin" && req.user?.clientId !== clientId) {
+        return res.status(403).json({ 
+          error: "Forbidden", 
+          message: "You can only delete insights for your own client" 
+        });
+      }
+      
+      if (!timePeriod) {
+        return res.status(400).json({ 
+          error: "Bad Request", 
+          message: "timePeriod query parameter is required" 
+        });
+      }
+      
+      // Single transactional operation deletes both insights and contexts
+      await storage.deleteInsightAndContextTransactional(clientId, decodeURIComponent(metricName), canonicalTimePeriod);
+      
+      // Clear performance cache for this client
       const cacheKey = `insights:${clientId}`;
       performanceCache.delete(cacheKey);
       
-      logger.info("Deleted AI insight for specific metric", { clientId, metricName, userId: req.user.id });
+      logger.info(`Single transactional delete completed for ${clientId}/${metricName}/${canonicalTimePeriod}`, {
+        userId: req.user?.id,
+        clientId,
+        metricName,
+        timePeriod: canonicalTimePeriod
+      });
+      
+      res.json({ 
+        success: true,
+        message: "Insight and context deleted successfully" 
+      });
+    } catch (error) {
+      logger.error("Error in transactional delete:", error);
+      res.status(500).json({ 
+        error: "Internal Server Error",
+        message: "Failed to delete insight and context" 
+      });
+    }
+  });
+
+  // Legacy route for backward compatibility
+  app.delete("/api/insights/:clientId/:metricName", requireAuth, async (req, res) => {
+    try {
+      const { clientId, metricName } = req.params;
+      const { timePeriod } = req.query;
+      
+      // Redirect to canonical transactional delete
+      const canonicalTimePeriod = normalizeTimePeriod(timePeriod as string || "Last Month");
+      
+      // Validate ownership
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Use the same transactional delete method
+      await storage.deleteInsightAndContextTransactional(clientId, metricName, canonicalTimePeriod);
+      
+      // Clear performance cache for this client
+      const cacheKey = `insights:${clientId}`;
+      performanceCache.delete(cacheKey);
+      
+      logger.info("Legacy delete redirected to transactional delete", { clientId, metricName, userId: req.user.id });
       
       res.json({ message: "AI insight deleted successfully" });
     } catch (error) {
-      logger.error("Error deleting AI insight", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
+      logger.error("Error in legacy delete route:", { error: (error as Error).message, clientId: req.params.clientId, metricName: req.params.metricName });
       res.status(500).json({ message: "Failed to delete AI insight" });
     }
   });
