@@ -287,7 +287,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasCustomContext: matchingInsight.hasCustomContext || false,
+          hasCustomContext: matchingInsight.hasContext || false,
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);

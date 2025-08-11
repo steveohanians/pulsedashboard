@@ -1518,9 +1518,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
       
       res.json({ 
+        status: 'available',
         insights,
-        period: canonicalPeriod,
-        success: true 
+        period: canonicalPeriod
       });
     } catch (error) {
       logger.error("Error fetching AI insights:", error);
