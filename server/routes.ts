@@ -428,8 +428,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 🚀 Async AI Insights endpoint - loads insights in background after main dashboard
-  app.get("/api/insights/:clientId", requireAuth, async (req, res) => {
+  // 🚀 AI Insights Handler - shared between canonical and legacy routes
+  const handleAIInsights = async (req: any, res: any) => {
     try {
       const { clientId } = req.params;
       
@@ -491,6 +491,21 @@ export function registerRoutes(app: Express): Server {
       logger.error("Insights loading error", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to load insights" });
     }
+  };
+
+  // 🚀 CANONICAL: AI Insights endpoint - loads insights in background after main dashboard
+  app.get("/api/ai-insights/:clientId", requireAuth, handleAIInsights);
+
+  // 🔄 LEGACY ALIAS: Backward-compatible route with deprecation headers
+  app.get("/api/insights/:clientId", requireAuth, async (req, res) => {
+    // Add deprecation headers
+    res.set({
+      'Deprecation': 'true',
+      'Sunset': '2026-01-01',
+      'Link': `</api/ai-insights/${req.params.clientId}>; rel="successor-version"`
+    });
+    
+    return handleAIInsights(req, res);
   });
 
   // Filters endpoint with caching and dynamic interdependent options  
@@ -1314,8 +1329,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Fetch AI insights for a client
+  // 🔄 LEGACY ALIAS: Fetch AI insights for a client (without clientId param)
   app.get("/api/insights", requireAuth, async (req, res) => {
+    // Add deprecation headers
+    res.set({
+      'Deprecation': 'true',
+      'Sunset': '2026-01-01',
+      'Link': `</api/ai-insights/${req.user?.clientId}>; rel="successor-version"`
+    });
+    
     try {
       const { period } = req.query;
       const clientId = req.user?.clientId;

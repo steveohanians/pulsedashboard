@@ -135,7 +135,7 @@ export const QueryKeys = {
     ["/api/filters"] as const,
     
   insights: (clientId: string, timePeriod: string = "Last Month") => 
-    ["/api/insights", clientId, timePeriod] as const
+    ["/api/ai-insights", clientId, timePeriod] as const
 } as const;
 
 // ===== VALIDATION HELPERS =====

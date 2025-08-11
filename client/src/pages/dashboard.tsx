@@ -192,6 +192,8 @@ export default function Dashboard() {
   // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
     queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
+    queryFn: () => fetch(`/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}`)
+      .then(res => res.json()),
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
