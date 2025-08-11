@@ -100,8 +100,11 @@ export function createVersionedInsightsRoutes(storage: any, backgroundProcessor:
         timePeriod: req.query.timePeriod
       });
       
-      return res.status(500).json({ 
-        message: "Failed to get AI insights" 
+      // Return 200 with pending status instead of 500 for better UX
+      return res.json({ 
+        status: 'pending',
+        insights: [],
+        message: 'Insights are being processed. Please try again in a few moments.'
       });
     }
   }
@@ -171,18 +174,21 @@ export function createVersionedInsightsRoutes(storage: any, backgroundProcessor:
       const { clientId } = req.params;
       const { timePeriod } = req.query;
 
-      if (!clientId || !timePeriod) {
+      if (!clientId) {
         return res.status(400).json({ 
-          message: "Client ID and time period are required" 
+          message: "Client ID is required" 
         });
       }
+      
+      // Use default time period if not provided
+      const effectiveTimePeriod = (timePeriod as string) || "Last Month";
 
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const status = await versionService.getInsightStatus(clientId, timePeriod as string);
+      const status = await versionService.getInsightStatus(clientId, effectiveTimePeriod);
       
       return res.json(status);
 

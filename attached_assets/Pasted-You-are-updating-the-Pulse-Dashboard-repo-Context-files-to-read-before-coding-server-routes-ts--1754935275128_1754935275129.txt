@@ -1,0 +1,68 @@
+You are updating the Pulse Dashboard™ repo.
+Context files to read before coding:
+
+server/routes.ts (dashboard handler, AI insights handler)
+
+shared/http/contracts.ts (Zod schemas for Dashboard, Filters, Insights)
+
+shared/timePeriod.ts (time period adapters)
+
+server/storage.ts (metrics + competitor queries)
+
+server/services/ga4/* (range building & GA4 calls)
+
+server/utils/query-optimization/queryOptimizer.ts (dashboard data assembly)
+
+Goal: Address P0 and P1 contract regression issues in one change:
+
+Dashboard route response:
+
+Ensure competitor fields never return null when Zod expects string.
+
+Either strip nulls (omit fields) or return empty strings — match contracts.ts.
+
+Fix handling for "Last 3 Months" and "Last 6 Months" so they return HTTP 200 and valid data.
+
+Zod schemas (contracts.ts):
+
+Update to allow optional() or .nullable() as needed if nulls are valid.
+
+Ensure timePeriod request schema accepts both label and token forms (case-insensitive, spaces or underscores).
+
+Time period adapter (shared/timePeriod.ts):
+
+Map labels like "Last 3 Months" → canonical month strings used by DB and GA4.
+
+Reuse this mapping everywhere (routes, services, GA4 calls) to avoid 422s.
+
+AI Insights route:
+
+For “Last Month” requests, if no insights exist, return {status:"pending", ...} with 200 instead of 500.
+
+Only return 500 for truly unexpected errors.
+
+Storage layer null-safety (server/storage.ts):
+
+In competitor queries, coalesce text columns to '' or undefined before serializing.
+
+Ensure time period filters match canonical adapter output.
+
+GA4 range building:
+
+Make sure range composers accept and correctly handle the mapped label/token forms.
+
+Guardrails:
+
+Do not change unrelated endpoints or frontend code.
+
+Keep all current tests passing; add/adjust tests for:
+
+Dashboard with “Last 3 Months” & “Last 6 Months” (200 OK, valid schema).
+
+AI Insights with no data (pending state, 200 OK).
+
+Competitor fields always meeting schema.
+
+Ensure cache keys stay consistent across new and old time-period forms.
+
+No breaking changes to existing response shapes except removing/replacing nulls in line with schema.

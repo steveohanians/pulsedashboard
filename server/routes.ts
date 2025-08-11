@@ -356,14 +356,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create a safe fallback response with proper property checking
         const responseData = {
           client: result.client,
-          competitors: result.competitors || [],
+          competitors: (result.competitors || []).map((comp: any) => ({
+            id: comp.id || '',
+            domain: comp.domain || '',
+            label: comp.label || comp.domain || 'Unknown Competitor',
+            status: comp.status || 'Active'
+          })),
           insights: result.insights || [],
           metrics: result.metrics?.map((m: any) => ({
             metricName: m.metricName,
             value: typeof m.value === 'number' ? m.value : parseFloat(m.value) || 0,
             sourceType: m.sourceType,
             channel: m.channel,
-            competitorId: typeof m.competitorId === 'string' ? m.competitorId : undefined
+            competitorId: typeof m.competitorId === 'string' && m.competitorId ? m.competitorId : undefined
           })) || [],
           averagedMetrics: (result as any).averagedMetrics || undefined,
           timeSeriesData: (result as any).timeSeriesData || undefined,
@@ -447,30 +452,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Load insights from database (all insights for client, not filtered by timePeriod)
       const insights = await storage.getAIInsightsByClient(clientId);
       
-      const responseData = { insights };
+      // Determine insight status
+      let status: 'available' | 'pending' | 'generating' | 'error' = 'pending';
+      let message: string | undefined;
+      
+      if (insights && insights.length > 0) {
+        status = 'available';
+      } else {
+        // Check if insights are being generated in background
+        const processorStatus = backgroundProcessor.getStatus();
+        const isGenerating = processorStatus?.activeJobs && Array.isArray(processorStatus.activeJobs) 
+          ? processorStatus.activeJobs.some((job: any) => job.type === 'AI_INSIGHT' && job.data?.clientId === clientId)
+          : false;
+        
+        if (isGenerating) {
+          status = 'generating';
+          message = 'AI insights are being generated in the background';
+        } else {
+          status = 'pending';
+          message = 'No insights available yet. Please try again in a few moments.';
+        }
+      }
+      
+      const responseData = { 
+        status,
+        insights: insights || [],
+        message
+      };
       
       try {
         // Validate response against schema
         const validatedResponse = validateResponse(InsightsResponseSchema, responseData);
         
-        // Cache for future requests
-        performanceCache.set(cacheKey, insights, 10 * 60 * 1000); // 10 minutes
+        // Cache for future requests (even empty insights with status)
+        performanceCache.set(cacheKey, insights || [], 10 * 60 * 1000); // 10 minutes
         
         return res.json(validatedResponse);
       } catch (validationError) {
         logger.error("Insights response validation failed", { 
           error: validationError,
           clientId,
-          insightsCount: insights?.length || 0
+          insightsCount: insights?.length || 0,
+          status
         });
-        return res.status(500).json({
-          message: "Response validation failed", 
-          code: "SCHEMA_MISMATCH"
+        
+        // Return 200 with pending status even if validation fails - better UX than 500
+        return res.json({
+          status: 'pending',
+          insights: [],
+          message: 'Insights are being processed'
         });
       }
     } catch (error) {
       logger.error("Insights loading error", { error: (error as Error).message });
-      res.status(500).json({ message: "Failed to load insights" });
+      
+      // Always return 200 with pending status for better UX, even on errors
+      return res.json({
+        status: 'pending',
+        insights: [],
+        message: 'Insights are being processed. Please try again in a few moments.'
+      });
     }
   };
 

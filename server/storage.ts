@@ -254,7 +254,15 @@ export class DatabaseStorage implements IStorage {
 
   // Competitors
   async getCompetitorsByClient(clientId: string): Promise<Competitor[]> {
-    return await db.select().from(competitors).where(eq(competitors.clientId, clientId));
+    const results = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
+    
+    // Ensure competitor fields never return null - coalesce to empty strings or defaults
+    return results.map(competitor => ({
+      ...competitor,
+      domain: competitor.domain || '', // Ensure non-null domain
+      label: competitor.label || competitor.domain || 'Unknown Competitor', // Fallback to domain or default
+      status: competitor.status || 'Active' // Default to Active status
+    }));
   }
 
   async getCompetitor(id: string): Promise<Competitor | undefined> {

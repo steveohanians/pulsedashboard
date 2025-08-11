@@ -7,11 +7,11 @@ import { z } from 'zod';
 
 // ===== COMMON SCHEMAS =====
 
-const CompetitorSchema = z.object({
+export const CompetitorSchema = z.object({
   id: z.string(),
-  domain: z.string(), 
-  label: z.string(),
-  status: z.string().optional()
+  domain: z.string().transform(val => val || ''), // Transform empty/null to empty string
+  label: z.string().transform(val => val || 'Unknown Competitor'), // Transform empty/null to default
+  status: z.union([z.string(), z.null(), z.undefined()]).transform(val => val || 'Active') // Handle null/undefined
 });
 
 const DashboardMetricSchema = z.object({
@@ -19,7 +19,7 @@ const DashboardMetricSchema = z.object({
   value: z.union([z.string(), z.number()]),
   sourceType: z.string(),
   channel: z.string().optional(),
-  competitorId: z.string().optional()
+  competitorId: z.string().optional() // Keep optional to handle Client/CD_Avg metrics
 });
 
 const TimeSeriesDataPointSchema = z.object({
@@ -49,7 +49,22 @@ const AIInsightSchema = z.object({
 
 export const DashboardRequestSchema = z.object({
   clientId: z.string().min(1, "Client ID is required"),
-  timePeriod: z.string().default("Last Month"),
+  timePeriod: z.string()
+    .default("Last Month")
+    .transform(val => {
+      // Normalize common time period variations
+      const normalized = val.trim().toLowerCase().replace(/[_\s]+/g, ' ');
+      const mapping: Record<string, string> = {
+        'last month': 'Last Month',
+        'last 3 months': 'Last 3 Months', 
+        'last quarter': 'Last 3 Months',
+        'last 6 months': 'Last 6 Months',
+        'last year': 'Last Year',
+        'last 12 months': 'Last Year',
+        'custom date range': 'Custom Date Range'
+      };
+      return mapping[normalized] || val;
+    }),
   businessSize: z.string().default("All"),
   industryVertical: z.string().default("All")
 });
@@ -61,7 +76,22 @@ export const FiltersRequestSchema = z.object({
 
 export const InsightsRequestSchema = z.object({
   clientId: z.string().min(1, "Client ID is required"),
-  timePeriod: z.string().default("Last Month")
+  timePeriod: z.string()
+    .default("Last Month")
+    .transform(val => {
+      // Normalize common time period variations
+      const normalized = val.trim().toLowerCase().replace(/[_\s]+/g, ' ');
+      const mapping: Record<string, string> = {
+        'last month': 'Last Month',
+        'last 3 months': 'Last 3 Months', 
+        'last quarter': 'Last 3 Months',
+        'last 6 months': 'Last 6 Months',
+        'last year': 'Last Year',
+        'last 12 months': 'Last Year',
+        'custom date range': 'Custom Date Range'
+      };
+      return mapping[normalized] || val;
+    })
 });
 
 // ===== RESPONSE SCHEMAS =====
@@ -89,7 +119,9 @@ export const FiltersResponseSchema = z.object({
 });
 
 export const InsightsResponseSchema = z.object({
-  insights: z.array(AIInsightSchema)
+  status: z.enum(['available', 'pending', 'generating', 'error']).default('pending'),
+  insights: z.array(AIInsightSchema),
+  message: z.string().optional()
 });
 
 // ===== ERROR SCHEMAS =====

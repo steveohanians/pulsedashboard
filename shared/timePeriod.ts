@@ -112,30 +112,41 @@ export function parseUILabel(label: string): TimePeriod {
     }
   }
 
-  // Handle standard labels
-  switch (trimmedLabel) {
-    case 'Last Month':
+  // Handle standard labels (case-insensitive with flexible separators)
+  const normalizedLabel = trimmedLabel.toLowerCase().replace(/[_\s]+/g, ' ');
+  
+  switch (normalizedLabel) {
+    case 'last month':
       return {
         granularity: 'month',
         months: 1,
         type: 'last_month'
       };
       
-    case 'Last Quarter':
+    case 'last quarter':
+    case 'last 3 months':
       return {
         granularity: 'month', 
         months: 3,
         type: 'last_quarter'
       };
       
-    case 'Last Year':
+    case 'last 6 months':
+      return {
+        granularity: 'month',
+        months: 6,
+        type: 'last_quarter' // Use quarter type for 6 months as well
+      };
+      
+    case 'last year':
+    case 'last 12 months':
       return {
         granularity: 'month',
         months: 12,
         type: 'last_year'
       };
       
-    case 'Custom Date Range':
+    case 'custom date range':
       // Default to last month for empty custom range
       return {
         granularity: 'month',
@@ -144,7 +155,7 @@ export function parseUILabel(label: string): TimePeriod {
       };
       
     default:
-      throw new Error(`Unsupported time period label: ${trimmedLabel}`);
+      throw new Error(`Unsupported time period label: ${trimmedLabel}. Supported: Last Month, Last 3 Months, Last 6 Months, Last Year, Custom Date Range`);
   }
 }
 
