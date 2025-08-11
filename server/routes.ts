@@ -277,6 +277,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         current.setMonth(current.getMonth() + 1);
       }
       
+      // Debug logging for period mapping
+      logger.info(`🔍 DASHBOARD PERIOD MAPPING: ${JSON.stringify({
+        timePeriod: req.query.timePeriod as string,
+        canonicalTimePeriod: canonicalTimePeriod.type,
+        dbRange,
+        periodsToQuery
+      })}`);
+      
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
         return res.status(403).json({ message: "Access denied" });

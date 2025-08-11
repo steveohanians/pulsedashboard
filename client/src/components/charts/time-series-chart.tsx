@@ -97,8 +97,19 @@ function generateTimeSeriesData(
     return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
   }
   
-  // For Last Month view, use daily data if available, otherwise show single authentic point
-  if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(clientData)) {
+  // Debug logging to trace data validation
+  console.log(`🔍 TIME SERIES DATA VALIDATION [${metricName}]:`, {
+    timePeriod,
+    clientData,
+    clientDataType: typeof clientData,
+    isUndefined: clientData === undefined,
+    isNull: clientData === null,
+    isNaN: isNaN(clientData),
+    hasValidNumber: !isNaN(Number(clientData)) && Number(clientData) !== 0
+  });
+  
+  // For Last Month view, use daily data if available, otherwise show single authentic point - improved validation
+  if (timePeriod === "Last Month" && clientData !== undefined && clientData !== null && !isNaN(Number(clientData)) && Number(clientData) !== 0) {
     
     // Check if we have time series data for the last month - this would be daily data
     if (timeSeriesData && periods && periods.length === 1) {

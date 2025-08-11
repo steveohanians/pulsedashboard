@@ -1692,10 +1692,11 @@ export default function Dashboard() {
             const metricData = groupedMetrics[metricName] || {};
             const insight = insights.find((i: any) => i.metricName === metricName);
             
-            // DEBUG: Session Duration metricData content
-            if (metricName === 'Session Duration') {
-              console.log(`🔍 SESSION DURATION metricData:`, metricData);
-              console.log(`🔍 Available source types:`, Object.keys(metricData));
+            // DEBUG: All simple metrics metricData content
+            if (['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'].includes(metricName)) {
+              console.log(`🔍 ${metricName.toUpperCase()} metricData:`, metricData);
+              console.log(`🔍 Available source types for ${metricName}:`, Object.keys(metricData));
+              console.log(`🔍 Raw metrics array for ${metricName}:`, dashboardData?.metrics?.filter(m => m.metricName === metricName));
             }
             
 

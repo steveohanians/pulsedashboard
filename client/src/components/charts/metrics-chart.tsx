@@ -36,7 +36,7 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
   const rawDataPoints = Object.entries(data).map(([key, value]) => ({
     name: key,
     value: safeNumericValue(value, 0),
-    fill: getMetricsColors()[key] || getMetricsColors()['Default']()
+    fill: getMetricsColors()[key] || getMetricsColors()['Default']
   }));
 
   // Normalize chart data
