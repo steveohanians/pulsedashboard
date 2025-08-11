@@ -4,7 +4,7 @@
  * Shows sync status with subtle banner and force refresh capability
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+
+/**
+ * Convert time period labels to canonical YYYY-MM format
+ */
+function canonicalizePeriod(timePeriod: string): string {
+  if (timePeriod === "Last Month") {
+    // Convert "Last Month" to current canonical format (2025-07)
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  }
+  return timePeriod;
+}
 
 interface GA4FetchStatus {
   clientId: string;
@@ -34,10 +47,15 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
   const [lastPolled, setLastPolled] = useState<Date>(new Date());
   const queryClient = useQueryClient();
 
-  // Poll status every 3 seconds when component is mounted
+  // Convert time period to canonical format (Last Month -> 2025-07)
+  const canonicalPeriod = useMemo(() => {
+    return timePeriod ? canonicalizePeriod(timePeriod) : undefined;
+  }, [timePeriod]);
+
+  // Poll status every 3 seconds when component is mounted  
   const { data: statusData, isLoading, error } = useQuery({
-    queryKey: ['/api/ga4-data/status', clientId, timePeriod],
-    queryFn: () => apiRequest('GET', `/api/ga4-data/status/${clientId}${timePeriod ? `?timePeriod=${timePeriod}` : ''}`),
+    queryKey: ['/api/ga4-data/status', clientId, canonicalPeriod],
+    queryFn: () => apiRequest('GET', `/api/ga4-data/status/${clientId}${canonicalPeriod ? `?timePeriod=${canonicalPeriod}` : ''}`),
     refetchInterval: 3000, // Poll every 3 seconds
     refetchOnWindowFocus: true,
     retry: 2
@@ -47,7 +65,7 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
   const forceRefreshMutation = useMutation({
     mutationFn: (params: { reason?: string }) =>
       apiRequest('POST', `/api/ga4-data/force-refresh/${clientId}`, {
-        timePeriod,
+        timePeriod: canonicalPeriod,
         reason: params.reason || 'Manual force refresh'
       }),
     onSuccess: () => {
