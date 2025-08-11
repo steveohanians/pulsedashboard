@@ -810,9 +810,22 @@ export class DatabaseStorage implements IStorage {
     return allMetrics;
   }
 
-  // Metrics
+  // Metrics - optimized for dashboardPrimaryIdx: clientId, timePeriod, sourceType
   async getMetricsByClient(clientId: string, timePeriod: string): Promise<Metric[]> {
-    const results = await db.select().from(metrics).where(
+    const results = await db.select({
+      id: metrics.id,
+      clientId: metrics.clientId,
+      competitorId: metrics.competitorId,
+      cdPortfolioCompanyId: metrics.cdPortfolioCompanyId,
+      benchmarkCompanyId: metrics.benchmarkCompanyId,
+      metricName: metrics.metricName,
+      value: metrics.value,
+      canonicalEnvelope: metrics.canonicalEnvelope,
+      sourceType: metrics.sourceType,
+      timePeriod: metrics.timePeriod,
+      channel: metrics.channel,
+      createdAt: metrics.createdAt
+    }).from(metrics).where(
       and(
         or(eq(metrics.clientId, clientId), isNull(metrics.clientId)),
         eq(metrics.timePeriod, timePeriod)
@@ -843,8 +856,22 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
+  // Optimized for clientMetricTimeIdx: clientId, metricName, timePeriod
   async getMetricsByNameAndPeriod(clientId: string, metricName: string, timePeriod: string, sourceType: string): Promise<Metric[]> {
-    const rawResults = await db.select().from(metrics).where(
+    const rawResults = await db.select({
+      id: metrics.id,
+      clientId: metrics.clientId,
+      competitorId: metrics.competitorId,
+      cdPortfolioCompanyId: metrics.cdPortfolioCompanyId,
+      benchmarkCompanyId: metrics.benchmarkCompanyId,
+      metricName: metrics.metricName,
+      value: metrics.value,
+      canonicalEnvelope: metrics.canonicalEnvelope,
+      sourceType: metrics.sourceType,
+      timePeriod: metrics.timePeriod,
+      channel: metrics.channel,
+      createdAt: metrics.createdAt
+    }).from(metrics).where(
       and(
         eq(metrics.clientId, clientId),
         eq(metrics.metricName, metricName),
@@ -976,6 +1003,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(metrics).where(eq(metrics.metricName, metricName));
   }
 
+  // Optimized competitor metrics query using explicit SELECT for performance
   async getMetricsByCompetitors(clientId: string, timePeriod: string): Promise<Metric[]> {
     console.error(`🚨 COMPETITOR FETCH: ${clientId}, ${timePeriod}`);
     
@@ -993,7 +1021,20 @@ export class DatabaseStorage implements IStorage {
       
       // Try exact period first, then fallback to most recent
       let targetPeriod = timePeriod;
-      let rawMetrics = await db.select().from(metrics).where(
+      let rawMetrics = await db.select({
+        id: metrics.id,
+        clientId: metrics.clientId,
+        competitorId: metrics.competitorId,
+        cdPortfolioCompanyId: metrics.cdPortfolioCompanyId,
+        benchmarkCompanyId: metrics.benchmarkCompanyId,
+        metricName: metrics.metricName,
+        value: metrics.value,
+        canonicalEnvelope: metrics.canonicalEnvelope,
+        sourceType: metrics.sourceType,
+        timePeriod: metrics.timePeriod,
+        channel: metrics.channel,
+        createdAt: metrics.createdAt
+      }).from(metrics).where(
         and(
           inArray(metrics.competitorId, competitorIds),
           eq(metrics.timePeriod, targetPeriod)
@@ -1013,7 +1054,20 @@ export class DatabaseStorage implements IStorage {
           targetPeriod = recentPeriods[0].timePeriod;
           console.error(`🚨 FALLBACK: Using period ${targetPeriod} instead of ${timePeriod}`);
           
-          rawMetrics = await db.select().from(metrics).where(
+          rawMetrics = await db.select({
+            id: metrics.id,
+            clientId: metrics.clientId,
+            competitorId: metrics.competitorId,
+            cdPortfolioCompanyId: metrics.cdPortfolioCompanyId,
+            benchmarkCompanyId: metrics.benchmarkCompanyId,
+            metricName: metrics.metricName,
+            value: metrics.value,
+            canonicalEnvelope: metrics.canonicalEnvelope,
+            sourceType: metrics.sourceType,
+            timePeriod: metrics.timePeriod,
+            channel: metrics.channel,
+            createdAt: metrics.createdAt
+          }).from(metrics).where(
             and(
               inArray(metrics.competitorId, competitorIds),
               eq(metrics.timePeriod, targetPeriod)

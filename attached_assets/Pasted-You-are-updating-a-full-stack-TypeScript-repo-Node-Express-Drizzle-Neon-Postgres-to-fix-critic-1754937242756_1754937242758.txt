@@ -1,0 +1,97 @@
+You are updating a full-stack TypeScript repo (Node/Express + Drizzle + Neon Postgres) to fix critical dashboard query performance. Do NOT add any caching in this change.
+
+GOALS
+1) Add composite indexes that match real dashboard predicates.
+2) Align server/storage queries to those predicates (column order, no SELECT *).
+3) Ship a tiny EXPLAIN verifier we can run locally to confirm index usage.
+4) Keep this change isolated: no functional behavior changes, no caching.
+
+FILES TO REVIEW (in order)
+- shared/schema.ts  (metrics table + indexes)
+- server/storage.ts (selectors used by /api/dashboard)
+- shared/timePeriod.ts (toDbRange; ensure predicates use YYYY-MM)
+- server/routes.ts  (/api/dashboard handler builds predicates)
+- scripts/* (create a verifier)
+
+IMPLEMENTATION
+
+A) Drizzle indexes (shared/schema.ts)
+- In the metrics table’s index block, ADD the following composite indexes:
+
+  dashboardPrimaryIdx: index("idx_metrics_dashboard_primary")
+    .on(table.clientId, table.timePeriod, table.sourceType),
+
+  clientMetricIdx: index("idx_metrics_client_metric")
+    .on(table.clientId, table.metricName, table.timePeriod),
+
+  clientSourceIdx: index("idx_metrics_client_source")
+    .on(table.clientId, table.sourceType),
+
+- Keep existing competitor indexes (idx_metrics_competitor_id, idx_metrics_competitor_time_period) unchanged.
+- Generate the migration and ensure it is idempotent (skip if index exists in dev).
+
+B) Query alignment (server/storage.ts)
+- For selectors powering /api/dashboard, ensure WHERE clauses match the new index order and types:
+  - Primary dashboard query shape:
+    WHERE client_id = $1
+      AND time_period IN ($2…)  -- canonical YYYY-MM strings from toDbRange()
+      AND source_type = $3
+  - Specific metric query:
+    WHERE client_id = $1
+      AND metric_name = $2
+      AND time_period IN ($3…)
+
+- Replace any SELECT * with explicit column lists used by the route/DTO (id, client_id, metric_name, time_period, source_type, value_json, created_at, etc.). Keep stable types.
+
+- Verify we never pass raw UI labels here; only canonical months from shared/timePeriod.ts (toDbRange). If you find label usage, replace with adapter output at the ROUTE boundary (server/routes.ts) so storage is always canonical.
+
+C) Route boundary sanity (server/routes.ts)
+- In the /api/dashboard handler:
+  - Convert request timePeriod → canonical via shared/timePeriod.ts.
+  - Build the list of month strings for IN() from toDbRange().
+  - Pass only canonical inputs to storage; do not add any caching.
+  - No changes to response shape (this is a perf-only change).
+
+D) EXPLAIN verifier (scripts)
+- Create scripts/verifyDashboardIndexes.ts that:
+  - Connects to the DB using env (read-only).
+  - Runs EXPLAIN (ANALYZE, BUFFERS) for the three representative queries:
+      1) client_id + time_period IN (...) + source_type
+      2) client_id + metric_name + time_period IN (...)
+      3) client_id + source_type (for secondary lookups)
+  - Print the chosen plan node. Assert it includes "Index Scan" on the expected indexes:
+      - idx_metrics_dashboard_primary
+      - idx_metrics_client_metric
+      - idx_metrics_client_source
+  - If a sequential scan is detected, exit with nonzero status and print the query text.
+
+- Add npm script:
+  "verify:indexes": "ts-node scripts/verifyDashboardIndexes.ts"
+
+E) Tests (lightweight)
+- Add a minimal integration test (server/__tests__/indexing.spec.ts) that:
+  - Uses the timePeriod adapter to produce last_3_months ranges.
+  - Calls the storage method to build the SQL (if accessible) or invokes a dry-run path if available.
+  - Confirms the WHERE clause includes clientId, time_period IN (...), source_type in that order.
+  - NOTE: The EXPLAIN verification is handled by the script; the test need not run EXPLAIN.
+
+GUARDRAILS
+- Do NOT add any caching or TTL changes in server or client.
+- Do NOT drop existing indexes in this pass.
+- Keep response payloads unchanged.
+- Keep feature flags untouched.
+- Migrations must be safe to run repeatedly in dev.
+
+DELIVERABLES
+- Diff to shared/schema.ts with three new indexes.
+- Diff to server/storage.ts selectors showing aligned predicates and explicit selects.
+- scripts/verifyDashboardIndexes.ts and package.json script update.
+- A short README note inside scripts/ (how to run verify:indexes and sample expected output).
+
+AFTER YOU FINISH, RUN LOCALLY (and paste output):
+- npm run db:push   # apply new indexes
+- npm run verify:indexes
+
+EXPECTED OUTPUT SAMPLE (indicative)
+- All three queries report "Index Scan using idx_metrics_dashboard_primary ..." or their respective targets.
+- No "Seq Scan" present. Exit code 0.

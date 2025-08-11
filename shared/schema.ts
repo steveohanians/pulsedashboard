@@ -188,6 +188,13 @@ export const metrics = pgTable("metrics", {
   clientMetricIdx: index("idx_metrics_client_metric").on(table.clientId, table.metricName),
   clientTimePeriodIdx: index("idx_metrics_client_time_period").on(table.clientId, table.timePeriod),
   metricTimePeriodIdx: index("idx_metrics_metric_time_period").on(table.metricName, table.timePeriod),
+  // NEW: Dashboard performance composite indexes
+  dashboardPrimaryIdx: index("idx_metrics_dashboard_primary")
+    .on(table.clientId, table.timePeriod, table.sourceType),
+  clientMetricTimeIdx: index("idx_metrics_client_metric_time")
+    .on(table.clientId, table.metricName, table.timePeriod),
+  clientSourceIdx: index("idx_metrics_client_source")
+    .on(table.clientId, table.sourceType),
 }));
 
 export const benchmarks = pgTable("benchmarks", {
