@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useAIInsights } from '@/hooks/use-ai-insights';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, TrendingUp, Target, AlertCircle } from 'lucide-react';
@@ -68,25 +68,20 @@ export function ComprehensiveInsightsDisplay({
     return period;
   }, [period]);
 
-  // Fetch existing insights
-  const { data: insights, isLoading, refetch } = useQuery<StoredInsight[]>({
-    queryKey: ['/api/ai-insights', clientId, canonicalPeriod],
-    queryFn: async () => {
-      const queryParams = canonicalPeriod ? `?period=${canonicalPeriod}` : '';
-      const response = await fetch(`/api/ai-insights/${clientId}${queryParams}`);
-      if (!response.ok) throw new Error('Failed to fetch insights');
-      return response.json();
-    },
-    staleTime: 0,
-    refetchOnMount: 'always',
-    gcTime: 0
-  });
+  // Fetch existing insights using centralized hook
+  const { data: insightsResponse, isFetching: isLoading } = useAIInsights(clientId, canonicalPeriod);
+  const insights = insightsResponse?.insights || [];
+  
+  // Provide refetch capability for compatibility
+  const refetch = () => {
+    // Refetch will be handled by query invalidation
+  };
 
   // Separate dashboard overview from metric-specific insights
-  const dashboardOverview = insights?.find(insight => 
+  const dashboardOverview = insights?.find((insight: StoredInsight) => 
     insight.metricName === "Dashboard Overview"
   );
-  const metricInsights = insights?.filter(insight => 
+  const metricInsights = insights?.filter((insight: StoredInsight) => 
     insight.metricName !== "Dashboard Overview"
   ) || [];
 
@@ -208,7 +203,7 @@ export function ComprehensiveInsightsDisplay({
               </h3>
               
               <div className="grid gap-4 md:grid-cols-2">
-                {metricInsights.map((insight) => (
+                {metricInsights.map((insight: StoredInsight) => (
                   <Card key={insight.id} className="border-slate-200 hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center justify-between">

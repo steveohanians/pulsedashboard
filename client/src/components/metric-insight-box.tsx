@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAIInsights } from "@/hooks/use-ai-insights";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
@@ -79,21 +80,8 @@ export function MetricInsightBox({
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
 
-  // Database-based insights query using new endpoint with server-computed hasContext
-  const { data: insightsData, isLoading: isLoadingInsights } = useQuery({
-    queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod),
-    queryFn: async () => {
-      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
-      if (!response.ok) {
-        if (response.status === 404) return null;
-        throw new Error("Failed to fetch insights");
-      }
-      return response.json();
-    },
-    staleTime: 0,
-    refetchOnMount: 'always',
-    gcTime: 0
-  });
+  // Database-based insights query using centralized hook
+  const { data: insightsData, isFetching: isLoadingInsights } = useAIInsights(clientId, canonicalPeriod);
 
   // Find this metric's insight from the database response
   const metricInsight = useMemo(() => {
@@ -146,58 +134,19 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
-  // Check for insights status using canonical endpoint
-  const { data: versionStatus, isLoading: isCheckingVersion } = useQuery({
-    queryKey: ["/api/ai-insights", clientId, canonicalPeriod, "status"],
-    queryFn: async () => {
-      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
-      if (!response.ok) {
-        return null;
-      }
-      const data = await response.json();
-      // Transform data to match expected status format
-      return {
-        status: data.status || 'available',
-        isGenerating: data.status === 'generating' || data.status === 'pending'
-      };
-    },
-    refetchInterval: 3000, // Poll every 3 seconds for status updates
-    refetchIntervalInBackground: true,
-    enabled: !!clientId && !!canonicalPeriod
-  });
-
-  // Query for canonical insights  
-  const { data: canonicalInsights, isLoading: isLoadingCanonical } = useQuery({
-    queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
-    queryFn: async () => {
-      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch insights');
-      }
-      const data = await response.json();
-      
-      // If we have insights, check for existing context and update hasCustomContext flags
-      if (data.status === 'available' && data.insights) {
-        for (const insight of data.insights) {
-          try {
-            const contextResponse = await fetch(
-              `/api/insight-context/${clientId}/${encodeURIComponent(insight.metricName)}`
-            );
-            if (contextResponse.ok) {
-              const contextData = await contextResponse.json();
-              insight.hasCustomContext = !!(contextData.userContext?.trim());
-            }
-          } catch (error) {
-            logger.component("MetricInsightBox", `Context check failed for insight ${insight.metricName}:`, error);
-            insight.hasCustomContext = false;
-          }
-        }
-      }
-      
-      return data;
-    },
-    enabled: !!clientId && !!canonicalPeriod && !versionStatus?.isGenerating
-  });
+  // Use the centralized insights hook
+  const canonicalInsights = insightsData;
+  
+  // Extract status information from centralized data
+  const versionStatus = useMemo(() => {
+    if (!canonicalInsights) return null;
+    return {
+      status: canonicalInsights.status || 'available',
+      isGenerating: canonicalInsights.status === 'generating' || canonicalInsights.status === 'pending'
+    };
+  }, [canonicalInsights]);
+  
+  const isCheckingVersion = isLoadingInsights;
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
@@ -218,7 +167,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight", {
@@ -248,7 +197,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight with context", {
@@ -372,7 +321,7 @@ export function MetricInsightBox({
             const result = await response.json();
             
             // Invalidate centralized query keys with canonical period
-            queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod) });
+            queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
             queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
             
             logger.component("MetricInsightBox", "Single transactional delete completed successfully");
