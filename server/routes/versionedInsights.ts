@@ -205,10 +205,53 @@ export function createVersionedInsightsRoutes(storage: any, backgroundProcessor:
     }
   }
 
+  /**
+   * Delete versioned insights for a specific metric
+   */
+  async function deleteVersionedInsight(req: Request, res: Response) {
+    try {
+      const { clientId, metricName } = req.params;
+
+      if (!clientId || !metricName) {
+        return res.status(400).json({ 
+          message: "Client ID and metric name are required" 
+        });
+      }
+
+      // Verify user has access to this client
+      if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Delete all versions of this insight
+      await storage.deleteAIInsightByMetric(clientId, metricName);
+      
+      logger.info("Deleted versioned AI insight for specific metric", { 
+        clientId, 
+        metricName, 
+        userId: req.user.id 
+      });
+      
+      return res.json({ message: "Versioned AI insight deleted successfully" });
+
+    } catch (error) {
+      logger.error('Error deleting versioned insight:', { 
+        error: error instanceof Error ? error.message : String(error),
+        clientId: req.params.clientId,
+        metricName: req.params.metricName
+      });
+      
+      return res.status(500).json({ 
+        message: "Failed to delete versioned insight" 
+      });
+    }
+  }
+
   return {
     getVersionedInsights,
     forceRegenerateInsights,
-    getVersionStatus
+    getVersionStatus,
+    deleteVersionedInsight
   };
 }
 

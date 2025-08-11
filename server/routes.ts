@@ -564,6 +564,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get version status for polling
   app.get("/api/v2/ai-insights/:clientId/status", requireAuth, versionedInsightsRoutes.getVersionStatus);
+  
+  // Delete versioned insight for specific metric
+  app.delete("/api/v2/ai-insights/:clientId/:metricName", requireAuth, versionedInsightsRoutes.deleteVersionedInsight);
 
   // Filters endpoint with caching and dynamic interdependent options  
   app.get("/api/filters", requireAuth, async (req, res) => {
@@ -1424,7 +1427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Delete the insight from database
+      // Delete the insight from database (both regular and versioned)
       await storage.deleteAIInsightByMetric(clientId, metricName);
       
       // Clear the insights cache for this client

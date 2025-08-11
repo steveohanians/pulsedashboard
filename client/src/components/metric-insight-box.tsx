@@ -57,6 +57,22 @@ export function MetricInsightBox({
     const loadStoredInsight = async () => {
       if (preloadedInsight) {
         logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
+        
+        // Check if user has custom context for this metric
+        let hasCustomContext = false;
+        try {
+          const contextResponse = await fetch(
+            `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`
+          );
+          if (contextResponse.ok) {
+            const contextData = await contextResponse.json();
+            hasCustomContext = !!(contextData.userContext?.trim());
+            logger.component("MetricInsightBox", `Context check for ${metricName}: ${hasCustomContext ? 'has context' : 'no context'}`);
+          }
+        } catch (error) {
+          logger.component("MetricInsightBox", `Context check failed for ${metricName}:`, error);
+        }
+        
         setInsight({
           contextText: preloadedInsight.contextText,
           insightText: preloadedInsight.insightText,
@@ -64,6 +80,7 @@ export function MetricInsightBox({
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true,
+          hasCustomContext, // Set based on actual database state
         });
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
@@ -103,7 +120,27 @@ export function MetricInsightBox({
       if (!response.ok) {
         throw new Error('Failed to fetch versioned insights');
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // If we have versioned insights, check for existing context and update hasCustomContext flags
+      if (data.status === 'available' && data.insights) {
+        for (const insight of data.insights) {
+          try {
+            const contextResponse = await fetch(
+              `/api/insight-context/${clientId}/${encodeURIComponent(insight.metricName)}`
+            );
+            if (contextResponse.ok) {
+              const contextData = await contextResponse.json();
+              insight.hasCustomContext = !!(contextData.userContext?.trim());
+            }
+          } catch (error) {
+            logger.component("MetricInsightBox", `Context check failed for versioned insight ${insight.metricName}:`, error);
+            insight.hasCustomContext = false;
+          }
+        }
+      }
+      
+      return data;
     },
     enabled: !!clientId && !!timePeriod && !versionStatus?.isGenerating
   });
@@ -179,6 +216,31 @@ export function MetricInsightBox({
 
   // Show "Regenerating insights..." if version status indicates generation in progress
   const isRegenerating = versionStatus?.isGenerating || isCheckingVersion;
+
+  // Use versioned insights if available, otherwise fall back to preloaded insight
+  useEffect(() => {
+    if (versionedInsights?.status === 'available' && versionedInsights.insights) {
+      const matchingInsight = versionedInsights.insights.find(
+        (insight: any) => insight.metricName === metricName
+      );
+      
+      if (matchingInsight) {
+        logger.component("MetricInsightBox", `Using versioned insight for ${metricName}`);
+        setInsight({
+          contextText: matchingInsight.contextText,
+          insightText: matchingInsight.insightText,
+          recommendationText: matchingInsight.recommendationText,
+          status: matchingInsight.status,
+          isTyping: false,
+          isFromStorage: true,
+          hasCustomContext: matchingInsight.hasCustomContext || false,
+        });
+        if (matchingInsight.status && onStatusChange) {
+          onStatusChange(matchingInsight.status);
+        }
+      }
+    }
+  }, [versionedInsights, metricName, onStatusChange]);
   
   if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
     return (
@@ -233,6 +295,8 @@ export function MetricInsightBox({
               }
             }
           } catch {}
+          // Clear hasCustomContext if no context exists when regenerating
+          setInsight(current => current ? { ...current, hasCustomContext: false } : current);
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
@@ -242,16 +306,25 @@ export function MetricInsightBox({
           setInsight(null);
           onStatusChange?.(undefined);
           try {
+            // Delete both regular insight and versioned insights, plus context
             await Promise.all([
               fetch(`/api/insights/${clientId}/${encodeURIComponent(metricName)}`, {
+                method: "DELETE",
+              }),
+              fetch(`/api/v2/ai-insights/${clientId}/${encodeURIComponent(metricName)}`, {
                 method: "DELETE",
               }),
               fetch(`/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`, {
                 method: "DELETE",
               }),
             ]);
+            
+            // Invalidate all relevant queries
             queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
-            logger.component("MetricInsightBox", "Successfully deleted insight and context");
+            queryClient.invalidateQueries({ queryKey: ["/api/v2/ai-insights", clientId, timePeriod] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v2/ai-insights", clientId, "status", timePeriod] });
+            
+            logger.component("MetricInsightBox", "Successfully deleted insight, versioned insights, and context");
           } catch (error) {
             logger.warn("Failed to delete insight or context", { error });
           }
