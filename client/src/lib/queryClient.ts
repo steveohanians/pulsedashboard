@@ -216,6 +216,10 @@ export const QueryKeys = {
   // For individual metric insights  
   aiInsightByMetric: (clientId: string, metricName: string, canonicalPeriod: string) =>
     ["/api/ai-insights", clientId, metricName, canonicalPeriod],
+    
+  // Insight context for individual metrics
+  insightContext: (clientId: string, metricName: string) =>
+    ["/api/insight-context", clientId, metricName],
   
   // Filters with dependency parameters
   filters: (businessSize?: string, industryVertical?: string) => 

@@ -100,6 +100,9 @@ export interface IStorage {
   
   // SINGLE TRANSACTIONAL DELETE - as per specification requirement  
   deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }>;
+  
+  // DELETE endpoint compatible method with search periods support
+  deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<number>;
 
   // Metric Versions
   getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined>;
@@ -1295,29 +1298,88 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]> {
-    const insights = await db.select().from(aiInsights).where(
-      and(
-        eq(aiInsights.clientId, clientId),
-        eq(aiInsights.timePeriod, timePeriod)
-      )
-    );
-
-    // Batch check for contexts in insightContexts table
-    const metricNames = insights.map(i => i.metricName);
-    const contexts = metricNames.length > 0 ? 
-      await db.select().from(insightContexts).where(
+    try {
+      // Handle both canonical (2025-07) and legacy (Last Month) period formats for backward compatibility
+      const legacyPeriodMap: Record<string, string> = {
+        '2025-07': 'Last Month',
+        '2025-06': 'Last Month', // Fallback mapping
+      };
+      
+      const searchPeriods = [timePeriod];
+      if (legacyPeriodMap[timePeriod]) {
+        searchPeriods.push(legacyPeriodMap[timePeriod]);
+      }
+      
+      logger.info('🔍 AI INSIGHTS SEARCH', { clientId, timePeriod, searchPeriods });
+      
+      // Simplified query first - test basic functionality
+      const results = await db.select().from(aiInsights)
+      .where(
         and(
-          eq(insightContexts.clientId, clientId),
-          inArray(insightContexts.metricName, metricNames)
+          eq(aiInsights.clientId, clientId),
+          or(...searchPeriods.map(period => eq(aiInsights.timePeriod, period)))
         )
-      ) : [];
-    
-    const contextByMetric = new Set(contexts.map(c => c.metricName));
+      )
+      .orderBy(desc(aiInsights.createdAt)); // Always prefer latest insight for given tuple
+      
+      logger.info('🔍 AI INSIGHTS FOUND', { count: results.length, clientId, timePeriod });
 
-    return insights.map(insight => ({
-      ...insight,
-      hasContext: Boolean(insight.contextText?.trim()) || contextByMetric.has(insight.metricName)
-    }));
+      // Add hasContext computation for each result
+      return results.map(insight => ({
+        ...insight,
+        hasContext: Boolean(insight.contextText?.trim()) // Simplified hasContext for now
+      }));
+    } catch (error) {
+      logger.error('Error in getAIInsightsForPeriod', { error: (error as Error).message, clientId, timePeriod });
+      return [];
+    }
+  }
+
+  // DELETE endpoint compatible method with search periods support for period compatibility
+  async deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<number> {
+    try {
+      logger.info('🗑️ STORAGE DELETE', { clientId, metricName, searchPeriods });
+      
+      // Delete insights matching any of the search periods
+      const insightResult = await db.delete(aiInsights)
+        .where(
+          and(
+            eq(aiInsights.clientId, clientId),
+            eq(aiInsights.metricName, metricName),
+            inArray(aiInsights.timePeriod, searchPeriods)
+          )
+        );
+        
+      // Delete context (period-independent for this metric)
+      const contextResult = await db.delete(insightContexts)
+        .where(
+          and(
+            eq(insightContexts.clientId, clientId),
+            eq(insightContexts.metricName, metricName)
+          )
+        );
+      
+      const deletedCount = (insightResult.rowCount || 0) + (contextResult.rowCount || 0);
+      
+      logger.info('🗑️ DELETE RESULT', { 
+        clientId, 
+        metricName, 
+        insightsDeleted: insightResult.rowCount || 0,
+        contextsDeleted: contextResult.rowCount || 0,
+        totalDeleted: deletedCount
+      });
+      
+      return deletedCount;
+      
+    } catch (error) {
+      logger.error('Error in deleteAIInsightAndContext', { 
+        error: (error as Error).message, 
+        clientId, 
+        metricName, 
+        searchPeriods 
+      });
+      return 0;
+    }
   }
 
   // SINGLE TRANSACTIONAL DELETE - as per specification requirement

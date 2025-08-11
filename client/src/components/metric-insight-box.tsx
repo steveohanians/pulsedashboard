@@ -70,11 +70,11 @@ export function MetricInsightBox({
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
 
-  // Database-based insights query with no caching during development
+  // Database-based insights query using new endpoint with server-computed hasContext
   const { data: insightsData, isLoading: isLoadingInsights } = useQuery({
     queryKey: QueryKeys.aiInsights(clientId, canonicalPeriod),
     queryFn: async () => {
-      const response = await fetch(`/api/ai-insights/${clientId}?period=${canonicalPeriod}`);
+      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error("Failed to fetch insights");
