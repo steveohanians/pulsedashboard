@@ -45,6 +45,182 @@ export function debugCacheKeys(): string[] {
   return Array.from(queryCache.keys());
 }
 
+/**
+ * Layer B: Daily → Monthly Coalescing Functions
+ * Aggregates daily metrics into monthly rollups when monthly data is missing
+ */
+
+interface DailyMetric {
+  metricName: string;
+  value: any;
+  sourceType: string;
+  timePeriod: string;
+  sessions?: number;
+  users?: number;
+  channel?: string;
+  competitorId?: string;
+}
+
+interface AggregatedMetric {
+  metricName: string;
+  value: number;
+  sourceType: string;
+  timePeriod: string;
+  channel?: string;
+  competitorId?: string;
+}
+
+/**
+ * Safely parses numeric values from various formats
+ */
+function safeParseNumeric(value: any): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    // Handle quoted strings like "162.94"
+    const cleaned = value.replace(/['"]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
+/**
+ * Aggregates Bounce Rate from daily metrics using weighted average by sessions
+ */
+function aggregateBounceRate(dailyMetrics: DailyMetric[]): number {
+  let totalWeightedBounceRate = 0;
+  let totalSessions = 0;
+  
+  for (const metric of dailyMetrics) {
+    const bounceRate = safeParseNumeric(metric.value);
+    const sessions = safeParseNumeric(metric.sessions) || 1; // Fallback to 1 if sessions not available
+    
+    totalWeightedBounceRate += bounceRate * sessions;
+    totalSessions += sessions;
+  }
+  
+  return totalSessions > 0 ? totalWeightedBounceRate / totalSessions : 0;
+}
+
+/**
+ * Aggregates Session Duration from daily metrics using weighted average by sessions  
+ */
+function aggregateSessionDuration(dailyMetrics: DailyMetric[]): number {
+  let totalWeightedDuration = 0;
+  let totalSessions = 0;
+  
+  for (const metric of dailyMetrics) {
+    const duration = safeParseNumeric(metric.value);
+    const sessions = safeParseNumeric(metric.sessions) || 1; // Fallback to 1 if sessions not available
+    
+    totalWeightedDuration += duration * sessions;
+    totalSessions += sessions;
+  }
+  
+  return totalSessions > 0 ? totalWeightedDuration / totalSessions : 0;
+}
+
+/**
+ * Aggregates Pages per Session from daily metrics using weighted average by sessions
+ */
+function aggregatePagesPerSession(dailyMetrics: DailyMetric[]): number {
+  let totalWeightedPages = 0;
+  let totalSessions = 0;
+  
+  for (const metric of dailyMetrics) {
+    const pagesPerSession = safeParseNumeric(metric.value);
+    const sessions = safeParseNumeric(metric.sessions) || 1; // Fallback to 1 if sessions not available
+    
+    totalWeightedPages += pagesPerSession * sessions;
+    totalSessions += sessions;
+  }
+  
+  return totalSessions > 0 ? totalWeightedPages / totalSessions : 0;
+}
+
+/**
+ * Aggregates Sessions per User from daily metrics: sum(sessions) / sum(users)
+ */
+function aggregateSessionsPerUser(dailyMetrics: DailyMetric[]): number {
+  let totalSessions = 0;
+  let totalUsers = 0;
+  
+  for (const metric of dailyMetrics) {
+    const sessions = safeParseNumeric(metric.sessions) || safeParseNumeric(metric.value);
+    const users = safeParseNumeric(metric.users) || 1; // Fallback to 1 if users not available
+    
+    totalSessions += sessions;
+    totalUsers += users;
+  }
+  
+  return totalUsers > 0 ? totalSessions / totalUsers : 0;
+}
+
+/**
+ * Main coalescing function: converts daily metrics to monthly rollups
+ */
+function coalesceDailyToMonthly(dailyMetrics: DailyMetric[], targetMonth: string): AggregatedMetric[] {
+  const monthlyMetrics: AggregatedMetric[] = [];
+  
+  // Group daily metrics by metricName and sourceType
+  const groupedMetrics = new Map<string, DailyMetric[]>();
+  
+  for (const metric of dailyMetrics) {
+    const key = `${metric.metricName}-${metric.sourceType}`;
+    if (!groupedMetrics.has(key)) {
+      groupedMetrics.set(key, []);
+    }
+    groupedMetrics.get(key)!.push(metric);
+  }
+  
+  // Aggregate each group into monthly metrics
+  for (const [key, metrics] of groupedMetrics) {
+    const [metricName, sourceType] = key.split('-');
+    let aggregatedValue = 0;
+    
+    // Apply appropriate aggregation function based on metric name
+    switch (metricName) {
+      case 'Bounce Rate':
+        aggregatedValue = aggregateBounceRate(metrics);
+        break;
+      case 'Session Duration':
+        aggregatedValue = aggregateSessionDuration(metrics);
+        break;
+      case 'Pages per Session':
+        aggregatedValue = aggregatePagesPerSession(metrics);
+        break;
+      case 'Sessions per User':
+        aggregatedValue = aggregateSessionsPerUser(metrics);
+        break;
+      default:
+        // For other metrics, use simple average
+        aggregatedValue = metrics.reduce((sum, m) => sum + safeParseNumeric(m.value), 0) / metrics.length;
+    }
+    
+    // Create aggregated metric
+    const aggregated: AggregatedMetric = {
+      metricName,
+      value: aggregatedValue,
+      sourceType,
+      timePeriod: targetMonth,
+      // Include channel/competitorId if present in source metrics
+      channel: metrics[0].channel,
+      competitorId: metrics[0].competitorId
+    };
+    
+    monthlyMetrics.push(aggregated);
+  }
+  
+  logger.info(`📊 Coalesced ${dailyMetrics.length} daily metrics into ${monthlyMetrics.length} monthly metrics for ${targetMonth}`, {
+    targetMonth,
+    dailyCount: dailyMetrics.length,
+    monthlyCount: monthlyMetrics.length,
+    metricsCoalesced: Array.from(groupedMetrics.keys())
+  });
+  
+  return monthlyMetrics;
+}
+
 async function generateCdAvgDeviceDistributionIfMissing(
   clientId: string, 
   periodsToQuery: string[], 
@@ -249,13 +425,61 @@ export async function getDashboardDataOptimized(
     allFilteredCdAvgMetricsArrays
   ] = await Promise.race([dataPromise, timeoutPromise]) as any;
   
-  const processedData = processMetricsData(
+  let processedData = processMetricsData(
     allMetricsArrays,
     allCompetitorMetricsArrays,
     allFilteredIndustryMetricsArrays,
     allFilteredCdAvgMetricsArrays,
     periodsToQuery
   );
+
+  // Layer B: Apply daily → monthly coalescing when monthly data is missing but daily exists  
+  if ((timePeriod === 'last_month' || timePeriod === 'Last Month') && periodsToQuery.length === 1) {
+    const targetMonth = periodsToQuery[0]; // Should be 2025-07
+    
+    // Check if monthly data exists for simple metrics
+    const simpleMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+    const existingMonthlyMetrics = processedData.filter(m => 
+      simpleMetrics.includes(m.metricName) && 
+      m.sourceType === 'Client' && 
+      m.timePeriod === targetMonth
+    );
+    
+    if (existingMonthlyMetrics.length === 0) {
+      logger.info(`🔧 No monthly data found for ${targetMonth}, attempting daily → monthly coalescing`);
+      
+      // Fetch daily metrics for the target month
+      try {
+        const dailyPattern = `${targetMonth}-daily-%`;
+        const dailyMetrics = await storage.getMetricsForTimePeriodPattern(client.id, dailyPattern);
+        
+        if (dailyMetrics.length > 0) {
+          logger.info(`📊 Found ${dailyMetrics.length} daily metrics for coalescing to ${targetMonth}`);
+          
+          // Filter to only simple metrics for coalescing
+          const dailySimpleMetrics = dailyMetrics.filter(m => simpleMetrics.includes(m.metricName));
+          
+          if (dailySimpleMetrics.length > 0) {
+            // Apply coalescing
+            const coalescedMetrics = coalesceDailyToMonthly(dailySimpleMetrics, targetMonth);
+            
+            // Add coalesced metrics to processedData
+            processedData.push(...coalescedMetrics);
+            
+            logger.info(`✅ Successfully coalesced ${coalescedMetrics.length} monthly metrics from ${dailySimpleMetrics.length} daily records`);
+          } else {
+            logger.warn(`⚠️ No daily simple metrics found for coalescing in ${targetMonth}`);
+          }
+        } else {
+          logger.warn(`⚠️ No daily metrics found for pattern ${dailyPattern}`);
+        }
+      } catch (error) {
+        logger.error(`❌ Daily → monthly coalescing failed for ${targetMonth}`, error);
+      }
+    } else {
+      logger.info(`✓ Monthly data already exists for ${targetMonth}, skipping coalescing`);
+    }
+  }
   
 
   

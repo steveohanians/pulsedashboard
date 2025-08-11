@@ -342,6 +342,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.set('Cache-Control', 'no-store');
       }
       
+      // Layer A: Add observability header for derived period (debugging "Last Month" issues)
+      if (canonicalTimePeriod.type === 'last_month' && periodsToQuery.length > 0) {
+        res.set('X-Derived-Period', periodsToQuery[0]);
+      }
+      
       // JSON serialization safety check to prevent malformed responses
       try {
         const testSerialized = JSON.stringify(compatibleResult);

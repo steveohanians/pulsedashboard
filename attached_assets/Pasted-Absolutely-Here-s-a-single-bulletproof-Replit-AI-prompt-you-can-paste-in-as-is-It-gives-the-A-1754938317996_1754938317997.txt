@@ -1,0 +1,125 @@
+Absolutely. Here’s a single, **bulletproof Replit AI prompt** you can paste in as-is. It gives the AI full repo context, forces a flow map first, then implements the “Last Month” fixes with guardrails, tests, and success criteria.
+
+---
+
+# Replit AI Task: Fix “Last Month” Charts Showing “No authentic data” (Pulse Dashboard™)
+
+## Repo Context (read before doing anything)
+
+* **Frontend**: React 18 + TS, TanStack Query, Wouter, Recharts. Main dashboard at `client/src/pages/dashboard.tsx`; charts under `client/src/components/charts/*`. Query calls `GET /api/dashboard/:clientId` and passes `timePeriod` strings such as `"Last Month"`.
+* **Backend**: Express + TS, routes in `server/routes.ts`; storage in `server/storage.ts`; query optimizer in `server/utils/query-optimization/queryOptimizer.ts`; GA4 pipeline under `server/services/ga4/*` including `SmartDataFetcher.ts` and `GA4DataProcessor.ts`.
+* **Schema**: PostgreSQL via Drizzle; `metrics` table holds monthly and JSONB values; daily rows exist for recent periods; canonical time period formats are `YYYY-MM` (monthly) and `YYYY-MM-daily-YYYYMMDD` (daily). Source types and metric names are standardized (`Bounce Rate`, `Session Duration`, `Pages per Session`, `Sessions per User`).
+* **Known risk**: **Time period format drift** between `"Last Month"` (frontend), `YYYY-MM` (DB), and actual GA4 date ranges. This is a documented breakpoint causing empty results for latest month windows.
+* **Feature flags & cache**: `DASHBOARD_CACHE_ENABLED`, `GA4_COMPAT_MODE`, locking, and 5-minute TTLs can affect behavior.
+
+## Situation & Symptoms
+
+* For **“Last Month”**: the simple metric charts (Bounce Rate, Session Duration, Pages per Session, Sessions per User) show the placeholder “No authentic data available…”.
+* **Traffic Channels** and **Device Distribution** render correctly.
+* **“Last Quarter/Last Year”** show all charts properly.
+  This strongly suggests either period mapping is off for the most recent calendar month, or the monthly rollup for simple metrics is missing while daily rows exist (distribution charts tolerate array/object JSONB better).
+
+## Required Outcomes (acceptance criteria)
+
+1. “Last Month” charts for all four simple metrics display **authentic GA4 values** for the most recent **completed** calendar month without changing UI/UX.
+2. If monthly rows are absent but **daily rows exist** for that month, the API must **coalesce daily → monthly on read** (weighted formulas) so charts still render.
+3. “Last Quarter/Last Year” **remain unchanged**.
+4. Add **server-side observability** for the derived month (`X-Derived-Period` header) when `timePeriod=Last Month`.
+5. Zero regressions on caching, auth, and admin cleanup/refetch flows.
+
+## Scope of Changes (files you may edit)
+
+* `server/routes.ts` (timePeriod parsing + derived period guard + response header)
+* `server/utils/query-optimization/queryOptimizer.ts` (read-path coalesce when monthly rows missing)
+* `server/services/ga4/SmartDataFetcher.ts` and/or `server/services/ga4/GA4DataProcessor.ts` (optional, ensure monthly rollup persistence for completed months)
+* **Do not** modify frontend rendering logic or chart component props unless strictly necessary.
+
+## Do First: Flow Map (no code changes yet)
+
+1. Trace the path for `timePeriod="Last Month"`:
+   `client/src/pages/dashboard.tsx` → `GET /api/dashboard/:clientId` → `server/routes.ts` dynamic mapping → `queryOptimizer` → `storage` → `metrics` table.
+2. Identify what **exact `YYYY-MM`** the backend currently derives for “Last Month” (e.g., on Aug 11, 2025 the target should be `2025-07`) and where that’s computed.
+3. Verify the **DB presence** assumption: do monthly rows exist for the four simple metrics for that `YYYY-MM`? If not, confirm daily rows exist for that month.
+
+> Produce a brief summary of the current flow and findings before editing code.
+
+## Implement: Two-layer, safe fix
+
+### Layer A — Harden period mapping (server)
+
+* In `server/routes.ts`, after parsing `timePeriod`, ensure **“Last Month” always resolves to the previous completed calendar month** in `YYYY-MM`.
+
+  * If the existing dynamic mapping returns nothing or an incorrect month, compute it deterministically with server time (UTC) and set `periodsToQuery = [YYYY-MM_of_prev_month]`.
+  * Add `res.setHeader('X-Derived-Period', derivedMonth)` on responses for dashboard calls.
+  * Keep existing behavior for “3 Months”, “Last Quarter”, “Last Year” mapping arrays.
+
+### Layer B — Coalesce daily → monthly on read (server)
+
+* In `queryOptimizer` (or a helper it invokes), when `timePeriod` is a **single** month and **monthly rows are missing** for the simple metrics, **aggregate from daily rows** for that calendar month and return synthesized monthly points:
+
+  * **Bounce Rate**: weighted average by sessions
+    `sum(daily_bounce_rate * daily_sessions) / sum(daily_sessions)`
+  * **Session Duration**: weighted average by sessions
+    `sum(daily_avg_session_duration_seconds * daily_sessions) / sum(daily_sessions)`
+  * **Pages per Session**: weighted average by sessions
+  * **Sessions per User**: `sum(sessions) / sum(users)`
+* Do **not** write these back to DB in this path; just return them in the API response as if monthly existed.
+* Preserve the existing response shape so frontend charts don’t change.
+
+### Optional, recommended — Ensure monthly rollup persistence (ingest)
+
+* In `SmartDataFetcher` (or `GA4DataProcessor`), when the previous month **closes**, write a **monthly row** for each simple metric even if daily rows are retained for the most recent month. This prevents repeated on-the-fly aggregation for completed months going forward.
+* Do not alter existing locking, retries, or cache invalidation semantics.
+
+## Guardrails & Constraints
+
+* **Do not** change metric names, `sourceType` constants, or chart prop contracts.
+* Respect env flags and **do not** weaken auth or caching behavior (`GA4_COMPAT_MODE`, `DASHBOARD_CACHE_ENABLED`, locks).
+* Don’t alter Traffic Channels or Device Distribution logic; they already work and have dedicated parsing paths.
+
+## Tests (add/update)
+
+1. **Unit**: Period mapping
+
+   * Frozen date: 2025‑08‑11 → “Last Month” resolves to `2025‑07`.
+2. **Integration**: Dashboard API with **only daily rows** in `2025‑07`
+
+   * Response should include valid values for all four simple metrics; `X-Derived-Period: 2025‑07`.
+3. **Integration**: Dashboard API with **monthly rows present**
+
+   * Should prefer monthly (no aggregation), identical output shape.
+4. **Regression**: “Last Quarter/Last Year” unchanged payload structure.
+5. **Perf/Cache**: With `DASHBOARD_CACHE_ENABLED=true`, verify cache keys don’t change and coalesced output gets cached for TTL without breaking SWR semantics.
+
+## Success Criteria (restate)
+
+* “Last Month” now renders **authentic data** for the four simple metrics when monthly rows exist; if not, daily rows are aggregated on read with correct weightings.
+* Other time windows remain correct.
+* Observability: `X-Derived-Period` visible on the response for fast diagnostics.
+* No changes needed on the frontend; no regressions in admin cleanup/refetch flows.
+
+## Files/Functions to Review (checklist)
+
+* `client/src/pages/dashboard.tsx` – query key & params for timePeriod
+* `server/routes.ts` – period mapping & response headers
+* `server/utils/query-optimization/queryOptimizer.ts` – injection point for coalescing logic
+* `server/services/ga4/SmartDataFetcher.ts` & `GA4DataProcessor.ts` – monthly rollup write (optional)
+* `shared/schema.ts` – confirm metric name/sourceType enums, timePeriod formats
+* `server/config.ts` – flags that could affect behavior/caching
+
+## Deliverables
+
+* Code changes in the scoped files above.
+* Short **flow map summary** (pre-change).
+* Short **verification notes** after running tests.
+* A one-paragraph **risk assessment** (e.g., edge cases for partial months, leap months, timezone cutovers).
+
+---
+
+**References for the AI (do not remove):**
+
+* Frontend map & dashboard query behavior
+* Backend routes & GA4 pipeline files
+* Schema: metrics table, time period formats, metric names, enums
+* Config/env flags & caching behaviors
+* Full repo reference (file inventory & layout)
