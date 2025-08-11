@@ -1,0 +1,76 @@
+Here’s a full-proof Replit validation prompt for the AI Insights work that just came back.
+It’s scoped, cites our schema and flow maps, and ensures the agent verifies exactly what we care about—badge persistence, context-preference on reload, and proper UI+DB deletion—without touching unrelated code.
+
+Prompt for Replit:
+
+You are validating the AI Insights feature in the Pulse Dashboard™ codebase.
+You have full repo context and must read only the following files before coding:
+
+Backend:
+
+server/routes.ts (AI Insights GET and DELETE routes)
+
+server/storage.ts (insights + contexts retrieval and deletion)
+
+Frontend:
+
+client/src/components/metric-insight-box.tsx (badge display, delete button, reload behavior)
+
+Schema & Data Flow References:
+
+shared/schema.ts — aiInsights and insightContexts table definitions, indexes, and constraintsschema_reference_v1
+
+AI Insights query key patterns in Data Flow Mapsdata_flow_maps_v1
+
+Validation Requirements
+You must confirm through code inspection and/or tests that the following are true:
+
+"With Context" Badge Persistence
+
+On initial page load and after refresh, the badge appears only if there is a related insightContexts row for the same (clientId, metricName, timePeriod) in the DBschema_reference_v1.
+
+Badge state must be computed server-side in the GET endpoint and not derived from stale UI state.
+
+hasContext must reflect actual DB state at fetch time.
+
+Context-Preferring Reload
+
+When both a base AI insight and a context-enhanced AI insight exist for the same metric/period, the context-enhanced version must be returned from the GET endpoint.
+
+This must be enforced in getAIInsightsForPeriod() so reloads never revert to base insights if context exists.
+
+True Delete Behavior
+
+DELETE endpoint (/api/ai-insights/:clientId/:metricName?period=YYYY-MM) must:
+
+Remove from both aiInsights and insightContexts tables in a single transactionschema_reference_v1.
+
+Return { ok: true, deleted: { insights: N, contexts: N } } with correct counts.
+
+Invalidate the correct TanStack query key (QueryKeys.aiInsights(clientId, canonicalPeriod)) so UI updates immediately.
+
+After deletion:
+
+The metric-insight-box UI must clear to empty state without flash of old content.
+
+Reloading must not bring back the deleted insight.
+
+Constraints
+Do not alter unrelated flows or queries (GA4, metrics, competitors).
+
+Keep all period handling in canonical YYYY-MM format.
+
+Preserve existing index usage and WHERE clauses for (clientId, metricName, timePeriod).
+
+Maintain backward compatibility for legacy "Last Month" queries.
+
+Ensure no race conditions from multiple deletes.
+
+Success Criteria
+Manual test: Add context → reload → badge shows & context version persists.
+
+Manual test: Delete → UI empty state → reload → stays empty.
+
+Automated/API test: GET after context insert returns context version; DELETE removes both rows.
+
+Database log shows correct transaction delete counts.

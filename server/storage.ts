@@ -102,7 +102,7 @@ export interface IStorage {
   deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }>;
   
   // DELETE endpoint compatible method with search periods support
-  deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<number>;
+  deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<{ insights: number; contexts: number }>;
 
   // Metric Versions
   getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined>;
@@ -1312,23 +1312,42 @@ export class DatabaseStorage implements IStorage {
       
       logger.info('🔍 AI INSIGHTS SEARCH', { clientId, timePeriod, searchPeriods });
       
-      // Simplified query first - test basic functionality
-      const results = await db.select().from(aiInsights)
-      .where(
-        and(
-          eq(aiInsights.clientId, clientId),
-          or(...searchPeriods.map(period => eq(aiInsights.timePeriod, period)))
+      // Query insights first, then check for context separately to avoid JOIN complexity
+      const insights = await db
+        .select()
+        .from(aiInsights)
+        .where(
+          and(
+            eq(aiInsights.clientId, clientId),
+            or(...searchPeriods.map(period => eq(aiInsights.timePeriod, period)))
+          )
         )
-      )
-      .orderBy(desc(aiInsights.createdAt)); // Always prefer latest insight for given tuple
+        .orderBy(desc(aiInsights.createdAt)); // Always prefer latest insight for given tuple
+      
+      // For each insight, check if it has context in separate table
+      const results = [];
+      for (const insight of insights) {
+        const contextRows = await db
+          .select()
+          .from(insightContexts)
+          .where(
+            and(
+              eq(insightContexts.clientId, insight.clientId),
+              eq(insightContexts.metricName, insight.metricName)
+            )
+          )
+          .limit(1);
+        
+        results.push({
+          ...insight,
+          hasContext: Boolean(insight.contextText?.trim() || contextRows.length > 0)
+        });
+      }
       
       logger.info('🔍 AI INSIGHTS FOUND', { count: results.length, clientId, timePeriod });
 
-      // Add hasContext computation for each result
-      return results.map(insight => ({
-        ...insight,
-        hasContext: Boolean(insight.contextText?.trim()) // Simplified hasContext for now
-      }));
+      // Results already have hasContext computed above
+      return results;
     } catch (error) {
       logger.error('Error in getAIInsightsForPeriod', { error: (error as Error).message, clientId, timePeriod });
       return [];
@@ -1336,7 +1355,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // DELETE endpoint compatible method with search periods support for period compatibility
-  async deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<number> {
+  async deleteAIInsightAndContext(clientId: string, metricName: string, searchPeriods: string[]): Promise<{ insights: number; contexts: number }> {
     try {
       logger.info('🗑️ STORAGE DELETE', { clientId, metricName, searchPeriods });
       
@@ -1359,17 +1378,19 @@ export class DatabaseStorage implements IStorage {
           )
         );
       
-      const deletedCount = (insightResult.rowCount || 0) + (contextResult.rowCount || 0);
+      const result = {
+        insights: insightResult.rowCount || 0,
+        contexts: contextResult.rowCount || 0
+      };
       
       logger.info('🗑️ DELETE RESULT', { 
         clientId, 
         metricName, 
-        insightsDeleted: insightResult.rowCount || 0,
-        contextsDeleted: contextResult.rowCount || 0,
-        totalDeleted: deletedCount
+        ...result,
+        totalDeleted: result.insights + result.contexts
       });
       
-      return deletedCount;
+      return result;
       
     } catch (error) {
       logger.error('Error in deleteAIInsightAndContext', { 
@@ -1378,7 +1399,7 @@ export class DatabaseStorage implements IStorage {
         metricName, 
         searchPeriods 
       });
-      return 0;
+      return { insights: 0, contexts: 0 };
     }
   }
 

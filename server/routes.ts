@@ -589,17 +589,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Delete both insight and context in single transaction
-      const deletedCount = await storage.deleteAIInsightAndContext(clientId, metricName, searchPeriods);
+      const deleted = await storage.deleteAIInsightAndContext(clientId, metricName, searchPeriods);
       
       // Clear performance cache (same pattern used elsewhere in routes.ts)
       performanceCache.delete(`insights:${clientId}:${period}`);
       
-      logger.info('🗑️ DELETE COMPLETE', { clientId, metricName, deletedCount });
+      logger.info('🗑️ DELETE COMPLETE', { clientId, metricName, deleted });
       
       res.json({
-        success: true,
-        message: 'AI insight and context deleted successfully',
-        deletedCount
+        ok: true,
+        deleted
       });
       
     } catch (error) {
