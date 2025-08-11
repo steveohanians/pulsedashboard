@@ -2,6 +2,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DashedBar } from './dashed-bar';
 import { useState, useMemo, useEffect } from 'react';
 import { parseMetricValue } from '../../utils/metricParser';
+import { 
+  normalizeChartData, 
+  safeNumericValue, 
+  safeTooltipProps,
+  getTimeSeriesColors 
+} from '@/utils/chartUtils';
 
 /** Props interface for MetricBarChart component configuration */
 interface BarChartProps {
@@ -42,7 +48,7 @@ interface BarChartProps {
 }
 
 // Generate deterministic seeded random number and temporal variation
-import { generateTemporalVariationSync, getTimeSeriesColors, getCompetitorColorsArray } from '@/utils/chartUtils';
+import { generateTemporalVariationSync, getCompetitorColorsArray } from '@/utils/chartUtils';
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 
 /**
@@ -391,40 +397,48 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
   }
   
   // Use real time-series data if available, otherwise generate fallback data
-  const data = useMemo(() => {
-    let result;
-    
+  const rawData = useMemo(() => {
     if (timeSeriesData && periods && periods.length > 1) {
-      result = processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+      return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
     } else {
-      result = generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
+      return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
-    
-
-    
-    return result;
   }, [timeSeriesData, periods, timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName]);
+
+  // Normalize chart data for null-safe rendering
+  const data = useMemo(() => {
+    const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
+    const requiredKeys = [clientKey, 'Industry Avg', `${companyName} Clients Avg`];
+    
+    return normalizeChartData(rawData, {
+      gapOnNull: false,  // Bar charts default to 0
+      defaultValue: 0,
+      requiredKeys
+    });
+  }, [rawData, clientKey]);
 
   // Use unified color system for consistent colors across charts
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const colors = getTimeSeriesColors(clientKey, competitors, companyName);
   const competitorColors = getCompetitorColorsArray();
   
-  // Calculate fixed Y-axis domain based on all data (regardless of visibility)
+  // Calculate fixed Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    const clientVal = point[clientKey] as number;
-    const industryVal = point['Industry Avg'] as number;
-    const cdVal = point[`${companyName} Clients Avg`] as number;
-    allValues.push(clientVal, industryVal, cdVal);
+    allValues.push(
+      safeNumericValue(point[clientKey], 0),
+      safeNumericValue(point['Industry Avg'], 0),
+      safeNumericValue(point[`${companyName} Clients Avg`], 0)
+    );
     competitors.forEach(comp => {
-      const compVal = point[comp.label] as number;
-      if (compVal !== undefined) {
-        allValues.push(compVal);
+      if (point[comp.label] !== undefined) {
+        allValues.push(safeNumericValue(point[comp.label], 0));
       }
     });
   });
-  const maxValue = Math.max(...allValues);
+  
+  const validValues = allValues.filter(val => val !== null && isFinite(val));
+  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 100;
   const padding = maxValue * 0.1; // 10% padding from top
   const yAxisDomain = [0, Math.ceil(maxValue + padding)];
 
@@ -499,8 +513,9 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
           />
           <Tooltip 
             cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.3 }}
+            {...safeTooltipProps(data)}
             content={({ active, payload, label }) => {
-              if (!active || !payload || !label) return null;
+              if (!active || !payload || !label || payload.length === 0) return null;
               
               return (
                 <div style={{

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDeviceColors } from '@/utils/chartUtils';
+import { getDeviceColors, safeNumericValue } from '@/utils/chartUtils';
 
 /** Device distribution data structure for Desktop and Mobile percentages */
 interface DeviceDistribution {
@@ -86,8 +86,8 @@ export function LollipopChart({
    * Handles missing data with zero fallback for consistent visualization.
    */
   const normalizeData = (deviceData: DeviceDistribution): DeviceDistribution => ({
-    Desktop: (deviceData.Desktop || 0) / 100,
-    Mobile: (deviceData.Mobile || 0) / 100
+    Desktop: (safeNumericValue(deviceData?.Desktop, 0) || 0) / 100,
+    Mobile: (safeNumericValue(deviceData?.Mobile, 0) || 0) / 100
   });
 
   // Prepare chart data
@@ -109,7 +109,7 @@ export function LollipopChart({
     },
     ...competitors.map(comp => ({
       label: comp.label,
-      data: normalizeData(comp.value || { Desktop: 55, Mobile: 45 }),
+      data: normalizeData(comp.value || { Desktop: 0, Mobile: 0 }),
       type: 'competitor'
     }))
   ];
@@ -122,10 +122,12 @@ export function LollipopChart({
   const maxLabelLength = Math.max(...chartEntities.map(entity => entity.label.length));
   const labelWidth = Math.max(120, maxLabelLength * 8); // Dynamic width based on content
   
-  // Calculate maximum value for dynamic scale
-  const maxValue = Math.max(...chartEntities.flatMap(entity => 
-    devices.map(device => entity.data[device])
-  ));
+  // Calculate maximum value for dynamic scale with null-safe processing
+  const allValues = chartEntities.flatMap(entity => 
+    devices.map(device => safeNumericValue(entity.data[device], 0) || 0)
+  );
+  const validValues = allValues.filter(val => isFinite(val));
+  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 1;
   const scaleMax = Math.ceil(maxValue * 1.1 * 10) / 10; // Add 10% padding, round to nearest 0.1
   const showFullScale = scaleMax >= 0.95; // Show 100% if data goes above 95%
 
@@ -182,7 +184,7 @@ export function LollipopChart({
                     style={{ height: '48px' }}
                   >
                     {devices.map((device, deviceIndex) => {
-                      const value = entity.data[device];
+                      const value = safeNumericValue(entity.data[device], 0) || 0;
                       const color = getDeviceColors()[device];
                       const percentage = Math.round(value * 100);
                       

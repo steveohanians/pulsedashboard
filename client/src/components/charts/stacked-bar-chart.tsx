@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { getTrafficChannelColors } from "@/utils/chartUtils";
+import { getTrafficChannelColors, safeNumericValue } from "@/utils/chartUtils";
 
 /** Data structure for each bar in the stacked chart */
 interface StackedBarData {
@@ -125,7 +125,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       }}
                     />
                     <span style={{ color: '#374151' }}>
-                      {hoveredSegment.channelName}: {Math.round(hoveredSegment.value)}%
+                      {hoveredSegment.channelName}: {Math.round(safeNumericValue(hoveredSegment.value, 0) || 0)}%
                     </span>
                   </div>
                 </div>
@@ -142,7 +142,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                       isFirst ? 'rounded-l-md' : ''
                     } ${isLast ? 'rounded-r-md' : ''}`}
                     style={{
-                      width: `${channel.percentage}%`,
+                      width: `${safeNumericValue(channel.percentage, 0) || 0}%`,
                       backgroundColor: getChannelColors()[channel.name] || channel.color,
                       borderTopLeftRadius: isFirst ? '6px' : '0',
                       borderBottomLeftRadius: isFirst ? '6px' : '0',
@@ -152,13 +152,13 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
                     onMouseEnter={() => {
                       setHoveredSegment({
                         channelName: channel.name,
-                        value: channel.value,
+                        value: safeNumericValue(channel.value, 0) || 0,
                         barIndex: index
                       });
                     }}
                     onMouseLeave={() => setHoveredSegment(null)}
                   >
-                    {channel.percentage >= 3 ? `${Math.round(channel.value)}%` : ''}
+                    {(safeNumericValue(channel.percentage, 0) || 0) >= 3 ? `${Math.round(safeNumericValue(channel.value, 0) || 0)}%` : ''}
                   </div>
                 );
               })}

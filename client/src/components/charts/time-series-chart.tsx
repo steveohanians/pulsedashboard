@@ -1,6 +1,17 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
-import { generateTemporalVariationSync, createChartVisibilityState, updateChartVisibilityForCompetitors, generateChartColors, calculateYAxisDomain, getTimeSeriesColors, getCompetitorColorsArray } from '@/utils/chartUtils';
+import { 
+  generateTemporalVariationSync, 
+  createChartVisibilityState, 
+  updateChartVisibilityForCompetitors, 
+  generateChartColors, 
+  calculateYAxisDomain, 
+  getTimeSeriesColors, 
+  getCompetitorColorsArray,
+  normalizeChartData,
+  safeNumericValue,
+  safeTooltipProps
+} from '@/utils/chartUtils';
 import { generatePeriodLabel } from '@/utils/chartGenerators';
 import { logger } from '@/utils/logger';
 
@@ -287,9 +298,21 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   
 
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
-  const data = useMemo(() => {
+  const rawData = useMemo(() => {
     return generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName);
   }, [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]);
+
+  // Normalize chart data for null-safe rendering
+  const data = useMemo(() => {
+    const clientKey = clientUrl || 'Client';
+    const requiredKeys = [clientKey, 'Industry Avg', 'Clear Digital Clients Avg'];
+    
+    return normalizeChartData(rawData, {
+      gapOnNull: true,  // Allow gaps in line charts
+      defaultValue: 0,
+      requiredKeys
+    });
+  }, [rawData, clientUrl]);
 
   // Check data validity AFTER all hooks
   const hasData = clientData !== undefined && clientData !== null && !isNaN(clientData);
@@ -301,18 +324,25 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   const colors = getTimeSeriesColors(clientKey, competitors);
   const competitorColors = getCompetitorColorsArray();
 
-  // Calculate optimized Y-axis domain based on all data with better scaling
+  // Calculate optimized Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(parseMetricValue(point[clientKey]) || 0, parseMetricValue(point['Industry Avg']) || 0, parseMetricValue(point['Clear Digital Clients Avg']) || 0);
+    allValues.push(
+      safeNumericValue(point[clientKey], 0),
+      safeNumericValue(point['Industry Avg'], 0),
+      safeNumericValue(point['Clear Digital Clients Avg'], 0)
+    );
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(parseMetricValue(point[comp.label]) || 0);
+        allValues.push(safeNumericValue(point[comp.label], 0));
       }
     });
   });
-  const minValue = Math.min(...allValues);
-  const maxValue = Math.max(...allValues);
+  
+  // Filter out invalid values and calculate domain
+  const validValues = allValues.filter(val => val !== null && isFinite(val));
+  const minValue = validValues.length > 0 ? Math.min(...validValues) : 0;
+  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 100;
   
   // Always start from 0 for better visual context and comparison
   const padding = maxValue * 0.1; // 10% padding from top

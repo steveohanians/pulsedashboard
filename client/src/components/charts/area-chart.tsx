@@ -1,7 +1,14 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
 import { parseMetricValue } from '../../utils/metricParser';
-import { generateTemporalVariationSync, getTimeSeriesColors, getCompetitorColorsArray } from '@/utils/chartUtils';
+import { 
+  generateTemporalVariationSync, 
+  getTimeSeriesColors, 
+  getCompetitorColorsArray,
+  normalizeChartData,
+  safeNumericValue,
+  safeTooltipProps
+} from '@/utils/chartUtils';
 
 // Custom diamond dot component
 import { DiamondDot } from '../shared/DiamondDot';
@@ -329,29 +336,46 @@ function generateAreaData(
  */
 export function SessionDurationAreaChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: AreaChartProps) {
   // Memoize data generation to prevent re-calculation on every render
-  const data = useMemo(() => 
+  const rawData = useMemo(() => 
     generateAreaData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName, timeSeriesData, periods),
     [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName, timeSeriesData, periods]
   );
 
   const clientKey = clientUrl || 'Client';
+
+  // Normalize chart data for null-safe rendering
+  const data = useMemo(() => {
+    const requiredKeys = [clientKey, 'Industry Avg', 'Clear Digital Clients Avg'];
+    
+    return normalizeChartData(rawData, {
+      gapOnNull: true,  // Area charts allow gaps like line charts
+      defaultValue: 0,
+      requiredKeys
+    });
+  }, [rawData, clientKey]);
   
   // Use unified color system for consistent colors across charts
   const colors = getTimeSeriesColors(clientKey, competitors);
   const competitorColors = getCompetitorColorsArray();
 
-  // Calculate fixed Y-axis domain based on all data
+  // Calculate fixed Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(parseMetricValue(point[clientKey]) || 0, parseMetricValue(point['Industry Avg']) || 0, parseMetricValue(point['Clear Digital Clients Avg']) || 0);
+    allValues.push(
+      safeNumericValue(point[clientKey], 0),
+      safeNumericValue(point['Industry Avg'], 0),
+      safeNumericValue(point['Clear Digital Clients Avg'], 0)
+    );
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(parseMetricValue(point[comp.label]) || 0);
+        allValues.push(safeNumericValue(point[comp.label], 0));
       }
     });
   });
-  const minValue = Math.min(...allValues);
-  const maxValue = Math.max(...allValues);
+  
+  const validValues = allValues.filter(val => val !== null && isFinite(val));
+  const minValue = validValues.length > 0 ? Math.min(...validValues) : 0;
+  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 100;
   const padding = (maxValue - minValue) * 0.15;
   const yAxisDomain = [Math.max(0, Math.floor(minValue - padding)), Math.ceil(maxValue + padding)];
 
@@ -440,8 +464,9 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
           type="number"
         />
         <Tooltip 
+          {...safeTooltipProps(data)}
           content={({ active, payload, label }) => {
-            if (!active || !payload || !label) return null;
+            if (!active || !payload || !label || payload.length === 0) return null;
             
             return (
               <div style={{

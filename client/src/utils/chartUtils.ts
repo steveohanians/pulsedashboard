@@ -1,5 +1,170 @@
 import { logger } from '@/utils/logger';
 
+// Static fallback palette for when CSS variables are missing
+const FALLBACK_PALETTE = {
+  'hsl(var(--color-client))': '#3B82F6',        // Blue
+  'hsl(var(--color-cd-avg))': '#10B981',        // Green 
+  'hsl(var(--color-industry-avg))': '#F59E0B',  // Orange
+  'hsl(var(--color-competitor-1))': '#EF4444',  // Red
+  'hsl(var(--color-competitor-2))': '#8B5CF6',  // Purple
+  'hsl(var(--color-competitor-3))': '#EC4899',  // Pink
+  'hsl(var(--color-device-desktop))': '#6366F1', // Indigo
+  'hsl(var(--color-device-mobile))': '#06B6D4',  // Cyan
+  'hsl(var(--color-device-tablet))': '#84CC16',  // Lime
+  'hsl(var(--color-device-other))': '#64748B',   // Slate
+  'hsl(var(--color-channel-direct))': '#3B82F6',
+  'hsl(var(--color-channel-organic))': '#10B981',
+  'hsl(var(--color-channel-social))': '#F59E0B',
+  'hsl(var(--color-channel-paid))': '#EF4444',
+  'hsl(var(--color-channel-email))': '#8B5CF6',
+  'hsl(var(--color-channel-referral))': '#EC4899',
+  'hsl(var(--color-channel-other))': '#64748B',
+  'hsl(var(--color-default))': '#6B7280',
+  'hsl(var(--chart-3))': '#FBBF24',
+  'hsl(var(--chart-5))': '#A78BFA'
+} as const;
+
+// Track if CSS warning has been logged to avoid spam
+let cssVariableWarningLogged = false;
+
+/**
+ * Validates CSS variable availability and provides fallback colors
+ */
+function validateAndGetColor(cssVarColor: string): string {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return FALLBACK_PALETTE[cssVarColor as keyof typeof FALLBACK_PALETTE] || '#6B7280';
+  }
+
+  // Test if CSS variable resolves to actual color
+  const testElement = document.createElement('div');
+  testElement.style.color = cssVarColor;
+  document.body.appendChild(testElement);
+  const computedColor = window.getComputedStyle(testElement).color;
+  document.body.removeChild(testElement);
+
+  // If CSS variable is missing, use fallback and log warning once
+  if (!computedColor || computedColor === '' || computedColor === 'rgba(0, 0, 0, 0)') {
+    if (!cssVariableWarningLogged) {
+      logger.warn('Chart CSS variables missing, using fallback colors', { 
+        missingVariable: cssVarColor,
+        fallbackUsed: true 
+      });
+      cssVariableWarningLogged = true;
+    }
+    return FALLBACK_PALETTE[cssVarColor as keyof typeof FALLBACK_PALETTE] || '#6B7280';
+  }
+
+  return cssVarColor;
+}
+
+/**
+ * Normalizes chart data to handle null, undefined, and sparse values
+ */
+export function normalizeChartData<T extends Record<string, any>>(
+  data: T[], 
+  options: {
+    gapOnNull?: boolean;      // For line charts - allow gaps
+    defaultValue?: number;    // For bar charts - default to 0 
+    requiredKeys?: string[];  // Keys that must be present
+  } = {}
+): T[] {
+  if (!Array.isArray(data) || data.length === 0) {
+    logger.warn('Chart data normalization: empty or invalid data array');
+    return [];
+  }
+
+  const { gapOnNull = false, defaultValue = 0, requiredKeys = [] } = options;
+
+  return data
+    .filter(item => item != null && typeof item === 'object')
+    .map(item => {
+      const normalizedItem = { ...item };
+      
+      // Handle required keys
+      requiredKeys.forEach(key => {
+        if (!(key in normalizedItem)) {
+          normalizedItem[key] = defaultValue;
+        }
+      });
+
+      // Handle null/undefined values in numeric fields
+      Object.keys(normalizedItem).forEach(key => {
+        const value = normalizedItem[key];
+        
+        if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+          normalizedItem[key] = gapOnNull ? null : defaultValue;
+        } else if (value == null) {
+          normalizedItem[key] = gapOnNull ? null : defaultValue;
+        } else if (typeof value === 'string' && value.trim() === '') {
+          normalizedItem[key] = gapOnNull ? null : defaultValue;
+        }
+      });
+
+      return normalizedItem;
+    })
+    .filter(item => {
+      // Remove completely empty data points unless gapOnNull is enabled
+      if (gapOnNull) return true;
+      
+      const hasValidData = Object.values(item).some(value => 
+        value != null && value !== '' && !isNaN(Number(value))
+      );
+      return hasValidData;
+    });
+}
+
+/**
+ * Safely extracts numeric values from chart data with fallback
+ */
+export function safeNumericValue(
+  value: any, 
+  fallback: number = 0,
+  options: { allowNull?: boolean } = {}
+): number | null {
+  const { allowNull = false } = options;
+  
+  if (value == null) {
+    return allowNull ? null : fallback;
+  }
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+  
+  if (isNaN(numValue) || !isFinite(numValue)) {
+    return allowNull ? null : fallback;
+  }
+  
+  return numValue;
+}
+
+/**
+ * Guards tooltip rendering against empty data arrays
+ */
+export function safeTooltipProps(data: any[]): { active?: boolean } {
+  if (!Array.isArray(data) || data.length === 0) {
+    return { active: false };
+  }
+  return {};
+}
+
+/**
+ * Guards brush component against empty data arrays
+ */
+export function safeBrushProps(data: any[]): { 
+  dataKey?: string; 
+  startIndex?: number; 
+  endIndex?: number;
+} {
+  if (!Array.isArray(data) || data.length === 0) {
+    return {};
+  }
+  
+  return {
+    startIndex: 0,
+    endIndex: Math.min(data.length - 1, 10) // Show last 10 points by default
+  };
+}
+
 export const TOOLTIP_STYLES = {
   container: {
     backgroundColor: 'hsl(var(--popover))',
@@ -33,22 +198,22 @@ export const TOOLTIP_STYLES = {
 };
 
 export const CHART_COLORS = {
-  Client: 'hsl(var(--color-client))',
-  CD_Avg: 'hsl(var(--color-cd-avg))',
-  Industry_Avg: 'hsl(var(--color-industry-avg))',
-  Industry: 'hsl(var(--color-industry-avg))',
-  Competitor: 'hsl(var(--color-competitor-1))',
-  Desktop: 'hsl(var(--color-device-desktop))',
-  Mobile: 'hsl(var(--color-device-mobile))',
-  Tablet: 'hsl(var(--color-device-tablet))',
-  Other: 'hsl(var(--color-device-other))',
-  'Organic Search': 'hsl(var(--color-competitor-1))',
-  'Direct': 'hsl(var(--color-client))', 
-  'Social Media': 'hsl(var(--color-competitor-1))',
-  'Paid Search': 'hsl(var(--chart-3))',
-  'Email': 'hsl(var(--chart-5))',
-  'Referral': '#E67E22',
-  Default: 'hsl(var(--color-default))'
+  Client: () => validateAndGetColor('hsl(var(--color-client))'),
+  CD_Avg: () => validateAndGetColor('hsl(var(--color-cd-avg))'),
+  Industry_Avg: () => validateAndGetColor('hsl(var(--color-industry-avg))'),
+  Industry: () => validateAndGetColor('hsl(var(--color-industry-avg))'),
+  Competitor: () => validateAndGetColor('hsl(var(--color-competitor-1))'),
+  Desktop: () => validateAndGetColor('hsl(var(--color-device-desktop))'),
+  Mobile: () => validateAndGetColor('hsl(var(--color-device-mobile))'),
+  Tablet: () => validateAndGetColor('hsl(var(--color-device-tablet))'),
+  Other: () => validateAndGetColor('hsl(var(--color-device-other))'),
+  'Organic Search': () => validateAndGetColor('hsl(var(--color-competitor-1))'),
+  'Direct': () => validateAndGetColor('hsl(var(--color-client))'), 
+  'Social Media': () => validateAndGetColor('hsl(var(--color-competitor-1))'),
+  'Paid Search': () => validateAndGetColor('hsl(var(--chart-3))'),
+  'Email': () => validateAndGetColor('hsl(var(--chart-5))'),
+  'Referral': () => '#E67E22', // Static color, no CSS var
+  Default: () => validateAndGetColor('hsl(var(--color-default))')
 };
 
 export function formatMetricValue(value: number, metricName: string): string {
@@ -127,31 +292,31 @@ export function calculateYAxisDomain(data: any[], dataKey: string): [number, num
  * shared series across different chart implementations.
  */
 
-// Base entity colors used across multiple charts
+// Base entity colors used across multiple charts with CSS variable validation
 const BASE_ENTITY_COLORS = {
-  client: 'hsl(var(--color-client))',
-  cdAvg: 'hsl(var(--color-cd-avg))',
-  industryAvg: 'hsl(var(--color-industry-avg))',
-  competitor1: 'hsl(var(--color-competitor-1))',
-  competitor2: 'hsl(var(--color-competitor-2))',
-  competitor3: 'hsl(var(--color-competitor-3))',
+  client: () => validateAndGetColor('hsl(var(--color-client))'),
+  cdAvg: () => validateAndGetColor('hsl(var(--color-cd-avg))'),
+  industryAvg: () => validateAndGetColor('hsl(var(--color-industry-avg))'),
+  competitor1: () => validateAndGetColor('hsl(var(--color-competitor-1))'),
+  competitor2: () => validateAndGetColor('hsl(var(--color-competitor-2))'),
+  competitor3: () => validateAndGetColor('hsl(var(--color-competitor-3))'),
 } as const;
 
-// Traffic channel specific colors for StackedBarChart
+// Traffic channel specific colors for StackedBarChart with validation
 const TRAFFIC_CHANNEL_COLORS = {
-  'Direct': 'hsl(var(--color-channel-direct))',
-  'Organic Search': 'hsl(var(--color-channel-organic))',
-  'Social Media': 'hsl(var(--color-channel-social))',
-  'Paid Search': 'hsl(var(--color-channel-paid))',
-  'Email': 'hsl(var(--color-channel-email))',
-  'Referral': 'hsl(var(--color-channel-referral))',
-  'Other': 'hsl(var(--color-channel-other))',
+  'Direct': () => validateAndGetColor('hsl(var(--color-channel-direct))'),
+  'Organic Search': () => validateAndGetColor('hsl(var(--color-channel-organic))'),
+  'Social Media': () => validateAndGetColor('hsl(var(--color-channel-social))'),
+  'Paid Search': () => validateAndGetColor('hsl(var(--color-channel-paid))'),
+  'Email': () => validateAndGetColor('hsl(var(--color-channel-email))'),
+  'Referral': () => validateAndGetColor('hsl(var(--color-channel-referral))'),
+  'Other': () => validateAndGetColor('hsl(var(--color-channel-other))'),
 } as const;
 
-// Device specific colors for LollipopChart
+// Device specific colors for LollipopChart with validation
 const DEVICE_COLORS = {
-  'Desktop': 'hsl(var(--color-device-desktop))',
-  'Mobile': 'hsl(var(--color-device-mobile))',
+  'Desktop': () => validateAndGetColor('hsl(var(--color-device-desktop))'),
+  'Mobile': () => validateAndGetColor('hsl(var(--color-device-mobile))'),
 } as const;
 
 /**
@@ -159,21 +324,21 @@ const DEVICE_COLORS = {
  */
 export function getTimeSeriesColors(clientKey: string, competitors: any[], companyName?: string): Record<string, string> {
   const colors: Record<string, string> = {
-    [clientKey]: BASE_ENTITY_COLORS.client,
-    'Industry Avg': BASE_ENTITY_COLORS.industryAvg,
-    'Clear Digital Clients Avg': BASE_ENTITY_COLORS.cdAvg,
+    [clientKey]: BASE_ENTITY_COLORS.client(),
+    'Industry Avg': BASE_ENTITY_COLORS.industryAvg(),
+    'Clear Digital Clients Avg': BASE_ENTITY_COLORS.cdAvg(),
   };
   
   // Add company-specific CD average if company name provided
   if (companyName) {
-    colors[`${companyName} Clients Avg`] = BASE_ENTITY_COLORS.cdAvg;
+    colors[`${companyName} Clients Avg`] = BASE_ENTITY_COLORS.cdAvg();
   }
   
-  // Add competitor colors
+  // Add competitor colors with validation
   const competitorColors = [
-    BASE_ENTITY_COLORS.competitor1,
-    BASE_ENTITY_COLORS.competitor2,
-    BASE_ENTITY_COLORS.competitor3,
+    BASE_ENTITY_COLORS.competitor1(),
+    BASE_ENTITY_COLORS.competitor2(),
+    BASE_ENTITY_COLORS.competitor3(),
   ];
   
   competitors.forEach((competitor, index) => {
@@ -187,21 +352,33 @@ export function getTimeSeriesColors(clientKey: string, competitors: any[], compa
  * Get colors for traffic channel chart (StackedBarChart)
  */
 export function getTrafficChannelColors(): Record<string, string> {
-  return { ...TRAFFIC_CHANNEL_COLORS };
+  const result: Record<string, string> = {};
+  for (const [key, getColor] of Object.entries(TRAFFIC_CHANNEL_COLORS)) {
+    result[key] = getColor();
+  }
+  return result;
 }
 
 /**
  * Get colors for device distribution chart (LollipopChart)
  */
 export function getDeviceColors(): Record<string, string> {
-  return { ...DEVICE_COLORS };
+  const result: Record<string, string> = {};
+  for (const [key, getColor] of Object.entries(DEVICE_COLORS)) {
+    result[key] = getColor();
+  }
+  return result;
 }
 
 /**
  * Get colors for metrics chart (MetricsChart) - maintains existing CHART_COLORS behavior
  */
 export function getMetricsColors(): Record<string, string> {
-  return { ...CHART_COLORS };
+  const result: Record<string, string> = {};
+  for (const [key, getColor] of Object.entries(CHART_COLORS)) {
+    result[key] = getColor();
+  }
+  return result;
 }
 
 /**
@@ -209,24 +386,24 @@ export function getMetricsColors(): Record<string, string> {
  */
 export function getCompetitorColorsArray(): string[] {
   return [
-    BASE_ENTITY_COLORS.competitor1,
-    BASE_ENTITY_COLORS.competitor2,
-    BASE_ENTITY_COLORS.competitor3,
+    BASE_ENTITY_COLORS.competitor1(),
+    BASE_ENTITY_COLORS.competitor2(),
+    BASE_ENTITY_COLORS.competitor3(),
   ];
 }
 
 // Legacy function maintained for compatibility
 export function generateChartColors(competitors: any[]): Record<string, string> {
   const colors = [
-    BASE_ENTITY_COLORS.competitor1,
-    BASE_ENTITY_COLORS.competitor2,
-    BASE_ENTITY_COLORS.competitor3,
+    BASE_ENTITY_COLORS.competitor1(),
+    BASE_ENTITY_COLORS.competitor2(),
+    BASE_ENTITY_COLORS.competitor3(),
   ];
   
   const result: Record<string, string> = {
-    'Client': BASE_ENTITY_COLORS.client,
-    'CD_Avg': BASE_ENTITY_COLORS.cdAvg,
-    'Industry_Avg': BASE_ENTITY_COLORS.industryAvg,
+    'Client': BASE_ENTITY_COLORS.client(),
+    'CD_Avg': BASE_ENTITY_COLORS.cdAvg(),
+    'Industry_Avg': BASE_ENTITY_COLORS.industryAvg(),
   };
   
   competitors.forEach((competitor, index) => {

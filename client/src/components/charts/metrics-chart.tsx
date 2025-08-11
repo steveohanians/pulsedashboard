@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getMetricsColors } from '@/utils/chartUtils';
+import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps } from '@/utils/chartUtils';
 
 interface MetricsChartProps {
   metricName: string;
@@ -32,12 +32,19 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }
 
-  // Process bar chart data points (Session Duration already converted in groupedMetrics)
-  const chartDataPoints = Object.entries(data).map(([key, value]) => ({
+  // Process bar chart data points with null-safe handling
+  const rawDataPoints = Object.entries(data).map(([key, value]) => ({
     name: key,
-    value: Math.round(value * 10) / 10,
-    fill: getMetricsColors()[key] || 'hsl(var(--color-default))'
+    value: safeNumericValue(value, 0),
+    fill: getMetricsColors()[key] || getMetricsColors()['Default']()
   }));
+
+  // Normalize chart data
+  const chartDataPoints = normalizeChartData(rawDataPoints, {
+    gapOnNull: false,
+    defaultValue: 0,
+    requiredKeys: ['name', 'value', 'fill']
+  });
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -55,6 +62,7 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
           tickMargin={10}
         />
         <Tooltip 
+          {...safeTooltipProps(chartDataPoints)}
           contentStyle={{
             backgroundColor: 'hsl(var(--popover))',
             border: '1px solid hsl(var(--border))',
