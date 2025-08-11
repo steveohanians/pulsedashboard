@@ -4,6 +4,14 @@
  */
 
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { 
+  ERROR_CODES, 
+  ErrorCode, 
+  StandardErrorResponse, 
+  NoDataResponse,
+  isErrorResponse,
+  isNoDataResponse
+} from "@shared/errorTypes";
 
 /**
  * HTTP methods supported by the API request function
@@ -11,60 +19,156 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
- * Validates response status and extracts error messages from failed requests
+ * Typed error class for API requests with specific error code handling
+ */
+export class APIError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string,
+    public statusCode: number,
+    public hint?: string,
+    public retryable: boolean = false,
+    public retryAfter?: number,
+    public context?: Record<string, any>
+  ) {
+    super(message);
+    this.name = 'APIError';
+  }
+}
+
+/**
+ * Validates response status and creates typed errors for specific error codes
  * @param res The fetch Response object to validate
- * @throws Error with descriptive message if response is not ok
+ * @throws APIError with specific error code and metadata
  */
 async function validateResponse(res: Response): Promise<void> {
   if (!res.ok) {
-    let errorMessage = res.statusText;
+    let errorData: StandardErrorResponse | null = null;
+    let fallbackMessage = res.statusText;
     
     try {
       const text = await res.text();
       if (text) {
-        // Try to parse as JSON first
         try {
           const json = JSON.parse(text);
-          errorMessage = json.message || json.error || text;
+          
+          // Check if this is a standardized error response
+          if (isErrorResponse(json)) {
+            errorData = json;
+          } else {
+            // Legacy error format
+            fallbackMessage = json.message || json.error || text;
+          }
         } catch {
-          // Not JSON, use raw text
-          errorMessage = text;
+          fallbackMessage = text;
         }
       }
     } catch {
       // Fallback to status text if can't read response
     }
     
-    throw new Error(errorMessage);
+    if (errorData) {
+      // Throw typed error with specific code
+      throw new APIError(
+        errorData.error.code,
+        errorData.error.message,
+        res.status,
+        errorData.error.hint,
+        errorData.error.retryable,
+        errorData.error.retryAfter,
+        errorData.context
+      );
+    } else {
+      // Map HTTP status codes to error codes for legacy responses
+      const errorCode = mapStatusToErrorCode(res.status);
+      throw new APIError(
+        errorCode,
+        fallbackMessage,
+        res.status,
+        undefined,
+        isRetryableStatus(res.status)
+      );
+    }
   }
 }
 
 /**
- * Generic API request function with automatic JSON handling
+ * Maps HTTP status codes to standardized error codes
+ */
+function mapStatusToErrorCode(status: number): ErrorCode {
+  switch (status) {
+    case 401:
+      return ERROR_CODES.UNAUTHENTICATED;
+    case 403:
+      return ERROR_CODES.FORBIDDEN;
+    case 404:
+      return ERROR_CODES.CLIENT_NOT_FOUND;
+    case 422:
+      return ERROR_CODES.SCHEMA_MISMATCH;
+    case 429:
+      return ERROR_CODES.RATE_LIMITED;
+    case 503:
+      return ERROR_CODES.NETWORK_ERROR;
+    default:
+      return ERROR_CODES.INTERNAL_ERROR;
+  }
+}
+
+/**
+ * Determines if an HTTP status is generally retryable
+ */
+function isRetryableStatus(status: number): boolean {
+  return [429, 500, 502, 503, 504].includes(status);
+}
+
+/**
+ * Generic API request function with automatic JSON handling and typed error responses
  * @param method HTTP method (GET, POST, PUT, PATCH, DELETE)
  * @param url The API endpoint URL
  * @param data Optional request body data
- * @returns Parsed response data or raw text
+ * @returns Parsed response data, NoDataResponse, or throws APIError
  */
 export async function apiRequest(
   method: HttpMethod,
   url: string,
   data?: unknown,
 ): Promise<any> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await validateResponse(res);
-  
-  const text = await res.text();
   try {
-    return text ? JSON.parse(text) : null;
-  } catch {
-    return text;
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+
+    await validateResponse(res);
+    
+    const text = await res.text();
+    const responseData = text ? JSON.parse(text) : null;
+    
+    // Check for no-data responses (successful but empty)
+    if (isNoDataResponse(responseData)) {
+      console.debug('No data response received:', responseData.meta);
+      return responseData;
+    }
+    
+    return responseData;
+  } catch (error) {
+    // Log error for debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('API Request Error:', {
+        method,
+        url,
+        error: error instanceof APIError ? {
+          code: error.code,
+          message: error.message,
+          statusCode: error.statusCode,
+          retryable: error.retryable
+        } : error
+      });
+    }
+    
+    throw error;
   }
 }
 

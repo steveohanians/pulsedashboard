@@ -25,6 +25,8 @@ import { ComprehensiveInsightsDisplay } from "@/components/comprehensive-insight
 import { MetricInsightBox } from "@/components/metric-insight-box";
 import { CompetitorModal } from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";
+import { ErrorBanner, useErrorBanner } from "@/components/ErrorBanner";
+import { APIError } from "@/lib/queryClient";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS } from "@/utils/chartUtils";
@@ -101,6 +103,9 @@ export default function Dashboard() {
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
   const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Error banner state
+  const { error: dashboardError, showError: showDashboardError, dismissError: dismissDashboardError, clearError: clearDashboardError } = useErrorBanner();
 
   // Get the actual data period (one month before current) 
   const getDataPeriodDisplay = () => {
@@ -159,8 +164,16 @@ export default function Dashboard() {
   
   const dashboardQuery = useQuery<DashboardData>({
     queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
-    queryFn: () => fetch(`/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`)
-      .then(res => res.json()),
+    queryFn: async () => {
+      try {
+        return await apiRequest('GET', `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`);
+      } catch (error) {
+        if (error instanceof APIError) {
+          showDashboardError(error);
+        }
+        throw error;
+      }
+    },
     enabled: !!user?.clientId,
     staleTime: 0, // Force fresh data on each request
     refetchOnMount: 'always', // Always refetch when component mounts
@@ -186,15 +199,31 @@ export default function Dashboard() {
 
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: QueryKeys.filters(),
-    queryFn: () => fetch(`/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`)
-      .then(res => res.json()),
+    queryFn: async () => {
+      try {
+        return await apiRequest('GET', `/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`);
+      } catch (error) {
+        if (error instanceof APIError) {
+          showDashboardError(error);
+        }
+        throw error;
+      }
+    },
   });
 
   // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
     queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
-    queryFn: () => fetch(`/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}`)
-      .then(res => res.json()),
+    queryFn: async () => {
+      try {
+        return await apiRequest('GET', `/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}`);
+      } catch (error) {
+        if (error instanceof APIError) {
+          showDashboardError(error);
+        }
+        throw error;
+      }
+    },
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -1371,6 +1400,18 @@ export default function Dashboard() {
             timePeriod={timePeriod}
             isAdmin={user?.role === "Admin"}
           />
+
+          {/* Error Banner for API errors */}
+          <ErrorBanner
+            error={dashboardError}
+            onRetry={() => {
+              clearDashboardError();
+              refetchDashboard();
+            }}
+            onDismiss={dismissDashboardError}
+            className="pdf-hide"
+          />
+
         {/* Enhanced Filters Section - Responsive */}
         <div className="filters-section pdf-hide grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
           <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">

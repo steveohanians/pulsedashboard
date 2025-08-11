@@ -8,6 +8,13 @@ import { ga4DataService } from "./services/ga4/PulseDataService";
 import ga4StatusRouter from "./routes/ga4StatusRoute";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
+import { 
+  ErrorFactory, 
+  PulseError, 
+  ERROR_CODES, 
+  NoDataResponse,
+  StandardErrorResponse 
+} from "@shared/errorTypes";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
@@ -233,11 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rawTimePeriod = normalizeTimePeriod(req.query.timePeriod as string);
         canonicalTimePeriod = parseUILabel(rawTimePeriod);
       } catch (error) {
-        return res.status(422).json({
-          message: "Invalid time period format",
-          code: "SCHEMA_MISMATCH", 
-          details: (error as Error).message
-        });
+        const schemaError = ErrorFactory.schemaMismatch(`Invalid time period format: ${(error as Error).message}`);
+        return res.status(schemaError.statusCode).json(schemaError.toResponse());
       }
       
       // Validate request parameters
@@ -252,11 +256,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (!requestValidation.success) {
-        return res.status(400).json({
-          message: "Invalid request parameters",
-          code: "SCHEMA_MISMATCH",
-          validationErrors: requestValidation.error.errors
-        });
+        const validationError = ErrorFactory.schemaMismatch(`Invalid request parameters: ${requestValidation.error.errors.map(e => e.message).join(', ')}`);
+        return res.status(validationError.statusCode).json(validationError.toResponse());
       }
       
       const { businessSize, industryVertical } = requestValidation.data;
