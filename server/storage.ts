@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -14,6 +14,7 @@ import {
   type InsightContext, type InsertInsightContext, type UpdateInsightContext,
   type FilterOption, type InsertFilterOption, type UpdateFilterOption,
   type GA4PropertyAccess, type InsertGA4PropertyAccess,
+  type MetricVersion, type InsertMetricVersion, type UpdateMetricVersion,
   validateCanonicalMetricEnvelope,
   type CanonicalMetricEnvelope
 } from "@shared/schema";
@@ -86,9 +87,17 @@ export interface IStorage {
   // AI Insights
   getAIInsights(clientId: string, timePeriod: string): Promise<AIInsight[]>;
   getAIInsightsByClient(clientId: string, timePeriod?: string): Promise<AIInsight[]>;
+  getAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<AIInsight[]>;
+  getLatestAIInsightVersion(clientId: string, timePeriod: string): Promise<AIInsight[]>;
   createAIInsight(insight: InsertAIInsight): Promise<AIInsight>;
   deleteAIInsightByMetric(clientId: string, metricName: string): Promise<void>;
+  deleteAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<void>;
   clearAllAIInsights(): Promise<void>;
+
+  // Metric Versions
+  getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined>;
+  createMetricVersion(clientId: string, timePeriod: string, version: number): Promise<MetricVersion>;
+  updateMetricVersion(clientId: string, timePeriod: string, version: number): Promise<MetricVersion | undefined>;
   
   // Password Reset
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
@@ -878,6 +887,9 @@ export class DatabaseStorage implements IStorage {
       // Enhanced metric creation with canonical envelope validation
       const metricData = { ...insertMetric };
       
+      // Increment metric version when new metric is created
+      await this.incrementMetricVersion(metricData.clientId, metricData.timePeriod);
+      
       // Check if FEATURE_CANONICAL_ENVELOPE is enabled
       const enableCanonicalEnvelope = process.env.FEATURE_CANONICAL_ENVELOPE === 'true';
       
@@ -1148,6 +1160,98 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllAIInsights(): Promise<void> {
     await db.delete(aiInsights);
+  }
+
+  async getAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<AIInsight[]> {
+    return await db.select().from(aiInsights).where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.timePeriod, timePeriod),
+        eq(aiInsights.version, version)
+      )
+    );
+  }
+
+  async getLatestAIInsightVersion(clientId: string, timePeriod: string): Promise<AIInsight[]> {
+    return await db.select().from(aiInsights).where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.timePeriod, timePeriod)
+      )
+    ).orderBy(desc(aiInsights.version));
+  }
+
+  async deleteAIInsightsByVersion(clientId: string, timePeriod: string, version: number): Promise<void> {
+    await db.delete(aiInsights).where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.timePeriod, timePeriod),
+        eq(aiInsights.version, version)
+      )
+    );
+  }
+
+  // Metric Versions
+  async getMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion | undefined> {
+    const results = await db.select().from(metricVersions).where(
+      and(
+        eq(metricVersions.clientId, clientId),
+        eq(metricVersions.timePeriod, timePeriod)
+      )
+    );
+    return results[0];
+  }
+
+  async createMetricVersion(clientId: string, timePeriod: string, version: number): Promise<MetricVersion> {
+    const insertData: InsertMetricVersion = {
+      clientId,
+      timePeriod,
+      currentVersion: version,
+      lastMetricUpdate: new Date()
+    };
+    
+    const results = await db.insert(metricVersions).values(insertData).returning();
+    return results[0];
+  }
+
+  async updateMetricVersion(clientId: string, timePeriod: string, version: number): Promise<MetricVersion | undefined> {
+    const results = await db.update(metricVersions)
+      .set({ 
+        currentVersion: version, 
+        lastMetricUpdate: new Date(),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(metricVersions.clientId, clientId),
+          eq(metricVersions.timePeriod, timePeriod)
+        )
+      )
+      .returning();
+    
+    return results[0];
+  }
+
+  async incrementMetricVersion(clientId: string, timePeriod: string): Promise<MetricVersion> {
+    // Use upsert to handle constraint conflicts
+    const results = await db.insert(metricVersions)
+      .values({
+        clientId,
+        timePeriod,
+        currentVersion: 1,
+        lastMetricUpdate: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [metricVersions.clientId, metricVersions.timePeriod],
+        set: {
+          currentVersion: sql`${metricVersions.currentVersion} + 1`,
+          lastMetricUpdate: new Date(),
+          updatedAt: new Date()
+        }
+      })
+      .returning();
+    
+    return results[0];
   }
 
   // Password Reset
@@ -1518,6 +1622,9 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.sourceType, 'Client')
       )
     );
+    
+    // Increment version after clearing metrics
+    await this.incrementMetricVersion(clientId, timePeriod);
   }
 
   // Clear ALL CLIENT metrics for a specific client (all periods, preserve benchmarks)
@@ -1528,6 +1635,12 @@ export class DatabaseStorage implements IStorage {
         eq(metrics.sourceType, 'Client')
       )
     );
+    
+    // Increment version for all time periods for this client
+    const existingVersions = await this.getMetricVersionsByClient(clientId);
+    for (const version of existingVersions) {
+      await this.incrementMetricVersion(clientId, version.timePeriod);
+    }
   }
 
   // Clear competitor metrics for a specific client and time period

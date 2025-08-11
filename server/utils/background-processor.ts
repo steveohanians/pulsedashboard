@@ -3,7 +3,7 @@ import logger from './logging/logger';
 // Background processing queue for heavy operations
 interface ProcessingJob {
   id: string;
-  type: 'AI_INSIGHT' | 'METRIC_AGGREGATION' | 'SCORING' | 'COMPETITOR_INTEGRATION';
+  type: 'AI_INSIGHT' | 'AI_INSIGHT_VERSIONED' | 'METRIC_AGGREGATION' | 'SCORING' | 'COMPETITOR_INTEGRATION';
   data: any;
   priority: number;
   retries: number;
@@ -18,6 +18,11 @@ class BackgroundProcessor {
   private processing = false;
   private readonly MAX_CONCURRENT = 3;
   private activeJobs = 0;
+  private storage: any; // Storage instance
+
+  constructor(storage?: any) {
+    this.storage = storage;
+  }
 
   // Add job to background processing queue
   enqueue(type: ProcessingJob['type'], data: any, priority?: number): string;
@@ -92,6 +97,9 @@ class BackgroundProcessor {
         case 'AI_INSIGHT':
           await this.processAIInsight(job.data);
           break;
+        case 'AI_INSIGHT_VERSIONED':
+          await this.processVersionedAIInsight(job.data);
+          break;
         case 'METRIC_AGGREGATION':
           await this.processMetricAggregation(job.data);
           break;
@@ -133,6 +141,115 @@ class BackgroundProcessor {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     logger.info(`AI insight processed for ${clientId}:${metricName}`);
+  }
+
+  private async processVersionedAIInsight(data: any): Promise<void> {
+    // Process versioned AI insight generation
+    const { clientId, timePeriod, version, forceRegenerate = false, reason = null } = data;
+    
+    try {
+      logger.info(`Processing versioned AI insights for client ${clientId}, period ${timePeriod}, version ${version}`, {
+        forceRegenerate,
+        reason
+      });
+
+      // Import versioning service
+      const { MetricVersionService } = await import('../services/metricVersioning.js');
+      const versionService = new MetricVersionService(this.storage);
+
+      // Check if insights already exist for this version (unless forcing regeneration)
+      if (!forceRegenerate) {
+        const existingInsights = await this.storage.getAIInsightsByVersion(clientId, timePeriod, version);
+        if (existingInsights.length > 0) {
+          logger.info(`Insights already exist for version ${version}, skipping generation`, {
+            clientId,
+            timePeriod,
+            insightCount: existingInsights.length
+          });
+          return;
+        }
+      }
+
+      // Get metrics for this client and time period
+      const metrics = await this.storage.getMetricsByClient(clientId, timePeriod);
+      
+      if (metrics.length === 0) {
+        logger.warn(`No metrics found for client ${clientId} and period ${timePeriod}`);
+        return;
+      }
+
+      // For now, skip AI generation as the utility doesn't exist yet
+      // TODO: Implement actual AI insight generation
+      logger.info('Skipping AI generation until utility is implemented');
+      
+      // Generate insights for each unique metric
+      const metricNames = metrics.map((m: any) => m.metricName);
+      const uniqueMetrics = Array.from(new Set(metricNames));
+      const generatedInsights = [];
+
+      for (const metricName of uniqueMetrics) {
+        try {
+          // Get metric data for this specific metric
+          const metricData = metrics.filter((m: any) => m.metricName === metricName);
+          
+          // TODO: Replace with actual AI insight generation
+          const mockInsight = {
+            context: `Analysis of ${metricName} data`,
+            insight: `Generated insight for ${metricName}`,
+            recommendation: `Recommendation for improving ${metricName}`
+          };
+
+          // Store the versioned insight
+          const insight = await this.storage.createAIInsight({
+            clientId,
+            metricName,
+            timePeriod,
+            version, // Include version number
+            contextText: mockInsight.context,
+            insightText: mockInsight.insight,
+            recommendationText: mockInsight.recommendation,
+            status: 'success'
+          });
+
+          generatedInsights.push(insight);
+          
+          logger.debug(`Generated versioned insight for ${metricName}`, {
+            clientId,
+            timePeriod,
+            version,
+            insightId: insight.id
+          });
+        } catch (metricError) {
+          logger.error(`Error generating versioned insight for ${metricName}`, {
+            error: metricError instanceof Error ? metricError.message : String(metricError),
+            clientId,
+            timePeriod,
+            version,
+            metricName
+          });
+        }
+      }
+
+      // Clean up old versions (keep only latest 3)
+      await versionService.cleanupOldVersions(clientId, timePeriod);
+
+      logger.info(`Completed versioned AI insight generation`, {
+        clientId,
+        timePeriod,
+        version,
+        generatedCount: generatedInsights.length,
+        totalMetrics: uniqueMetrics.length
+      });
+
+    } catch (error) {
+      logger.error(`Error processing versioned AI insights`, {
+        error: error instanceof Error ? error.message : String(error),
+        clientId,
+        timePeriod,
+        version
+      });
+      throw error;
+    }
   }
 
   private async processMetricAggregation(data: any): Promise<void> {
@@ -187,4 +304,8 @@ class BackgroundProcessor {
   }
 }
 
+// Export the class for initialization with storage
+export { BackgroundProcessor };
+
+// Create default instance for backward compatibility (without storage)
 export const backgroundProcessor = new BackgroundProcessor();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
@@ -79,6 +79,35 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
+  // Check for versioned insights and show pending states
+  const { data: versionStatus, isLoading: isCheckingVersion } = useQuery({
+    queryKey: ["/api/v2/ai-insights", clientId, "status", timePeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/v2/ai-insights/${clientId}/status?timePeriod=${encodeURIComponent(timePeriod)}`);
+      if (!response.ok) {
+        // If versioned endpoint doesn't exist, fall back to legacy behavior
+        return null;
+      }
+      return await response.json();
+    },
+    refetchInterval: 3000, // Poll every 3 seconds for status updates
+    refetchIntervalInBackground: true,
+    enabled: !!clientId && !!timePeriod
+  });
+
+  // Query for versioned insights
+  const { data: versionedInsights, isLoading: isLoadingVersioned } = useQuery({
+    queryKey: ["/api/v2/ai-insights", clientId, timePeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/v2/ai-insights/${clientId}?timePeriod=${encodeURIComponent(timePeriod)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch versioned insights');
+      }
+      return await response.json();
+    },
+    enabled: !!clientId && !!timePeriod && !versionStatus?.isGenerating
+  });
+
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/generate-metric-insight/${clientId}`, {
@@ -148,7 +177,10 @@ export function MetricInsightBox({
     },
   });
 
-  if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending) {
+  // Show "Regenerating insights..." if version status indicates generation in progress
+  const isRegenerating = versionStatus?.isGenerating || isCheckingVersion;
+  
+  if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
     return (
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
@@ -162,10 +194,10 @@ export function MetricInsightBox({
             size="sm"
           >
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Generating Insights...
+            {isRegenerating ? "Regenerating Insights..." : "Generating Insights..."}
           </Button>
           <p className="text-xs text-slate-500 mt-3 animate-pulse">
-            Analyzing competitive data and market trends...
+            {isRegenerating ? "Updating insights with latest data..." : "Analyzing competitive data and market trends..."}
           </p>
         </div>
       </div>

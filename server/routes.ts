@@ -132,7 +132,7 @@ function parseDistributionMetricValue(value: any, metricName: string): any {
 import { performanceCache } from "./cache/performance-cache";
 import { CompetitorIntegration } from "./services/semrush/competitorIntegration";
 
-import { backgroundProcessor } from "./utils/background-processor";
+import { BackgroundProcessor } from "./utils/background-processor";
 import ga4Routes from "./routes/ga4Routes";
 import ga4DataRoute from "./routes/ga4DataRoute";
 import smartGA4Route from "./routes/smartGA4Route";
@@ -189,11 +189,14 @@ function requireAdmin(req: any, res: any, next: any) {
 
 
 
-export function registerRoutes(app: Express): Server {
+export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // Initialize competitor integration with storage
   const competitorIntegration = new CompetitorIntegration(storage);
+  
+  // Initialize background processor with storage access for versioned insights
+  const backgroundProcessor = new BackgroundProcessor(storage);
 
   // Disabled per user request
 
@@ -522,6 +525,19 @@ export function registerRoutes(app: Express): Server {
     
     return handleAIInsights(req, res);
   });
+
+  // Versioned AI Insights Routes
+  const createVersionedInsightsRoutes = (await import('./routes/versionedInsights.js')).default;
+  const versionedInsightsRoutes = createVersionedInsightsRoutes(storage, backgroundProcessor);
+  
+  // Get versioned insights (replaces legacy non-versioned endpoint)
+  app.get("/api/v2/ai-insights/:clientId", requireAuth, versionedInsightsRoutes.getVersionedInsights);
+  
+  // Admin: Force regenerate insights for latest version
+  app.post("/api/v2/ai-insights/:clientId/regenerate", requireAuth, versionedInsightsRoutes.forceRegenerateInsights);
+  
+  // Get version status for polling
+  app.get("/api/v2/ai-insights/:clientId/status", requireAuth, versionedInsightsRoutes.getVersionStatus);
 
   // Filters endpoint with caching and dynamic interdependent options  
   app.get("/api/filters", requireAuth, async (req, res) => {

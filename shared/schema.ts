@@ -7,7 +7,7 @@
 // - competitors: Client-specific competitor companies (generates Competitor sourceType data)
 //
 import { sql } from "drizzle-orm";
-import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, integer, boolean, timestamp, decimal, pgEnum, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -214,6 +214,7 @@ export const aiInsights = pgTable("ai_insights", {
   clientId: varchar("client_id").references(() => clients.id).notNull(),
   metricName: text("metric_name").notNull(),
   timePeriod: text("time_period").notNull(),
+  version: integer("version").notNull().default(1), // Version for invalidation when metrics change
   contextText: text("context_text"),
   insightText: text("insight_text"),
   recommendationText: text("recommendation_text"),
@@ -225,6 +226,8 @@ export const aiInsights = pgTable("ai_insights", {
   metricNameIdx: index("idx_ai_insights_metric_name").on(table.metricName),
   timePeriodIdx: index("idx_ai_insights_time_period").on(table.timePeriod),
   clientMetricIdx: index("idx_ai_insights_client_metric").on(table.clientId, table.metricName),
+  // New composite index for versioned lookups
+  clientTimePeriodVersionIdx: index("idx_ai_insights_client_time_period_version").on(table.clientId, table.timePeriod, table.version),
 }));
 
 export const globalPromptTemplate = pgTable("global_prompt_template", {
@@ -258,6 +261,20 @@ export const insightContexts = pgTable("insight_contexts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Table to track metric snapshot versions for (clientId, timePeriod) pairs
+export const metricVersions = pgTable("metric_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  timePeriod: text("time_period").notNull(),
+  currentVersion: integer("current_version").notNull().default(1),
+  lastMetricUpdate: timestamp("last_metric_update").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint for (clientId, timePeriod)
+  clientTimePeriodIdx: uniqueIndex("idx_metric_versions_client_time_period").on(table.clientId, table.timePeriod),
+}));
+
 // Filter options table for custom filter management
 export const filterOptions = pgTable("filter_options", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -277,6 +294,14 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   aiInsights: many(aiInsights),
   insightContexts: many(insightContexts),
   ga4PropertyAccess: many(ga4PropertyAccess),
+  metricVersions: many(metricVersions),
+}));
+
+export const metricVersionsRelations = relations(metricVersions, ({ one }) => ({
+  client: one(clients, {
+    fields: [metricVersions.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const ga4ServiceAccountsRelations = relations(ga4ServiceAccounts, ({ many }) => ({
@@ -384,6 +409,18 @@ export const insertAIInsightSchema = createInsertSchema(aiInsights).omit({
   createdAt: true,
 });
 
+export const insertMetricVersionSchema = createInsertSchema(metricVersions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMetricVersionSchema = createInsertSchema(metricVersions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertGlobalPromptTemplateSchema = createInsertSchema(globalPromptTemplate).omit({
   id: true,
   createdAt: true,
@@ -477,6 +514,9 @@ export type Benchmark = typeof benchmarks.$inferSelect;
 export type InsertBenchmark = z.infer<typeof insertBenchmarkSchema>;
 export type AIInsight = typeof aiInsights.$inferSelect;
 export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
+export type MetricVersion = typeof metricVersions.$inferSelect;
+export type InsertMetricVersion = z.infer<typeof insertMetricVersionSchema>;
+export type UpdateMetricVersion = z.infer<typeof updateMetricVersionSchema>;
 
 export type GlobalPromptTemplate = typeof globalPromptTemplate.$inferSelect;
 export type InsertGlobalPromptTemplate = z.infer<typeof insertGlobalPromptTemplateSchema>;
