@@ -146,33 +146,37 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
-  // Check for versioned insights and show pending states
+  // Check for insights status using canonical endpoint
   const { data: versionStatus, isLoading: isCheckingVersion } = useQuery({
-    queryKey: ["/api/v2/ai-insights", clientId, "status", canonicalPeriod],
+    queryKey: ["/api/ai-insights", clientId, canonicalPeriod, "status"],
     queryFn: async () => {
-      const response = await fetch(`/api/v2/ai-insights/${clientId}/status?timePeriod=${encodeURIComponent(canonicalPeriod)}`);
+      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
       if (!response.ok) {
-        // If versioned endpoint doesn't exist, fall back to legacy behavior
         return null;
       }
-      return await response.json();
+      const data = await response.json();
+      // Transform data to match expected status format
+      return {
+        status: data.status || 'available',
+        isGenerating: data.status === 'generating' || data.status === 'pending'
+      };
     },
     refetchInterval: 3000, // Poll every 3 seconds for status updates
     refetchIntervalInBackground: true,
     enabled: !!clientId && !!canonicalPeriod
   });
 
-  // Query for versioned insights
-  const { data: versionedInsights, isLoading: isLoadingVersioned } = useQuery({
-    queryKey: ["/api/v2/ai-insights", clientId, canonicalPeriod],
+  // Query for canonical insights  
+  const { data: canonicalInsights, isLoading: isLoadingCanonical } = useQuery({
+    queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
     queryFn: async () => {
-      const response = await fetch(`/api/v2/ai-insights/${clientId}?timePeriod=${encodeURIComponent(canonicalPeriod)}`);
+      const response = await fetch(`/api/ai-insights/${clientId}?period=${encodeURIComponent(canonicalPeriod)}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch versioned insights');
+        throw new Error('Failed to fetch insights');
       }
       const data = await response.json();
       
-      // If we have versioned insights, check for existing context and update hasCustomContext flags
+      // If we have insights, check for existing context and update hasCustomContext flags
       if (data.status === 'available' && data.insights) {
         for (const insight of data.insights) {
           try {
@@ -184,7 +188,7 @@ export function MetricInsightBox({
               insight.hasCustomContext = !!(contextData.userContext?.trim());
             }
           } catch (error) {
-            logger.component("MetricInsightBox", `Context check failed for versioned insight ${insight.metricName}:`, error);
+            logger.component("MetricInsightBox", `Context check failed for insight ${insight.metricName}:`, error);
             insight.hasCustomContext = false;
           }
         }
@@ -267,15 +271,15 @@ export function MetricInsightBox({
   // Show "Regenerating insights..." if version status indicates generation in progress
   const isRegenerating = versionStatus?.isGenerating || isCheckingVersion;
 
-  // Use versioned insights if available, otherwise fall back to preloaded insight
+  // Use canonical insights if available, otherwise fall back to preloaded insight
   useEffect(() => {
-    if (versionedInsights?.status === 'available' && versionedInsights.insights) {
-      const matchingInsight = versionedInsights.insights.find(
+    if (canonicalInsights?.status === 'available' && canonicalInsights.insights) {
+      const matchingInsight = canonicalInsights.insights.find(
         (insight: any) => insight.metricName === metricName
       );
       
       if (matchingInsight) {
-        logger.component("MetricInsightBox", `Using versioned insight for ${metricName}`);
+        logger.component("MetricInsightBox", `Using canonical insight for ${metricName}`);
         setInsight({
           contextText: matchingInsight.contextText,
           insightText: matchingInsight.insightText,
@@ -290,7 +294,7 @@ export function MetricInsightBox({
         }
       }
     }
-  }, [versionedInsights, metricName, onStatusChange]);
+  }, [canonicalInsights, metricName, onStatusChange]);
   
   if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
     return (
