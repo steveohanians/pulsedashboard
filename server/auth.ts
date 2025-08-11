@@ -31,6 +31,83 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Standardized middleware functions with consistent error codes
+export function requireAuth(req: any, res: any, next: any) {
+  // Development mode: auto-authenticate admin user if no one is logged in
+  if (!req.isAuthenticated() && process.env.NODE_ENV === 'development') {
+    logger.info('Development auto-login attempted', { endpoint: req.originalUrl });
+    return storage.getUser('admin-user-id').then(adminUser => {
+      if (adminUser) {
+        req.login(adminUser, (err: any) => {
+          if (err) {
+            logger.warn('Development auto-login failed in requireAuth', { error: err.message });
+            return res.status(401).json({ 
+              code: "UNAUTHENTICATED", 
+              message: "Authentication required" 
+            });
+          }
+          logger.info('Development auto-login successful in requireAuth', { userId: adminUser.id });
+          return next();
+        });
+      } else {
+        return res.status(401).json({ 
+          code: "UNAUTHENTICATED", 
+          message: "Authentication required" 
+        });
+      }
+    }).catch((error: Error) => {
+      logger.warn('Failed to auto-authenticate in requireAuth', { error: error.message });
+      return res.status(401).json({ 
+        code: "UNAUTHENTICATED", 
+        message: "Authentication required" 
+      });
+    });
+  }
+  
+  if (!req.isAuthenticated()) {
+    logger.warn('Unauthorized access attempt', { 
+      endpoint: req.originalUrl,
+      method: req.method,
+      ip: req.ip
+    });
+    return res.status(401).json({ 
+      code: "UNAUTHENTICATED", 
+      message: "Authentication required" 
+    });
+  }
+  next();
+}
+
+export function requireAdmin(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    logger.warn('Unauthenticated admin access attempt', { 
+      endpoint: req.originalUrl,
+      method: req.method,
+      ip: req.ip
+    });
+    return res.status(401).json({ 
+      code: "UNAUTHENTICATED", 
+      message: "Authentication required" 
+    });
+  }
+  
+  if (req.user.role !== "Admin") {
+    logger.warn('Non-admin access attempt to admin route', { 
+      endpoint: req.originalUrl,
+      method: req.method,
+      userId: req.user.id,
+      userRole: req.user.role,
+      ip: req.ip
+    });
+    return res.status(403).json({ 
+      code: "FORBIDDEN", 
+      message: "Admin access required" 
+    });
+  }
+  
+  next();
+}
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: requireSessionSecret(),
