@@ -2,6 +2,7 @@ import { storage } from '../../storage';
 import { GA4DataService } from './PulseDataService';
 import logger from '../../utils/logging/logger';
 import type { Metric } from '@shared/schema';
+import { ga4StatusRegistry } from './StatusRegistry';
 
 // Environment flag controls for rollback safety
 const GA4_FORCE_ENABLED = process.env.GA4_FORCE_ENABLED === 'true';
@@ -21,6 +22,7 @@ logger.info('GA4 Feature Flags:', {
 interface LockInfo {
   promise: Promise<{ success: boolean; dataType: 'daily' | 'monthly'; error?: string }>;
   timestamp: number;
+  statusKey?: string; // Link to status registry
 }
 
 // In-memory locking mechanism for per-period fetch coordination
@@ -29,20 +31,36 @@ const activeFetches = new Map<string, LockInfo>();
 /**
  * Acquire a lock for a specific GA4 key (clientId + period) with TTL enforcement
  * Prevents concurrent fetches for the same GA4 key and cleans up stale locks
+ * Now includes status registry integration and jitter/backoff
  */
-async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boolean> {
+async function acquireLock(
+  lockKey: string, 
+  clientId: string, 
+  timePeriod: string,
+  ttlMs: number = 300000,
+  forceRefresh: boolean = false
+): Promise<boolean> {
   const now = Date.now();
   
-  // Clean up expired locks to prevent memory leaks
-  for (const [key, lockInfo] of Array.from(activeFetches.entries())) {
+  // Clean up expired locks to prevent memory leaks (snapshot iteration for safety)
+  const lockEntries = Array.from(activeFetches.entries());
+  for (const [key, lockInfo] of lockEntries) {
     if (now - lockInfo.timestamp > ttlMs) {
       activeFetches.delete(key);
+      
+      // Complete status tracking for expired lock
+      if (lockInfo.statusKey) {
+        ga4StatusRegistry.completeFetch(lockInfo.statusKey, false, 'monthly', 'Lock expired due to TTL');
+      }
+      
       logger.warn(`Cleaned up expired lock: ${key}`);
     }
   }
   
   const existingLock = activeFetches.get(lockKey);
-  if (existingLock) {
+  if (existingLock && !forceRefresh) {
+    logger.info(`Lock exists for ${lockKey}, waiting for completion`);
+    
     // Wait for existing fetch to complete, but with timeout protection
     try {
       await Promise.race([
@@ -52,20 +70,60 @@ async function acquireLock(lockKey: string, ttlMs: number = 300000): Promise<boo
     } catch (error) {
       // If existing fetch failed or timed out, clean up and proceed
       activeFetches.delete(lockKey);
+      
+      if (existingLock.statusKey) {
+        ga4StatusRegistry.completeFetch(existingLock.statusKey, false, 'monthly', 
+          `Lock timeout: ${(error as Error).message}`);
+      }
+      
+      logger.warn(`Lock wait failed for ${lockKey}:`, error);
     }
     
     // Double-check lock status after waiting
     return !activeFetches.has(lockKey);
   }
   
-  return true; // No existing lock, can proceed
+  // Force refresh: expire existing lock if admin requested
+  if (existingLock && forceRefresh) {
+    logger.info(`Force refresh requested for ${lockKey}, expiring existing lock`);
+    
+    activeFetches.delete(lockKey);
+    if (existingLock.statusKey) {
+      ga4StatusRegistry.completeFetch(existingLock.statusKey, false, 'monthly', 'Force expired by admin');
+    }
+    
+    ga4StatusRegistry.forceExpireFetch(clientId, timePeriod);
+  }
+  
+  // Add jitter to prevent thundering herd when multiple clients start simultaneously
+  if (!forceRefresh) {
+    const jitterDelay = ga4StatusRegistry.generateJitteredDelay(500); // 500ms base with jitter
+    await new Promise(resolve => setTimeout(resolve, jitterDelay));
+    logger.debug(`Applied jitter delay of ${Math.round(jitterDelay)}ms for ${lockKey}`);
+  }
+  
+  return true; // Can proceed with fetch
 }
 
 /**
- * Release lock for a specific GA4 key
+ * Release lock for a specific GA4 key with status completion
  */
-function releaseLock(lockKey: string): void {
+function releaseLock(
+  lockKey: string, 
+  success: boolean = true, 
+  dataType: 'daily' | 'monthly' = 'monthly',
+  error?: string
+): void {
+  const lockInfo = activeFetches.get(lockKey);
+  
+  // Complete status tracking
+  if (lockInfo?.statusKey) {
+    ga4StatusRegistry.completeFetch(lockInfo.statusKey, success, dataType, error);
+  }
+  
   activeFetches.delete(lockKey);
+  
+  logger.debug(`Released lock: ${lockKey}`, { success, dataType, error: error?.substring(0, 100) });
 }
 
 /**
@@ -107,9 +165,9 @@ export class SmartGA4DataFetcher {
 
   /**
    * Smart 15-month GA4 data fetching with intelligent storage optimization
-   * Enhanced with force parameter to bypass cached reads and always refresh data
+   * Enhanced with status tracking, force parameter to bypass cached reads and always refresh data
    */
-  async fetch15MonthData(clientId: string, force?: boolean): Promise<{
+  async fetch15MonthData(clientId: string, force?: boolean, timePeriod?: string): Promise<{
     success: boolean;
     periodsProcessed: number;
     dailyDataPeriods: string[];
@@ -165,7 +223,7 @@ export class SmartGA4DataFetcher {
         try {
           // Conditionally acquire lock for this specific period
           if (GA4_LOCKS_ENABLED) {
-            const lockAcquired = await acquireLock(lockKey);
+            const lockAcquired = await acquireLock(lockKey, clientId, period.period, 300000, force);
             
             if (!lockAcquired) {
               result.errors.push(`Skipped ${period.period}: concurrent fetch in progress`);
@@ -180,9 +238,11 @@ export class SmartGA4DataFetcher {
           const fetchPromise = this.processPeriodData(clientId, period, existingDataStatus, shouldBypassCache);
           
           if (GA4_LOCKS_ENABLED) {
+            const statusKey = ga4StatusRegistry.startFetch(clientId, period.period);
             activeFetches.set(lockKey, {
               promise: fetchPromise,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              statusKey
             });
           }
 
@@ -201,7 +261,7 @@ export class SmartGA4DataFetcher {
           } finally {
             // Always release lock after processing (if locks enabled)
             if (GA4_LOCKS_ENABLED) {
-              releaseLock(lockKey);
+              releaseLock(lockKey, processed.success, processed.dataType, processed.error);
               acquiredLocks.delete(lockKey);
             }
           }
@@ -211,7 +271,7 @@ export class SmartGA4DataFetcher {
           
           // Ensure lock is released on error (if locks enabled)
           if (GA4_LOCKS_ENABLED && acquiredLocks.has(lockKey)) {
-            releaseLock(lockKey);
+            releaseLock(lockKey, false, 'monthly', errorMessage);
             acquiredLocks.delete(lockKey);
           }
         }

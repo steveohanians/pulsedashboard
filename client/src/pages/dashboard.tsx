@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles, RefreshCw } from "lucide-react";
+import StatusBanner from "@/components/StatusBanner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { MetricsChart } from "@/components/charts/metrics-chart";
@@ -1363,6 +1364,13 @@ export default function Dashboard() {
 
         {/* Enhanced Main Content - Responsive */}
         <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto" id="dashboard-content">
+          
+          {/* GA4 Status Banner */}
+          <StatusBanner 
+            clientId={user?.clientId || "demo-client-id"} 
+            timePeriod={timePeriod}
+            isAdmin={user?.role === "Admin"}
+          />
         {/* Enhanced Filters Section - Responsive */}
         <div className="filters-section pdf-hide grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
           <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">

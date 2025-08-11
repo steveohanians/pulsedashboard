@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { ga4DataService } from "./services/ga4/PulseDataService";
+import ga4StatusRouter from "./routes/ga4StatusRoute";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import multer from "multer";
@@ -3015,6 +3016,7 @@ export function registerRoutes(app: Express): Server {
   // GA4 Integration Routes
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
+  app.use("/api/ga4-data", ga4StatusRouter);
   app.use("/api/admin/ga4", adminGA4Route);
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
 
