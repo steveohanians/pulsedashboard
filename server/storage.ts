@@ -13,7 +13,9 @@ import {
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
   type InsightContext, type InsertInsightContext, type UpdateInsightContext,
   type FilterOption, type InsertFilterOption, type UpdateFilterOption,
-  type GA4PropertyAccess, type InsertGA4PropertyAccess
+  type GA4PropertyAccess, type InsertGA4PropertyAccess,
+  validateCanonicalMetricEnvelope,
+  type CanonicalMetricEnvelope
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, ne, isNull, inArray, sql, like, desc } from "drizzle-orm";
@@ -23,6 +25,7 @@ import { pool } from "./db";
 import { DatabaseRepository } from "./utils/databaseUtils";
 import logger from "./utils/logging/logger";
 import crypto from 'crypto';
+import { transformToCanonical } from "./utils/metricTransformers";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -871,7 +874,82 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMetric(insertMetric: InsertMetric): Promise<Metric> {
-    return await this.metricRepo.create(insertMetric);
+    try {
+      // Enhanced metric creation with canonical envelope validation
+      const metricData = { ...insertMetric };
+      
+      // Check if FEATURE_CANONICAL_ENVELOPE is enabled
+      const enableCanonicalEnvelope = process.env.FEATURE_CANONICAL_ENVELOPE === 'true';
+      
+      if (enableCanonicalEnvelope && metricData.value) {
+        // Transform raw value to canonical envelope if feature is enabled
+        logger.debug('Creating metric with canonical envelope transformation', { 
+          metricName: metricData.metricName, 
+          sourceType: metricData.sourceType 
+        });
+        
+        try {
+          // Extract dimensions from existing data
+          const dimensions: { deviceCategory?: string; channel?: string } = {};
+          if (metricData.channel) {
+            // Determine if channel is a device or traffic channel
+            if (['Desktop', 'Mobile', 'Tablet'].includes(metricData.channel)) {
+              dimensions.deviceCategory = metricData.channel;
+            } else {
+              dimensions.channel = metricData.channel;
+            }
+          }
+          
+          // Transform to canonical envelope
+          const canonicalEnvelope = transformToCanonical(
+            metricData.metricName,
+            metricData.value,
+            metricData.timePeriod,
+            metricData.sourceType,
+            Object.keys(dimensions).length > 0 ? dimensions : undefined
+          );
+          
+          // Validate the canonical envelope
+          validateCanonicalMetricEnvelope(canonicalEnvelope);
+          
+          // Set canonical envelope and keep legacy value for compatibility
+          metricData.canonicalEnvelope = canonicalEnvelope;
+          
+          logger.debug('Successfully created canonical envelope for metric', { 
+            metricName: metricData.metricName,
+            envelopePreview: { 
+              seriesCount: canonicalEnvelope.series.length,
+              sourceType: canonicalEnvelope.meta.sourceType,
+              units: canonicalEnvelope.meta.units
+            }
+          });
+          
+        } catch (envelopeError) {
+          logger.error('Failed to create canonical envelope for metric', { 
+            error: envelopeError,
+            metricName: metricData.metricName,
+            sourceType: metricData.sourceType
+          });
+          
+          // Return 500 with SCHEMA_MISMATCH as specified in requirements
+          throw new Error(`SCHEMA_MISMATCH: Invalid canonical metric envelope: ${(envelopeError as Error).message}`);
+        }
+      }
+      
+      // Use the repository for creation but pass the enhanced metric data
+      return await this.metricRepo.create(metricData);
+      
+    } catch (error) {
+      if ((error as Error).message.includes('SCHEMA_MISMATCH')) {
+        throw error; // Re-throw schema validation errors
+      }
+      
+      logger.error('Failed to create metric', { 
+        error: (error as Error).message,
+        metricName: insertMetric.metricName
+      });
+      throw error;
+    }
   }
 
   async clearMetricsByName(metricName: string): Promise<void> {

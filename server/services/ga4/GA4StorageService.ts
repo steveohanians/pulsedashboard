@@ -8,6 +8,7 @@ import { storage } from '../../storage';
 import logger from '../../utils/logging/logger';
 import { METRIC_NAMES } from './constants';
 import type { GA4MetricData, GA4DailyMetric, ExistingDataStatus, DataPeriod } from './types';
+import { transformGA4ToCanonical } from '../../utils/metricTransformers';
 
 export class GA4StorageService {
 
@@ -117,14 +118,39 @@ export class GA4StorageService {
       { name: METRIC_NAMES.SESSIONS_PER_USER, value: data.sessionsPerUser.toFixed(2) }
     ];
 
+    const enableCanonicalEnvelope = process.env.FEATURE_CANONICAL_ENVELOPE === 'true';
+
     for (const metric of metrics) {
-      await storage.createMetric({
+      let metricData: any = {
         clientId,
         metricName: metric.name,
         value: metric.value,
         sourceType: 'Client',
         timePeriod: period
-      });
+      };
+
+      // Add canonical envelope transformation if feature is enabled
+      if (enableCanonicalEnvelope) {
+        try {
+          const canonicalEnvelope = transformGA4ToCanonical(
+            metric.name,
+            parseFloat(metric.value),
+            period
+          );
+          metricData.canonicalEnvelope = canonicalEnvelope;
+          
+          logger.debug(`Created canonical envelope for ${metric.name}`, {
+            sourceType: canonicalEnvelope.meta.sourceType,
+            units: canonicalEnvelope.meta.units,
+            seriesCount: canonicalEnvelope.series.length
+          });
+        } catch (error) {
+          logger.warn(`Failed to create canonical envelope for ${metric.name}:`, error);
+          // Continue with legacy format if transformation fails
+        }
+      }
+
+      await storage.createMetric(metricData);
     }
   }
 

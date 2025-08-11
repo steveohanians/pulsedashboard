@@ -12,6 +12,54 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ===== CANONICAL METRIC ENVELOPE SCHEMAS =====
+
+/**
+ * Canonical Metric Envelope Schema
+ * 
+ * Standardizes all metrics stored in Postgres to follow a unified JSON structure
+ * so chart readers never need to branch by source type.
+ */
+
+export const CanonicalMetricDimensionsSchema = z.object({
+  deviceCategory: z.string().optional(), // "Desktop", "Mobile", "Tablet"
+  channel: z.string().optional(), // "Organic Search", "Direct", "Social Media", etc.
+}).strict();
+
+export const CanonicalMetricSeriesSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  value: z.number(),
+  dimensions: CanonicalMetricDimensionsSchema.optional()
+}).strict();
+
+export const CanonicalMetricMetaSchema = z.object({
+  sourceType: z.enum(["GA4", "SEMrush", "DataForSEO"]),
+  units: z.string(), // "percentage", "minutes", "count", "sessions", etc.
+  notes: z.string().optional()
+}).strict();
+
+export const CanonicalMetricEnvelopeSchema = z.object({
+  series: z.array(CanonicalMetricSeriesSchema).min(1, "Series must contain at least one data point"),
+  meta: CanonicalMetricMetaSchema
+}).strict();
+
+// Type exports for canonical envelope
+export type CanonicalMetricDimensions = z.infer<typeof CanonicalMetricDimensionsSchema>;
+export type CanonicalMetricSeries = z.infer<typeof CanonicalMetricSeriesSchema>;
+export type CanonicalMetricMeta = z.infer<typeof CanonicalMetricMetaSchema>;
+export type CanonicalMetricEnvelope = z.infer<typeof CanonicalMetricEnvelopeSchema>;
+
+/**
+ * Validation helper for canonical metric envelopes
+ */
+export function validateCanonicalMetricEnvelope(data: unknown): CanonicalMetricEnvelope {
+  try {
+    return CanonicalMetricEnvelopeSchema.parse(data);
+  } catch (error) {
+    throw new Error(`Invalid canonical metric envelope: ${error instanceof z.ZodError ? error.message : String(error)}`);
+  }
+}
+
 // Enums
 export const roleEnum = pgEnum("role", ["Admin", "User"]);
 export const statusEnum = pgEnum("status", ["Active", "Inactive", "Invited"]);
@@ -124,7 +172,8 @@ export const metrics = pgTable("metrics", {
   cdPortfolioCompanyId: varchar("cd_portfolio_company_id").references(() => cdPortfolioCompanies.id),
   benchmarkCompanyId: varchar("benchmark_company_id").references(() => benchmarkCompanies.id),
   metricName: text("metric_name").notNull(),
-  value: jsonb("value").notNull(), // Changed to jsonb to support complex data structures
+  value: jsonb("value"), // Legacy field - contains raw data during migration
+  canonicalEnvelope: jsonb("canonical_envelope"), // New canonical format
   sourceType: sourceTypeEnum("source_type").notNull(),
   timePeriod: text("time_period").notNull(), // YYYY-MM format
   channel: varchar("channel", { length: 50 }), // For traffic channels breakdown

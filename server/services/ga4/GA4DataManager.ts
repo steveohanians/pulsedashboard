@@ -19,6 +19,7 @@ import type {
   DataPeriod,
   ExistingDataStatus 
 } from './types';
+import { transformGA4ToCanonical } from '../../utils/metricTransformers';
 
 export class GA4DataManager {
   private authService: GA4AuthenticationService;
