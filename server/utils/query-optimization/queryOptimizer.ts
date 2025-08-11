@@ -346,6 +346,9 @@ export async function getDashboardDataOptimized(
   
   const filters = { businessSize, industryVertical };
   
+  // Check for both canonical and raw "Last Month" formats - moved up for early use
+  const isLastMonth = timePeriod === 'Last Month' || timePeriod === 'LAST_MONTH' || timePeriod === 'last_month';
+  
   if (periodsToQuery.includes('2025-07') || periodsToQuery.includes('2025-06')) {
     const lastMonthPeriod = periodsToQuery.find(p => p === '2025-07' || p === '2025-06');
     if (lastMonthPeriod) {
@@ -434,7 +437,7 @@ export async function getDashboardDataOptimized(
   );
 
   // Layer B: Apply daily → monthly coalescing when monthly data is missing but daily exists  
-  if ((timePeriod === 'last_month' || timePeriod === 'Last Month') && periodsToQuery.length === 1) {
+  if (isLastMonth && periodsToQuery.length === 1) {
     const targetMonth = periodsToQuery[0]; // Should be 2025-07
     
     // Check if monthly data exists for simple metrics
@@ -483,22 +486,56 @@ export async function getDashboardDataOptimized(
   
 
   
-  const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || timePeriod === 'Last Month';
+  const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || isLastMonth;
   let timeSeriesData = shouldCreateTimeSeriesData ? groupMetricsByPeriod(processedData) : undefined;
   
-  if (timePeriod === 'Last Month' && timeSeriesData) {
+  logger.info(`🔍 TIME SERIES LOGIC: timePeriod="${timePeriod}", isLastMonth=${isLastMonth}, shouldCreateTimeSeriesData=${shouldCreateTimeSeriesData}, periodsCount=${periodsToQuery.length}`);
+  
+  if (isLastMonth && shouldCreateTimeSeriesData) {
     try {
       const lastMonthPeriod = periodsToQuery[0]; // Should be 2025-07
-      const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
       
-      if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
-        logger.debug(`📊 Found ${cachedDailyData.length} cached daily metrics for grouping`);
+      // FIRST: Try to actively fetch daily GA4 data for Last Month grouping
+      logger.info(`🔍 LAST MONTH LOGIC: Actively fetching daily GA4 data for ${lastMonthPeriod}`);
+      
+      let dailyDataForGrouping = null;
+      try {
+        const dailyPattern = `${lastMonthPeriod}-daily-%`;
+        const freshDailyMetrics = await storage.getMetricsForTimePeriodPattern(client.id, dailyPattern);
         
-        const sessionDurationMetrics = cachedDailyData.filter(m => m.metricName === 'Session Duration');
-        logger.debug(`Session Duration metrics in cache: ${sessionDurationMetrics.length}`);
+        if (freshDailyMetrics.length > 0) {
+          logger.info(`📊 DAILY GA4 FETCH SUCCESS: Found ${freshDailyMetrics.length} daily metrics for grouping`);
+          dailyDataForGrouping = freshDailyMetrics;
+        } else {
+          logger.warn(`⚠️ DAILY GA4 FETCH: No daily metrics found for pattern ${dailyPattern}`);
+        }
+      } catch (error) {
+        logger.error(`❌ DAILY GA4 FETCH ERROR: ${error}`);
+      }
+      
+      // FALLBACK: Check cached daily data if fresh fetch failed
+      if (!dailyDataForGrouping) {
+        const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
+        if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
+          logger.info(`📦 FALLBACK: Using ${cachedDailyData.length} cached daily metrics for grouping`);
+          dailyDataForGrouping = cachedDailyData;
+        }
+      }
+      
+      if (dailyDataForGrouping && Array.isArray(dailyDataForGrouping) && dailyDataForGrouping.length > 0) {
+        // Log daily data details for debugging
+        const simpleMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+        const dailySimpleMetrics = dailyDataForGrouping.filter(m => simpleMetrics.includes(m.metricName));
+        
+        logger.info(`📊 DAILY DATA BREAKDOWN: Total: ${dailyDataForGrouping.length}, Simple metrics: ${dailySimpleMetrics.length}`);
+        
+        simpleMetrics.forEach(metricName => {
+          const count = dailySimpleMetrics.filter(m => m.metricName === metricName).length;
+          logger.info(`  - ${metricName}: ${count} daily records`);
+        });
         
         const dailyByDate: Record<string, any[]> = {};
-        cachedDailyData.forEach(metric => {
+        dailyDataForGrouping.forEach(metric => {
           const dayKey = metric.timePeriod; // Format: 2025-07-daily-20250701
           if (!dailyByDate[dayKey]) {
             dailyByDate[dayKey] = [];
@@ -508,11 +545,13 @@ export async function getDashboardDataOptimized(
         
         const sortedDays = Object.keys(dailyByDate).sort();
         const daysInMonth = sortedDays.length;
-        const groupSize = Math.ceil(daysInMonth / 6);
+        const groupSize = Math.ceil(daysInMonth / 5); // Target 5 groups as per requirements
+        
+        logger.info(`📅 GROUPING STRATEGY: ${daysInMonth} days → 5 groups of ~${groupSize} days each`);
         
         const groupedPeriods: Record<string, any[]> = {};
         
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 5; i++) {
           const startIdx = i * groupSize;
           const endIdx = Math.min(startIdx + groupSize, daysInMonth);
           const daysInGroup = sortedDays.slice(startIdx, endIdx);
@@ -522,11 +561,14 @@ export async function getDashboardDataOptimized(
           const firstDay = daysInGroup[0].split('-daily-')[1];
           const lastDay = daysInGroup[daysInGroup.length - 1].split('-daily-')[1];
           
-          const firstDate = new Date(parseInt(firstDay.substring(0, 4)), parseInt(firstDay.substring(4, 6)) - 1, parseInt(firstDay.substring(6, 8)));
-          const lastDate = new Date(parseInt(lastDay.substring(0, 4)), parseInt(lastDay.substring(4, 6)) - 1, parseInt(lastDay.substring(6, 8)));
+          // Convert YYYYMMDD to readable dates for logging
+          const firstDate = `${firstDay.substring(0, 4)}-${firstDay.substring(4, 6)}-${firstDay.substring(6, 8)}`;
+          const lastDate = `${lastDay.substring(0, 4)}-${lastDay.substring(4, 6)}-${lastDay.substring(6, 8)}`;
           
           const periodKey = `${lastMonthPeriod}-group-${i + 1}`;
           groupedPeriods[periodKey] = [];
+          
+          logger.info(`📊 GROUP ${i + 1}: ${firstDate} to ${lastDate} (${daysInGroup.length} days)`);
           
           const allMetricsInGroup: Record<string, number[]> = {};
           
@@ -560,19 +602,25 @@ export async function getDashboardDataOptimized(
               competitorId: null
             });
             
-            // Debug Session Duration grouping
-            if (metricName === 'Session Duration') {
-              logger.debug(`Session Duration group ${i + 1} average: ${average} from ${values.length} days`);
+            // Log each simple metric grouping
+            if (simpleMetrics.includes(metricName)) {
+              logger.info(`  → ${metricName}: ${average.toFixed(2)} (avg of ${values.length} daily values)`);
             }
           });
         }
         
         if (Object.keys(groupedPeriods).length > 0) {
-          logger.debug(`Created ${Object.keys(groupedPeriods).length} grouped periods for Session Duration timeSeriesData`);
+          logger.info(`✅ CREATED ${Object.keys(groupedPeriods).length} grouped periods for Last Month time series`);
+          
+          // Add competitor and CD_Avg metrics as single monthly points across all groups
+          const competitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
           
+          logger.info(`📈 ADDING MONTHLY DATA: ${competitorMetrics.length} competitor metrics, ${cdAvgMetrics.length} CD_Avg metrics`);
+          
           Object.keys(groupedPeriods).forEach(periodKey => {
-            cdAvgMetrics.forEach(metric => {
+            // Add both CD_Avg and Competitor metrics to each grouped period
+            [...cdAvgMetrics, ...competitorMetrics].forEach(metric => {
               let processedValue = metric.value;
               if ((metric.metricName === 'Traffic Channels' || metric.metricName === 'Device Distribution') && metric.sourceType === 'CD_Avg') {
                 if (typeof metric.value === 'string' && metric.value.includes('{')) {
@@ -598,20 +646,32 @@ export async function getDashboardDataOptimized(
               groupedPeriods[periodKey].push({
                 metricName: metric.metricName,
                 value: processedValue,
-                sourceType: 'CD_Avg',
+                sourceType: metric.sourceType, // Keep original sourceType (CD_Avg or Competitor)
                 timePeriod: periodKey,
                 channel: metric.channel,
-                competitorId: null
+                competitorId: metric.competitorId || null
               });
             });
           });
   
           timeSeriesData = groupedPeriods;
           periodsToQuery = Object.keys(groupedPeriods).sort();
+          
+          // Log final payload structure 
+          logger.info(`🎯 FINAL TIME SERIES PAYLOAD: ${periodsToQuery.length} periods`);
+          periodsToQuery.forEach(period => {
+            const periodData = groupedPeriods[period];
+            const clientCount = periodData.filter(m => m.sourceType === 'Client').length;
+            const competitorCount = periodData.filter(m => m.sourceType === 'Competitor').length;
+            const cdAvgCount = periodData.filter(m => m.sourceType === 'CD_Avg').length;
+            logger.info(`  ${period}: Client=${clientCount}, Competitor=${competitorCount}, CD_Avg=${cdAvgCount}`);
+          });
         }
+      } else {
+        logger.warn(`❌ NO DAILY DATA: Cannot create grouped time series for Last Month - falling back to single monthly points`);
       }
     } catch (error) {
-      console.warn('Could not include daily data in time series:', error);
+      logger.error('Could not create daily grouped time series:', error);
     }
   }
   

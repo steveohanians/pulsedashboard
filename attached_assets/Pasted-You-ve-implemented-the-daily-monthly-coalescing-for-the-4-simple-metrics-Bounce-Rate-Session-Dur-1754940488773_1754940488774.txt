@@ -1,0 +1,45 @@
+You’ve implemented the daily → monthly coalescing for the 4 simple metrics (Bounce Rate, Session Duration, Pages per Session, Sessions per User), but the charts for “Last Month” are still not rendering as they used to.
+
+Here’s the actual intended behavior that is still broken:
+
+For Last Month, GA4 provides daily client data for Bounce Rate, Session Duration, Pages per Session, and Sessions per User.
+
+SEMrush provides monthly data for CD Portfolio Avg and Competitors — daily data does not exist for these.
+
+The frontend chart logic takes that GA4 daily data and groups it into 5 groupings of 6–7 days for that month, showing day-range variation for the client.
+
+CD Portfolio Avg and Competitor lines remain a single monthly point because their data source is monthly only.
+
+Chart types:
+
+Session Duration → Bar chart (showing grouped day ranges for Client, single bar for CD Avg and Competitors).
+
+Bounce Rate, Pages per Session, Sessions per User → Line charts (showing grouped day ranges for Client, single flat line for CD Avg and Competitors).
+
+What’s happening now:
+
+We’re getting only a single monthly GA4 metric for the client, which makes Replit think charts are working, but they don’t display correctly because the daily data pipeline isn’t running for “Last Month.”
+
+This is why we see a single flat point instead of 5 grouped segments for the client line/bar.
+
+What needs to be fixed:
+
+Restore the original daily GA4 fetch + grouping logic for “Last Month” in the backend so that the API returns 5 grouped data points for the client, not just the monthly coalesced number.
+
+Keep SEMrush monthly CD Portfolio Avg and Competitor values as single points (line stays flat for them).
+
+Ensure timeSeriesData in the /api/dashboard/:clientId response includes these grouped daily values for the client while still including the monthly competitor/CD Avg data.
+
+Confirm that Session Duration data is converted to minutes for the bar chart and the other 3 metrics are rendered as line charts.
+
+Add backend logging to show:
+
+Count of daily GA4 records retrieved for the selected month.
+
+Grouping ranges used (e.g., “2025-07-01 to 2025-07-06”).
+
+Final API payload structure for these metrics.
+
+Expected outcome:
+
+Selecting “Last Month” in the dashboard will show 5 grouped bars/points for the client and a flat competitor/CD Avg line/bar — exactly how it used to work.
