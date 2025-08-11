@@ -483,7 +483,14 @@ export class GA4DataManager {
   /**
    * Get date range for a period (YYYY-MM format)
    */
+  /**
+   * Get date range for a period using canonical time period system
+   * @param period Period in YYYY-MM format
+   * @returns GA4-compatible date range
+   */
   private getDateRangeForPeriod(period: string): { startDate: string; endDate: string } {
+    // For now, maintain backward compatibility with existing period format
+    // Future enhancement: integrate fully with canonical time periods
     const [year, month] = period.split('-');
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
     const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of month
@@ -492,5 +499,15 @@ export class GA4DataManager {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0]
     };
+  }
+
+  /**
+   * Convert canonical time period to GA4 date range
+   * @param canonicalTimePeriod Canonical time period object
+   * @returns GA4-compatible date range
+   */
+  private async getDateRangeFromCanonical(canonicalTimePeriod: any): Promise<{ startDate: string; endDate: string }> {
+    const { toGa4Range } = await import("../../../shared/timePeriod");
+    return toGa4Range(canonicalTimePeriod);
   }
 }

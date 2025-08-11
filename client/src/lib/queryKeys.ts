@@ -10,11 +10,11 @@
 
 export const QueryKeys = {
   /**
-   * Dashboard data query key
+   * Dashboard data query key (supports canonical time periods)
    * @param clientId - Client identifier
-   * @param timePeriod - Time period for data filtering
+   * @param timePeriod - Time period for data filtering (string or canonical object)
    */
-  dashboard: (clientId: string, timePeriod: string = "Last Month") => 
+  dashboard: (clientId: string, timePeriod: any = "Last Month") => 
     ["/api/dashboard", clientId, timePeriod] as const,
 
   /**
@@ -24,11 +24,11 @@ export const QueryKeys = {
     ["/api/filters"] as const,
 
   /**
-   * AI insights query key
+   * AI insights query key (supports canonical time periods)
    * @param clientId - Client identifier  
-   * @param timePeriod - Time period for insights
+   * @param timePeriod - Time period for insights (string or canonical object)
    */
-  aiInsights: (clientId: string, timePeriod: string = "Last Month") => 
+  aiInsights: (clientId: string, timePeriod: any = "Last Month") => 
     ["/api/ai-insights", clientId, timePeriod] as const,
 
   /**

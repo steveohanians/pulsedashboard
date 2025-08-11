@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { ga4DataService } from "./services/ga4/PulseDataService";
+import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
@@ -257,11 +258,30 @@ export function registerRoutes(app: Express): Server {
     try {
       const { clientId } = req.params;
       
-      // Validate and normalize request parameters
-      const requestValidation = DashboardRequestSchema.safeParse({
-        clientId,
-        timePeriod: normalizeTimePeriod(req.query.timePeriod as string),
-        businessSize: req.query.businessSize as string || "All",
+      // Import canonical time period functions
+      const { parseUILabel, toDbRange, isCanonicalTimePeriod } = await import("../shared/timePeriod");
+      
+      // Validate and canonicalize time period
+      let canonicalTimePeriod;
+      try {
+        const rawTimePeriod = normalizeTimePeriod(req.query.timePeriod as string);
+        canonicalTimePeriod = parseUILabel(rawTimePeriod);
+      } catch (error) {
+        return res.status(422).json({
+          message: "Invalid time period format",
+          code: "SCHEMA_MISMATCH", 
+          details: (error as Error).message
+        });
+      }
+      
+      // Validate request parameters
+      const requestValidation = z.object({
+        clientId: z.string().min(1),
+        businessSize: z.string(),
+        industryVertical: z.string()
+      }).safeParse({
+        clientId: clientId,
+        businessSize: req.query.businessSize as string || "All", 
         industryVertical: req.query.industryVertical as string || "All"
       });
       
@@ -273,41 +293,21 @@ export function registerRoutes(app: Express): Server {
         });
       }
       
-      const { timePeriod, businessSize, industryVertical } = requestValidation.data;
+      const { businessSize, industryVertical } = requestValidation.data;
       
-      // Generate dynamic period mapping based on current date
-      const { generateDynamicPeriodMapping } = await import("./utils/dateUtils");
-      const periodMapping = generateDynamicPeriodMapping();
+      // Convert canonical time period to database range
+      const dbRange = toDbRange(canonicalTimePeriod);
       
-      let periodsToQuery: string[];
-      if (typeof timePeriod === 'string' && periodMapping[timePeriod]) {
-        periodsToQuery = periodMapping[timePeriod];
-      } else if (typeof timePeriod === 'string' && timePeriod.includes(' to ')) {
-        // Handle custom date range format: "4/30/2025 to 7/31/2025"
-        const [startDateStr, endDateStr] = timePeriod.split(' to ');
-        try {
-          const startDate = new Date(startDateStr);
-          const endDate = new Date(endDateStr);
-          
-          // Generate monthly periods between start and end dates
-          const periods: string[] = [];
-          const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-          const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-          
-          while (current <= end) {
-            const periodStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-            periods.push(periodStr);
-            current.setMonth(current.getMonth() + 1);
-          }
-          
-          periodsToQuery = periods;
-        } catch (error) {
-          logger.error("Invalid custom date range format", { timePeriod, error: (error as Error).message });
-          periodsToQuery = periodMapping["Last Month"];
-        }
-      } else {
-        // Default fallback to Last Month if unknown period
-        periodsToQuery = periodMapping["Last Month"];
+      // Generate monthly periods for database queries
+      const periodsToQuery: string[] = [];
+      const startDate = new Date(dbRange.startMonth + '-01');
+      const endDate = new Date(dbRange.endMonth + '-01');
+      
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        const periodStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        periodsToQuery.push(periodStr);
+        current.setMonth(current.getMonth() + 1);
       }
       
       // Verify user has access to this client
@@ -335,7 +335,7 @@ export function registerRoutes(app: Express): Server {
         periodsToQuery,
         businessSize as string,
         industryVertical as string,
-        timePeriod as string
+        canonicalTimePeriod.type // Use canonical type instead of raw timePeriod
       );
       
       // Queue AI insights generation in background (non-blocking)
@@ -433,24 +433,38 @@ export function registerRoutes(app: Express): Server {
     try {
       const { clientId } = req.params;
       
-      // Validate and normalize request parameters
-      const requestValidation = InsightsRequestSchema.safeParse({
-        clientId,
-        timePeriod: normalizeTimePeriod(req.query.timePeriod as string)
-      });
+      // Import canonical time period functions
+      const { parseUILabel, generateCacheKey } = await import("../shared/timePeriod");
+      
+      // Validate and canonicalize time period
+      let canonicalTimePeriod;
+      try {
+        const rawTimePeriod = normalizeTimePeriod(req.query.timePeriod as string);
+        canonicalTimePeriod = parseUILabel(rawTimePeriod);
+      } catch (error) {
+        return res.status(422).json({
+          message: "Invalid time period format",
+          code: "SCHEMA_MISMATCH",
+          details: (error as Error).message
+        });
+      }
+      
+      // Validate client ID
+      const requestValidation = z.object({
+        clientId: z.string().min(1)
+      }).safeParse({ clientId });
       
       if (!requestValidation.success) {
         return res.status(400).json({
           message: "Invalid request parameters",
-          code: "SCHEMA_MISMATCH", 
+          code: "SCHEMA_MISMATCH",
           validationErrors: requestValidation.error.errors
         });
       }
       
-      const { timePeriod } = requestValidation.data;
-      
-      // Check cache first (include timePeriod in cache key for consistency)
-      const cacheKey = `insights:${clientId}:${timePeriod}`;
+      // Check cache using canonical cache key with client ID
+      const canonicalCacheKey = generateCacheKey(canonicalTimePeriod);
+      const cacheKey = `insights:${clientId}:${canonicalCacheKey}`;
       const cached = performanceCache.get(cacheKey);
       if (cached) {
         try {
