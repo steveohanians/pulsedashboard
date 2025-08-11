@@ -1,3 +1,4 @@
+import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -49,12 +50,12 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
 
   // Fetch available service accounts
   const { data: serviceAccounts } = useQuery<ServiceAccount[]>({
-    queryKey: ["/api/admin/ga4-service-accounts"],
+    queryKey: AdminQueryKeys.ga4ServiceAccounts(),
   });
 
   // Fetch current property access for this client (single property per client)
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess | null>({
-    queryKey: ["/api/admin/ga4-property-access/client", clientId],
+    queryKey: AdminQueryKeys.ga4PropertyAccessClient(clientId || ''),
     enabled: !!clientId,
   });
 

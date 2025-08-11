@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     isLoading,
   } = useQuery<SelectUser | undefined, Error>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/user"] as const,
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 

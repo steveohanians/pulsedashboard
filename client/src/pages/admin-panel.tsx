@@ -25,6 +25,7 @@ import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
 import { logger } from "@/utils/logger";
+import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
@@ -195,7 +196,7 @@ export default function AdminPanel() {
 
   // Query for fetching portfolio company data
   const companyDataQuery = useQuery({
-    queryKey: ['/api/admin/cd-portfolio', viewingCompanyData?.id, 'data'],
+    queryKey: AdminQueryKeys.cdPortfolioData(viewingCompanyData?.id || ''),
     queryFn: async () => {
       if (!viewingCompanyData?.id) return null;
       return await apiRequest('GET', `/api/admin/cd-portfolio/${viewingCompanyData.id}/data`);
@@ -215,35 +216,35 @@ export default function AdminPanel() {
   }, [location]);
 
   const { data: clients, isLoading: clientsLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/clients"],
+    queryKey: AdminQueryKeys.clients(),
     enabled: user?.role === "Admin",
   });
 
   const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/benchmark-companies"],
+    queryKey: AdminQueryKeys.benchmarkCompanies(),
     enabled: user?.role === "Admin",
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/users"],
+    queryKey: AdminQueryKeys.users(),
     enabled: user?.role === "Admin",
   });
 
   // Query for CD portfolio companies (independent from clients)
   const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/cd-portfolio"],
+    queryKey: AdminQueryKeys.cdPortfolio(),
     enabled: user?.role === "Admin",
   });
 
   // Query for filter options to populate dropdowns dynamically
   const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/filter-options"],
+    queryKey: AdminQueryKeys.filterOptions(),
     enabled: user?.role === "Admin",
   });
 
   // Query for metric prompts
   const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/metric-prompts"],
+    queryKey: AdminQueryKeys.metricPrompts(),
     enabled: user?.role === "Admin",
   });
 
@@ -262,8 +263,8 @@ export default function AdminPanel() {
     },
     onSuccess: (data) => {
 
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/ga4-property-access"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.ga4PropertyAccess() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -292,7 +293,7 @@ export default function AdminPanel() {
       
       // Since the client is now actually deleted from the database,
       // we can safely invalidate the cache to get fresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
       
       toast({
         title: "Client deleted",
@@ -315,7 +316,7 @@ export default function AdminPanel() {
       return await apiRequest("PUT", `/api/admin/benchmark-companies/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -337,7 +338,7 @@ export default function AdminPanel() {
       await apiRequest("DELETE", `/api/admin/benchmark-companies/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       toast({
         title: "Company deleted",
         description: "Benchmark company has been successfully deleted.",
@@ -358,7 +359,7 @@ export default function AdminPanel() {
       return await apiRequest("PUT", `/api/admin/users/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -380,7 +381,7 @@ export default function AdminPanel() {
       await apiRequest("DELETE", `/api/admin/users/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       toast({
         title: "User deleted",
         description: "User has been successfully deleted.",
@@ -424,7 +425,7 @@ export default function AdminPanel() {
       return await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       toast({
         title: "User status updated",
         description: "User access has been successfully updated.",
@@ -445,7 +446,7 @@ export default function AdminPanel() {
       return await apiRequest("POST", "/api/admin/clients", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -467,7 +468,7 @@ export default function AdminPanel() {
       return await apiRequest("POST", "/api/admin/benchmark-companies", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -489,7 +490,7 @@ export default function AdminPanel() {
       return await apiRequest("POST", "/api/admin/users/invite", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -512,7 +513,7 @@ export default function AdminPanel() {
       return await apiRequest("POST", "/api/admin/cd-portfolio", data);
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
       setIsDialogOpen(false);
       setEditingItem(null);
       
@@ -591,11 +592,11 @@ export default function AdminPanel() {
             clearInterval(pollInterval);
             
             // Comprehensive cache invalidation for seamless refresh
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
             
             // Targeted cache invalidation for better performance
-            queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
+            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allDashboards() });
+            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allFilters() });
             
             console.log("🔄 Cache invalidated after portfolio integration completion");
             
@@ -618,7 +619,7 @@ export default function AdminPanel() {
       return await apiRequest("PUT", `/api/admin/cd-portfolio/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -641,9 +642,9 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       // Targeted cache invalidation for faster performance
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cd-portfolio"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allDashboards() });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allFilters() });
       
       console.log("🔄 Cache invalidated after portfolio company deletion");
       
@@ -675,7 +676,7 @@ export default function AdminPanel() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.metricPrompts() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -698,7 +699,7 @@ export default function AdminPanel() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/metric-prompts"] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.metricPrompts() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -3417,7 +3418,7 @@ export default function AdminPanel() {
           open={isCSVImportOpen}
           onOpenChange={setIsCSVImportOpen}
           onImportComplete={() => {
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/benchmark-companies"] });
+            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
           }}
         />
         </div>

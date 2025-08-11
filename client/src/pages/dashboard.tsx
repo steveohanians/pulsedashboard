@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { QueryKeys } from "@shared/http/contracts";
+import { QueryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +64,7 @@ export default function Dashboard() {
       await refetchDashboard();
       
       // Also refresh filters 
-      queryClient.invalidateQueries({ queryKey: ["/api/filters"] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.allFilters() });
       
       toast({
         title: "Dashboard refreshed",
@@ -191,7 +191,7 @@ export default function Dashboard() {
 
   // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
-    queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
+    queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
     queryFn: () => fetch(`/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}`)
       .then(res => res.json()),
     enabled: !!user?.clientId,
@@ -252,9 +252,8 @@ export default function Dashboard() {
       }
       // Invalidate and refetch all related queries with correct key patterns
       queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
-      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.metricInsights(user?.clientId || '') });
       // Force refetch all data immediately
       dashboardQuery.refetch();
       refetchInsights();
@@ -298,9 +297,8 @@ export default function Dashboard() {
       logger.info("Delete mutation onSuccess triggered");
       // Invalidate cache first, then refetch - ensures UI updates properly
       queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: ["/api/insights"] }); // Legacy key
-      queryClient.invalidateQueries({ queryKey: ["/api/metric-insights"] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.metricInsights(user?.clientId || '') });
       // Force refetch all data immediately
       dashboardQuery.refetch();
       refetchInsights();

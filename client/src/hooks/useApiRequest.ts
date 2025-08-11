@@ -15,7 +15,7 @@ interface ApiRequestOptions {
   onError?: (error: Error) => void;
   successMessage?: string;
   errorMessage?: string;
-  invalidateQueries?: string[];
+  invalidateQueries?: (() => readonly unknown[])[];
   showToast?: boolean;
 }
 
@@ -59,8 +59,8 @@ export function useApiRequest<TData = unknown, TVariables = unknown>(
     },
     onSuccess: (data, variables) => {
       // Invalidate specified queries
-      invalidateQueries.forEach(queryKey => {
-        queryClient.invalidateQueries({ queryKey: [queryKey] });
+      invalidateQueries.forEach(queryKeyFn => {
+        queryClient.invalidateQueries({ queryKey: queryKeyFn() });
       });
 
       // Show success toast

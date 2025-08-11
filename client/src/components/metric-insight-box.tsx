@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
-import { QueryKeys } from "@shared/http/contracts";
+import { QueryKeys } from "@/lib/queryKeys";
 
 /** AI-generated insight data structure with performance status */
 interface InsightData {
@@ -98,7 +98,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(clientId, timePeriod) });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight", {
@@ -128,7 +128,7 @@ export function MetricInsightBox({
     onSuccess: (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insights(clientId, timePeriod) });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight with context", {
@@ -218,7 +218,7 @@ export function MetricInsightBox({
                 method: "DELETE",
               }),
             ]);
-            queryClient.invalidateQueries({ queryKey: QueryKeys.insights(clientId, timePeriod) });
+            queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(clientId, timePeriod) });
             logger.component("MetricInsightBox", "Successfully deleted insight and context");
           } catch (error) {
             logger.warn("Failed to delete insight or context", { error });
