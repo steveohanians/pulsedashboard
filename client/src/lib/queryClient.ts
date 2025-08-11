@@ -199,38 +199,8 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-/**
- * Centralized query keys for consistent cache management
- * Uses tuple format for proper cache invalidation patterns
- * Following specification: ["/api/ai-insights", clientId, period]
- */
-export const QueryKeys = {
-  // Dashboard data with client and time period
-  dashboard: (clientId: string, timePeriod?: string) => 
-    timePeriod ? ["/api/dashboard", clientId, timePeriod] : ["/api/dashboard", clientId],
-  
-  // AI Insights with client and canonical period - EXACT FORMAT REQUIRED
-  aiInsights: (clientId: string, canonicalPeriod: string) => 
-    ["/api/ai-insights", clientId, canonicalPeriod],
-    
-  // For individual metric insights  
-  aiInsightByMetric: (clientId: string, metricName: string, canonicalPeriod: string) =>
-    ["/api/ai-insights", clientId, metricName, canonicalPeriod],
-    
-  // Insight context for individual metrics
-  insightContext: (clientId: string, metricName: string) =>
-    ["/api/insight-context", clientId, metricName],
-  
-  // Filters with dependency parameters
-  filters: (businessSize?: string, industryVertical?: string) => 
-    ["/api/filters", businessSize || "All", industryVertical || "All"],
-  
-  // User data
-  user: () => ["/api/user"],
-  
-  // Server boot time for cache busting
-  serverBootTime: () => ["/api/server-boot-time"]
-};
+// QueryKeys are now centralized in @/lib/queryKeys.ts to avoid conflicts
+// Import them there instead of using duplicates here
 
 /**
  * Configured React Query client with optimized defaults for the application

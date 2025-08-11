@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
-import { QueryKeys } from "@/lib/queryClient";
+import { QueryKeys } from "@/lib/queryKeys";
 
 /** AI-generated insight data structure with performance status */
 interface InsightData {
