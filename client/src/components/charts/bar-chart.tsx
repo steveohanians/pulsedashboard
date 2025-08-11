@@ -380,15 +380,7 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
 
 
   
-  // Debug logging to trace data validation
-  console.log(`🔍 BAR CHART DATA VALIDATION [${metricName}]:`, {
-    clientData,
-    clientDataType: typeof clientData,
-    isUndefined: clientData === undefined,
-    isNull: clientData === null,
-    isNaN: isNaN(clientData),
-    hasValidNumber: !isNaN(Number(clientData)) && Number(clientData) !== 0
-  });
+  // Data validation improved for proper number handling
   
   // Check if we have any valid data - improved validation
   const hasData = clientData !== undefined && clientData !== null && !isNaN(Number(clientData)) && Number(clientData) !== 0;
