@@ -49,18 +49,27 @@ export function MetricInsightBox({
 
   // Normalize time period to canonical YYYY-MM format
   const canonicalPeriod = useMemo(() => {
-    if (/^\d{4}-\d{2}$/.test(timePeriod)) {
-      return timePeriod;
-    }
-    if (timePeriod === "Last Month") {
+    // Convert to canonical YYYY-MM format for database consistency
+    const convertToCanonical = (period: string): string => {
+      // Already in YYYY-MM format
+      if (/^\d{4}-\d{2}$/.test(period)) {
+        return period;
+      }
+      
+      // Convert "Last Month" and other legacy formats
+      if (period === "Last Month" || period === "last_month" || !period) {
+        const now = new Date();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+      }
+      
+      // Handle other period formats if needed
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-    }
-    // Default fallback
-    const now = new Date();
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+    };
+    
+    return convertToCanonical(timePeriod);
   }, [timePeriod]);
 
   // Memoize the display month label for consistency
@@ -139,9 +148,9 @@ export function MetricInsightBox({
 
   // Check for versioned insights and show pending states
   const { data: versionStatus, isLoading: isCheckingVersion } = useQuery({
-    queryKey: ["/api/v2/ai-insights", clientId, "status", timePeriod],
+    queryKey: ["/api/v2/ai-insights", clientId, "status", canonicalPeriod],
     queryFn: async () => {
-      const response = await fetch(`/api/v2/ai-insights/${clientId}/status?timePeriod=${encodeURIComponent(timePeriod)}`);
+      const response = await fetch(`/api/v2/ai-insights/${clientId}/status?timePeriod=${encodeURIComponent(canonicalPeriod)}`);
       if (!response.ok) {
         // If versioned endpoint doesn't exist, fall back to legacy behavior
         return null;
@@ -150,14 +159,14 @@ export function MetricInsightBox({
     },
     refetchInterval: 3000, // Poll every 3 seconds for status updates
     refetchIntervalInBackground: true,
-    enabled: !!clientId && !!timePeriod
+    enabled: !!clientId && !!canonicalPeriod
   });
 
   // Query for versioned insights
   const { data: versionedInsights, isLoading: isLoadingVersioned } = useQuery({
-    queryKey: ["/api/v2/ai-insights", clientId, timePeriod],
+    queryKey: ["/api/v2/ai-insights", clientId, canonicalPeriod],
     queryFn: async () => {
-      const response = await fetch(`/api/v2/ai-insights/${clientId}?timePeriod=${encodeURIComponent(timePeriod)}`);
+      const response = await fetch(`/api/v2/ai-insights/${clientId}?timePeriod=${encodeURIComponent(canonicalPeriod)}`);
       if (!response.ok) {
         throw new Error('Failed to fetch versioned insights');
       }
@@ -183,7 +192,7 @@ export function MetricInsightBox({
       
       return data;
     },
-    enabled: !!clientId && !!timePeriod && !versionStatus?.isGenerating
+    enabled: !!clientId && !!canonicalPeriod && !versionStatus?.isGenerating
   });
 
   const generateInsightMutation = useMutation({
@@ -191,7 +200,7 @@ export function MetricInsightBox({
       const response = await fetch(`/api/generate-metric-insight/${clientId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metricName, timePeriod, metricData }),
+        body: JSON.stringify({ metricName, timePeriod: canonicalPeriod, metricData }),
       });
       if (!response.ok) {
         let detail = "";
@@ -221,7 +230,7 @@ export function MetricInsightBox({
       const response = await fetch(`/api/generate-metric-insight-with-context/${clientId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metricName, timePeriod, metricData, userContext }),
+        body: JSON.stringify({ metricName, timePeriod: canonicalPeriod, metricData, userContext }),
       });
       if (!response.ok) {
         let detail = "";
@@ -318,7 +327,7 @@ export function MetricInsightBox({
         hasCustomContext={insight.hasCustomContext || false}
         clientId={clientId}
         metricName={metricName}
-        timePeriod={timePeriod}
+        timePeriod={canonicalPeriod}
         metricData={metricData}
         onRegenerate={async () => {
           logger.component("MetricInsightBox", "Regenerate clicked - checking for existing context");
