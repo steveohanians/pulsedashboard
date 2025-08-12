@@ -357,11 +357,24 @@ export function MetricInsightBox({
     );
   }
 
-  if (insight) {
+  // Decide what to render using single "display text" source
+  const displayInsightText = 
+    insight?.isTyping ? (insight.insightText || "") : (insight?.insightText ?? metricInsight?.insightText ?? "");
+
+  // Empty state wins if forced or there is no text at all
+  const shouldShowEmpty = 
+    !displayInsightText.trim() &&
+    !isLoadingInsights &&
+    !isFetching &&
+    !isRegenerating &&
+    !generateInsightMutation.isPending &&
+    !generateInsightWithContextMutation.isPending;
+
+  if (insight && !shouldShowEmpty) {
     return (
       <AIInsights
         context={insight.contextText || ""}
-        insight={insight.insightText || ""}
+        insight={displayInsightText}
         recommendation={insight.recommendationText || ""}
         status={insight.status}
         isTyping={insight.isTyping}
