@@ -1267,25 +1267,7 @@ export class DatabaseStorage implements IStorage {
   // Enhanced Methods for Month-Pinned Persistence
   async getAIInsightWithContext(clientId: string, metricName: string, timePeriod: string): Promise<AIInsight & { hasContext: boolean } | undefined> {
     const results = await db
-      .select({
-        id: aiInsights.id,
-        clientId: aiInsights.clientId,
-        metricName: aiInsights.metricName,
-        status: aiInsights.status,
-        insightText: aiInsights.insightText,
-        recommendationText: aiInsights.recommendationText,
-        contextText: aiInsights.contextText,
-        timePeriod: aiInsights.timePeriod,
-        version: aiInsights.version,
-        createdAt: aiInsights.createdAt,
-        hasContext: sql<boolean>`EXISTS(
-          SELECT 1
-          FROM ${insightContexts} ic
-          WHERE ic.client_id = ${clientId}
-            AND ic.metric_name = ${metricName}
-            AND length(trim(ic.user_context)) > 0
-        )`,
-      })
+      .select()
       .from(aiInsights)
       .where(
         and(
@@ -1296,7 +1278,27 @@ export class DatabaseStorage implements IStorage {
       )
       .limit(1);
 
-    return results[0] || undefined;
+    const insight = results[0];
+    if (!insight) return undefined;
+    
+    // Check context manually
+    const hasContextResults = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(insightContexts)
+      .where(
+        and(
+          eq(insightContexts.clientId, clientId),
+          eq(insightContexts.metricName, metricName),
+          sql`length(trim(${insightContexts.userContext})) > 0`
+        )
+      );
+    
+    const hasContext = (hasContextResults[0]?.count || 0) > 0;
+    
+    return {
+      ...insight,
+      hasContext
+    };
   }
 
   async getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]> {
@@ -1619,26 +1621,9 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced method for AI insights with context computation
   async getInsightsWithContext(clientId: string, period: string): Promise<(AIInsight & { hasContext: boolean })[]> {
-    return await db
-      .select({
-        id: aiInsights.id,
-        clientId: aiInsights.clientId,
-        metricName: aiInsights.metricName,
-        status: aiInsights.status,
-        insightText: aiInsights.insightText,
-        recommendationText: aiInsights.recommendationText,
-        contextText: aiInsights.contextText,
-        timePeriod: aiInsights.timePeriod,
-        version: aiInsights.version,
-        createdAt: aiInsights.createdAt,
-        hasContext: sql<boolean>`EXISTS(
-          SELECT 1
-          FROM ${insightContexts} ic
-          WHERE ic.client_id = ${clientId}
-            AND ic.metric_name = ${aiInsights.metricName}
-            AND length(trim(ic.user_context)) > 0
-        )`,
-      })
+    // First get the insights
+    const insights = await db
+      .select()
       .from(aiInsights)
       .where(
         and(
@@ -1646,6 +1631,29 @@ export class DatabaseStorage implements IStorage {
           eq(aiInsights.timePeriod, period)
         )
       );
+    
+    // Then check context for each insight manually
+    const results = await Promise.all(insights.map(async (insight) => {
+      const hasContextResults = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(insightContexts)
+        .where(
+          and(
+            eq(insightContexts.clientId, clientId),
+            eq(insightContexts.metricName, insight.metricName),
+            sql`length(trim(${insightContexts.userContext})) > 0`
+          )
+        );
+      
+      const hasContext = (hasContextResults[0]?.count || 0) > 0;
+      
+      return {
+        ...insight,
+        hasContext
+      };
+    }));
+    
+    return results;
   }
 
   // Filter Options

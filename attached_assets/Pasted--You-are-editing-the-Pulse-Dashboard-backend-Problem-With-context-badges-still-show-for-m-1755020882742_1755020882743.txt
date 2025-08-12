@@ -1,0 +1,117 @@
+
+
+````
+You are editing the Pulse Dashboard backend.
+
+Problem:
+"With context" badges still show for metrics without user context. The backend is still forcing hasContext=true somewhere (either in storage or when shaping the route response).
+
+Goal:
+Make hasContext TRUE only if there exists a row in insightContexts for (clientId, metricName, period) with non-empty trimmed contextText. Do NOT derive hasContext from aiInsights.contextText anywhere.
+
+Make the following explicit changes:
+
+A) storage.ts (or storage (1).ts) — single source of truth
+1) Locate the function used by the GET /api/ai-insights/:clientId handler to fetch monthly insights (e.g., getInsightsWithContext(clientId: string, period: string)). If the function doesn’t exist, create it as described below and ensure the route calls it.
+2) In the SELECT, compute hasContext ONLY with EXISTS against insightContexts. Do not OR/COALESCE with aiInsights.contextText.
+
+Use this pattern (adjust import paths):
+```ts
+import { sql, eq, and } from "drizzle-orm";
+import { aiInsights, insightContexts } from "../shared/schema";
+
+export async function getInsightsWithContext(clientId: string, period: string) {
+  return await db
+    .select({
+      metricName: aiInsights.metricName,
+      status: aiInsights.status,
+      insightText: aiInsights.insightText,
+      recommendationText: aiInsights.recommendationText,
+      // contextText may be selected or omitted; it must NOT affect hasContext
+      hasContext: sql<boolean>`EXISTS(
+        SELECT 1
+        FROM ${insightContexts} ic
+        WHERE ic.clientId = ${clientId}
+          AND ic.metricName = ${aiInsights.metricName}
+          AND ic.period = ${period}
+          AND length(trim(ic.contextText)) > 0
+      )`,
+    })
+    .from(aiInsights)
+    .where(and(eq(aiInsights.clientId, clientId), eq(aiInsights.period, period)));
+}
+````
+
+3. SEARCH the whole file for any variant of these anti-patterns and remove/replace them:
+
+   * `hasContext: Boolean(aiInsights.contextText?.trim() || ...)`
+   * `hasContext = !!ai.contextText || ...`
+   * Any expression that mixes aiInsights.contextText into hasContext.
+     After edits, hasContext MUST come ONLY from the EXISTS expression.
+
+B) routes.ts (or routes (2).ts) — no remapping in the handler
+
+1. Ensure there is exactly ONE GET handler for `/api/ai-insights/:clientId`.
+2. At the top, accept BOTH `?period=YYYY-MM` and `?timePeriod=<phrase|YYYY-MM>` and canonicalize to a `canonicalPeriod`. If neither is provided, default to the current month (YYYY-MM) without throwing.
+3. Fetch data using the storage function from (A):
+
+   ```ts
+   const insights = await getInsightsWithContext(clientId, canonicalPeriod);
+   ```
+4. IMPORTANT: Do NOT transform or re-derive hasContext in the route. Remove any mapping like:
+
+   ```ts
+   insights.map(r => ({ ...r, hasContext: !!r.contextText || r.hasContext }))
+   ```
+
+   Instead, return the rows directly:
+
+   ```ts
+   return res.json({ status: "available", period: canonicalPeriod, insights });
+   ```
+5. Add a TEMPORARY log right before returning (for verification):
+
+   ```ts
+   console.info("[AI GET]", { clientId, period: canonicalPeriod, sample: insights?.[0] });
+   ```
+
+C) contracts.ts (shared/http/contracts.ts or equivalent) — schema alignment
+
+1. Ensure the `MetricInsight` type includes:
+
+   ```ts
+   hasContext: boolean;
+   ```
+
+   with NO default that could force true.
+2. Ensure the GET response schema matches what the route returns:
+
+   ```ts
+   { status: 'available' | 'pending' | 'generating' | 'empty', period?: string, insights: MetricInsight[] }
+   ```
+
+   Do not require fields we don’t send. Do not omit `status`.
+
+D) Keep the period/timePeriod shim
+
+1. Preserve the lenient param handling you added (accept both `period` and `timePeriod`, map phrases like "This Month" / "Last Month" to YYYY-MM).
+
+E) Verification (must do)
+
+1. Build/restart the server.
+2. Hit: GET /api/ai-insights/\:clientId?period=YYYY-MM for a month where you know “Session Duration” has no user-added context.
+3. In the server console, find the \[AI GET] temp log and verify:
+
+   * `sample.hasContext` is `false` for a metric with no context.
+4. Reload the UI; the “With context” badge should be OFF for that metric.
+
+F) Cleanup (after verification)
+
+* Remove the temporary `console.info("[AI GET]", …)` log.
+
+Constraints:
+
+* Make only the changes above. Do NOT modify unrelated endpoints or logic.
+* Absolutely no fallback to `contextText` when computing hasContext anywhere.
+
+```

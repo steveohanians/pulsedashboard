@@ -1545,6 +1545,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
       
+
+      
       return res.json({ 
         status: "available", 
         period: canonicalPeriod, 
