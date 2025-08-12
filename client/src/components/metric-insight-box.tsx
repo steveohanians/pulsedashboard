@@ -216,6 +216,7 @@ export function MetricInsightBox({
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: true });
       onStatusChange?.(data.insight.status);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
     },
     onError: (error) => {
       logger.warn("Failed to generate insight with context", {
@@ -322,13 +323,14 @@ export function MetricInsightBox({
           logger.component("MetricInsightBox", "Regenerate clicked - checking for existing context");
           try {
             const contextResponse = await fetch(
-              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`
+              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`
             );
             if (contextResponse.ok) {
               const contextData = await contextResponse.json();
               const existingContext = contextData.userContext?.trim();
               if (existingContext) {
                 logger.component("MetricInsightBox", "Found existing context, regenerating with context");
+                setInsight(cur => cur ? { ...cur, hasContext: true, isTyping: true } : cur);
                 generateInsightWithContextMutation.mutate(existingContext);
                 return;
               }
