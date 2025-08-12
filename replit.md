@@ -61,6 +61,7 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **AI Insights Route Canonicalization**: Established `/api/ai-insights/:clientId` as the canonical route.
 - **Query Key Migration**: Eliminated all string-based query keys, replacing them with centralized tuple-based helpers.
 - **Cache and Locks Observability System**: Implemented comprehensive GA4 status tracking with real-time status polling.
+- **GA4 Status Polling Performance Optimization** (August 2025): Fixed critical P0 performance issue by implementing `useGA4Status` hook with intelligent 404 handling, treating CLIENT_NOT_FOUND errors as "not ready" status and backing off polling. Eliminated duplicate invalidate + refetch patterns across mutations, standardized all query keys to canonical period format (YYYY-MM), and reduced CPU usage by stopping aggressive retry loops. Performance improvement: reduced GA4 status requests from every 1-2 seconds to proper 4-5 second intervals.
 - **Contract Testing**: Implemented comprehensive "canary" contract tests using Zod schema validation.
 - **Time Period Canonicalization System**: Implemented comprehensive canonical time period handling system.
 - **Canonical Metric Envelope System**: Implemented comprehensive write-time metric normalization.
