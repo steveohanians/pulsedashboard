@@ -108,22 +108,8 @@ export function MetricInsightBox({
       if (preloadedInsight) {
         logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
         
-        // Use server-computed hasContext if available, otherwise fallback to context check
-        let hasCustomContext = preloadedInsight.hasContext || false;
-        if (!hasCustomContext) {
-          try {
-            const contextResponse = await fetch(
-              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}`
-            );
-            if (contextResponse.ok) {
-              const contextData = await contextResponse.json();
-              hasCustomContext = !!(contextData.userContext?.trim());
-              logger.component("MetricInsightBox", `Context check for ${metricName}: ${hasCustomContext ? 'has context' : 'no context'}`);
-            }
-          } catch (error) {
-            logger.component("MetricInsightBox", `Context check failed for ${metricName}:`, error);
-          }
-        }
+        // Use strict boolean check for server-computed hasContext field only
+        const hasCustomContext = preloadedInsight.hasContext === true;
         
         setInsight({
           contextText: preloadedInsight.contextText,
@@ -250,7 +236,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasCustomContext: matchingInsight.hasContext || false, // Use server-computed hasContext
+          hasCustomContext: matchingInsight.hasContext === true, // Use strict boolean check for server's hasContext
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
