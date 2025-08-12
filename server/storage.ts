@@ -1645,6 +1645,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
       
+      // IMPORTANT: Compute hasContext only from insightContexts via EXISTS — do NOT OR with aiInsights.contextText.
       const hasContext = (hasContextResults[0]?.count || 0) > 0;
       
       return {

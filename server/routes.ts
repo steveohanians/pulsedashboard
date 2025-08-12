@@ -1545,8 +1545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
       
-
-      
+      // IMPORTANT: Do not re-derive hasContext here — must come directly from storage (EXISTS in insightContexts).
       return res.json({ 
         status: "available", 
         period: canonicalPeriod, 
