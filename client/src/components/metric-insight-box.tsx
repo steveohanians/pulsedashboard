@@ -279,7 +279,7 @@ export function MetricInsightBox({
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
       await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName, canonicalPeriod) });
       // do NOT set suppressHydrationRef=false here — we flip it off in the typewriter effect after the new text finishes animating
     },
     onError: (error) => {
@@ -308,63 +308,7 @@ export function MetricInsightBox({
   // Treat both 'generating' and 'pending' as regenerating
   const isRegenerating = versionStatus?.isGenerating === true;
 
-  // Use canonical insights if available, otherwise fall back to preloaded insight
-  useEffect(() => {
-    if (suppressHydrationRef.current) return;
-    if (canonicalInsights?.status === 'available' && canonicalInsights.insights) {
-      const matchingInsight = canonicalInsights.insights.find(
-        (insight: any) => insight.metricName === metricName
-      );
-      
-      if (matchingInsight) {
-        const serverText = (matchingInsight.insightText || "").trim();
-        
-        // Only run when text truly changed (prevents loops)
-        if (serverText && serverText !== lastTypedRef.current) {
-          logger.component("MetricInsightBox", `Using canonical insight for ${metricName} with typewriter`);
-          
-          // Set initial state for typewriter
-          setInsight({
-            contextText: matchingInsight.contextText,
-            insightText: "", // Start with empty text for typewriter
-            recommendationText: matchingInsight.recommendationText,
-            status: matchingInsight.status,
-            isTyping: true,
-            isFromStorage: false,
-            hasContext: matchingInsight?.hasContext === true,
-          });
-          
-          // Start typewriter animation
-          runTypewriter(serverText, t =>
-            setInsight(cur => cur ? { ...cur, insightText: t } : { insightText: t } as any)
-          );
 
-          // Mark this version as typed and schedule isTyping=false at the end
-          lastTypedRef.current = serverText;
-          const ms = Math.max(200, (serverText.length + 2) * 12);
-          setTimeout(() => {
-            setInsight(cur => cur ? { ...cur, isTyping: false } : { isTyping: false } as any);
-          }, ms);
-        } else if (matchingInsight.insightText) {
-          // No typewriter needed, just set the insight directly
-          logger.component("MetricInsightBox", `Using canonical insight for ${metricName} without typewriter`);
-          setInsight({
-            contextText: matchingInsight.contextText,
-            insightText: matchingInsight.insightText,
-            recommendationText: matchingInsight.recommendationText,
-            status: matchingInsight.status,
-            isTyping: false,
-            isFromStorage: false,
-            hasContext: matchingInsight?.hasContext === true,
-          });
-        }
-        
-        if (matchingInsight.status && onStatusChange) {
-          onStatusChange(matchingInsight.status);
-        }
-      }
-    }
-  }, [canonicalInsights, metricName, onStatusChange]);
 
 
   
@@ -506,7 +450,7 @@ export function MetricInsightBox({
             // On success: invalidate and refetch, then allow hydration
             await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
             await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
-            queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
+            queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName, canonicalPeriod) });
 
             // Allow hydration again (refetch has completed)
             suppressHydrationRef.current = false;

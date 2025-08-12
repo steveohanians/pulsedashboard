@@ -62,8 +62,8 @@ export const QueryKeys = {
    * @param clientId - Client identifier
    * @param metricName - Metric name for context
    */
-  insightContext: (clientId: string, metricName: string) => 
-    ["/api/insight-context", clientId, metricName] as const,
+  insightContext: (clientId: string, metricName: string, period?: string) => 
+    ["/api/insight-context", clientId, metricName, period] as const,
 
   /**
    * Generic API cache invalidation helpers
