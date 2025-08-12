@@ -117,7 +117,7 @@ export function MetricInsightBox({
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: false, // was true
-          hasContext: !!preloadedInsight.contextText?.trim(), // Badge based on actual context text presence
+          hasContext: preloadedInsight?.hasContext === true,
         });
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
@@ -144,7 +144,7 @@ export function MetricInsightBox({
         isTyping: false,
         // treat as server data; no blocking flag
         isFromStorage: false,
-        hasContext: !!metricInsight.contextText?.trim(),
+        hasContext: metricInsight?.hasContext === true,
       });
       if (metricInsight.status && onStatusChange) {
         onStatusChange(metricInsight.status);
@@ -254,7 +254,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: false, // was true
-          hasContext: !!matchingInsight.contextText?.trim(), // Badge based on actual context text presence
+          hasContext: matchingInsight?.hasContext === true,
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
