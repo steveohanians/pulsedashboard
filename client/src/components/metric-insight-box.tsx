@@ -116,7 +116,7 @@ export function MetricInsightBox({
           recommendationText: preloadedInsight.recommendationText,
           status: preloadedInsight.status,
           isTyping: false,
-          isFromStorage: true,
+          isFromStorage: false, // was true
           hasContext: !!preloadedInsight.contextText?.trim(), // Badge based on actual context text presence
         });
         if (preloadedInsight.status && onStatusChange) {
@@ -135,21 +135,22 @@ export function MetricInsightBox({
 
   // Update local state when fresh data arrives from the hook
   useEffect(() => {
-    if (metricInsight && !insight?.isFromStorage) {
+    if (metricInsight) {
       setInsight({
         contextText: metricInsight.contextText,
         insightText: metricInsight.insightText,
         recommendationText: metricInsight.recommendationText,
         status: metricInsight.status,
         isTyping: false,
+        // treat as server data; no blocking flag
         isFromStorage: false,
-        hasContext: !!metricInsight.contextText?.trim(), // Badge based on actual context text presence
+        hasContext: !!metricInsight.contextText?.trim(),
       });
       if (metricInsight.status && onStatusChange) {
         onStatusChange(metricInsight.status);
       }
     }
-  }, [metricInsight, insight?.isFromStorage, onStatusChange]);
+  }, [metricInsight, onStatusChange]);
 
   // Use the centralized insights hook
   const canonicalInsights = insightsData;
@@ -252,7 +253,7 @@ export function MetricInsightBox({
           recommendationText: matchingInsight.recommendationText,
           status: matchingInsight.status,
           isTyping: false,
-          isFromStorage: true,
+          isFromStorage: false, // was true
           hasContext: !!matchingInsight.contextText?.trim(), // Badge based on actual context text presence
         });
         if (matchingInsight.status && onStatusChange) {
@@ -262,6 +263,23 @@ export function MetricInsightBox({
     }
   }, [canonicalInsights, metricName, onStatusChange]);
   
+  // NEW: show loading while the initial query is in-flight
+  if (isLoadingInsights || isFetching) {
+    return (
+      <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+        <div className="text-center">
+          <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+            Loading insights for <span className="font-medium text-primary">{metricName}</span>…
+          </p>
+          <Button disabled size="sm" className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Loading…
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading only when mutation is pending or actually generating
   if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
     return (

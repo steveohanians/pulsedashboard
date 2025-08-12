@@ -1,0 +1,109 @@
+1) Add a true initial “loading” UI (prevents empty-state flicker)
+What to do: Before you render the empty CTA, short-circuit when the query is still loading.
+
+Where: Near the bottom, right before the block that renders the Generate button (the empty CTA). Insert this new guard above the existing mutation-loading block.
+
+tsx
+Copy
+Edit
+// NEW: show loading while the initial query is in-flight
+if (isLoadingInsights || isFetching) {
+  return (
+    <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+      <div className="text-center">
+        <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+          Loading insights for <span className="font-medium text-primary">{metricName}</span>…
+        </p>
+        <Button disabled size="sm" className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5">
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Loading…
+        </Button>
+      </div>
+    </div>
+  );
+}
+You can place it just before the existing mutation-loading return (starts with // Show loading only when mutation is pending...). 
+ 
+
+2) Let fresh server data always hydrate (remove the blocker)
+What to do: Drop the !insight?.isFromStorage guard so query results can overwrite local/preloaded state after reload.
+
+Change this:
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  if (metricInsight && !insight?.isFromStorage) {
+    setInsight({
+      ...
+    });
+    ...
+  }
+}, [metricInsight, insight?.isFromStorage, onStatusChange]);
+To this:
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  if (metricInsight) {
+    setInsight({
+      contextText: metricInsight.contextText,
+      insightText: metricInsight.insightText,
+      recommendationText: metricInsight.recommendationText,
+      status: metricInsight.status,
+      isTyping: false,
+      // treat as server data; no blocking flag
+      isFromStorage: false,
+      hasContext: !!metricInsight.contextText?.trim(),
+    });
+    if (metricInsight.status && onStatusChange) {
+      onStatusChange(metricInsight.status);
+    }
+  }
+}, [metricInsight, onStatusChange]);
+This change is in the “Update local state when fresh data arrives from the hook” effect. 
+
+3) Don’t mark canonical/preloaded hydration as “from storage” (prevents future blocks)
+What to do: When you seed from preloadedInsight or canonicalInsights, don’t set isFromStorage: true. Use false (or remove the field) so step #2 can always replace it with fresher data.
+
+A) Preloaded path – change isFromStorage: true to false:
+
+tsx
+Copy
+Edit
+setInsight({
+  contextText: preloadedInsight.contextText,
+  insightText: preloadedInsight.insightText,
+  recommendationText: preloadedInsight.recommendationText,
+  status: preloadedInsight.status,
+  isTyping: false,
+  isFromStorage: false, // was true
+  hasContext: !!preloadedInsight.contextText?.trim(),
+});
+This is inside the loadStoredInsight() effect. 
+
+B) Canonical/central hook path – change isFromStorage: true to false:
+
+tsx
+Copy
+Edit
+setInsight({
+  contextText: matchingInsight.contextText,
+  insightText: matchingInsight.insightText,
+  recommendationText: matchingInsight.recommendationText,
+  status: matchingInsight.status,
+  isTyping: false,
+  isFromStorage: false, // was true
+  hasContext: !!matchingInsight.contextText?.trim(),
+});
+This is in the “Use canonical insights if available” effect. 
+
+Why this fixes the reload → empty issue
+While the query is loading, you now return a loading view instead of the empty CTA, so no flicker. 
+
+When data arrives, you always hydrate from metricInsight because you removed the isFromStorage blocker. 
+
+Preloaded/canonical seeds no longer “poison” future updates by marking themselves as “from storage,” so they won’t prevent fresh server data from replacing them. 
+ 
