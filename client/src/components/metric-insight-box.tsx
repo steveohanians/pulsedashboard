@@ -44,7 +44,7 @@ export function MetricInsightBox({
   preloadedInsight,
 }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<
-    (InsightData & { isTyping?: boolean; isFromStorage?: boolean; hasCustomContext?: boolean }) | null
+    (InsightData & { isTyping?: boolean; isFromStorage?: boolean; hasContext?: boolean }) | null
   >(null);
   const queryClient = useQueryClient();
 
@@ -109,7 +109,6 @@ export function MetricInsightBox({
         logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
         
         // Use strict boolean check for server-computed hasContext field only
-        const hasCustomContext = preloadedInsight.hasContext === true;
         
         setInsight({
           contextText: preloadedInsight.contextText,
@@ -213,7 +212,7 @@ export function MetricInsightBox({
       return await response.json();
     },
     onSuccess: (data) => {
-      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
+      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: true });
       onStatusChange?.(data.insight.status);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
     },
@@ -254,7 +253,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasCustomContext: matchingInsight.hasContext === true, // Use strict boolean check for server's hasContext
+          hasContext: matchingInsight.hasContext === true, // Use strict boolean check for server's hasContext
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
@@ -317,8 +316,8 @@ export function MetricInsightBox({
               }
             }
           } catch {}
-          // Clear hasCustomContext if no context exists when regenerating
-          setInsight(current => current ? { ...current, hasCustomContext: false } : current);
+          // Clear hasContext if no context exists when regenerating
+          setInsight(current => current ? { ...current, hasContext: false } : current);
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {

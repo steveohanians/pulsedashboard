@@ -1,0 +1,68 @@
+Short version: the badge prop is wired to the wrong field.
+
+In `MetricInsightBox`, you maintain **two** booleans on the local `insight` object—`hasContext` *and* `hasCustomContext`—but when you render the child you pass:
+
+```tsx
+<AIInsights
+  …
+  hasCustomContext={insight.hasContext === true}
+/>
+```
+
+So whenever you set only `hasCustomContext` (e.g., after a “regenerate with context” success, or when you map `matchingInsight.hasContext` into `hasCustomContext`), the child never sees it and the “With Context” badge doesn’t show. &#x20;
+
+# What to change (minimal fix)
+
+Pick one field and use it consistently. Easiest is to keep `hasContext` everywhere and pass that through.
+
+1. When setting insight after a canonical fetch or a “with context” mutation, set `hasContext: true` (not `hasCustomContext`).
+
+**Change these spots in `metric-insight-box.tsx`:**
+
+* In the **generate-with-context** `onSuccess`:
+
+```diff
+- setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasCustomContext: true });
++ setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: true });
+```
+
+* In the **canonical insights** effect:
+
+```diff
+- hasCustomContext: matchingInsight.hasContext === true,
++ hasContext: matchingInsight.hasContext === true,
+```
+
+* In the **onRegenerate** fallback (when no saved context found):
+
+```diff
+- setInsight(current => current ? { ...current, hasCustomContext: false } : current);
++ setInsight(current => current ? { ...current, hasContext: false } : current);
+```
+
+2. When rendering the child, pass the same flag you keep in state:
+
+```diff
+- hasCustomContext={insight.hasContext === true}
++ hasCustomContext={insight.hasContext === true}
+```
+
+(After the above normalizations, this line is already correct; if you prefer keeping both fields briefly, make it defensive:)
+
+```tsx
+hasCustomContext={insight.hasContext === true || insight.hasCustomContext === true}
+```
+
+# Why this fixes it
+
+`AIInsights` only shows the badge when the **prop** `hasCustomContext === true`:
+
+```tsx
+{hasCustomContext === true && (
+  <Badge variant="secondary" className="text-xs">With Context</Badge>
+)}
+```
+
+If `MetricInsightBox` sometimes stores the info under `hasCustomContext` and sometimes under `hasContext` but **always** passes only `hasContext`, the child misses the truthy value. Unifying on a single boolean (recommended: `hasContext`) guarantees the prop reflects reality in all code paths: preloaded → server fetch → regenerate with context. &#x20;
+
+If you want, I can paste a tiny diff with all edits consolidated.
