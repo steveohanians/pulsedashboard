@@ -9,7 +9,7 @@ export function useGA4Status(clientId: string, period: string, enabled: boolean)
     queryKey: ["/api/ga4-data/status", clientId, period],
     queryFn: async (): Promise<GA4StatusResponse> => {
       const response = await fetch(
-        `/api/ga4-data/status/${clientId}?timePeriod=${encodeURIComponent(period)}`
+        `/api/ga4-data/status/${clientId}?period=${encodeURIComponent(period)}`
       );
       
       // If status is 404, return "not_ready" and don't retry
