@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { TypewriterText } from "./typewriter-text";
@@ -338,7 +339,14 @@ export function AIInsights({
 
             {shouldShowButtons && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-slate-200 space-y-2 sm:space-y-0">
-                <div className="text-xs text-slate-400">{timestamp}</div>
+                <div className="flex items-center space-x-2">
+                  <div className="text-xs text-slate-400">{timestamp}</div>
+                  {hasCustomContext && (
+                    <Badge variant="secondary" className="text-xs">
+                      With Context
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2 flex-shrink-0">
                   {clientId && metricName && timePeriod && metricData && onRegenerateWithContext && (
                     <Dialog open={isContextModalOpen} onOpenChange={setIsContextModalOpen}>

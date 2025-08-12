@@ -521,6 +521,11 @@ export type Benchmark = typeof benchmarks.$inferSelect;
 export type InsertBenchmark = z.infer<typeof insertBenchmarkSchema>;
 export type AIInsight = typeof aiInsights.$inferSelect;
 export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
+
+// Extended AI Insight type with server-computed hasContext field
+export interface AIInsightDTO extends AIInsight {
+  hasContext: boolean;
+}
 export type MetricVersion = typeof metricVersions.$inferSelect;
 export type InsertMetricVersion = z.infer<typeof insertMetricVersionSchema>;
 export type UpdateMetricVersion = z.infer<typeof updateMetricVersionSchema>;
