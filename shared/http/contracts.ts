@@ -41,7 +41,7 @@ const AIInsightSchema = z.object({
   contextText: z.string(),
   insightText: z.string(),
   recommendationText: z.string(),
-  status: z.string().optional(),
+  status: z.enum(['pending', 'generating', 'available', 'error']).optional(),
   createdAt: z.string().optional(),
   hasContext: z.boolean()
 });

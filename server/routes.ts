@@ -574,8 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // 🚀 CANONICAL: AI Insights endpoint - loads insights in background after main dashboard
-  app.get("/api/ai-insights/:clientId", requireAuth, handleAIInsights);
+  // REMOVED: Duplicate GET /api/ai-insights/:clientId handler - keeping the Month-Pinned version further down
 
   // 🗑️ CANONICAL: Single transactional DELETE endpoint for insights and context
   app.delete("/api/ai-insights/:clientId/:metricName", requireAuth, async (req, res) => {
@@ -1529,7 +1528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const canonicalPeriod = normalizeToCanonicalMonth(period as string);
       
       // Get insights with computed hasContext from database state
-      const insights = await storage.getAIInsightsForPeriod(clientId, canonicalPeriod);
+      const insights = await storage.getInsightsWithContext(clientId, canonicalPeriod);
       
       logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
       
