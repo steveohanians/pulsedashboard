@@ -117,7 +117,7 @@ export function MetricInsightBox({
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasContext: preloadedInsight.hasContext, // Use server-computed hasContext field
+          hasContext: preloadedInsight.hasContext === true && !!preloadedInsight.contextText?.trim(), // Guard against false positives
         });
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
@@ -143,7 +143,7 @@ export function MetricInsightBox({
         status: metricInsight.status,
         isTyping: false,
         isFromStorage: false,
-        hasContext: metricInsight.hasContext, // Preserve server-computed hasContext
+        hasContext: metricInsight.hasContext === true && !!metricInsight.contextText?.trim(), // Guard against false positives
       });
       if (metricInsight.status && onStatusChange) {
         onStatusChange(metricInsight.status);
@@ -253,7 +253,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasContext: matchingInsight.hasContext === true, // Use strict boolean check for server's hasContext
+          hasContext: (matchingInsight.hasContext === true) && !!matchingInsight.contextText?.trim(), // Guard against false positives
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
