@@ -46,6 +46,8 @@ export function MetricInsightBox({
   const [insight, setInsight] = useState<
     (InsightData & { isTyping?: boolean; isFromStorage?: boolean; hasContext?: boolean }) | null
   >(null);
+  const [forcedEmpty, setForcedEmpty] = useState(false);
+  const [typing, setTyping] = useState({ active: false, text: "" });
   const queryClient = useQueryClient();
 
   // A) Add suppression flag to block hydration while generating
@@ -122,7 +124,8 @@ export function MetricInsightBox({
   useEffect(() => {
     // Guard hydration during delete/regenerate operations and typing states
     if (suppressHydrationRef.current) return;   // don't hydrate during delete/regenerate
-    if (insight?.isTyping) return;               // don't hydrate while typewriter is running
+    if (forcedEmpty) return;                    // don't hydrate while we've forced empty
+    if (typing.active) return;                  // don't hydrate while typewriter is running
     
     const loadStoredInsight = async () => {
       if (preloadedInsight) {
@@ -155,8 +158,9 @@ export function MetricInsightBox({
 
   // C) Guard the hydration-from-server effect
   useEffect(() => {
-    if (suppressHydrationRef.current) return;    // don't hydrate while we're mutating
-    if (insight?.isTyping) return;               // don't overwrite while typewriter is running
+    if (suppressHydrationRef.current) return;   // don't hydrate during delete/regenerate
+    if (forcedEmpty) return;                    // don't hydrate while we've forced empty
+    if (typing.active) return;                  // don't hydrate while typewriter is running
     
     if (metricInsight) {
       setInsight({
@@ -367,12 +371,13 @@ export function MetricInsightBox({
 
   // Empty state wins if forced or there is no text at all
   const shouldShowEmpty = 
-    !displayInsightText.trim() &&
-    !isLoadingInsights &&
-    !isFetching &&
-    !isRegenerating &&
-    !generateInsightMutation.isPending &&
-    !generateInsightWithContextMutation.isPending;
+    forcedEmpty ||
+    (
+      !typing.active &&
+      !isLoadingInsights &&
+      !isFetching &&
+      (!metricInsight?.insightText && !insight?.insightText)
+    );
 
   if (insight && !shouldShowEmpty) {
     return (
@@ -415,25 +420,27 @@ export function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
-          // B) Fix DELETE: optimistic clear + cache surgery + suppression
-          
-          // 1) BEFORE firing the mutation/fetch:
+          // Block hydration and force empty immediately
           suppressHydrationRef.current = true;
-          // Optimistically clear local UI to the empty state
-          setInsight(null);
+          setForcedEmpty(true);
+          setInsight(null);                  // immediate clear
+          setTyping({ active: false, text: "" });
           onStatusChange?.(undefined);
-          
-          // 2) Immediately remove the metric from the React Query cache so hydration cannot reinsert it:
+
+          // Optimistically remove this metric from the list cache
           queryClient.setQueryData(
             ["/api/ai-insights", clientId, canonicalPeriod],
             (prev: any) => {
               if (!prev || !Array.isArray(prev.insights)) return prev;
-              return { ...prev, insights: prev.insights.filter((it: any) => it.metricName !== metricName) };
+              return {
+                ...prev,
+                insights: prev.insights.filter((it: any) => it.metricName !== metricName),
+              };
             }
           );
-          
+
           try {
-            // SINGLE TRANSACTIONAL DELETE - as per specification requirement
+            // Call delete endpoint
             const response = await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`, {
               method: "DELETE",
             });
@@ -444,17 +451,21 @@ export function MetricInsightBox({
             
             const result = await response.json();
             
-            // 3) After the delete request resolves, do BOTH invalidate and refetch of the insights list:
+            // On success: invalidate and refetch, then allow hydration
             await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
             await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
             queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
-            
-            logger.component("MetricInsightBox", "Single transactional delete completed successfully");
-          } catch (error) {
-            logger.warn("Failed to delete insight and context via transactional operation", { error });
-          } finally {
-            // 4) Finally, allow hydration again:
+
+            // Allow hydration again (refetch has completed)
             suppressHydrationRef.current = false;
+            setForcedEmpty(false);
+            
+            logger.component("MetricInsightBox", "Truly optimistic delete completed successfully");
+          } catch (error) {
+            // On error: allow hydration again so it can rehydrate from server
+            suppressHydrationRef.current = false;
+            setForcedEmpty(false);
+            logger.warn("Failed to delete insight and context via transactional operation", { error });
           }
         }}
       />
