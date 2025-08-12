@@ -1932,22 +1932,22 @@ export default function Dashboard() {
                       metricName={metricName}
                       clientId={client?.id || ''}
                       timePeriod={timePeriod}
-                      metricData={useMemo(() => ({
+                      metricData={{
                         metricName,
                         clientValue: metricData?.Client || null,
                         industryAverage: metricData?.Industry_Avg || null,
                         cdAverage: metricData?.CD_Avg || null,
                         competitorValues: [],
                         competitorNames: []
-                      }), [metricName, metricData?.Client, metricData?.Industry_Avg, metricData?.CD_Avg])}
+                      }}
                       preloadedInsight={insightsLookup[metricName] || null}
-                      onStatusChange={useCallback((status: "success" | "needs_improvement" | "warning" | undefined) => {
+                      onStatusChange={(status: "success" | "needs_improvement" | "warning" | undefined) => {
                         logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
                           ...prev,
                           [metricName]: status
                         }));
-                      }, [metricName])}
+                      }}
                     />
                   </div>
                 </CardContent>
