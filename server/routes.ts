@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Load insights from database for specific period with server-computed hasContext
-      const insights = await storage.getAIInsightsForPeriod(clientId, canonicalTimePeriod);
+      const insights = await storage.getInsightsWithContext(clientId, canonicalTimePeriod);
       
       // Determine insight status based on results
       if (insights && insights.length > 0) {

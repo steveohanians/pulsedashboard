@@ -1,0 +1,88 @@
+
+
+````
+You are editing the Pulse Dashboard backend.
+
+Goal: Fix the "With context" badge so it only appears when a metric has actual user-added context.
+
+Scope: Update the backend so GET /api/ai-insights/:clientId?period=YYYY-MM returns an accurate hasContext boolean computed from the database.
+
+Schema details:
+- aiInsights table:
+  - clientId: text
+  - metricName: text
+  - period: text (format YYYY-MM)
+  - status: text
+  - insightText: text | null
+  - recommendationText: text | null
+  - contextText: text | null
+- insightContexts table:
+  - clientId: text
+  - metricName: text
+  - period: text
+  - contextText: text | null
+
+Requirements:
+1. Create or update a function in server/storage.ts called getInsightsWithContext(clientId: string, period: string) that:
+   - Selects from aiInsights all the fields already used in the current response (metricName, status, insightText, recommendationText, contextText, etc.).
+   - Adds a computed column hasContext that is TRUE only if a matching row exists in insightContexts for the same clientId, metricName, and period AND length(trim(contextText)) > 0.
+   - Uses Drizzle ORM's sql<boolean>`EXISTS(...)` syntax for the computed column.
+   - Filters by clientId and period as in the current query.
+   - Does NOT base hasContext on aiInsights.contextText.
+   - Does NOT default hasContext to true for any reason.
+
+Example:
+```ts
+import { sql, eq, and } from "drizzle-orm";
+import { aiInsights, insightContexts } from "../shared/schema";
+
+export async function getInsightsWithContext(clientId: string, period: string) {
+  return await db
+    .select({
+      metricName: aiInsights.metricName,
+      status: aiInsights.status,
+      insightText: aiInsights.insightText,
+      recommendationText: aiInsights.recommendationText,
+      contextText: aiInsights.contextText,
+      hasContext: sql<boolean>`EXISTS(
+        SELECT 1
+        FROM ${insightContexts} ic
+        WHERE ic.clientId = ${clientId}
+          AND ic.metricName = ${aiInsights.metricName}
+          AND ic.period = ${period}
+          AND length(trim(ic.contextText)) > 0
+      )`,
+    })
+    .from(aiInsights)
+    .where(
+      and(
+        eq(aiInsights.clientId, clientId),
+        eq(aiInsights.period, period)
+      )
+    );
+}
+````
+
+2. Update the GET /api/ai-insights/\:clientId route handler to:
+
+   * Call getInsightsWithContext(clientId, period) instead of the old fetch logic.
+   * Pass the hasContext boolean from the DB result directly to the client.
+   * Preserve all existing behavior for other fields (status, insightText, recommendationText, etc.).
+
+3. Update the MetricInsight type in shared/http/contracts.ts so it explicitly includes:
+
+```ts
+hasContext: boolean;
+```
+
+4. Do not modify unrelated logic (status calculation, ordering, joins, or other endpoints).
+
+Deliverable:
+
+* Updated server/storage.ts with getInsightsWithContext function.
+* Updated GET handler to use it.
+* Updated MetricInsight type in shared/http/contracts.ts.
+
+After this change, the client will only show the "With context" badge when there’s a matching non-empty row in insightContexts for that metric.
+
+```

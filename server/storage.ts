@@ -97,6 +97,7 @@ export interface IStorage {
   // Enhanced Methods for Month-Pinned Persistence
   getAIInsightWithContext(clientId: string, metricName: string, timePeriod: string): Promise<AIInsight & { hasContext: boolean } | undefined>;
   getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]>;
+  getInsightsWithContext(clientId: string, period: string): Promise<(AIInsight & { hasContext: boolean })[]>;
   
   // SINGLE TRANSACTIONAL DELETE - as per specification requirement  
   deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }>;
@@ -1620,6 +1621,39 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllInsightContexts(): Promise<void> {
     await db.delete(insightContexts);
+  }
+
+  // Enhanced method for AI insights with context computation
+  async getInsightsWithContext(clientId: string, period: string): Promise<(AIInsight & { hasContext: boolean })[]> {
+    return await db
+      .select({
+        id: aiInsights.id,
+        clientId: aiInsights.clientId,
+        metricName: aiInsights.metricName,
+        status: aiInsights.status,
+        insightText: aiInsights.insightText,
+        recommendationText: aiInsights.recommendationText,
+        contextText: aiInsights.contextText,
+        period: aiInsights.period,
+        version: aiInsights.version,
+        createdAt: aiInsights.createdAt,
+        updatedAt: aiInsights.updatedAt,
+        hasContext: sql<boolean>`EXISTS(
+          SELECT 1
+          FROM ${insightContexts} ic
+          WHERE ic.clientId = ${clientId}
+            AND ic.metricName = ${aiInsights.metricName}
+            AND ic.period = ${period}
+            AND length(trim(ic.contextText)) > 0
+        )`,
+      })
+      .from(aiInsights)
+      .where(
+        and(
+          eq(aiInsights.clientId, clientId),
+          eq(aiInsights.period, period)
+        )
+      );
   }
 
   // Filter Options

@@ -42,8 +42,12 @@ const AIInsightSchema = z.object({
   insightText: z.string(),
   recommendationText: z.string(),
   status: z.string().optional(),
-  createdAt: z.string().optional()
+  createdAt: z.string().optional(),
+  hasContext: z.boolean()
 });
+
+// Type definition for MetricInsight
+export type MetricInsight = z.infer<typeof AIInsightSchema>;
 
 // ===== REQUEST SCHEMAS =====
 
