@@ -1636,19 +1636,17 @@ export class DatabaseStorage implements IStorage {
         ai.recommendation_text AS "recommendationText",
         ai.status,
         ai.created_at AS "createdAt",
-        ai.updated_at AS "updatedAt",
         /* computed boolean: hasContext via EXISTS */
         EXISTS (
           SELECT 1 FROM insight_contexts ic
           WHERE ic.client_id = ai.client_id
             AND ic.metric_name = ai.metric_name
-            AND ic.period = ai.time_period
-            AND length(trim(ic.context_text)) > 0
+            AND length(trim(ic.user_context)) > 0
         ) AS "hasContext"
       FROM ai_insights ai
       WHERE ai.client_id = ${clientId}
         AND ai.time_period = ${period}
-      ORDER BY ai.metric_name, ai.updated_at DESC NULLS LAST, ai.created_at DESC NULLS LAST
+      ORDER BY ai.metric_name, ai.created_at DESC NULLS LAST
     `);
     
     return results.rows as (AIInsight & { hasContext: boolean })[];
