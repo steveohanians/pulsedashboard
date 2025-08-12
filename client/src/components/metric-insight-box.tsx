@@ -113,6 +113,12 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     insightsData?.status === "generating" ||
     metricInsight?.status === "generating";
 
+  // Create stable keys for preloaded insight to prevent infinite loops
+  const preloadedInsightKey = useMemo(() => {
+    if (!preloadedInsight) return null;
+    return `${preloadedInsight.contextText || ''}:${preloadedInsight.insightText || ''}:${preloadedInsight.status || ''}:${preloadedInsight.hasContext || false}`;
+  }, [preloadedInsight]);
+
   // Preload (props) when allowed
   useEffect(() => {
     if (suppressHydrationRef.current || forcedEmpty) return;
@@ -132,10 +138,15 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   }, [
     clientId,
     metricName,
-    onStatusChange,
-    preloadedInsight,
+    preloadedInsightKey,
     forcedEmpty,
   ]);
+
+  // Create stable key for metric insight to prevent infinite loops
+  const metricInsightKey = useMemo(() => {
+    if (!metricInsight) return null;
+    return `${metricInsight.contextText || ''}:${metricInsight.insightText || ''}:${metricInsight.status || ''}:${metricInsight.hasContext || false}`;
+  }, [metricInsight]);
 
   // Hydrate from server when allowed
   useEffect(() => {
@@ -153,7 +164,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     });
     if (metricInsight.status && onStatusChange)
       onStatusChange(metricInsight.status);
-  }, [metricInsight, onStatusChange, forcedEmpty]);
+  }, [metricInsightKey, forcedEmpty]);
 
 
 

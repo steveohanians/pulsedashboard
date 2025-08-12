@@ -427,14 +427,18 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
   // Calculate fixed Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(
-      safeNumericValue(point[clientKey], 0),
-      safeNumericValue(point['Industry Avg'], 0),
-      safeNumericValue(point[`${companyName} Clients Avg`], 0)
-    );
+    const clientValue = safeNumericValue(point[clientKey], 0);
+    const industryValue = safeNumericValue(point['Industry Avg'], 0);
+    const cdValue = safeNumericValue(point[`${companyName} Clients Avg`], 0);
+    
+    if (clientValue !== null) allValues.push(clientValue);
+    if (industryValue !== null) allValues.push(industryValue);
+    if (cdValue !== null) allValues.push(cdValue);
+    
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(safeNumericValue(point[comp.label], 0));
+        const compValue = safeNumericValue(point[comp.label], 0);
+        if (compValue !== null) allValues.push(compValue);
       }
     });
   });
@@ -444,41 +448,41 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
   const padding = maxValue * 0.1; // 10% padding from top
   const yAxisDomain = [0, Math.ceil(maxValue + padding)];
 
-  // State for toggling bars - ensure all competitors are visible by default
-  const [visibleBars, setVisibleBars] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {
-      [clientKey]: true,
-      'Industry Avg': true,
-      [`${companyName} Clients Avg`]: true,
+  // Create stable competitor key to prevent infinite re-renders
+  const competitorKey = useMemo(() => {
+    return competitors.map(c => `${c.id}:${c.label}:${c.value}`).join('|');
+  }, [competitors]);
+
+  // State for toggling bars - use Set for hidden bars
+  const [hiddenBars, setHiddenBars] = useState<Set<string>>(new Set());
+
+  // Derive visible bars from competitors and hidden state
+  const visibleBars = useMemo<Record<string, boolean>>(() => {
+    const visible: Record<string, boolean> = {
+      [clientKey]: !hiddenBars.has(clientKey),
+      'Industry Avg': !hiddenBars.has('Industry Avg'),
+      [`${companyName} Clients Avg`]: !hiddenBars.has(`${companyName} Clients Avg`),
     };
     competitors.forEach(comp => {
-      initial[comp.label] = true;
+      visible[comp.label] = !hiddenBars.has(comp.label);
     });
-    return initial;
-  });
-
-  // Update visible bars whenever competitors change
-  useEffect(() => {
-    setVisibleBars(prev => {
-      const updated = { ...prev };
-      competitors.forEach(comp => {
-        if (!(comp.label in updated)) {
-          updated[comp.label] = true;
-        }
-      });
-      return updated;
-    });
-  }, [competitors]);
+    return visible;
+  }, [clientKey, companyName, competitorKey, hiddenBars]);
 
   // Track if this is the initial render to allow animation only once
   const [isInitialRender, setIsInitialRender] = useState(true);
 
   const toggleBar = (barKey: string) => {
     setIsInitialRender(false); // Disable animation after first interaction
-    setVisibleBars(prev => ({
-      ...prev,
-      [barKey]: !prev[barKey]
-    }));
+    setHiddenBars(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(barKey)) {
+        newSet.delete(barKey);
+      } else {
+        newSet.add(barKey);
+      }
+      return newSet;
+    });
   };
 
   return (
