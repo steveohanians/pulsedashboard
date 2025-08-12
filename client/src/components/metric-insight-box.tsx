@@ -235,8 +235,8 @@ export function MetricInsightBox({
     },
   });
 
-  // Fix spinner logic - only show "Regenerating" when actually generating (not just loading)  
-  const isRegenerating = isGenerating;
+  // Treat both 'generating' and 'pending' as regenerating
+  const isRegenerating = versionStatus?.isGenerating === true;
 
   // Use canonical insights if available, otherwise fall back to preloaded insight
   useEffect(() => {
@@ -264,7 +264,7 @@ export function MetricInsightBox({
   }, [canonicalInsights, metricName, onStatusChange]);
   
   // NEW: show loading while the initial query is in-flight
-  if (isLoadingInsights || isFetching) {
+  if (isLoadingInsights || isFetching || insightsData?.status === 'pending') {
     return (
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
