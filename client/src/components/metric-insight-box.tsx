@@ -53,6 +53,7 @@ export function MetricInsightBox({
   // A) Add suppression flag to block hydration while generating
   const suppressHydrationRef = useRef(false);
   const lastTypedRef = useRef<string>(""); // track last fully-typed server text
+  const deletedRef = useRef(false); // tombstone to prevent delete flashback
 
   // Normalize time period to canonical YYYY-MM format
   const canonicalPeriod = useMemo(() => {
@@ -210,6 +211,19 @@ export function MetricInsightBox({
     }, estMs + 20);
     return () => clearTimeout(done);
   }, [metricInsight?.insightText]);  // only when server text actually changes
+
+  // E) Release the delete lock only after the server no longer returns this metric
+  useEffect(() => {
+    if (deletedRef.current) {
+      if (!metricInsight) {
+        deletedRef.current = false;
+        suppressHydrationRef.current = false;
+        setForcedEmpty(false);
+        setInsight(null);
+        setTyping({ active: false, text: "" });
+      }
+    }
+  }, [metricInsight]);
 
   // Use the centralized insights hook
   const canonicalInsights = insightsData;
@@ -416,49 +430,37 @@ export function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
-          // Block hydration and force empty immediately
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
-          setInsight(null);                  // immediate clear
+          setInsight(null);
           setTyping({ active: false, text: "" });
           onStatusChange?.(undefined);
+          deletedRef.current = true; // <-- mark as tombstoned
 
-          // Optimistically remove this metric from the list cache
+          // Optimistic cache removal (keep)
           queryClient.setQueryData(
             ["/api/ai-insights", clientId, canonicalPeriod],
             (prev: any) => {
               if (!prev || !Array.isArray(prev.insights)) return prev;
-              return {
-                ...prev,
-                insights: prev.insights.filter((it: any) => it.metricName !== metricName),
-              };
+              return { ...prev, insights: prev.insights.filter((it: any) => it.metricName !== metricName) };
             }
           );
 
           try {
-            // Call delete endpoint
-            const response = await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`, {
-              method: "DELETE",
-            });
-            
-            if (!response.ok) {
-              throw new Error("Failed to delete insight and context");
-            }
-            
-            const result = await response.json();
-            
-            // On success: invalidate and refetch, then allow hydration
+            const response = await fetch(
+              `/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`,
+              { method: "DELETE" }
+            );
+            if (!response.ok) throw new Error("Failed to delete insight and context");
+
             await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
             await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
             queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName, canonicalPeriod) });
 
-            // Allow hydration again (refetch has completed)
-            suppressHydrationRef.current = false;
-            setForcedEmpty(false);
-            
-            logger.component("MetricInsightBox", "Truly optimistic delete completed successfully");
+            // DO NOT release suppression here; wait for confirm effect below.
           } catch (error) {
-            // On error: allow hydration again so it can rehydrate from server
+            // Roll back release so UI can rehydrate normally on failure
+            deletedRef.current = false;
             suppressHydrationRef.current = false;
             setForcedEmpty(false);
             logger.warn("Failed to delete insight and context via transactional operation", { error });

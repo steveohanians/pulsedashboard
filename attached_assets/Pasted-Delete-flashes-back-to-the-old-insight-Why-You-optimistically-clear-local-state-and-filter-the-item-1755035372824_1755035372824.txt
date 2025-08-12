@@ -1,0 +1,68 @@
+Delete flashes back to the old insight
+Why: You optimistically clear local state and filter the item out of the cache (good), but then you immediately allow hydration again (suppressHydrationRef.current = false; setForcedEmpty(false);). React Query may momentarily rehydrate with the stale server value while the DELETE + refetch settles, producing the “flashback.”
+
+Fix: Hold a local “tombstone” until the server confirms the metric is gone. Don’t release suppression/empty state until metricInsight is truly null.
+
+Add a ref at the top:
+
+tsx
+Copy
+Edit
+const deletedRef = useRef(false);
+Update onClear:
+
+tsx
+Copy
+Edit
+onClear={async () => {
+  suppressHydrationRef.current = true;
+  setForcedEmpty(true);
+  setInsight(null);
+  setTyping({ active: false, text: "" });
+  onStatusChange?.(undefined);
+  deletedRef.current = true; // <-- mark as tombstoned
+
+  // Optimistic cache removal (keep)
+  queryClient.setQueryData(
+    ["/api/ai-insights", clientId, canonicalPeriod],
+    (prev: any) => {
+      if (!prev || !Array.isArray(prev.insights)) return prev;
+      return { ...prev, insights: prev.insights.filter((it: any) => it.metricName !== metricName) };
+    }
+  );
+
+  try {
+    const response = await fetch(
+      `/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`,
+      { method: "DELETE" }
+    );
+    if (!response.ok) throw new Error("Failed to delete insight and context");
+
+    await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+    await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
+
+    // DO NOT release suppression here; wait for confirm effect below.
+  } catch (error) {
+    // Roll back release so UI can rehydrate normally on failure
+    deletedRef.current = false;
+    suppressHydrationRef.current = false;
+    setForcedEmpty(false);
+  }
+}}
+Add a small confirmation effect to release the lock only when the deletion is reflected in the query:
+
+tsx
+Copy
+Edit
+// Release the delete lock only after the server no longer returns this metric
+useEffect(() => {
+  if (deletedRef.current) {
+    if (!metricInsight) {
+      deletedRef.current = false;
+      suppressHydrationRef.current = false;
+      setForcedEmpty(false);
+      setInsight(null);
+      setTyping({ active: false, text: "" });
+    }
+  }
+}, [metricInsight]);
