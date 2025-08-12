@@ -1,0 +1,93 @@
+You are editing the Pulse Dashboard frontend.
+
+File to edit: client/src/components/metric-insight-box.tsx (the file currently named “metric-insight-box (6).tsx”)
+
+Goals:
+1) Stop old insight from re-appearing after Regenerate.
+2) Restore the typewriter effect when (re)generating.
+3) Ensure refetch happens so we hydrate with fresh data (not the preloaded copy).
+
+Implement ALL of the following:
+
+A) Add a suppression flag to block hydration while generating
+- At the top of the component, add:
+  const suppressHydrationRef = useRef(false);
+
+B) In the Regenerate click handler(s):
+- Immediately before calling either mutation (with-context or no-context):
+  setInsight(cur => cur ? { ...cur, isTyping: true, insightText: "", recommendationText: "" } : cur);
+  suppressHydrationRef.current = true;
+
+- Make sure both mutation calls include an onSuccess/onSettled that:
+  1) invalidates the insights query key for this box (["/api/ai-insights", clientId, canonicalPeriod])
+  2) awaits a refetch
+  3) then flips the suppression flag off so hydration can resume
+
+Example inside the mutation options:
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+    await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+  },
+  onSettled: () => {
+    suppressHydrationRef.current = false;
+  }
+
+(Keep your existing invalidations; add the refetch+suppression logic.)
+
+C) Guard the hydration effect so it doesn’t overwrite while generating
+- In the useEffect that sets local `insight` from `metricInsight`, add:
+  if (suppressHydrationRef.current) return;
+  // also skip if local isTyping is true or server status is "generating"
+  if (insight?.isTyping) return;
+  if (metricInsight?.status === "generating") return;
+
+Then proceed to setInsight from metricInsight as you already do (including hasContext from server).
+
+D) Restore a simple typewriter when fresh text arrives
+- Add a small helper (top-level inside the component):
+  function runTypewriter(full: string, setter: (s: string) => void) {
+    let i = 0;
+    setter("");
+    const id = setInterval(() => {
+      i++;
+      setter(full.slice(0, i));
+      if (i >= full.length) clearInterval(id);
+    }, 12); // tweak speed as desired
+  }
+
+- Add an effect that starts typewriter when:
+  1) we are NOT suppressing hydration,
+  2) server status becomes "available",
+  3) local insight.isTyping is true,
+  4) and metricInsight.insightText is a non-empty string.
+
+Example:
+  useEffect(() => {
+    if (suppressHydrationRef.current) return;
+    if (!insight?.isTyping) return;
+    if (metricInsight?.status !== "available") return;
+    const text = metricInsight?.insightText?.trim();
+    if (!text) return;
+    runTypewriter(text, t =>
+      setInsight(cur => cur ? { ...cur, insightText: t } : cur)
+    );
+    // when we kick off typing, also clear isTyping when done:
+    // easiest: schedule a timeout proportional to length
+    const ms = Math.max(200, (text.length + 2) * 12);
+    const doneId = setTimeout(() => {
+      setInsight(cur => cur ? { ...cur, isTyping: false } : cur);
+    }, ms);
+    return () => clearTimeout(doneId);
+  }, [metricInsight?.status, metricInsight?.insightText, insight?.isTyping]);
+
+E) Make sure the context-prefetch on Regenerate uses the month (you added this earlier; keep it):
+  /api/insight-context/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}
+
+Notes:
+- Do not remove your existing “optimistic hasContext true” set when regenerating with context.
+- Keep all other logic intact; only add the suppression guard, guarded hydration, refetch, and typewriter pieces above.
+
+Deliverable:
+- After clicking Regenerate, the box shows an empty typing area and animates the new text.
+- The old insight no longer flashes back in.
+- Once the server returns the new result, the component refetches and hydrates the final strings cleanly.

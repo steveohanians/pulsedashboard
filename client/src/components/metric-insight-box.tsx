@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,9 @@ export function MetricInsightBox({
   >(null);
   const queryClient = useQueryClient();
 
+  // A) Add suppression flag to block hydration while generating
+  const suppressHydrationRef = useRef(false);
+
   // Normalize time period to canonical YYYY-MM format
   const canonicalPeriod = useMemo(() => {
     // Convert to canonical YYYY-MM format for database consistency
@@ -79,6 +82,17 @@ export function MetricInsightBox({
     const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
+
+  // D) Simple typewriter helper function
+  function runTypewriter(full: string, setter: (s: string) => void) {
+    let i = 0;
+    setter("");
+    const id = setInterval(() => {
+      i++;
+      setter(full.slice(0, i));
+      if (i >= full.length) clearInterval(id);
+    }, 12); // tweak speed as desired
+  }
 
   // Database-based insights query using centralized hook
   const { data: insightsData, isLoading: isLoadingInsights, isFetching, error } = useAIInsights(clientId, canonicalPeriod);
@@ -133,8 +147,14 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
-  // Update local state when fresh data arrives from the hook
+  // C) Update local state when fresh data arrives from the hook (with suppression guard)
   useEffect(() => {
+    // Guard against hydration while generating
+    if (suppressHydrationRef.current) return;
+    // Skip if local isTyping is true or server status is "generating"
+    if (insight?.isTyping) return;
+    if (metricInsight?.status === "generating") return;
+    
     if (metricInsight) {
       setInsight({
         contextText: metricInsight.contextText,
@@ -150,7 +170,7 @@ export function MetricInsightBox({
         onStatusChange(metricInsight.status);
       }
     }
-  }, [metricInsight, onStatusChange]);
+  }, [metricInsight, onStatusChange, insight?.isTyping]);
 
   // Use the centralized insights hook
   const canonicalInsights = insightsData;
@@ -182,10 +202,14 @@ export function MetricInsightBox({
       }
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: false });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+    },
+    onSettled: () => {
+      suppressHydrationRef.current = false;
     },
     onError: (error) => {
       logger.warn("Failed to generate insight", {
@@ -212,11 +236,15 @@ export function MetricInsightBox({
       }
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: true });
       onStatusChange?.(data.insight.status);
-      queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
       queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
+      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+    },
+    onSettled: () => {
+      suppressHydrationRef.current = false;
     },
     onError: (error) => {
       logger.warn("Failed to generate insight with context", {
@@ -263,6 +291,26 @@ export function MetricInsightBox({
       }
     }
   }, [canonicalInsights, metricName, onStatusChange]);
+
+  // D) Typewriter effect when fresh text arrives
+  useEffect(() => {
+    if (suppressHydrationRef.current) return;
+    if (!insight?.isTyping) return;
+    if (metricInsight?.status !== "available") return;
+    const text = metricInsight?.insightText?.trim();
+    if (!text) return;
+    
+    runTypewriter(text, t =>
+      setInsight(cur => cur ? { ...cur, insightText: t } : cur)
+    );
+    
+    // Clear isTyping when done
+    const ms = Math.max(200, (text.length + 2) * 12);
+    const doneId = setTimeout(() => {
+      setInsight(cur => cur ? { ...cur, isTyping: false } : cur);
+    }, ms);
+    return () => clearTimeout(doneId);
+  }, [metricInsight?.status, metricInsight?.insightText, insight?.isTyping]);
   
   // NEW: show loading while the initial query is in-flight
   if (isLoadingInsights || isFetching || insightsData?.status === 'pending') {
@@ -330,14 +378,17 @@ export function MetricInsightBox({
               const existingContext = contextData.userContext?.trim();
               if (existingContext) {
                 logger.component("MetricInsightBox", "Found existing context, regenerating with context");
-                setInsight(cur => cur ? { ...cur, hasContext: true, isTyping: true } : cur);
+                // B) Clear text and set suppression flag before mutation
+                setInsight(cur => cur ? { ...cur, hasContext: true, isTyping: true, insightText: "", recommendationText: "" } : cur);
+                suppressHydrationRef.current = true;
                 generateInsightWithContextMutation.mutate(existingContext);
                 return;
               }
             }
           } catch {}
-          // Clear hasContext if no context exists when regenerating
-          setInsight(current => current ? { ...current, hasContext: false } : current);
+          // B) Clear text and set suppression flag before mutation
+          setInsight(current => current ? { ...current, hasContext: false, isTyping: true, insightText: "", recommendationText: "" } : current);
+          suppressHydrationRef.current = true;
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
