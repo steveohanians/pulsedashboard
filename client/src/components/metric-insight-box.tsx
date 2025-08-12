@@ -134,6 +134,24 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
+  // Update local state when fresh data arrives from the hook
+  useEffect(() => {
+    if (metricInsight && !insight?.isFromStorage) {
+      setInsight({
+        contextText: metricInsight.contextText,
+        insightText: metricInsight.insightText,
+        recommendationText: metricInsight.recommendationText,
+        status: metricInsight.status,
+        isTyping: false,
+        isFromStorage: false,
+        hasContext: metricInsight.hasContext, // Preserve server-computed hasContext
+      });
+      if (metricInsight.status && onStatusChange) {
+        onStatusChange(metricInsight.status);
+      }
+    }
+  }, [metricInsight, insight?.isFromStorage, onStatusChange]);
+
   // Use the centralized insights hook
   const canonicalInsights = insightsData;
   
