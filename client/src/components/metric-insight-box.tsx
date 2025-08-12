@@ -8,11 +8,7 @@ import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
 import { QueryKeys } from "@/lib/queryKeys";
 
-/**
- * Persist typewriter progress across unmounts (e.g., list virtualization).
- * Keyed by clientId|metricName|period
- */
-const typingState = new Map<string, { text: string; index: number }>();
+
 
 interface InsightData {
   contextText?: string;
@@ -59,25 +55,13 @@ export function MetricInsightBox({
     | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
-  const [typing, setTyping] = useState({ active: false, text: "" });
   const queryClient = useQueryClient();
 
   // Guards / flags
   const suppressHydrationRef = useRef(false);
-  const lastTypedRef = useRef<string>("");
 
-  // Visibility tracking refs
+  // Container ref
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isVisibleRef = useRef(true);
-  const isTabVisibleRef = useRef(true);
-
-  // Typewriter engine refs
-  const rafIdRef = useRef<number | null>(null);
-  const lastTsRef = useRef<number>(0);
-  const fullTextRef = useRef<string>("");
-  const indexRef = useRef<number>(0);
-  const keyRef = useRef<string>("");
-  const doneRef = useRef<boolean>(false);
 
   // Confirmed delete flag (set only after DELETE + refetch)
   const deleteConfirmRef = useRef(false);
@@ -96,25 +80,7 @@ export function MetricInsightBox({
   // Use GA4 Status hook to prevent 404 polling storm
   const ga4 = useGA4Status(clientId, canonicalPeriod, true);
 
-  // Visibility tracking effect
-  useEffect(() => {
-    const el = containerRef.current;
-    let io: IntersectionObserver | null = null;
-    if (typeof window !== "undefined" && "IntersectionObserver" in window && el) {
-      io = new IntersectionObserver((entries) => {
-        for (const entry of entries) isVisibleRef.current = entry.isIntersecting;
-      }, { threshold: 0.01 });
-      io.observe(el);
-    }
-    const onVis = () => (isTabVisibleRef.current = document.visibilityState === "visible");
-    document.addEventListener("visibilitychange", onVis);
-    onVis();
-    return () => {
-      if (io && el) io.unobserve(el);
-      if (io) io.disconnect();
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
+
 
   const monthLabel = useMemo(() => {
     const now = new Date();
@@ -125,89 +91,7 @@ export function MetricInsightBox({
     });
   }, []);
 
-  /** rAF-based typewriter — smooth, catch-up on inactive, resilient to unmount/remount */
-  function startTypewriter(full: string) {
-    // Cancel any prior
-    if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
-    rafIdRef.current = null;
-    doneRef.current = false;
-    fullTextRef.current = full;
-    keyRef.current = `${clientId}|${metricName}|${canonicalPeriod}`;
 
-    // Resume if we have progress stored for the same text
-    const saved = typingState.get(keyRef.current);
-    const startIdx = saved && saved.text === full ? saved.index : 0;
-    indexRef.current = startIdx;
-    setTyping({ active: true, text: full.slice(0, startIdx) });
-
-    // Hydration suppressed during animation
-    suppressHydrationRef.current = true;
-    lastTsRef.current = 0;
-
-    const msPerChar = 14; // ~70 cps. Adjust if you want faster/slower.
-    const batchChars = 3; // batch state updates for perf
-
-    const step = (ts: number) => {
-      if (doneRef.current) return;
-      if (!isVisibleRef.current || !isTabVisibleRef.current) {
-        rafIdRef.current = requestAnimationFrame(step);
-        return;
-      }
-      if (!lastTsRef.current) lastTsRef.current = ts;
-      let delta = ts - lastTsRef.current;
-      if (delta > 200) delta = 200;
-
-      let advance = Math.floor(delta / msPerChar);
-      if (advance <= 0) { 
-        rafIdRef.current = requestAnimationFrame(step); 
-        return; 
-      }
-      if (advance > 3) advance = 3;
-
-      lastTsRef.current += advance * msPerChar;
-      indexRef.current = Math.min(
-        indexRef.current + advance,
-        fullTextRef.current.length,
-      );
-
-      const next = fullTextRef.current.slice(0, indexRef.current);
-      setTyping((t) => (t.active ? { active: true, text: next } : t));
-
-      // Persist progress so we can resume after unmount
-      typingState.set(keyRef.current, {
-        text: fullTextRef.current,
-        index: indexRef.current,
-      });
-
-      if (indexRef.current >= fullTextRef.current.length) {
-        // Done
-        doneRef.current = true;
-        setTyping({ active: false, text: fullTextRef.current });
-        setInsight((cur) =>
-          cur
-            ? { ...cur, insightText: fullTextRef.current }
-            : ({ insightText: fullTextRef.current } as any),
-        );
-        lastTypedRef.current = fullTextRef.current;
-        typingState.delete(keyRef.current);
-        suppressHydrationRef.current = false;
-        rafIdRef.current = null;
-        return;
-      }
-
-      rafIdRef.current = requestAnimationFrame(step);
-    };
-
-    rafIdRef.current = requestAnimationFrame(step);
-  }
-
-  // Cleanup: cancel rAF & persist progress
-  useEffect(() => {
-    return () => {
-      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    };
-  }, []);
 
   // Query
   const {
@@ -231,7 +115,7 @@ export function MetricInsightBox({
 
   // Preload (props) when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || typing.active) return;
+    if (suppressHydrationRef.current || forcedEmpty) return;
     if (!preloadedInsight) return;
 
     setInsight({
@@ -251,12 +135,11 @@ export function MetricInsightBox({
     onStatusChange,
     preloadedInsight,
     forcedEmpty,
-    typing.active,
   ]);
 
-  // Hydrate from server when allowed (won't run while typing)
+  // Hydrate from server when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || typing.active) return;
+    if (suppressHydrationRef.current || forcedEmpty) return;
     if (!metricInsight) return;
 
     setInsight({
@@ -270,34 +153,9 @@ export function MetricInsightBox({
     });
     if (metricInsight.status && onStatusChange)
       onStatusChange(metricInsight.status);
-  }, [metricInsight, onStatusChange, forcedEmpty, typing.active]);
+  }, [metricInsight, onStatusChange, forcedEmpty]);
 
-  // Start (or resume) typewriter when server text changes
-  useEffect(() => {
-    if (forcedEmpty) return;
-    const serverText = (metricInsight?.insightText || "").trim();
-    if (!serverText) return;
 
-    // If we already fully typed this exact text, skip
-    if (serverText === lastTypedRef.current) return;
-
-    // If we have saved progress for this key and text, resume from it
-    keyRef.current = `${clientId}|${metricName}|${canonicalPeriod}`;
-    const saved = typingState.get(keyRef.current);
-    if (saved && saved.text === serverText && saved.index < serverText.length) {
-      startTypewriter(serverText);
-      return;
-    }
-
-    // Fresh start
-    startTypewriter(serverText);
-  }, [
-    metricInsight?.insightText,
-    forcedEmpty,
-    clientId,
-    metricName,
-    canonicalPeriod,
-  ]);
 
   // Release delete lock only after confirmed + no fetch + item gone
   useEffect(() => {
@@ -306,7 +164,6 @@ export function MetricInsightBox({
       suppressHydrationRef.current = false;
       setForcedEmpty(false);
       setInsight(null);
-      setTyping({ active: false, text: "" });
     }
   }, [metricInsight, isFetching]);
 
@@ -341,7 +198,6 @@ export function MetricInsightBox({
     },
     onError: (error) => {
       suppressHydrationRef.current = false;
-      setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight", {
         error,
         clientId,
@@ -382,7 +238,6 @@ export function MetricInsightBox({
     },
     onError: (error) => {
       suppressHydrationRef.current = false;
-      setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight with context", {
         error,
         clientId,
@@ -440,13 +295,10 @@ export function MetricInsightBox({
     );
   }
 
-  const displayInsightText = typing.active
-    ? typing.text
-    : (insight?.insightText ?? "");
+  const displayInsightText = insight?.insightText ?? "";
   const shouldShowEmpty =
     forcedEmpty ||
-    (!typing.active &&
-      !isLoadingInsights &&
+    (!isLoadingInsights &&
       !isFetching &&
       !metricInsight?.insightText &&
       !insight?.insightText);
@@ -459,7 +311,7 @@ export function MetricInsightBox({
         insight={displayInsightText}
         recommendation={insight.recommendationText || ""}
         status={insight.status}
-        isTyping={typing.active}
+        isTyping={false}
         hasCustomContext={insight.hasContext === true}
         clientId={clientId}
         metricName={metricName}
@@ -476,7 +328,6 @@ export function MetricInsightBox({
               if (existingContext) {
                 suppressHydrationRef.current = true;
                 setForcedEmpty(false);
-                setTyping({ active: true, text: "" });
                 setInsight((cur) =>
                   cur
                     ? {
@@ -494,7 +345,6 @@ export function MetricInsightBox({
           } catch {}
           suppressHydrationRef.current = true;
           setForcedEmpty(false);
-          setTyping({ active: true, text: "" });
           setInsight((cur) =>
             cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
           );
@@ -503,7 +353,6 @@ export function MetricInsightBox({
         onRegenerateWithContext={(userContext: string) => {
           suppressHydrationRef.current = true;
           setForcedEmpty(false);
-          setTyping({ active: true, text: "" });
           setInsight((cur) =>
             cur
               ? {
@@ -517,15 +366,9 @@ export function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
-          // Stop any typing animation
-          if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = null;
-          typingState.delete(`${clientId}|${metricName}|${canonicalPeriod}`);
-
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
-          setTyping({ active: false, text: "" });
           onStatusChange?.(undefined);
 
           // Optimistic cache prune (optional)
@@ -589,7 +432,6 @@ export function MetricInsightBox({
           onClick={() => {
             suppressHydrationRef.current = true;
             setForcedEmpty(false);
-            setTyping({ active: true, text: "" });
             setInsight((cur) =>
               cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
             );
