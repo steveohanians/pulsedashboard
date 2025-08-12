@@ -310,22 +310,55 @@ export function MetricInsightBox({
 
   // Use canonical insights if available, otherwise fall back to preloaded insight
   useEffect(() => {
+    if (suppressHydrationRef.current) return;
     if (canonicalInsights?.status === 'available' && canonicalInsights.insights) {
       const matchingInsight = canonicalInsights.insights.find(
         (insight: any) => insight.metricName === metricName
       );
       
       if (matchingInsight) {
-        logger.component("MetricInsightBox", `Using canonical insight for ${metricName}`);
-        setInsight({
-          contextText: matchingInsight.contextText,
-          insightText: matchingInsight.insightText,
-          recommendationText: matchingInsight.recommendationText,
-          status: matchingInsight.status,
-          isTyping: false,
-          isFromStorage: false, // was true
-          hasContext: matchingInsight?.hasContext === true,
-        });
+        const serverText = (matchingInsight.insightText || "").trim();
+        
+        // Only run when text truly changed (prevents loops)
+        if (serverText && serverText !== lastTypedRef.current) {
+          logger.component("MetricInsightBox", `Using canonical insight for ${metricName} with typewriter`);
+          
+          // Set initial state for typewriter
+          setInsight({
+            contextText: matchingInsight.contextText,
+            insightText: "", // Start with empty text for typewriter
+            recommendationText: matchingInsight.recommendationText,
+            status: matchingInsight.status,
+            isTyping: true,
+            isFromStorage: false,
+            hasContext: matchingInsight?.hasContext === true,
+          });
+          
+          // Start typewriter animation
+          runTypewriter(serverText, t =>
+            setInsight(cur => cur ? { ...cur, insightText: t } : { insightText: t } as any)
+          );
+
+          // Mark this version as typed and schedule isTyping=false at the end
+          lastTypedRef.current = serverText;
+          const ms = Math.max(200, (serverText.length + 2) * 12);
+          setTimeout(() => {
+            setInsight(cur => cur ? { ...cur, isTyping: false } : { isTyping: false } as any);
+          }, ms);
+        } else if (matchingInsight.insightText) {
+          // No typewriter needed, just set the insight directly
+          logger.component("MetricInsightBox", `Using canonical insight for ${metricName} without typewriter`);
+          setInsight({
+            contextText: matchingInsight.contextText,
+            insightText: matchingInsight.insightText,
+            recommendationText: matchingInsight.recommendationText,
+            status: matchingInsight.status,
+            isTyping: false,
+            isFromStorage: false,
+            hasContext: matchingInsight?.hasContext === true,
+          });
+        }
+        
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
         }
@@ -333,29 +366,7 @@ export function MetricInsightBox({
     }
   }, [canonicalInsights, metricName, onStatusChange]);
 
-  // D) Robust typewriter trigger (works even if status wording differs)
-  useEffect(() => {
-    if (suppressHydrationRef.current) return;
-    const serverText = (metricInsight?.insightText || "").trim();
-    if (!serverText) return;
 
-    // Only run when text truly changed (prevents loops)
-    if (serverText === lastTypedRef.current) return;
-
-    // Start typewriter
-    setInsight(cur => cur ? { ...cur, isTyping: true } : { isTyping: true } as any);
-    runTypewriter(serverText, t =>
-      setInsight(cur => cur ? { ...cur, insightText: t } : { insightText: t } as any)
-    );
-
-    // Mark this version as typed and schedule isTyping=false at the end
-    lastTypedRef.current = serverText;
-    const ms = Math.max(200, (serverText.length + 2) * 12);
-    const done = setTimeout(() => {
-      setInsight(cur => cur ? { ...cur, isTyping: false } : { isTyping: false } as any);
-    }, ms);
-    return () => clearTimeout(done);
-  }, [metricInsight?.insightText]);
   
   // NEW: show loading while the initial query is in-flight
   if (isLoadingInsights || isFetching || insightsData?.status === 'pending') {
@@ -400,9 +411,9 @@ export function MetricInsightBox({
   }
 
   // Decide what to render using single "display text" source
-  // Critical: while typing.active, use typing.text only (not metricInsight.insightText)
+  // Critical: while typing.active, use typing.text only
   const displayInsightText = 
-    typing.active ? typing.text : (insight?.insightText ?? metricInsight?.insightText ?? "");
+    typing.active ? typing.text : (insight?.insightText ?? "");
 
   // Empty state wins if forced or there is no text at all
   const shouldShowEmpty = 
