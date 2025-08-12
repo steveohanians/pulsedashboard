@@ -118,7 +118,7 @@ export function MetricInsightBox({
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasCustomContext, // Set based on actual database state
+          hasContext: preloadedInsight.hasContext, // Use server-computed hasContext field
         });
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
