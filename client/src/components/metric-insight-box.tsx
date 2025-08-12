@@ -178,7 +178,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false;
       setForcedEmpty(false);
       setInsight(null);
-      deletedRef.current = null; // Clear tombstone when deletion is confirmed
+      // Don't clear tombstone here - let it persist to prevent any flashback
     }
   }, [metricInsight, isFetching]);
 
@@ -319,6 +319,17 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       !metricInsight?.insightText &&
       !insight?.insightText);
 
+  // Clear tombstone only when we're showing empty AND no longer fetching
+  useEffect(() => {
+    if (deletedRef.current === metricName && shouldShowEmpty && !isFetching && !isLoadingInsights) {
+      // Small delay to ensure UI is stable in empty state
+      const timer = setTimeout(() => {
+        deletedRef.current = null;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [metricName, shouldShowEmpty, isFetching, isLoadingInsights]);
+
   if (insight && !shouldShowEmpty) {
     return (
       <div ref={containerRef}>
@@ -426,7 +437,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           } catch (error) {
             suppressHydrationRef.current = false;
             setForcedEmpty(false);
-            deletedRef.current = null; // Clear tombstone on error
+            deletedRef.current = null; // Clear tombstone on error (immediate rollback)
             logger.warn(
               "Failed to delete insight and context via transactional operation",
               { error },
