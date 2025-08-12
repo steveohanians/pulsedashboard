@@ -1642,8 +1642,7 @@ export class DatabaseStorage implements IStorage {
           FROM ${insightContexts} ic
           WHERE ic.client_id = ${clientId}
             AND ic.metric_name = ${aiInsights.metricName}
-            AND ic.period = ${period}
-            AND length(trim(ic.context_text)) > 0
+            AND length(trim(ic.user_context)) > 0
         )`,
       })
       .from(aiInsights)
