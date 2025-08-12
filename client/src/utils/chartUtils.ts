@@ -84,7 +84,7 @@ export function normalizeChartData<T extends Record<string, any>>(
       // Handle required keys
       requiredKeys.forEach(key => {
         if (!(key in normalizedItem)) {
-          normalizedItem[key] = defaultValue;
+          (normalizedItem as any)[key] = defaultValue;
         }
       });
 
@@ -93,11 +93,11 @@ export function normalizeChartData<T extends Record<string, any>>(
         const value = normalizedItem[key];
         
         if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
-          normalizedItem[key] = gapOnNull ? null : defaultValue;
+          (normalizedItem as any)[key] = gapOnNull ? null : defaultValue;
         } else if (value == null) {
-          normalizedItem[key] = gapOnNull ? null : defaultValue;
+          (normalizedItem as any)[key] = gapOnNull ? null : defaultValue;
         } else if (typeof value === 'string' && value.trim() === '') {
-          normalizedItem[key] = gapOnNull ? null : defaultValue;
+          (normalizedItem as any)[key] = gapOnNull ? null : defaultValue;
         }
       });
 

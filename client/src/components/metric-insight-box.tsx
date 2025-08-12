@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { useGA4Status } from "@/hooks/useGA4Status";
@@ -38,7 +38,7 @@ interface MetricInsightBoxProps {
   preloadedInsight?: InsightData;
 }
 
-export function MetricInsightBox({
+export const MetricInsightBox = React.memo(function MetricInsightBox({
   metricName,
   clientId,
   timePeriod,
@@ -458,4 +458,4 @@ export function MetricInsightBox({
       </div>
     </div>
   );
-}
+});

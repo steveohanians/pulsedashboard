@@ -48,7 +48,9 @@ import { logger } from "@/utils/logger";
 
 
 const getChannelColor = (channelName: string): string => {
-  return CHART_COLORS[channelName as keyof typeof CHART_COLORS] || CHART_COLORS.Other;
+  // CHART_COLORS contains functions that return color strings
+  const colorFunction = CHART_COLORS[channelName as keyof typeof CHART_COLORS] || CHART_COLORS.Other;
+  return colorFunction();
 };
 
 export default function Dashboard() {
@@ -1930,33 +1932,22 @@ export default function Dashboard() {
                       metricName={metricName}
                       clientId={client?.id || ''}
                       timePeriod={timePeriod}
-                      metricData={{
+                      metricData={useMemo(() => ({
                         metricName,
                         clientValue: metricData?.Client || null,
                         industryAverage: metricData?.Industry_Avg || null,
                         cdAverage: metricData?.CD_Avg || null,
                         competitorValues: [],
                         competitorNames: []
-                      }}
-                      preloadedInsight={(() => {
-                        const insight = insightsLookup[metricName] || null;
-                        console.log(`🔍 INSIGHT LOOKUP [${metricName}]:`, {
-                          found: !!insight,
-                          insightId: insight?.id,
-                          lookupKeys: Object.keys(insightsLookup),
-                          exactMatch: insightsLookup.hasOwnProperty(metricName),
-                          metricNameType: typeof metricName,
-                          metricNameValue: metricName
-                        });
-                        return insight;
-                      })()}
-                      onStatusChange={(status) => {
+                      }), [metricName, metricData?.Client, metricData?.Industry_Avg, metricData?.CD_Avg])}
+                      preloadedInsight={insightsLookup[metricName] || null}
+                      onStatusChange={useCallback((status: "success" | "needs_improvement" | "warning" | undefined) => {
                         logger.debug(`Status change for ${metricName}:`, status);
                         setMetricStatuses(prev => ({
                           ...prev,
                           [metricName]: status
                         }));
-                      }}
+                      }, [metricName])}
                     />
                   </div>
                 </CardContent>
