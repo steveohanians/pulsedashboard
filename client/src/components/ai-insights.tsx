@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { TypewriterText } from "./typewriter-text";
+
 import { validateUserInput } from "@/utils/inputValidation";
 
 // ---------- Text Rendering ----------
@@ -107,11 +107,7 @@ export function AIInsights({
   hasCustomContext = false,
   onRegenerateWithContext,
 }: AIInsightsProps) {
-  const [contextComplete, setContextComplete] = useState(!isTyping);
-  const [insightComplete, setInsightComplete] = useState(!isTyping);
-  const [showInsight, setShowInsight] = useState(!isTyping);
-  const [showRecommendation, setShowRecommendation] = useState(!isTyping);
-  const [recommendationComplete, setRecommendationComplete] = useState(!isTyping);
+
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [contentKey, setContentKey] = useState(Date.now());
 
@@ -125,22 +121,9 @@ export function AIInsights({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isTyping) {
-      setContextComplete(false);
-      setInsightComplete(false);
-      setShowInsight(false);
-      setShowRecommendation(false);
-      setRecommendationComplete(false);
-    } else {
-      setContextComplete(true);
-      setInsightComplete(true);
-      setShowInsight(true);
-      setShowRecommendation(true);
-      setRecommendationComplete(true);
-    }
     setCopiedText(null);
     setContentKey(Date.now());
-  }, [context, insight, recommendation, isTyping]);
+  }, [context, insight, recommendation]);
 
   const timestamp = useMemo(
     () =>
@@ -254,7 +237,7 @@ export function AIInsights({
     setValidationError("");
   };
 
-  const shouldShowButtons = !isTyping || recommendationComplete;
+  const shouldShowButtons = true;
 
   if (!context && !insight && !recommendation) {
     return (
@@ -278,64 +261,31 @@ export function AIInsights({
               Context
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {isTyping && !contextComplete ? (
-                <TypewriterText
-                  key={`context-${contentKey}`}
-                  text={context}
-                  speed={5}
-                  onComplete={() => {
-                    setContextComplete(true);
-                    setShowInsight(true);
-                  }}
-                />
-              ) : (
-                renderTextWithBold(context)
-              )}
+              {renderTextWithBold(context)}
             </p>
           </div>
         )}
 
-        {insight && (showInsight || !isTyping) && (
+        {insight && (
           <div className="mb-3 sm:mb-4">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <Lightbulb className="h-3 w-3 mr-2 text-yellow-500 flex-shrink-0" />
               Insights
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {isTyping && showInsight && !insightComplete ? (
-                <TypewriterText
-                  key={`insight-${contentKey}`}
-                  text={insight}
-                  speed={5}
-                  onComplete={() => {
-                    setInsightComplete(true);
-                    setShowRecommendation(true);
-                  }}
-                />
-              ) : (
-                renderTextWithBold(insight)
-              )}
+              {renderTextWithBold(insight)}
             </p>
           </div>
         )}
 
-        {recommendation && (showRecommendation || !isTyping) && (
+        {recommendation && (
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 flex items-center">
               <TrendingUp className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
               Recommendations
             </h4>
             <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
-              {isTyping && showRecommendation && !recommendationComplete ? (
-                <TypewriterText
-                  key={`recommendation-${contentKey}`}
-                  text={recommendation}
-                  speed={5}
-                  onComplete={() => setRecommendationComplete(true)}
-                />
-              ) : (
-                renderTextWithBold(recommendation, true)
-              )}
+              {renderTextWithBold(recommendation, true)}
             </div>
 
             {shouldShowButtons && (
