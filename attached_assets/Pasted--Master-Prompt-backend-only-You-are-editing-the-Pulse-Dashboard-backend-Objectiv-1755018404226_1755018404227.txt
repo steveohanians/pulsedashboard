@@ -1,0 +1,117 @@
+
+---
+
+**Master Prompt (backend only):**
+
+````
+You are editing the Pulse Dashboard backend.
+
+Objectives (do all of these):
+1) Keep only the newer GET /api/ai-insights/:clientId handler (remove any duplicate earlier registration).
+2) Ensure the handler ALWAYS returns a response with a status field (e.g., "available") so the UI never spins forever.
+3) Compute hasContext correctly from the DB (EXISTS in insightContexts) — not from contextText.
+4) Make the endpoint resilient to query-param differences: accept BOTH `period=YYYY-MM` and `timePeriod=<phrase or YYYY-MM>`. Canonicalize `timePeriod` values like "Last Month", "This Month" into YYYY-MM. If neither is given, default to current month (YYYY-MM) without throwing.
+5) Keep contracts/types aligned: MetricInsight must include `hasContext: boolean`.
+
+Implementation details:
+
+A) routes.ts
+- Ensure there is ONE handler for: GET /api/ai-insights/:clientId
+- At the top of the handler, read and canonicalize query params:
+
+  ```ts
+  // Accept both ?period=YYYY-MM and ?timePeriod=...
+  const qpPeriod = typeof req.query.period === "string" ? req.query.period : undefined;
+  const qpTimePeriod = typeof req.query.timePeriod === "string" ? req.query.timePeriod : undefined;
+
+  function canonicalize(input?: string): string | undefined {
+    if (!input) return undefined;
+    const s = input.trim();
+    // Accept already-canonical YYYY-MM
+    if (/^\d{4}-\d{2}$/.test(s)) return s;
+
+    // Map known phrases
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth(); // 0-11
+    const toYYYYMM = (year: number, monthIndex: number) =>
+      `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+
+    const lower = s.toLowerCase();
+    if (lower === "this month") return toYYYYMM(y, m);
+    if (lower === "last month") {
+      const d = new Date(Date.UTC(y, m, 1));
+      d.setUTCMonth(d.getUTCMonth() - 1);
+      return toYYYYMM(d.getUTCFullYear(), d.getUTCMonth());
+    }
+    return undefined; // unrecognized phrase
+  }
+
+  const canonicalFromPeriod = canonicalize(qpPeriod);
+  const canonicalFromTime = canonicalize(qpTimePeriod);
+  const canonicalPeriod = canonicalFromPeriod ?? canonicalFromTime ?? (() => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    return `${y}-${String(m + 1).padStart(2, "0")}`;
+  })();
+````
+
+* Call storage using this `canonicalPeriod`:
+
+  ```ts
+  const { clientId } = req.params;
+  const insights = await getInsightsWithContext(clientId, canonicalPeriod);
+  return res.json({ status: "available", period: canonicalPeriod, insights });
+  ```
+
+* Wrap in try/catch and on error `console.error` the details, returning `res.status(500).json({ status: "error", message: "AI insights failed" })`.
+
+B) storage.ts
+
+* Provide/ensure:
+
+  ```ts
+  import { sql, eq, and } from "drizzle-orm";
+  import { aiInsights, insightContexts } from "../shared/schema"; // adjust path
+
+  export async function getInsightsWithContext(clientId: string, period: string) {
+    return await db
+      .select({
+        metricName: aiInsights.metricName,
+        status: aiInsights.status,
+        insightText: aiInsights.insightText,
+        recommendationText: aiInsights.recommendationText,
+        contextText: aiInsights.contextText, // optional passthrough
+        hasContext: sql<boolean>`EXISTS(
+          SELECT 1 FROM ${insightContexts} ic
+          WHERE ic.clientId = ${clientId}
+            AND ic.metricName = ${aiInsights.metricName}
+            AND ic.period = ${period}
+            AND length(trim(ic.contextText)) > 0
+        )`,
+      })
+      .from(aiInsights)
+      .where(and(eq(aiInsights.clientId, clientId), eq(aiInsights.period, period)));
+  }
+  ```
+
+  * If TypeScript complains about `sql<boolean>`, you may use a mapper or cast.
+
+C) contracts.ts (shared/http/contracts.ts or equivalent)
+
+* Ensure MetricInsight includes: `hasContext: boolean`
+* Ensure the response schema for the GET route allows:
+  `{ status: 'available' | 'pending' | 'generating' | 'empty', period?: string, insights: MetricInsight[] }`
+* Make sure your validation (if any) matches exactly what the route returns (no missing/extra fields).
+
+D) Remove older duplicate handler (if still present) that used `handleAIInsights` and had a cache-hit path without `status`.
+
+E) Do not modify unrelated endpoints or logic.
+
+After changes:
+
+* Hitting GET /api/ai-insights/\:clientId?period=2025-07 or ?timePeriod=Last%20Month should return 200 with `{ status:'available', period:'2025-07', insights:[...] }`.
+* UI should no longer spin, and badges should reflect correct hasContext from DB.
+
+```

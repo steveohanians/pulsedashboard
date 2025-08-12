@@ -1500,14 +1500,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete specific AI insight
-  // Month-Pinned AI Insights GET endpoint with server-computed hasContext
+  // Helper function to canonicalize time periods
+  const canonicalizeTimePeriod = (input?: string): string | undefined => {
+    if (!input) return undefined;
+    const s = input.trim();
+    // Accept already-canonical YYYY-MM
+    if (/^\d{4}-\d{2}$/.test(s)) return s;
+
+    // Map known phrases
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth(); // 0-11
+    const toYYYYMM = (year: number, monthIndex: number) =>
+      `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+
+    const lower = s.toLowerCase();
+    if (lower === "this month") return toYYYYMM(y, m);
+    if (lower === "last month") {
+      const d = new Date(Date.UTC(y, m, 1));
+      d.setUTCMonth(d.getUTCMonth() - 1);
+      return toYYYYMM(d.getUTCFullYear(), d.getUTCMonth());
+    }
+    return undefined; // unrecognized phrase
+  };
+
+  // AI Insights GET endpoint with dual parameter support and server-computed hasContext
   app.get("/api/ai-insights/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      const { period } = req.query;
       
-      // Import time period utilities
-      const { normalizeToCanonicalMonth } = await import("./utils/timePeriodUtils");
+      // Accept both ?period=YYYY-MM and ?timePeriod=...
+      const qpPeriod = typeof req.query.period === "string" ? req.query.period : undefined;
+      const qpTimePeriod = typeof req.query.timePeriod === "string" ? req.query.timePeriod : undefined;
+
+      const canonicalFromPeriod = canonicalizeTimePeriod(qpPeriod);
+      const canonicalFromTime = canonicalizeTimePeriod(qpTimePeriod);
+      const canonicalPeriod = canonicalFromPeriod ?? canonicalFromTime ?? (() => {
+        const now = new Date();
+        const y = now.getUTCFullYear();
+        const m = now.getUTCMonth();
+        return `${y}-${String(m + 1).padStart(2, "0")}`;
+      })();
       
       // Validate ownership
       if (req.user?.role !== "Admin" && req.user?.clientId !== clientId) {
@@ -1517,31 +1550,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      if (!period) {
-        return res.status(400).json({ 
-          error: "Bad Request", 
-          message: "period query parameter is required" 
-        });
-      }
-      
-      // Normalize to canonical YYYY-MM format
-      const canonicalPeriod = normalizeToCanonicalMonth(period as string);
-      
       // Get insights with computed hasContext from database state
       const insights = await storage.getInsightsWithContext(clientId, canonicalPeriod);
       
       logger.info(`Retrieved ${insights.length} insights for ${clientId}/${canonicalPeriod}`);
       
-      res.json({ 
-        status: 'available',
-        insights,
-        period: canonicalPeriod
+      return res.json({ 
+        status: "available", 
+        period: canonicalPeriod, 
+        insights 
       });
     } catch (error) {
-      logger.error("Error fetching AI insights:", error);
-      res.status(500).json({ 
-        error: "Internal Server Error",
-        message: "Failed to fetch AI insights" 
+      console.error("AI insights error:", error);
+      return res.status(500).json({ 
+        status: "error", 
+        message: "AI insights failed" 
       });
     }
   });

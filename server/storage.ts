@@ -1634,24 +1634,23 @@ export class DatabaseStorage implements IStorage {
         insightText: aiInsights.insightText,
         recommendationText: aiInsights.recommendationText,
         contextText: aiInsights.contextText,
-        period: aiInsights.period,
+        timePeriod: aiInsights.timePeriod,
         version: aiInsights.version,
         createdAt: aiInsights.createdAt,
-        updatedAt: aiInsights.updatedAt,
         hasContext: sql<boolean>`EXISTS(
           SELECT 1
           FROM ${insightContexts} ic
-          WHERE ic.clientId = ${clientId}
-            AND ic.metricName = ${aiInsights.metricName}
+          WHERE ic.client_id = ${clientId}
+            AND ic.metric_name = ${aiInsights.metricName}
             AND ic.period = ${period}
-            AND length(trim(ic.contextText)) > 0
+            AND length(trim(ic.context_text)) > 0
         )`,
       })
       .from(aiInsights)
       .where(
         and(
           eq(aiInsights.clientId, clientId),
-          eq(aiInsights.period, period)
+          eq(aiInsights.timePeriod, period)
         )
       );
   }
