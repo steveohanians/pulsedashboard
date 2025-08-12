@@ -66,6 +66,11 @@ export function MetricInsightBox({
   const suppressHydrationRef = useRef(false);
   const lastTypedRef = useRef<string>("");
 
+  // Visibility tracking refs
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isVisibleRef = useRef(true);
+  const isTabVisibleRef = useRef(true);
+
   // Typewriter engine refs
   const rafIdRef = useRef<number | null>(null);
   const lastTsRef = useRef<number>(0);
@@ -90,6 +95,26 @@ export function MetricInsightBox({
 
   // Use GA4 Status hook to prevent 404 polling storm
   const ga4 = useGA4Status(clientId, canonicalPeriod, true);
+
+  // Visibility tracking effect
+  useEffect(() => {
+    const el = containerRef.current;
+    let io: IntersectionObserver | null = null;
+    if (typeof window !== "undefined" && "IntersectionObserver" in window && el) {
+      io = new IntersectionObserver((entries) => {
+        for (const entry of entries) isVisibleRef.current = entry.isIntersecting;
+      }, { threshold: 0.01 });
+      io.observe(el);
+    }
+    const onVis = () => (isTabVisibleRef.current = document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVis);
+    onVis();
+    return () => {
+      if (io && el) io.unobserve(el);
+      if (io) io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   const monthLabel = useMemo(() => {
     const now = new Date();
@@ -124,18 +149,21 @@ export function MetricInsightBox({
 
     const step = (ts: number) => {
       if (doneRef.current) return;
-      if (!lastTsRef.current) lastTsRef.current = ts;
-      const delta = ts - lastTsRef.current;
-
-      // How many chars should we advance based on elapsed time
-      let advance = Math.floor(delta / msPerChar);
-      if (advance <= 0) {
+      if (!isVisibleRef.current || !isTabVisibleRef.current) {
         rafIdRef.current = requestAnimationFrame(step);
         return;
       }
+      if (!lastTsRef.current) lastTsRef.current = ts;
+      let delta = ts - lastTsRef.current;
+      if (delta > 200) delta = 200;
 
-      // Batch and clamp
-      if (advance > batchChars) advance = batchChars;
+      let advance = Math.floor(delta / msPerChar);
+      if (advance <= 0) { 
+        rafIdRef.current = requestAnimationFrame(step); 
+        return; 
+      }
+      if (advance > 3) advance = 3;
+
       lastTsRef.current += advance * msPerChar;
       indexRef.current = Math.min(
         indexRef.current + advance,
@@ -376,7 +404,7 @@ export function MetricInsightBox({
 
   if (isBusy) {
     return (
-      <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+      <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
           <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
             {generateInsightMutation.isPending ||
@@ -425,7 +453,8 @@ export function MetricInsightBox({
 
   if (insight && !shouldShowEmpty) {
     return (
-      <AIInsights
+      <div ref={containerRef}>
+        <AIInsights
         context={insight.contextText || ""}
         insight={displayInsightText}
         recommendation={insight.recommendationText || ""}
@@ -544,11 +573,12 @@ export function MetricInsightBox({
           }
         }}
       />
+      </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+    <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
       <div className="text-center">
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
           Get strategic competitive intelligence and actionable recommendations

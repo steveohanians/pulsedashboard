@@ -1,0 +1,142 @@
+Resilient typewriter: rAF + pause offscreen (P1 stability & perf)
+Goal: Replace interval-based typewriter with requestAnimationFrame, persist progress so it survives virtualization/unmount, and pause when offscreen or the tab is hidden.
+
+Scope: Only the insights component. No changes to shared libs.
+
+Files to edit:
+
+client/src/components/metric-insight-box.tsx
+
+Instructions:
+
+Add a small module-level cache at the top of the file:
+
+ts
+Copy
+Edit
+const typingState = new Map<string, { text: string; index: number }>();
+Add refs in the component:
+
+ts
+Copy
+Edit
+const containerRef = useRef<HTMLDivElement | null>(null);
+const isVisibleRef = useRef(true);
+const isTabVisibleRef = useRef(true);
+
+const rafIdRef = useRef<number | null>(null);
+const lastTsRef = useRef<number>(0);
+const fullTextRef = useRef<string>("");
+const indexRef = useRef<number>(0);
+const keyRef = useRef<string>("");
+const doneRef = useRef<boolean>(false);
+const lastTypedRef = useRef<string>("");
+Add a visibility effect:
+
+ts
+Copy
+Edit
+useEffect(() => {
+  const el = containerRef.current;
+  let io: IntersectionObserver | null = null;
+  if (typeof window !== "undefined" && "IntersectionObserver" in window && el) {
+    io = new IntersectionObserver((entries) => {
+      for (const entry of entries) isVisibleRef.current = entry.isIntersecting;
+    }, { threshold: 0.01 });
+    io.observe(el);
+  }
+  const onVis = () => (isTabVisibleRef.current = document.visibilityState === "visible");
+  document.addEventListener("visibilitychange", onVis);
+  onVis();
+  return () => {
+    if (io && el) io.unobserve(el);
+    if (io) io.disconnect();
+    document.removeEventListener("visibilitychange", onVis);
+  };
+}, []);
+Implement the rAF typewriter:
+
+ts
+Copy
+Edit
+function startTypewriter(full: string) {
+  if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+  rafIdRef.current = null;
+  doneRef.current = false;
+  fullTextRef.current = full;
+  keyRef.current = `${clientId}|${metricName}|${canonicalPeriod}`;
+
+  const saved = typingState.get(keyRef.current);
+  const startIdx = saved && saved.text === full ? saved.index : 0;
+  indexRef.current = startIdx;
+  setTyping({ active: true, text: full.slice(0, startIdx) });
+
+  suppressHydrationRef.current = true;
+  lastTsRef.current = 0;
+
+  const msPerChar = 14;
+  const maxCharsPerTick = 3;
+
+  const step = (ts: number) => {
+    if (doneRef.current) return;
+    if (!isVisibleRef.current || !isTabVisibleRef.current) {
+      rafIdRef.current = requestAnimationFrame(step);
+      return;
+    }
+    if (!lastTsRef.current) lastTsRef.current = ts;
+    let delta = ts - lastTsRef.current;
+    if (delta > 200) delta = 200;
+
+    let advance = Math.floor(delta / msPerChar);
+    if (advance <= 0) { rafIdRef.current = requestAnimationFrame(step); return; }
+    if (advance > maxCharsPerTick) advance = maxCharsPerTick;
+
+    lastTsRef.current += advance * msPerChar;
+    indexRef.current = Math.min(indexRef.current + advance, fullTextRef.current.length);
+
+    const next = fullTextRef.current.slice(0, indexRef.current);
+    setTyping((t) => (t.active ? { active: true, text: next } : t));
+    typingState.set(keyRef.current, { text: fullTextRef.current, index: indexRef.current });
+
+    if (indexRef.current >= fullTextRef.current.length) {
+      doneRef.current = true;
+      setTyping({ active: false, text: fullTextRef.current });
+      setInsight((cur) => (cur ? { ...cur, insightText: fullTextRef.current } : { insightText: fullTextRef.current } as any));
+      lastTypedRef.current = fullTextRef.current;
+      typingState.delete(keyRef.current);
+      suppressHydrationRef.current = false;
+      rafIdRef.current = null;
+      return;
+    }
+    rafIdRef.current = requestAnimationFrame(step);
+  };
+  rafIdRef.current = requestAnimationFrame(step);
+}
+useEffect(() => () => { if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current); }, []);
+Start typing when new server text arrives (do not block on suppression):
+
+ts
+Copy
+Edit
+useEffect(() => {
+  if (forcedEmpty) return;
+  const serverText = (metricInsight?.insightText || "").trim();
+  if (!serverText) return;
+  if (serverText === lastTypedRef.current) return;
+  startTypewriter(serverText);
+}, [metricInsight?.insightText, forcedEmpty, clientId, metricName, canonicalPeriod]);
+In onClear, cancel any typing and clear persisted progress for this key before deleting:
+
+ts
+Copy
+Edit
+if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+rafIdRef.current = null;
+typingState.delete(`${clientId}|${metricName}|${canonicalPeriod}`);
+Acceptance criteria:
+
+Typing animation continues smoothly after scrolling away and back (virtualization).
+
+No freeze when the tab becomes hidden and visible again; it simply catches up.
+
+CPU stays low when the row is offscreen or the tab is hidden.
