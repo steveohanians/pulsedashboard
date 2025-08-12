@@ -66,6 +66,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   // Confirmed delete flag (set only after DELETE + refetch)
   const deleteConfirmRef = useRef(false);
 
+  // Tombstone pattern: track deleted items to prevent flashback
+  const deletedRef = useRef<string | null>(null);
+
   // Canonical YYYY-MM
   const canonicalPeriod = useMemo(() => {
     const convertToCanonical = (period: string): string => {
@@ -121,7 +124,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Preload (props) when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty) return;
+    if (suppressHydrationRef.current || forcedEmpty || deletedRef.current === metricName) return;
     if (!preloadedInsight) return;
 
     setInsight({
@@ -150,7 +153,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Hydrate from server when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty) return;
+    if (suppressHydrationRef.current || forcedEmpty || deletedRef.current === metricName) return;
     if (!metricInsight) return;
 
     setInsight({
@@ -175,6 +178,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false;
       setForcedEmpty(false);
       setInsight(null);
+      deletedRef.current = null; // Clear tombstone when deletion is confirmed
     }
   }, [metricInsight, isFetching]);
 
@@ -309,6 +313,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const displayInsightText = insight?.insightText ?? "";
   const shouldShowEmpty =
     forcedEmpty ||
+    deletedRef.current === metricName ||
     (!isLoadingInsights &&
       !isFetching &&
       !metricInsight?.insightText &&
@@ -380,6 +385,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
+          deletedRef.current = metricName; // Mark as deleted to prevent flashback
           onStatusChange?.(undefined);
 
           // Optimistic cache prune (optional)
@@ -420,6 +426,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           } catch (error) {
             suppressHydrationRef.current = false;
             setForcedEmpty(false);
+            deletedRef.current = null; // Clear tombstone on error
             logger.warn(
               "Failed to delete insight and context via transactional operation",
               { error },
