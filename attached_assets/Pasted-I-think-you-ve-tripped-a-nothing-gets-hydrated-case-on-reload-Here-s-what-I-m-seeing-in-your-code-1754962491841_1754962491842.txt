@@ -1,0 +1,67 @@
+I think you’ve tripped a “nothing gets hydrated” case on reload. Here’s what I’m seeing in your code and what typically causes the all-empty state:
+
+The specific bug I can point to in your files
+In the reload path where you hydrate from the DB (“canonical” insights), you’re still writing hasCustomContext onto local state instead of hasContext:
+
+ts
+Copy
+Edit
+// metric-insight-box.tsx
+setInsight({
+  contextText: matchingInsight.contextText,
+  insightText: matchingInsight.insightText,
+  recommendationText: matchingInsight.recommendationText,
+  status: matchingInsight.status,
+  isTyping: false,
+  isFromStorage: true,
+  hasCustomContext: matchingInsight.hasContext === true, // <-- mismatch
+});
+…but later, when you render the child you pass:
+
+tsx
+Copy
+Edit
+hasCustomContext={insight.hasContext === true}
+So after a reload, your local insight does get set, but the flag the child looks at is insight.hasContext (undefined), and the early “empty” branch in <AIInsights> can fire because your three text props come through as falsy until the next render. Aligning the flag on reload avoids that race and ensures the child doesn’t sit in the empty state.
+
+Fix (reload mapping):
+
+diff
+Copy
+Edit
+- hasCustomContext: matchingInsight.hasContext === true,
++ hasContext: matchingInsight.hasContext === true,
+Do the same normalization anywhere else you still write hasCustomContext on reload.
+
+Two sanity checks that often cause the “everything’s empty” symptom
+These aren’t in the snippets you shared, but they’re the next two usual suspects if the above one-liner doesn’t fully clear it:
+
+Make sure you force the same canonical period for fetch and generate.
+If your page defaults to “Last Month” but your generate call wrote data for YYYY-MM and your reload fetch is asking for a different YYYY-MM, the DB returns no insights and you’ll see all empty cards. Confirm you’re computing canonicalPeriod one way and using the same value in:
+
+the useAIInsights(clientId, canonicalPeriod) hook, and
+
+both generate POSTs, and
+
+the delete endpoint.
+
+Avoid returning the “empty state” during the brief hydrate tick.
+<AIInsights> returns the empty box when all three props are falsy:
+
+ts
+Copy
+Edit
+if (!context && !insight && !recommendation) { /* empty UI */ }
+If your parent passes "" initially (because you do insight?.field || "") and then hydrates on the next tick, you’ll “flash” empty. Two easy guards:
+
+Either pass the raw values without || "", or
+
+Gate the empty branch on !isTyping as well:
+
+diff
+Copy
+Edit
+- if (!context && !insight && !recommendation) {
++ if (!isTyping && !context && !insight && !recommendation) {
+TL;DR
+Change the reload mapper to set hasContext, not hasCustomContext. That aligns your persisted → local → prop chain, which prevents the child from getting an “empty” state on reload. If anything still flashes empty, tighten the empty-state guard as above.
