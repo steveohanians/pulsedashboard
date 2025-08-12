@@ -8,6 +8,7 @@ import {
   Check,
   MessageCircle,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -342,7 +343,10 @@ export function AIInsights({
                 <div className="flex items-center space-x-2">
                   <div className="text-xs text-slate-400">{timestamp}</div>
                   {hasCustomContext === true && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge 
+                      className="text-xs px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 rounded-md font-medium inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <Sparkles className="h-3 w-3" />
                       With Context
                     </Badge>
                   )}
