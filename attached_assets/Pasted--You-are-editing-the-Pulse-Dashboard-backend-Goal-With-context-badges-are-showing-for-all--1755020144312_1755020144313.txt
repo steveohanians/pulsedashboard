@@ -1,0 +1,97 @@
+
+````
+You are editing the Pulse Dashboard backend.
+
+Goal:
+"With context" badges are showing for all insights. Fix the backend so hasContext is TRUE only when a matching row exists in insightContexts for the given clientId + metricName + period with non-empty contextText. Do NOT derive hasContext from aiInsights.contextText or any truthiness fallback.
+
+Apply ALL of the following changes:
+
+A) routes.ts — single canonical handler + no remapping
+1) Ensure there is exactly ONE GET handler for /api/ai-insights/:clientId (remove any earlier duplicate).
+2) At the top of that handler, accept BOTH ?period=YYYY-MM and ?timePeriod=<phrase|YYYY-MM> and canonicalize as you already do. If both missing, default to current YYYY-MM without throwing.
+3) Call the storage method (getInsightsWithContext or equivalent) to fetch rows.
+4) IMPORTANT: Do NOT re-derive or transform hasContext in the route. Return whatever storage gives you. NO expressions like `!!row.contextText || row.hasContext`; keep `hasContext` exactly as in storage.
+5) Always include a `status` in the response (use "available" if rows return successfully).
+6) Add a TEMPORARY log (to help verify):
+   `console.info("[AI GET]", { clientId, period: canonicalPeriod, first: insights?.[0] });`
+
+Return shape:
+`res.json({ status: "available", period: canonicalPeriod, insights })`
+
+B) storage.ts — compute hasContext with EXISTS only
+1) Find the function used by the route to fetch monthly insights (e.g., getInsightsWithContext(clientId, period)).
+2) Implement SELECT using Drizzle so that hasContext is computed ONLY via EXISTS against insightContexts with a non-empty trimmed contextText. DO NOT OR this with aiInsights.contextText. For example:
+
+```ts
+import { sql, eq, and } from "drizzle-orm";
+import { aiInsights, insightContexts } from "../shared/schema"; // adjust import
+
+export async function getInsightsWithContext(clientId: string, period: string) {
+  return await db
+    .select({
+      metricName: aiInsights.metricName,
+      status: aiInsights.status,
+      insightText: aiInsights.insightText,
+      recommendationText: aiInsights.recommendationText,
+      // contextText may be selected or omitted; it must NOT affect hasContext
+      hasContext: sql<boolean>`EXISTS(
+        SELECT 1
+        FROM ${insightContexts} ic
+        WHERE ic.clientId = ${clientId}
+          AND ic.metricName = ${aiInsights.metricName}
+          AND ic.period = ${period}
+          AND length(trim(ic.contextText)) > 0
+      )`,
+    })
+    .from(aiInsights)
+    .where(
+      and(eq(aiInsights.clientId, clientId), eq(aiInsights.period, period))
+    );
+}
+````
+
+3. SEARCH AND REMOVE any logic that sets:
+
+   * `hasContext = Boolean(aiInsights.contextText?.trim() || <anything>)`
+   * `hasContext = ai.contextText ? true : rowCount > 0`
+   * any OR/COALESCE mixing aiInsights.contextText into hasContext.
+     hasContext must come ONLY from the EXISTS() expression above.
+
+C) contracts.ts (shared/http/contracts.ts or equivalent)
+
+1. Ensure the MetricInsight type includes: `hasContext: boolean;`
+2. Ensure the response schema for the GET endpoint matches what we return:
+   `{ status: 'available' | 'pending' | 'generating' | 'empty', period?: string, insights: MetricInsight[] }`
+   There must be NO default that forces hasContext to true.
+
+D) Keep period/timePeriod shim
+
+1. Preserve the lenient query-param handling you added (accept `period` or `timePeriod` and map phrases like "This Month"/"Last Month" to YYYY-MM).
+
+E) Verification (do not skip)
+
+1. After implementing the above, build and start the server.
+2. Call GET /api/ai-insights/\:clientId?period=YYYY-MM for a case where you KNOW one metric has no user-added context.
+3. Inspect the server log from the TEMPORARY log:
+
+   * Confirm the logged object’s `first.hasContext` is `false` for a metric without context.
+4. If correct, reload the UI and verify that badge is OFF for that metric.
+
+F) Cleanup (optional at the end)
+
+* Remove the TEMPORARY console.info log in routes.ts after validation.
+
+Constraints:
+
+* Make only the necessary changes described above.
+* Do NOT change unrelated endpoints or logic.
+* Do NOT introduce new defaults for hasContext; it must be a boolean returned from storage.
+
+Deliverables:
+
+* routes.ts: single handler, returns `{ status: "available", period, insights }` with hasContext unmodified and temp log in place.
+* storage.ts: EXISTS-based hasContext with no aiInsights.contextText fallback.
+* contracts.ts: hasContext required boolean in MetricInsight; schema aligned.
+
+```

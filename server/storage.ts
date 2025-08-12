@@ -1266,36 +1266,37 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced Methods for Month-Pinned Persistence
   async getAIInsightWithContext(clientId: string, metricName: string, timePeriod: string): Promise<AIInsight & { hasContext: boolean } | undefined> {
-    const insight = await db.select().from(aiInsights).where(
-      and(
-        eq(aiInsights.clientId, clientId),
-        eq(aiInsights.metricName, metricName),
-        eq(aiInsights.timePeriod, timePeriod)
-      )
-    ).limit(1);
-
-    if (!insight[0]) {
-      return undefined;
-    }
-
-    // Check for context - either in aiInsights.contextText or separate insightContexts table
-    const hasContextInInsight = Boolean(insight[0].contextText?.trim());
-    
-    let hasContextInTable = false;
-    if (!hasContextInInsight) {
-      const contextRow = await db.select().from(insightContexts).where(
+    const results = await db
+      .select({
+        id: aiInsights.id,
+        clientId: aiInsights.clientId,
+        metricName: aiInsights.metricName,
+        status: aiInsights.status,
+        insightText: aiInsights.insightText,
+        recommendationText: aiInsights.recommendationText,
+        contextText: aiInsights.contextText,
+        timePeriod: aiInsights.timePeriod,
+        version: aiInsights.version,
+        createdAt: aiInsights.createdAt,
+        hasContext: sql<boolean>`EXISTS(
+          SELECT 1
+          FROM ${insightContexts} ic
+          WHERE ic.client_id = ${clientId}
+            AND ic.metric_name = ${metricName}
+            AND length(trim(ic.user_context)) > 0
+        )`,
+      })
+      .from(aiInsights)
+      .where(
         and(
-          eq(insightContexts.clientId, clientId),
-          eq(insightContexts.metricName, metricName)
+          eq(aiInsights.clientId, clientId),
+          eq(aiInsights.metricName, metricName),
+          eq(aiInsights.timePeriod, timePeriod)
         )
-      ).limit(1);
-      hasContextInTable = contextRow.length > 0;
-    }
+      )
+      .limit(1);
 
-    return {
-      ...insight[0],
-      hasContext: hasContextInInsight || hasContextInTable
-    };
+    return results[0] || undefined;
   }
 
   async getAIInsightsForPeriod(clientId: string, timePeriod: string): Promise<(AIInsight & { hasContext: boolean })[]> {
@@ -1313,9 +1314,27 @@ export class DatabaseStorage implements IStorage {
       
       logger.info('🔍 AI INSIGHTS SEARCH', { clientId, timePeriod, searchPeriods });
       
-      // Query insights first, then check for context separately to avoid JOIN complexity
-      const insights = await db
-        .select()
+      // Use EXISTS-only logic for hasContext computation
+      return await db
+        .select({
+          id: aiInsights.id,
+          clientId: aiInsights.clientId,
+          metricName: aiInsights.metricName,
+          status: aiInsights.status,
+          insightText: aiInsights.insightText,
+          recommendationText: aiInsights.recommendationText,
+          contextText: aiInsights.contextText,
+          timePeriod: aiInsights.timePeriod,
+          version: aiInsights.version,
+          createdAt: aiInsights.createdAt,
+          hasContext: sql<boolean>`EXISTS(
+            SELECT 1
+            FROM ${insightContexts} ic
+            WHERE ic.client_id = ${clientId}
+              AND ic.metric_name = ${aiInsights.metricName}
+              AND length(trim(ic.user_context)) > 0
+          )`,
+        })
         .from(aiInsights)
         .where(
           and(
@@ -1324,31 +1343,6 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .orderBy(desc(aiInsights.createdAt)); // Always prefer latest insight for given tuple
-      
-      // For each insight, check if it has context in separate table
-      const results = [];
-      for (const insight of insights) {
-        const contextRows = await db
-          .select()
-          .from(insightContexts)
-          .where(
-            and(
-              eq(insightContexts.clientId, insight.clientId),
-              eq(insightContexts.metricName, insight.metricName)
-            )
-          )
-          .limit(1);
-        
-        results.push({
-          ...insight,
-          hasContext: Boolean(insight.contextText?.trim() || contextRows.length > 0)
-        });
-      }
-      
-      logger.info('🔍 AI INSIGHTS FOUND', { count: results.length, clientId, timePeriod });
-
-      // Results already have hasContext computed above
-      return results;
     } catch (error) {
       logger.error('Error in getAIInsightsForPeriod', { error: (error as Error).message, clientId, timePeriod });
       return [];

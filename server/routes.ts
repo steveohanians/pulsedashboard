@@ -622,17 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔄 LEGACY ALIAS: Backward-compatible route with deprecation headers
-  app.get("/api/insights/:clientId", requireAuth, async (req, res) => {
-    // Add deprecation headers
-    res.set({
-      'Deprecation': 'true',
-      'Sunset': '2026-01-01',
-      'Link': `</api/ai-insights/${req.params.clientId}>; rel="successor-version"`
-    });
-    
-    return handleAIInsights(req, res);
-  });
+  // LEGACY HANDLER REMOVED - Using only canonical /api/ai-insights/:clientId endpoint
 
   // Versioned AI Insights Routes
   const createVersionedInsightsRoutes = (await import('./routes/versionedInsights.js')).default;
