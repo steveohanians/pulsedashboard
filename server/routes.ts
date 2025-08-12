@@ -482,7 +482,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cached = performanceCache.get(cacheKey);
       if (cached) {
         try {
-          const validatedCached = validateResponse(InsightsResponseSchema, { insights: cached });
+          // Set status based on cached insights length
+          const status = Array.isArray(cached) && cached.length > 0 ? 'available' : 'pending';
+          
+          const validatedCached = validateResponse(InsightsResponseSchema, { 
+            status,
+            insights: cached 
+          });
           return res.json(validatedCached);
         } catch (validationError) {
           // Clear invalid cache
