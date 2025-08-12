@@ -1,23 +1,44 @@
 import { useQuery } from '@tanstack/react-query';
 
-export function useAIInsights(clientId: string | undefined, canonicalPeriod: string | undefined) {
-  const enabled = Boolean(clientId && canonicalPeriod);
-  const key = ["/api/ai-insights", clientId, canonicalPeriod];
+// Helper to normalize period to YYYY-MM format
+export function toYYYYMM(period: string | undefined): string {
+  if (!period || period === "Last Month") {
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  }
+  return period;
+}
+
+export function useAIInsights(clientId: string | undefined, period: string | undefined) {
+  const canonicalPeriod = toYYYYMM(period ?? "Last Month");
+  const enabled = Boolean(clientId) && Boolean(canonicalPeriod);
+  
+  // Guard warning for disabled queries  
+  if (!enabled && (clientId || period)) {
+    console.warn("[AI] query disabled", { clientId, period, canonicalPeriod });
+  }
 
   return useQuery({
-    queryKey: key,
+    queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
     enabled,
-    // prevent bursts:
-    staleTime: 30_000,
-    gcTime: 5 * 60_000,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
     retry: 0,
+    staleTime: 0,
+    refetchOnMount: "always",
+    gcTime: 0,
     queryFn: async () => {
-      const res = await fetch(`/api/ai-insights/${clientId}?period=${canonicalPeriod}`);
-      if (!res.ok) throw new Error(`AI insights ${res.status}`);
-      return res.json();
+      const url = `/api/ai-insights/${encodeURIComponent(clientId!)}` +
+                  `?period=${encodeURIComponent(canonicalPeriod!)}`;
+      console.info("[AI] fetch", { url, clientId, canonicalPeriod });
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("[AI] fetch error", res.status, text);
+        throw new Error(`AI insights ${res.status}`);
+      }
+      const data = await res.json();
+      console.info("[AI] data", data);
+      return data;
     },
   });
 }

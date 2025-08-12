@@ -81,13 +81,27 @@ export function MetricInsightBox({
   }, []);
 
   // Database-based insights query using centralized hook
-  const { data: insightsData, isFetching: isLoadingInsights } = useAIInsights(clientId, canonicalPeriod);
+  const { data: insightsData, isLoading: isLoadingInsights, isFetching, error } = useAIInsights(clientId, canonicalPeriod);
 
   // Find this metric's insight from the database response
   const metricInsight = useMemo(() => {
     if (!insightsData?.insights) return null;
     return insightsData.insights.find((insight: any) => insight.metricName === metricName) || null;
   }, [insightsData, metricName]);
+
+  // Fix spinner logic - only show when actually generating
+  const isGenerating = insightsData?.status === "generating" || 
+                      metricInsight?.status === "generating";
+                      
+  console.info("[AI] MetricInsightBox render", {
+    metricName,
+    isLoading: isLoadingInsights, 
+    isFetching, 
+    isGenerating, 
+    hasData: !!insightsData,
+    hasMetricInsight: !!metricInsight,
+    status: insightsData?.status
+  });
 
   useEffect(() => {
     const loadStoredInsight = async () => {
@@ -217,8 +231,8 @@ export function MetricInsightBox({
     },
   });
 
-  // Show "Regenerating insights..." if version status indicates generation in progress
-  const isRegenerating = versionStatus?.isGenerating || isCheckingVersion;
+  // Fix spinner logic - only show "Regenerating" when actually generating (not just loading)  
+  const isRegenerating = isGenerating;
 
   // Use canonical insights if available, otherwise fall back to preloaded insight
   useEffect(() => {
@@ -245,6 +259,7 @@ export function MetricInsightBox({
     }
   }, [canonicalInsights, metricName, onStatusChange]);
   
+  // Show loading only when mutation is pending or actually generating
   if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
     return (
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">

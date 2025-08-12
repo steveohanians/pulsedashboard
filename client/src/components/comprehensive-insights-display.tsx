@@ -69,8 +69,21 @@ export function ComprehensiveInsightsDisplay({
   }, [period]);
 
   // Fetch existing insights using centralized hook
-  const { data: insightsResponse, isFetching: isLoading } = useAIInsights(clientId, canonicalPeriod);
+  const { data: insightsResponse, isLoading, isFetching, error } = useAIInsights(clientId, canonicalPeriod);
   const insights = insightsResponse?.insights || [];
+  
+  // Fix spinner logic - only show when actually generating
+  const isGenerating = insightsResponse?.status === "generating" || 
+                      (insights && insights.some && insights.some((x: any) => x.status === "generating"));
+                      
+  console.info("[AI] ComprehensiveInsightsDisplay render", {
+    isLoading, 
+    isFetching, 
+    isGenerating, 
+    hasData: !!insightsResponse,
+    status: insightsResponse?.status,
+    insightsCount: insights?.length || 0
+  });
   
   // Provide refetch capability for compatibility
   const refetch = () => {
@@ -85,7 +98,8 @@ export function ComprehensiveInsightsDisplay({
     insight.metricName !== "Dashboard Overview"
   ) || [];
 
-  if (isLoading) {
+  // Show loading only when initially loading or actually generating
+  if (isLoading || isFetching || isGenerating) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
