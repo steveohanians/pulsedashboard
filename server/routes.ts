@@ -1061,6 +1061,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedInsight = await storage.createAIInsight(insertInsight);
       logger.info('Successfully saved metric-specific insights', { clientId, metricName, insightId: savedInsight.id });
 
+      // IMPORTANT: Always evict insights cache on regenerate/delete so GET refetches fresh rows.
+      const { performanceCache } = await import('./cache/performance-cache.js');
+      const canonicalPeriod = timePeriod; // Use the timePeriod from request
+      performanceCache.delete(`insights:${clientId}:${canonicalPeriod}`);
+
       res.json({
         message: "Metric insights generated successfully",
         insight: {
@@ -1370,6 +1375,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedInsight = await storage.createAIInsight(insertInsight);
       logger.info('Successfully saved metric-specific insights with context', { clientId, metricName, insightId: savedInsight.id });
 
+      // IMPORTANT: Always evict insights cache on regenerate/delete so GET refetches fresh rows.
+      const { performanceCache } = await import('./cache/performance-cache.js');
+      const canonicalPeriod = timePeriod; // Use the timePeriod from request  
+      performanceCache.delete(`insights:${clientId}:${canonicalPeriod}`);
+
       res.json({
         message: "Metric insights with context generated successfully",
         insight: {
@@ -1594,8 +1604,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         canonicalPeriod
       );
       
-      // Clear performance cache for this client
-      const cacheKey = `insights:${clientId}`;
+      // IMPORTANT: Always evict insights cache on regenerate/delete so GET refetches fresh rows.
+      const cacheKey = `insights:${clientId}:${canonicalPeriod}`;
       performanceCache.delete(cacheKey);
       
       logger.info(`Transactional delete completed for ${clientId}/${metricName}/${canonicalPeriod}`, {
@@ -1634,8 +1644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the same transactional delete method
       await storage.deleteInsightAndContextTransactional(clientId, metricName, canonicalTimePeriod);
       
-      // Clear performance cache for this client
-      const cacheKey = `insights:${clientId}`;
+      // IMPORTANT: Always evict insights cache on regenerate/delete so GET refetches fresh rows.
+      const cacheKey = `insights:${clientId}:${canonicalTimePeriod}`;
       performanceCache.delete(cacheKey);
       
       logger.info("Legacy delete redirected to transactional delete", { clientId, metricName, userId: req.user.id });

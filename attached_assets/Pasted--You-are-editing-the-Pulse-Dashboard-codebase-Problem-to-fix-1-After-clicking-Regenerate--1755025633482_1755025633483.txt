@@ -1,0 +1,159 @@
+
+
+````
+You are editing the Pulse Dashboard codebase.
+
+Problem to fix:
+1) After clicking Regenerate, the UI shows the same (initial) AI insight text.
+2) The typewriter effect doesn’t run (likely because the returned text is unchanged).
+
+Root causes to address:
+- GET /api/ai-insights/:clientId is returning a stale or older row per metric (missing "latest per metric" selection or cache not evicted).
+- Regenerate endpoint(s) are not clearing the insights cache for the month/metric.
+- Frontend refetch may not be targeting the exact list key.
+
+Make the following changes:
+
+========================
+A) BACKEND — storage.ts
+========================
+Goal: Return the LATEST row per (clientId, period, metricName).
+
+1) In the function used by GET /api/ai-insights/:clientId (e.g., getInsightsWithContext(clientId, period)), select the latest insight per metricName. Use one of these approaches (choose based on DB):
+
+Postgres (preferred: DISTINCT ON):
+----------------------------------
+Return exactly one row per metricName — the most recent by updatedAt (fallback createdAt if needed):
+
+```ts
+// Example using Drizzle + SQL snippet. Adjust column names.
+return await db.execute(sql`
+  SELECT DISTINCT ON (ai.metric_name)
+    ai.metric_name AS "metricName",
+    ai.status,
+    ai.insight_text AS "insightText",
+    ai.recommendation_text AS "recommendationText",
+    /* computed boolean: hasContext via EXISTS */
+    EXISTS (
+      SELECT 1 FROM insight_contexts ic
+      WHERE ic.client_id = ai.client_id
+        AND ic.metric_name = ai.metric_name
+        AND ic.period = ai.period
+        AND length(trim(ic.context_text)) > 0
+    ) AS "hasContext"
+  FROM ai_insights ai
+  WHERE ai.client_id = ${clientId}
+    AND ai.period = ${period}
+  ORDER BY ai.metric_name, ai.updated_at DESC NULLS LAST, ai.created_at DESC NULLS LAST
+`);
+````
+
+## SQLite / generic SQL (window function):
+
+```ts
+// Use a window to rank latest per metric
+return await db.execute(sql`
+  SELECT metric_name AS "metricName",
+         status,
+         insight_text AS "insightText",
+         recommendation_text AS "recommendationText",
+         EXISTS (
+           SELECT 1 FROM insight_contexts ic
+           WHERE ic.client_id = ai.client_id
+             AND ic.metric_name = ai.metric_name
+             AND ic.period = ai.period
+             AND length(trim(ic.context_text)) > 0
+         ) AS "hasContext"
+  FROM (
+    SELECT ai.*,
+           ROW_NUMBER() OVER (
+             PARTITION BY ai.metric_name
+             ORDER BY ai.updated_at DESC, ai.created_at DESC
+           ) AS rn
+    FROM ai_insights ai
+    WHERE ai.client_id = ${clientId}
+      AND ai.period = ${period}
+  ) ai
+  WHERE rn = 1
+`);
+```
+
+Requirements:
+
+* Do NOT use `ai.context_text` to compute hasContext. Only the EXISTS() check.
+* If you already have a Drizzle `.select({...})` version, add an ORDER BY and a grouping technique that returns one most-recent row per metricName.
+
+Add comment guards above the query:
+
+```ts
+// IMPORTANT: We must return the LATEST row per metricName.
+// Do NOT return the oldest row or an arbitrary row.
+// Do NOT derive hasContext from ai_insights.context_text.
+```
+
+\=======================
+B) BACKEND — routes.ts
+======================
+
+Goal: Ensure freshness and no duplicate routes.
+
+1. Ensure there is exactly ONE handler for GET /api/ai-insights/\:clientId (keep the newer month-pinned one).
+
+2. Accept both `?period=YYYY-MM` and `?timePeriod=<phrase|YYYY-MM>` and canonicalize to YYYY-MM.
+
+3. Call the storage function from (A) and return:
+   `res.json({ status: "available", period: canonicalPeriod, insights })`
+
+4. Regenerate endpoints (with and without context):
+
+   * After writing the new insight row, EVICT the period cache key:
+     `performanceCache.delete(\`insights:\${clientId}:\${canonicalPeriod}\`);\`
+   * If you cache by metric too, also delete per-metric cache keys.
+
+5. Delete endpoint:
+
+   * After deleting, also evict the same cache keys as above.
+
+Add comment guards:
+// IMPORTANT: Always evict insights cache on regenerate/delete so GET refetches fresh rows.
+
+\========================
+C) FRONTEND — metric-insight-box.tsx
+====================================
+
+Goal: Make sure the UI refetches the RIGHT key and the typewriter runs on new text.
+
+1. Ensure the React Query key for the insights list matches the server call exactly, including period:
+   `["/api/ai-insights", clientId, canonicalPeriod]`
+
+2. In the regenerate mutation onSuccess:
+
+   * `await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });`
+   * `await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });`
+
+3. Keep your suppression guard and `isTyping` flow. The typewriter effect should trigger when:
+
+   * local `isTyping` is true
+   * server status is "available"
+   * `metricInsight.insightText` is non-empty
+     This will animate whatever new text comes back.
+
+Comment guard above the query key usage:
+// IMPORTANT: This key must match invalidations from regenerate/delete or you’ll see stale data.
+
+\=====================
+D) QUICK VERIFICATION
+=====================
+
+1. Click Regenerate for a metric you can recognize.
+2. Confirm server logs show a new row persisted (updated\_at changes).
+3. Ensure the GET response now returns the latest text (not the initial).
+4. UI should clear, animate the new text, and NOT snap back to the old one.
+
+Constraints:
+
+* Make minimal changes necessary.
+* Do not reintroduce hasContext from ai\_insights.context\_text.
+* Do not add a second GET route.
+
+```

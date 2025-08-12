@@ -1621,40 +1621,37 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced method for AI insights with context computation
   async getInsightsWithContext(clientId: string, period: string): Promise<(AIInsight & { hasContext: boolean })[]> {
-    // First get the insights
-    const insights = await db
-      .select()
-      .from(aiInsights)
-      .where(
-        and(
-          eq(aiInsights.clientId, clientId),
-          eq(aiInsights.timePeriod, period)
-        )
-      );
+    // IMPORTANT: We must return the LATEST row per metricName.
+    // Do NOT return the oldest row or an arbitrary row.
+    // Do NOT derive hasContext from ai_insights.context_text.
     
-    // Then check context for each insight manually
-    const results = await Promise.all(insights.map(async (insight) => {
-      const hasContextResults = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(insightContexts)
-        .where(
-          and(
-            eq(insightContexts.clientId, clientId),
-            eq(insightContexts.metricName, insight.metricName),
-            sql`length(trim(${insightContexts.userContext})) > 0`
-          )
-        );
-      
-      // IMPORTANT: Compute hasContext only from insightContexts via EXISTS — do NOT OR with aiInsights.contextText.
-      const hasContext = (hasContextResults[0]?.count || 0) > 0;
-      
-      return {
-        ...insight,
-        hasContext
-      };
-    }));
+    const results = await db.execute(sql`
+      SELECT DISTINCT ON (ai.metric_name)
+        ai.id,
+        ai.client_id AS "clientId",
+        ai.time_period AS "timePeriod", 
+        ai.metric_name AS "metricName",
+        ai.context_text AS "contextText",
+        ai.insight_text AS "insightText",
+        ai.recommendation_text AS "recommendationText",
+        ai.status,
+        ai.created_at AS "createdAt",
+        ai.updated_at AS "updatedAt",
+        /* computed boolean: hasContext via EXISTS */
+        EXISTS (
+          SELECT 1 FROM insight_contexts ic
+          WHERE ic.client_id = ai.client_id
+            AND ic.metric_name = ai.metric_name
+            AND ic.period = ai.time_period
+            AND length(trim(ic.context_text)) > 0
+        ) AS "hasContext"
+      FROM ai_insights ai
+      WHERE ai.client_id = ${clientId}
+        AND ai.time_period = ${period}
+      ORDER BY ai.metric_name, ai.updated_at DESC NULLS LAST, ai.created_at DESC NULLS LAST
+    `);
     
-    return results;
+    return results.rows as (AIInsight & { hasContext: boolean })[];
   }
 
   // Filter Options
