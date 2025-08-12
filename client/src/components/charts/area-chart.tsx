@@ -361,14 +361,18 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
   // Calculate fixed Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(
-      safeNumericValue(point[clientKey], 0),
-      safeNumericValue(point['Industry Avg'], 0),
-      safeNumericValue(point['Clear Digital Clients Avg'], 0)
-    );
+    const clientValue = safeNumericValue(point[clientKey], 0);
+    const industryValue = safeNumericValue(point['Industry Avg'], 0);
+    const cdValue = safeNumericValue(point['Clear Digital Clients Avg'], 0);
+    
+    if (clientValue !== null) allValues.push(clientValue);
+    if (industryValue !== null) allValues.push(industryValue);
+    if (cdValue !== null) allValues.push(cdValue);
+    
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(safeNumericValue(point[comp.label], 0));
+        const compValue = safeNumericValue(point[comp.label], 0);
+        if (compValue !== null) allValues.push(compValue);
       }
     });
   });
@@ -379,41 +383,41 @@ export function SessionDurationAreaChart({ metricName, timePeriod, clientData, i
   const padding = (maxValue - minValue) * 0.15;
   const yAxisDomain = [Math.max(0, Math.floor(minValue - padding)), Math.ceil(maxValue + padding)];
 
-  // State for toggling areas
-  const [visibleAreas, setVisibleAreas] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {
-      [clientKey]: true,
-      'Industry Avg': true,
-      'Clear Digital Clients Avg': true,
+  // Create stable competitor key to prevent infinite re-renders
+  const competitorKey = useMemo(() => {
+    return competitors.map(c => `${c.id}:${c.label}:${c.value}`).join('|');
+  }, [competitors]);
+
+  // State for toggling areas - use Set for hidden areas
+  const [hiddenAreas, setHiddenAreas] = useState<Set<string>>(new Set());
+
+  // Derive visible areas from competitors and hidden state
+  const visibleAreas = useMemo<Record<string, boolean>>(() => {
+    const visible: Record<string, boolean> = {
+      [clientKey]: !hiddenAreas.has(clientKey),
+      'Industry Avg': !hiddenAreas.has('Industry Avg'),
+      'Clear Digital Clients Avg': !hiddenAreas.has('Clear Digital Clients Avg'),
     };
     competitors.forEach(comp => {
-      initial[comp.label] = true;
+      visible[comp.label] = !hiddenAreas.has(comp.label);
     });
-    return initial;
-  });
-
-  // Update visible areas whenever competitors change
-  useEffect(() => {
-    setVisibleAreas(prev => {
-      const updated = { ...prev };
-      competitors.forEach(comp => {
-        if (!(comp.label in updated)) {
-          updated[comp.label] = true;
-        }
-      });
-      return updated;
-    });
-  }, [competitors]);
+    return visible;
+  }, [clientKey, competitorKey, hiddenAreas]);
 
   // Track if this is the initial render for animation
   const [isInitialRender, setIsInitialRender] = useState(true);
 
   const toggleArea = (areaKey: string) => {
     setIsInitialRender(false);
-    setVisibleAreas(prev => ({
-      ...prev,
-      [areaKey]: !prev[areaKey]
-    }));
+    setHiddenAreas(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(areaKey)) {
+        newSet.delete(areaKey);
+      } else {
+        newSet.add(areaKey);
+      }
+      return newSet;
+    });
   };
 
   return (
