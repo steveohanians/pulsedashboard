@@ -120,6 +120,10 @@ export function MetricInsightBox({
   });
 
   useEffect(() => {
+    // Guard hydration during delete/regenerate operations and typing states
+    if (suppressHydrationRef.current) return;   // don't hydrate during delete/regenerate
+    if (insight?.isTyping) return;               // don't hydrate while typewriter is running
+    
     const loadStoredInsight = async () => {
       if (preloadedInsight) {
         logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
@@ -147,7 +151,7 @@ export function MetricInsightBox({
     };
 
     loadStoredInsight();
-  }, [clientId, metricName, onStatusChange, preloadedInsight]);
+  }, [clientId, metricName, onStatusChange, preloadedInsight, insight?.isTyping]);
 
   // C) Guard the hydration-from-server effect
   useEffect(() => {
