@@ -182,7 +182,7 @@ export function MetricInsightBox({
       return await response.json();
     },
     onSuccess: (data) => {
-      setInsight({ ...data.insight, isTyping: true, isFromStorage: false });
+      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: false });
       onStatusChange?.(data.insight.status);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
     },
