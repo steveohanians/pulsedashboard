@@ -242,20 +242,21 @@ export function MetricInsightBox({
       return await response.json();
     },
     onSuccess: async (data) => {
-      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: false });
-      onStatusChange?.(data.insight.status);
       await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-    },
-    onSettled: () => {
-      suppressHydrationRef.current = false;
+      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
+      // do NOT set suppressHydrationRef=false here — we flip it off in the typewriter effect after the new text finishes animating
     },
     onError: (error) => {
+      suppressHydrationRef.current = false;
+      setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight", {
         error: error instanceof Error ? error.message : "Unknown error",
         clientId,
         metricName,
       });
+    },
+    onSettled: () => {
+      // No-op for suppressHydrationRef (let the typing effect decide when to release)
     },
   });
 
@@ -276,16 +277,14 @@ export function MetricInsightBox({
       return await response.json();
     },
     onSuccess: async (data) => {
-      setInsight({ ...data.insight, isTyping: true, isFromStorage: false, hasContext: true });
-      onStatusChange?.(data.insight.status);
       await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
       queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
-      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-    },
-    onSettled: () => {
-      suppressHydrationRef.current = false;
+      // do NOT set suppressHydrationRef=false here — we flip it off in the typewriter effect after the new text finishes animating
     },
     onError: (error) => {
+      suppressHydrationRef.current = false;
+      setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight with context", {
         error: error instanceof Error ? error.message : "Unknown error",
         clientId,
@@ -300,6 +299,9 @@ export function MetricInsightBox({
           metricName,
         });
       }
+    },
+    onSettled: () => {
+      // No-op for suppressHydrationRef (let the typing effect decide when to release)
     },
   });
 
@@ -436,20 +438,26 @@ export function MetricInsightBox({
               const existingContext = contextData.userContext?.trim();
               if (existingContext) {
                 logger.component("MetricInsightBox", "Found existing context, regenerating with context");
-                // B) Clear text and set suppression flag before mutation
-                setInsight(cur => cur ? { ...cur, hasContext: true, isTyping: true, insightText: "", recommendationText: "" } : cur);
                 suppressHydrationRef.current = true;
+                setForcedEmpty(false); // we want to show the typing region, not empty
+                setTyping({ active: true, text: "" });
+                setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "", hasContext: true } : cur);
                 generateInsightWithContextMutation.mutate(existingContext);
                 return;
               }
             }
           } catch {}
-          // B) Clear text and set suppression flag before mutation
-          setInsight(current => current ? { ...current, hasContext: false, isTyping: true, insightText: "", recommendationText: "" } : current);
           suppressHydrationRef.current = true;
+          setForcedEmpty(false); // we want to show the typing region, not empty
+          setTyping({ active: true, text: "" });
+          setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "" } : cur);
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
+          suppressHydrationRef.current = true;
+          setForcedEmpty(false); // we want to show the typing region, not empty
+          setTyping({ active: true, text: "" });
+          setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "", hasContext: true } : cur);
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
@@ -513,7 +521,13 @@ export function MetricInsightBox({
           <span className="font-medium text-primary">{metricName}</span> for {dataMonthLabel}
         </p>
         <Button
-          onClick={() => generateInsightMutation.mutate()}
+          onClick={() => {
+            suppressHydrationRef.current = true;
+            setForcedEmpty(false); // we want to show the typing region, not empty
+            setTyping({ active: true, text: "" });
+            setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "" } : cur);
+            generateInsightMutation.mutate();
+          }}
           disabled={generateInsightMutation.isPending}
           className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
           size="sm"
