@@ -1,0 +1,66 @@
+Stop the 404 polling storm + unify query keys (P0 performance)
+Goal: Eliminate runaway polling and duplicate fetches. Treat 404 as “not ready”, back off polling, and standardize period=YYYY-MM.
+
+Scope: Only create a new hook, and minimally touch the AI insights component to use it. Do not refactor unrelated code.
+
+Files to edit/create:
+
+client/src/hooks/useGA4Status.ts (new)
+
+client/src/components/metric-insight-box.tsx (or wherever the GA4 status is checked/used)
+
+(Optional) shared/timePeriod.ts if you need a canonicalizer, but prefer to reuse existing helper
+
+Instructions:
+
+Create client/src/hooks/useGA4Status.ts with this exact API:
+
+export function useGA4Status(clientId: string, period: string, enabled: boolean)
+
+Uses React Query useQuery.
+
+GET /api/ga4-data/status/${clientId}?timePeriod=${encodeURIComponent(period)}
+
+If status===404, return {status:"not_ready"} and do not retry.
+
+refetchInterval: (data) => (data?.status === "processing" ? 5000 : false)
+
+retry: (failureCount, err) => failureCount < 1
+
+refetchOnWindowFocus: false, staleTime: 30000, gcTime: 300000.
+
+In client/src/components/metric-insight-box.tsx, at the top where keys/period are computed:
+
+Ensure you compute a canonical period YYYY-MM. Reuse existing canonicalizer if present (e.g., from shared/timePeriod.ts).
+
+Add:
+
+ts
+Copy
+Edit
+import { useGA4Status } from "@/hooks/useGA4Status";
+const ga4 = useGA4Status(clientId, canonicalPeriod, true);
+Use ga4.data?.status === "processing" to decide if you show a “generating” spinner for GA4-driven UI.
+
+Standardize query keys & params (no widespread refactor, only in this component):
+
+Replace any Last Month/timePeriod variations with a single canonical period = YYYY-MM for insights endpoints:
+
+GET: /api/ai-insights/:clientId?period=YYYY-MM
+
+DELETE: /api/ai-insights/:clientId/:metricName?period=YYYY-MM
+
+Keep GA4 status as timePeriod=YYYY-MM only inside useGA4Status.ts.
+
+Replace any immediate invalidate + refetchQueries pairs after mutations with just invalidate (React Query auto-refetches active observers). Only do this in this component; don’t touch other files.
+
+Acceptance criteria:
+
+When GA4 status returns 404, queries stop retrying and stop polling.
+
+No duplicate query keys for insights: only [ "/api/ai-insights", clientId, canonicalPeriod ] used.
+
+CPU usage drops significantly during idle (no furious polling in Network tab).
+
+Existing tests/build pass; no TS errors.
+

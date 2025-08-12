@@ -1,22 +1,27 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAIInsights } from "@/hooks/use-ai-insights";
+import { useGA4Status } from "@/hooks/useGA4Status";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
 import { QueryKeys } from "@/lib/queryKeys";
 
-/** AI-generated insight data structure with performance status */
+/**
+ * Persist typewriter progress across unmounts (e.g., list virtualization).
+ * Keyed by clientId|metricName|period
+ */
+const typingState = new Map<string, { text: string; index: number }>();
+
 interface InsightData {
   contextText?: string;
   insightText?: string;
   recommendationText?: string;
   status?: "success" | "needs_improvement" | "warning";
-  hasContext?: boolean; // Server-computed badge state
+  hasContext?: boolean;
 }
 
-/** Metric data structure for competitive analysis */
 interface MetricData {
   metricName: string;
   clientValue: number | null;
@@ -31,7 +36,9 @@ interface MetricInsightBoxProps {
   clientId: string;
   timePeriod: string;
   metricData: MetricData;
-  onStatusChange?: (status?: "success" | "needs_improvement" | "warning") => void;
+  onStatusChange?: (
+    status?: "success" | "needs_improvement" | "warning",
+  ) => void;
   preloadedInsight?: InsightData;
 }
 
@@ -44,344 +51,377 @@ export function MetricInsightBox({
   preloadedInsight,
 }: MetricInsightBoxProps) {
   const [insight, setInsight] = useState<
-    (InsightData & { isTyping?: boolean; isFromStorage?: boolean; hasContext?: boolean }) | null
+    | (InsightData & {
+        isTyping?: boolean;
+        isFromStorage?: boolean;
+        hasContext?: boolean;
+      })
+    | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
   const [typing, setTyping] = useState({ active: false, text: "" });
   const queryClient = useQueryClient();
 
-  // A) Add suppression flag to block hydration while generating
+  // Guards / flags
   const suppressHydrationRef = useRef(false);
-  const lastTypedRef = useRef<string>(""); // track last fully-typed server text
-  const deletedRef = useRef(false); // tombstone to prevent delete flashback
+  const lastTypedRef = useRef<string>("");
 
-  // Normalize time period to canonical YYYY-MM format
+  // Typewriter engine refs
+  const rafIdRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number>(0);
+  const fullTextRef = useRef<string>("");
+  const indexRef = useRef<number>(0);
+  const keyRef = useRef<string>("");
+  const doneRef = useRef<boolean>(false);
+
+  // Confirmed delete flag (set only after DELETE + refetch)
+  const deleteConfirmRef = useRef(false);
+
+  // Canonical YYYY-MM
   const canonicalPeriod = useMemo(() => {
-    // Convert to canonical YYYY-MM format for database consistency
     const convertToCanonical = (period: string): string => {
-      // Already in YYYY-MM format
-      if (/^\d{4}-\d{2}$/.test(period)) {
-        return period;
-      }
-      
-      // Convert "Last Month" and other legacy formats
-      if (period === "Last Month" || period === "last_month" || !period) {
-        const now = new Date();
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-      }
-      
-      // Handle other period formats if needed
+      if (/^\d{4}-\d{2}$/.test(period)) return period;
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+      return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
     };
-    
     return convertToCanonical(timePeriod);
   }, [timePeriod]);
 
-  // Memoize the display month label for consistency
-  const dataMonthLabel = useMemo(() => {
+  // Use GA4 Status hook to prevent 404 polling storm
+  const ga4 = useGA4Status(clientId, canonicalPeriod, true);
+
+  const monthLabel = useMemo(() => {
     const now = new Date();
     const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    return dataMonth.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
   }, []);
 
-  // Real typewriter that only starts when new server text arrives
+  /** rAF-based typewriter — smooth, catch-up on inactive, resilient to unmount/remount */
   function startTypewriter(full: string) {
-    // Cancel any previous run
-    clearInterval((startTypewriter as any)._id);
+    // Cancel any prior
+    if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = null;
+    doneRef.current = false;
+    fullTextRef.current = full;
+    keyRef.current = `${clientId}|${metricName}|${canonicalPeriod}`;
 
-    setTyping({ active: true, text: "" });
-    let i = 0;
+    // Resume if we have progress stored for the same text
+    const saved = typingState.get(keyRef.current);
+    const startIdx = saved && saved.text === full ? saved.index : 0;
+    indexRef.current = startIdx;
+    setTyping({ active: true, text: full.slice(0, startIdx) });
 
-    (startTypewriter as any)._id = setInterval(() => {
-      i++;
-      setTyping((t) => (t.active ? { active: true, text: full.slice(0, i) } : t));
-      if (i >= full.length) {
-        clearInterval((startTypewriter as any)._id);
-        setTyping({ active: false, text: full });
-        // After done typing, copy into local insight so it persists
-        setInsight((cur) => cur ? { ...cur, insightText: full } : { insightText: full } as any);
-        lastTypedRef.current = full;
-      }
-    }, 12);
-  }
+    // Hydration suppressed during animation
+    suppressHydrationRef.current = true;
+    lastTsRef.current = 0;
 
-  // Database-based insights query using centralized hook
-  const { data: insightsData, isLoading: isLoadingInsights, isFetching, error } = useAIInsights(clientId, canonicalPeriod);
+    const msPerChar = 14; // ~70 cps. Adjust if you want faster/slower.
+    const batchChars = 3; // batch state updates for perf
 
-  // Find this metric's insight from the database response
-  const metricInsight = useMemo(() => {
-    if (!insightsData?.insights) return null;
-    return insightsData.insights.find((insight: any) => insight.metricName === metricName) || null;
-  }, [insightsData, metricName]);
+    const step = (ts: number) => {
+      if (doneRef.current) return;
+      if (!lastTsRef.current) lastTsRef.current = ts;
+      const delta = ts - lastTsRef.current;
 
-  // Fix spinner logic - only show when actually generating
-  const isGenerating = insightsData?.status === "generating" || 
-                      metricInsight?.status === "generating";
-                      
-  console.info("[AI] MetricInsightBox render", {
-    metricName,
-    isLoading: isLoadingInsights, 
-    isFetching, 
-    isGenerating, 
-    hasData: !!insightsData,
-    hasMetricInsight: !!metricInsight,
-    status: insightsData?.status
-  });
-
-  useEffect(() => {
-    // Guard hydration during delete/regenerate operations and typing states
-    if (suppressHydrationRef.current) return;   // don't hydrate during delete/regenerate
-    if (forcedEmpty) return;                    // don't hydrate while we've forced empty
-    if (typing.active) return;                  // don't hydrate while typewriter is running
-    
-    const loadStoredInsight = async () => {
-      if (preloadedInsight) {
-        logger.component("MetricInsightBox", `Using preloaded insight for ${metricName}`);
-        
-        // Use strict boolean check for server-computed hasContext field only
-        
-        setInsight({
-          contextText: preloadedInsight.contextText,
-          insightText: preloadedInsight.insightText,
-          recommendationText: preloadedInsight.recommendationText,
-          status: preloadedInsight.status,
-          isTyping: false,
-          isFromStorage: false, // was true
-          hasContext: preloadedInsight?.hasContext === true,
-        });
-        if (preloadedInsight.status && onStatusChange) {
-          onStatusChange(preloadedInsight.status);
-        }
+      // How many chars should we advance based on elapsed time
+      let advance = Math.floor(delta / msPerChar);
+      if (advance <= 0) {
+        rafIdRef.current = requestAnimationFrame(step);
         return;
       }
-      logger.component(
-        "MetricInsightBox",
-        `No preloaded insight available for ${metricName} - will show generate button`
+
+      // Batch and clamp
+      if (advance > batchChars) advance = batchChars;
+      lastTsRef.current += advance * msPerChar;
+      indexRef.current = Math.min(
+        indexRef.current + advance,
+        fullTextRef.current.length,
       );
+
+      const next = fullTextRef.current.slice(0, indexRef.current);
+      setTyping((t) => (t.active ? { active: true, text: next } : t));
+
+      // Persist progress so we can resume after unmount
+      typingState.set(keyRef.current, {
+        text: fullTextRef.current,
+        index: indexRef.current,
+      });
+
+      if (indexRef.current >= fullTextRef.current.length) {
+        // Done
+        doneRef.current = true;
+        setTyping({ active: false, text: fullTextRef.current });
+        setInsight((cur) =>
+          cur
+            ? { ...cur, insightText: fullTextRef.current }
+            : ({ insightText: fullTextRef.current } as any),
+        );
+        lastTypedRef.current = fullTextRef.current;
+        typingState.delete(keyRef.current);
+        suppressHydrationRef.current = false;
+        rafIdRef.current = null;
+        return;
+      }
+
+      rafIdRef.current = requestAnimationFrame(step);
     };
 
-    loadStoredInsight();
-  }, [clientId, metricName, onStatusChange, preloadedInsight, insight?.isTyping]);
+    rafIdRef.current = requestAnimationFrame(step);
+  }
 
-  // C) Guard the hydration-from-server effect
+  // Cleanup: cancel rAF & persist progress
   useEffect(() => {
-    if (suppressHydrationRef.current) return;   // don't hydrate during delete/regenerate
-    if (forcedEmpty) return;                    // don't hydrate while we've forced empty
-    if (typing.active) return;                  // don't hydrate while typewriter is running
-    
-    if (metricInsight) {
-      setInsight({
-        contextText: metricInsight.contextText,
-        insightText: metricInsight.insightText,
-        recommendationText: metricInsight.recommendationText,
-        status: metricInsight.status,
-        isTyping: false,
-        // treat as server data; no blocking flag
-        isFromStorage: false,
-        hasContext: metricInsight?.hasContext === true,
-      });
-      if (metricInsight.status && onStatusChange) {
-        onStatusChange(metricInsight.status);
-      }
-    }
-  }, [metricInsight, onStatusChange, insight?.isTyping]);
+    return () => {
+      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    };
+  }, []);
 
-  // D) Start typewriter when new server text arrives
+  // Query
+  const {
+    data: insightsData,
+    isLoading: isLoadingInsights,
+    isFetching,
+    error,
+  } = useAIInsights(clientId, canonicalPeriod);
+
+  const metricInsight = useMemo(() => {
+    if (!insightsData?.insights) return null;
+    return (
+      insightsData.insights.find((ins: any) => ins.metricName === metricName) ||
+      null
+    );
+  }, [insightsData, metricName]);
+
+  const isGenerating =
+    insightsData?.status === "generating" ||
+    metricInsight?.status === "generating";
+
+  // Preload (props) when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current) return;
+    if (suppressHydrationRef.current || forcedEmpty || typing.active) return;
+    if (!preloadedInsight) return;
+
+    setInsight({
+      contextText: preloadedInsight.contextText,
+      insightText: preloadedInsight.insightText,
+      recommendationText: preloadedInsight.recommendationText,
+      status: preloadedInsight.status,
+      isTyping: false,
+      isFromStorage: false,
+      hasContext: preloadedInsight?.hasContext === true,
+    });
+    if (preloadedInsight.status && onStatusChange)
+      onStatusChange(preloadedInsight.status);
+  }, [
+    clientId,
+    metricName,
+    onStatusChange,
+    preloadedInsight,
+    forcedEmpty,
+    typing.active,
+  ]);
+
+  // Hydrate from server when allowed (won't run while typing)
+  useEffect(() => {
+    if (suppressHydrationRef.current || forcedEmpty || typing.active) return;
+    if (!metricInsight) return;
+
+    setInsight({
+      contextText: metricInsight.contextText,
+      insightText: metricInsight.insightText,
+      recommendationText: metricInsight.recommendationText,
+      status: metricInsight.status,
+      isTyping: false,
+      isFromStorage: false,
+      hasContext: metricInsight?.hasContext === true,
+    });
+    if (metricInsight.status && onStatusChange)
+      onStatusChange(metricInsight.status);
+  }, [metricInsight, onStatusChange, forcedEmpty, typing.active]);
+
+  // Start (or resume) typewriter when server text changes
+  useEffect(() => {
     if (forcedEmpty) return;
-
     const serverText = (metricInsight?.insightText || "").trim();
     if (!serverText) return;
 
-    // Only type when server text changed
+    // If we already fully typed this exact text, skip
     if (serverText === lastTypedRef.current) return;
 
-    // Don't let hydration clobber while we type
-    suppressHydrationRef.current = true;
-    startTypewriter(serverText);
-
-    // Release hydration when typing finishes
-    const estMs = Math.max(200, (serverText.length + 2) * 12);
-    const done = setTimeout(() => {
-      suppressHydrationRef.current = false;
-    }, estMs + 20);
-    return () => clearTimeout(done);
-  }, [metricInsight?.insightText]);  // only when server text actually changes
-
-  // E) Release the delete lock only after the server no longer returns this metric
-  useEffect(() => {
-    if (deletedRef.current) {
-      if (!metricInsight) {
-        deletedRef.current = false;
-        suppressHydrationRef.current = false;
-        setForcedEmpty(false);
-        setInsight(null);
-        setTyping({ active: false, text: "" });
-      }
+    // If we have saved progress for this key and text, resume from it
+    keyRef.current = `${clientId}|${metricName}|${canonicalPeriod}`;
+    const saved = typingState.get(keyRef.current);
+    if (saved && saved.text === serverText && saved.index < serverText.length) {
+      startTypewriter(serverText);
+      return;
     }
-  }, [metricInsight]);
 
-  // Use the centralized insights hook
-  const canonicalInsights = insightsData;
-  
-  // Extract status information from centralized data
+    // Fresh start
+    startTypewriter(serverText);
+  }, [
+    metricInsight?.insightText,
+    forcedEmpty,
+    clientId,
+    metricName,
+    canonicalPeriod,
+  ]);
+
+  // Release delete lock only after confirmed + no fetch + item gone
+  useEffect(() => {
+    if (deleteConfirmRef.current && !isFetching && !metricInsight) {
+      deleteConfirmRef.current = false;
+      suppressHydrationRef.current = false;
+      setForcedEmpty(false);
+      setInsight(null);
+      setTyping({ active: false, text: "" });
+    }
+  }, [metricInsight, isFetching]);
+
   const versionStatus = useMemo(() => {
-    if (!canonicalInsights) return null;
+    if (!insightsData) return null;
     return {
-      status: canonicalInsights.status || 'available',
-      isGenerating: canonicalInsights.status === 'generating' || canonicalInsights.status === 'pending'
+      status: insightsData.status || "available",
+      isGenerating:
+        insightsData.status === "generating" ||
+        insightsData.status === "pending",
     };
-  }, [canonicalInsights]);
-  
-  const isCheckingVersion = isLoadingInsights;
+  }, [insightsData]);
 
   const generateInsightMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/generate-metric-insight/${clientId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metricName, timePeriod: canonicalPeriod, metricData }),
+        body: JSON.stringify({
+          metricName,
+          timePeriod: canonicalPeriod,
+          metricData,
+        }),
       });
-      if (!response.ok) {
-        let detail = "";
-        try {
-          detail = await response.text();
-        } catch {}
-        throw new Error(`HTTP ${response.status} ${detail}`.trim());
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
-      // do NOT set suppressHydrationRef=false here — we flip it off in the typewriter effect after the new text finishes animating
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
+      });
     },
     onError: (error) => {
       suppressHydrationRef.current = false;
       setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight", {
-        error: error instanceof Error ? error.message : "Unknown error",
+        error,
         clientId,
         metricName,
       });
-    },
-    onSettled: () => {
-      // No-op for suppressHydrationRef (let the typing effect decide when to release)
     },
   });
 
   const generateInsightWithContextMutation = useMutation({
     mutationFn: async (userContext: string) => {
-      const response = await fetch(`/api/generate-metric-insight-with-context/${clientId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metricName, timePeriod: canonicalPeriod, metricData, userContext }),
-      });
-      if (!response.ok) {
-        let detail = "";
-        try {
-          detail = await response.text();
-        } catch {}
-        throw new Error(`HTTP ${response.status} ${detail}`.trim());
-      }
+      const response = await fetch(
+        `/api/generate-metric-insight-with-context/${clientId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            metricName,
+            timePeriod: canonicalPeriod,
+            metricData,
+            userContext,
+          }),
+        },
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-      await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName, canonicalPeriod) });
-      // do NOT set suppressHydrationRef=false here — we flip it off in the typewriter effect after the new text finishes animating
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.insightContext(
+          clientId,
+          metricName,
+          canonicalPeriod,
+        ),
+      });
     },
     onError: (error) => {
       suppressHydrationRef.current = false;
       setTyping({ active: false, text: "" });
       logger.warn("Failed to generate insight with context", {
-        error: error instanceof Error ? error.message : "Unknown error",
+        error,
         clientId,
         metricName,
       });
       try {
         generateInsightMutation.mutate();
-      } catch (fallbackError) {
-        logger.warn("Fallback insight generation also failed", {
-          error: fallbackError instanceof Error ? fallbackError.message : "Unknown fallback error",
-          clientId,
-          metricName,
-        });
-      }
-    },
-    onSettled: () => {
-      // No-op for suppressHydrationRef (let the typing effect decide when to release)
+      } catch {}
     },
   });
 
-  // Treat both 'generating' and 'pending' as regenerating
-  const isRegenerating = versionStatus?.isGenerating === true;
+  const isBusy =
+    isLoadingInsights ||
+    isFetching ||
+    insightsData?.status === "pending" ||
+    generateInsightMutation.isPending ||
+    generateInsightWithContextMutation.isPending ||
+    versionStatus?.isGenerating;
 
-
-
-
-  
-  // NEW: show loading while the initial query is in-flight
-  if (isLoadingInsights || isFetching || insightsData?.status === 'pending') {
+  if (isBusy) {
     return (
       <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
           <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-            Loading insights for <span className="font-medium text-primary">{metricName}</span>…
-          </p>
-          <Button disabled size="sm" className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Loading…
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading only when mutation is pending or actually generating
-  if (generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || isRegenerating) {
-    return (
-      <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
-        <div className="text-center">
-          <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-            Get strategic competitive intelligence and actionable recommendations for{" "}
-            <span className="font-medium text-primary">{metricName}</span> for {dataMonthLabel}
+            {generateInsightMutation.isPending ||
+            generateInsightWithContextMutation.isPending ||
+            versionStatus?.isGenerating ? (
+              <>
+                Get strategic competitive intelligence and actionable
+                recommendations for{" "}
+                <span className="font-medium text-primary">{metricName}</span>{" "}
+                for {monthLabel}
+              </>
+            ) : (
+              <>
+                Loading insights for{" "}
+                <span className="font-medium text-primary">{metricName}</span>…
+              </>
+            )}
           </p>
           <Button
-            disabled={true}
-            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
+            disabled
             size="sm"
+            className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5"
           >
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            {isRegenerating ? "Regenerating Insights..." : "Generating Insights..."}
+            {generateInsightMutation.isPending ||
+            generateInsightWithContextMutation.isPending ||
+            versionStatus?.isGenerating
+              ? "Generating Insights..."
+              : "Loading..."}
           </Button>
-          <p className="text-xs text-slate-500 mt-3 animate-pulse">
-            {isRegenerating ? "Updating insights with latest data..." : "Analyzing competitive data and market trends..."}
-          </p>
         </div>
       </div>
     );
   }
 
-  // Decide what to render using single "display text" source
-  // Critical: while typing.active, use typing.text only
-  const displayInsightText = 
-    typing.active ? typing.text : (insight?.insightText ?? "");
-
-  // Empty state wins if forced or there is no text at all
-  const shouldShowEmpty = 
+  const displayInsightText = typing.active
+    ? typing.text
+    : (insight?.insightText ?? "");
+  const shouldShowEmpty =
     forcedEmpty ||
-    (
-      !typing.active &&
+    (!typing.active &&
       !isLoadingInsights &&
       !isFetching &&
-      (!metricInsight?.insightText && !insight?.insightText)
-    );
+      !metricInsight?.insightText &&
+      !insight?.insightText);
 
   if (insight && !shouldShowEmpty) {
     return (
@@ -390,80 +430,117 @@ export function MetricInsightBox({
         insight={displayInsightText}
         recommendation={insight.recommendationText || ""}
         status={insight.status}
-        isTyping={insight.isTyping}
+        isTyping={typing.active}
         hasCustomContext={insight.hasContext === true}
         clientId={clientId}
         metricName={metricName}
         timePeriod={canonicalPeriod}
         metricData={metricData}
         onRegenerate={async () => {
-          logger.component("MetricInsightBox", "Regenerate clicked - checking for existing context");
           try {
             const contextResponse = await fetch(
-              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`
+              `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`,
             );
             if (contextResponse.ok) {
               const contextData = await contextResponse.json();
               const existingContext = contextData.userContext?.trim();
               if (existingContext) {
-                logger.component("MetricInsightBox", "Found existing context, regenerating with context");
                 suppressHydrationRef.current = true;
-                setForcedEmpty(false); // we want to show the typing region, not empty
+                setForcedEmpty(false);
                 setTyping({ active: true, text: "" });
-                setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "", hasContext: true } : cur);
+                setInsight((cur) =>
+                  cur
+                    ? {
+                        ...cur,
+                        insightText: "",
+                        recommendationText: "",
+                        hasContext: true,
+                      }
+                    : cur,
+                );
                 generateInsightWithContextMutation.mutate(existingContext);
                 return;
               }
             }
           } catch {}
           suppressHydrationRef.current = true;
-          setForcedEmpty(false); // we want to show the typing region, not empty
+          setForcedEmpty(false);
           setTyping({ active: true, text: "" });
-          setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "" } : cur);
+          setInsight((cur) =>
+            cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
+          );
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
           suppressHydrationRef.current = true;
-          setForcedEmpty(false); // we want to show the typing region, not empty
+          setForcedEmpty(false);
           setTyping({ active: true, text: "" });
-          setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "", hasContext: true } : cur);
+          setInsight((cur) =>
+            cur
+              ? {
+                  ...cur,
+                  insightText: "",
+                  recommendationText: "",
+                  hasContext: true,
+                }
+              : cur,
+          );
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
+          // Stop any typing animation
+          if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+          typingState.delete(`${clientId}|${metricName}|${canonicalPeriod}`);
+
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
           setTyping({ active: false, text: "" });
           onStatusChange?.(undefined);
-          deletedRef.current = true; // <-- mark as tombstoned
 
-          // Optimistic cache removal (keep)
+          // Optimistic cache prune (optional)
           queryClient.setQueryData(
             ["/api/ai-insights", clientId, canonicalPeriod],
             (prev: any) => {
               if (!prev || !Array.isArray(prev.insights)) return prev;
-              return { ...prev, insights: prev.insights.filter((it: any) => it.metricName !== metricName) };
-            }
+              return {
+                ...prev,
+                insights: prev.insights.filter(
+                  (it: any) => it.metricName !== metricName,
+                ),
+              };
+            },
           );
 
           try {
             const response = await fetch(
               `/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`,
-              { method: "DELETE" }
+              { method: "DELETE" },
             );
-            if (!response.ok) throw new Error("Failed to delete insight and context");
+            if (!response.ok)
+              throw new Error("Failed to delete insight and context");
 
-            await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
-            await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
-            queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName, canonicalPeriod) });
+            await queryClient.invalidateQueries({
+              queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
+            });
+            queryClient.invalidateQueries({
+              queryKey: QueryKeys.insightContext(
+                clientId,
+                metricName,
+                canonicalPeriod,
+              ),
+            });
 
-            // DO NOT release suppression here; wait for confirm effect below.
+            // Mark ready to release once refetch shows item is gone
+            deleteConfirmRef.current = true;
           } catch (error) {
-            // Roll back release so UI can rehydrate normally on failure
-            deletedRef.current = false;
             suppressHydrationRef.current = false;
             setForcedEmpty(false);
-            logger.warn("Failed to delete insight and context via transactional operation", { error });
+            logger.warn(
+              "Failed to delete insight and context via transactional operation",
+              { error },
+            );
           }
         }}
       />
@@ -474,15 +551,18 @@ export function MetricInsightBox({
     <div className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
       <div className="text-center">
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
-          Get strategic competitive intelligence and actionable recommendations for{" "}
-          <span className="font-medium text-primary">{metricName}</span> for {dataMonthLabel}
+          Get strategic competitive intelligence and actionable recommendations
+          for <span className="font-medium text-primary">{metricName}</span> for{" "}
+          {monthLabel}
         </p>
         <Button
           onClick={() => {
             suppressHydrationRef.current = true;
-            setForcedEmpty(false); // we want to show the typing region, not empty
+            setForcedEmpty(false);
             setTyping({ active: true, text: "" });
-            setInsight((cur) => cur ? { ...cur, insightText: "", recommendationText: "" } : cur);
+            setInsight((cur) =>
+              cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
+            );
             generateInsightMutation.mutate();
           }}
           disabled={generateInsightMutation.isPending}
