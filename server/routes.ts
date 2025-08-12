@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Simplified period handling to avoid import issues
+      // Enhanced period handling to properly map "Last Month" to canonical format
       const periodParam = req.query.period as string || req.query.timePeriod as string;
       let canonicalTimePeriod: string;
       
@@ -439,8 +439,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         if (periodParam) {
-          // If already in YYYY-MM format, use directly; otherwise use as-is for now
-          canonicalTimePeriod = periodParam;
+          // Map "Last Month" to canonical format for AI insights
+          if (periodParam === "Last Month") {
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            canonicalTimePeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+          } else if (periodParam.match(/^\d{4}-\d{2}$/)) {
+            // Already in YYYY-MM format, use directly
+            canonicalTimePeriod = periodParam;
+          } else {
+            // For other formats, map to current canonical format  
+            canonicalTimePeriod = periodParam;
+          }
         } else {
           // Default to last month in canonical format
           const now = new Date();
@@ -448,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canonicalTimePeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
         }
         
-        logger.info('🔍 PERIOD RESOLVED', { canonicalTimePeriod });
+        logger.info('🔍 PERIOD RESOLVED', { originalPeriod: periodParam, canonicalTimePeriod });
         
       } catch (error) {
         return sendError(res, 422, "SCHEMA_MISMATCH", "Invalid time period format", (error as Error).message);
