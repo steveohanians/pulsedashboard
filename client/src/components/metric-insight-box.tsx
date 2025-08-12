@@ -86,15 +86,24 @@ export function MetricInsightBox({
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
 
-  // D) Robust typewriter helper (works even if status wording differs)
-  function runTypewriter(full: string, setter: (s: string) => void) {
-    clearInterval((runTypewriter as any)._id);
-    setter("");
+  // Real typewriter that only starts when new server text arrives
+  function startTypewriter(full: string) {
+    // Cancel any previous run
+    clearInterval((startTypewriter as any)._id);
+
+    setTyping({ active: true, text: "" });
     let i = 0;
-    (runTypewriter as any)._id = setInterval(() => {
+
+    (startTypewriter as any)._id = setInterval(() => {
       i++;
-      setter(full.slice(0, i));
-      if (i >= full.length) clearInterval((runTypewriter as any)._id);
+      setTyping((t) => (t.active ? { active: true, text: full.slice(0, i) } : t));
+      if (i >= full.length) {
+        clearInterval((startTypewriter as any)._id);
+        setTyping({ active: false, text: full });
+        // After done typing, copy into local insight so it persists
+        setInsight((cur) => cur ? { ...cur, insightText: full } : { insightText: full } as any);
+        lastTypedRef.current = full;
+      }
     }, 12);
   }
 
@@ -178,6 +187,29 @@ export function MetricInsightBox({
       }
     }
   }, [metricInsight, onStatusChange, insight?.isTyping]);
+
+  // D) Start typewriter when new server text arrives
+  useEffect(() => {
+    if (suppressHydrationRef.current) return;
+    if (forcedEmpty) return;
+
+    const serverText = (metricInsight?.insightText || "").trim();
+    if (!serverText) return;
+
+    // Only type when server text changed
+    if (serverText === lastTypedRef.current) return;
+
+    // Don't let hydration clobber while we type
+    suppressHydrationRef.current = true;
+    startTypewriter(serverText);
+
+    // Release hydration when typing finishes
+    const estMs = Math.max(200, (serverText.length + 2) * 12);
+    const done = setTimeout(() => {
+      suppressHydrationRef.current = false;
+    }, estMs + 20);
+    return () => clearTimeout(done);
+  }, [metricInsight?.insightText]);  // only when server text actually changes
 
   // Use the centralized insights hook
   const canonicalInsights = insightsData;
@@ -366,8 +398,9 @@ export function MetricInsightBox({
   }
 
   // Decide what to render using single "display text" source
+  // Critical: while typing.active, use typing.text only (not metricInsight.insightText)
   const displayInsightText = 
-    insight?.isTyping ? (insight.insightText || "") : (insight?.insightText ?? metricInsight?.insightText ?? "");
+    typing.active ? typing.text : (insight?.insightText ?? metricInsight?.insightText ?? "");
 
   // Empty state wins if forced or there is no text at all
   const shouldShowEmpty = 
