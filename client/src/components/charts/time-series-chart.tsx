@@ -299,10 +299,15 @@ function generateRealTimeSeriesData(
 export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: TimeSeriesChartProps) {
   
 
+  // Create stable competitor key to prevent infinite re-renders
+  const competitorKey = useMemo(() => {
+    return competitors.map(c => `${c.id}:${c.label}:${c.value}`).join('|');
+  }, [competitors]);
+
   // ALL HOOKS MUST BE CALLED FIRST - no early returns before hooks
   const rawData = useMemo(() => {
     return generateTimeSeriesData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName);
-  }, [timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, timeSeriesData, periods, metricName]);
+  }, [timePeriod, clientData, industryAvg, cdAvg, competitorKey, clientUrl, timeSeriesData, periods, metricName]);
 
   // Normalize chart data for null-safe rendering
   const data = useMemo(() => {
@@ -329,14 +334,18 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   // Calculate optimized Y-axis domain with null-safe processing
   const allValues: number[] = [];
   data.forEach(point => {
-    allValues.push(
-      safeNumericValue(point[clientKey], 0),
-      safeNumericValue(point['Industry Avg'], 0),
-      safeNumericValue(point['Clear Digital Clients Avg'], 0)
-    );
+    const clientValue = safeNumericValue(point[clientKey], 0);
+    const industryValue = safeNumericValue(point['Industry Avg'], 0);
+    const cdValue = safeNumericValue(point['Clear Digital Clients Avg'], 0);
+    
+    if (clientValue !== null) allValues.push(clientValue);
+    if (industryValue !== null) allValues.push(industryValue);
+    if (cdValue !== null) allValues.push(cdValue);
+    
     competitors.forEach(comp => {
       if (point[comp.label] !== undefined) {
-        allValues.push(safeNumericValue(point[comp.label], 0));
+        const compValue = safeNumericValue(point[comp.label], 0);
+        if (compValue !== null) allValues.push(compValue);
       }
     });
   });
@@ -351,40 +360,35 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   const yAxisDomain = [0, Math.ceil(maxValue + padding)];
 
   // State for toggling lines - ensure all competitors are visible by default
-  const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {
-      [clientKey]: true,
-      'Industry Avg': true,
-      'Clear Digital Clients Avg': true,
+  const [hiddenLines, setHiddenLines] = useState<Set<string>>(new Set());
+
+  // Derive visible lines from competitors and hidden state
+  const visibleLines = useMemo<Record<string, boolean>>(() => {
+    const visible: Record<string, boolean> = {
+      [clientKey]: !hiddenLines.has(clientKey),
+      'Industry Avg': !hiddenLines.has('Industry Avg'),
+      'Clear Digital Clients Avg': !hiddenLines.has('Clear Digital Clients Avg'),
     };
     competitors.forEach(comp => {
-      initial[comp.label] = true;
+      visible[comp.label] = !hiddenLines.has(comp.label);
     });
-    return initial;
-  });
-
-  // Update visible lines whenever competitors change to include new ones
-  useEffect(() => {
-    setVisibleLines(prev => {
-      const updated = { ...prev };
-      competitors.forEach(comp => {
-        if (!(comp.label in updated)) {
-          updated[comp.label] = true; // Default new competitors to visible
-        }
-      });
-      return updated;
-    });
-  }, [competitors]);
+    return visible;
+  }, [clientKey, competitorKey, hiddenLines]);
 
   // Track if this is the initial render to allow animation only once
   const [isInitialRender, setIsInitialRender] = useState(true);
 
   const toggleLine = (lineKey: string) => {
     setIsInitialRender(false); // Disable animation after first interaction
-    setVisibleLines(prev => ({
-      ...prev,
-      [lineKey]: !prev[lineKey]
-    }));
+    setHiddenLines(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(lineKey)) {
+        newSet.delete(lineKey);
+      } else {
+        newSet.add(lineKey);
+      }
+      return newSet;
+    });
   };
 
   // Render based on data availability - NO EARLY RETURNS
