@@ -5,13 +5,14 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { useGA4Status } from '@/hooks/useGA4Status';
 
 /**
  * Convert time period labels to canonical YYYY-MM format
@@ -52,14 +53,12 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
     return timePeriod ? canonicalizePeriod(timePeriod) : undefined;
   }, [timePeriod]);
 
-  // Poll status every 3 seconds when component is mounted  
-  const { data: statusData, isLoading, error } = useQuery({
-    queryKey: ['/api/ga4-data/status', clientId, canonicalPeriod],
-    queryFn: () => apiRequest('GET', `/api/ga4-data/status/${clientId}${canonicalPeriod ? `?timePeriod=${canonicalPeriod}` : ''}`),
-    refetchInterval: 3000, // Poll every 3 seconds
-    refetchOnWindowFocus: true,
-    retry: 2
-  });
+  // Use centralized GA4 status hook with proper 404 handling  
+  const { data: ga4Status, isLoading, error } = useGA4Status(
+    clientId, 
+    canonicalPeriod || '', 
+    !!canonicalPeriod
+  );
 
   // Force refresh mutation
   const forceRefreshMutation = useMutation({
@@ -70,7 +69,7 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
       }),
     onSuccess: () => {
       // Invalidate status query to get fresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/ga4-data/status', clientId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ga4-data/status", clientId] });
       // Also invalidate dashboard data to refresh charts
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard', clientId] });
     }
@@ -78,10 +77,10 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
 
   // Update last polled timestamp
   useEffect(() => {
-    if (statusData) {
+    if (ga4Status) {
       setLastPolled(new Date());
     }
-  }, [statusData]);
+  }, [ga4Status]);
 
   // Handle force refresh
   const handleForceRefresh = () => {
@@ -90,27 +89,27 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
     });
   };
 
-  // Don't render anything if loading or no data
-  if (isLoading || !statusData?.data) {
+  // Don't render anything if loading or no GA4 status
+  if (isLoading || !ga4Status) {
     return null;
   }
 
-  const status: GA4FetchStatus = timePeriod ? 
-    statusData.data.status : 
-    statusData.data.statuses?.[0]; // Get most recent status if no specific period
+  // Map GA4 status to banner display format
+  const inProgress = ga4Status.status === "processing";
+  const hasError = ga4Status.status === "error";
+  const isReady = ga4Status.status === "ready";
+  const isNotReady = ga4Status.status === "not_ready";
 
-  // Don't show banner if no active status and no recent activity
-  if (!status && (!statusData.data.stats?.lastActivity)) {
+  // Don't show banner if not ready (404 case)
+  if (isNotReady) {
     return null;
   }
 
-  // Determine display state
-  const inProgress = status?.inProgress || false;
-  const lastRefreshed = status?.lastRefreshedAt || statusData.data.stats?.lastActivity;
-  const hasError = status?.error;
+  // Determine display state based on GA4 status
+  const lastRefreshed = null; // GA4 status doesn't include timestamp data
   const relativeTime = lastRefreshed ? 
     formatDistanceToNow(new Date(lastRefreshed), { addSuffix: true }) : 
-    'Never';
+    'Status checked';
 
   // Choose banner variant based on state
   let variant: 'default' | 'destructive' = 'default';
@@ -134,31 +133,28 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
           <AlertDescription className="mb-0">
             {inProgress ? (
               <span>
-                Sync in progress… 
-                {status?.startedAt && (
-                  <span className="text-muted-foreground ml-1">
-                    (started {formatDistanceToNow(new Date(status.startedAt), { addSuffix: true })})
-                  </span>
-                )}
+                GA4 data sync in progress…
               </span>
             ) : hasError ? (
               <span>
-                Sync failed: {status.error}
+                GA4 sync failed
+              </span>
+            ) : isReady ? (
+              <span>
+                GA4 data ready
               </span>
             ) : (
               <span>
-                Last updated {relativeTime}
+                GA4 status: {ga4Status.status}
               </span>
             )}
           </AlertDescription>
           
           {/* Status indicators */}
           <div className="flex items-center gap-1 ml-2">
-            {status?.dataType && (
-              <Badge variant="outline" className="text-xs">
-                {status.dataType}
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs">
+              {ga4Status.status}
+            </Badge>
             {inProgress && (
               <Badge variant="secondary" className="text-xs">
                 Active
@@ -189,15 +185,9 @@ export function StatusBanner({ clientId, timePeriod, isAdmin = false }: StatusBa
       </div>
 
       {/* Additional details for admins */}
-      {isAdmin && statusData.data.stats && (
+      {isAdmin && (
         <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
-          Registry: {statusData.data.stats.inProgressCount} active, 
-          {statusData.data.stats.totalFetches} total fetches
-          {statusData.data.stats.oldestInProgress && (
-            <span className="ml-2">
-              (oldest: {formatDistanceToNow(new Date(statusData.data.stats.oldestInProgress), { addSuffix: true })})
-            </span>
-          )}
+          GA4 Status: {ga4Status.status}
           <div className="mt-1">
             Last polled: {formatDistanceToNow(lastPolled, { addSuffix: true })}
           </div>

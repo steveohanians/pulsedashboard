@@ -24,7 +24,7 @@ export function useGA4Status(clientId: string, period: string, enabled: boolean)
       return await response.json();
     },
     enabled,
-    refetchInterval: (data) => (data?.status === "processing" ? 5000 : false),
+    refetchInterval: (query) => (query.state.data?.status === "processing" ? 5000 : false),
     retry: (failureCount, err) => failureCount < 1,
     refetchOnWindowFocus: false,
     staleTime: 30000,
