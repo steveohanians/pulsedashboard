@@ -117,7 +117,7 @@ export function MetricInsightBox({
           status: preloadedInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasContext: preloadedInsight.hasContext === true && !!preloadedInsight.contextText?.trim(), // Guard against false positives
+          hasContext: !!preloadedInsight.contextText?.trim(), // Badge based on actual context text presence
         });
         if (preloadedInsight.status && onStatusChange) {
           onStatusChange(preloadedInsight.status);
@@ -143,7 +143,7 @@ export function MetricInsightBox({
         status: metricInsight.status,
         isTyping: false,
         isFromStorage: false,
-        hasContext: metricInsight.hasContext === true && !!metricInsight.contextText?.trim(), // Guard against false positives
+        hasContext: !!metricInsight.contextText?.trim(), // Badge based on actual context text presence
       });
       if (metricInsight.status && onStatusChange) {
         onStatusChange(metricInsight.status);
@@ -253,7 +253,7 @@ export function MetricInsightBox({
           status: matchingInsight.status,
           isTyping: false,
           isFromStorage: true,
-          hasContext: (matchingInsight.hasContext === true) && !!matchingInsight.contextText?.trim(), // Guard against false positives
+          hasContext: !!matchingInsight.contextText?.trim(), // Badge based on actual context text presence
         });
         if (matchingInsight.status && onStatusChange) {
           onStatusChange(matchingInsight.status);
