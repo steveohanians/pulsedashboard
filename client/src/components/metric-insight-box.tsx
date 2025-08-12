@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
@@ -273,18 +272,7 @@ export function MetricInsightBox({
 
   if (insight) {
     return (
-      <div className="space-y-3">
-        {insight?.hasContext === true && (
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="ml-2">
-                With Context
-              </Badge>
-              <span className="text-xs text-slate-500">This insight includes custom context</span>
-            </div>
-          </div>
-        )}
-        <AIInsights
+      <AIInsights
         context={insight.contextText || ""}
         insight={insight.insightText || ""}
         recommendation={insight.recommendationText || ""}
@@ -343,7 +331,6 @@ export function MetricInsightBox({
           }
         }}
       />
-      </div>
     );
   }
 
