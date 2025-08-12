@@ -50,6 +50,7 @@ export function MetricInsightBox({
 
   // A) Add suppression flag to block hydration while generating
   const suppressHydrationRef = useRef(false);
+  const lastTypedRef = useRef<string>(""); // track last fully-typed server text
 
   // Normalize time period to canonical YYYY-MM format
   const canonicalPeriod = useMemo(() => {
@@ -83,15 +84,16 @@ export function MetricInsightBox({
     return dataMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   }, []);
 
-  // D) Simple typewriter helper function
+  // D) Robust typewriter helper (works even if status wording differs)
   function runTypewriter(full: string, setter: (s: string) => void) {
-    let i = 0;
+    clearInterval((runTypewriter as any)._id);
     setter("");
-    const id = setInterval(() => {
+    let i = 0;
+    (runTypewriter as any)._id = setInterval(() => {
       i++;
       setter(full.slice(0, i));
-      if (i >= full.length) clearInterval(id);
-    }, 12); // tweak speed as desired
+      if (i >= full.length) clearInterval((runTypewriter as any)._id);
+    }, 12);
   }
 
   // Database-based insights query using centralized hook
@@ -147,13 +149,10 @@ export function MetricInsightBox({
     loadStoredInsight();
   }, [clientId, metricName, onStatusChange, preloadedInsight]);
 
-  // C) Update local state when fresh data arrives from the hook (with suppression guard)
+  // C) Guard the hydration-from-server effect
   useEffect(() => {
-    // Guard against hydration while generating
-    if (suppressHydrationRef.current) return;
-    // Skip if local isTyping is true or server status is "generating"
-    if (insight?.isTyping) return;
-    if (metricInsight?.status === "generating") return;
+    if (suppressHydrationRef.current) return;    // don't hydrate while we're mutating
+    if (insight?.isTyping) return;               // don't overwrite while typewriter is running
     
     if (metricInsight) {
       setInsight({
@@ -292,25 +291,29 @@ export function MetricInsightBox({
     }
   }, [canonicalInsights, metricName, onStatusChange]);
 
-  // D) Typewriter effect when fresh text arrives
+  // D) Robust typewriter trigger (works even if status wording differs)
   useEffect(() => {
     if (suppressHydrationRef.current) return;
-    if (!insight?.isTyping) return;
-    if (metricInsight?.status !== "available") return;
-    const text = metricInsight?.insightText?.trim();
-    if (!text) return;
-    
-    runTypewriter(text, t =>
-      setInsight(cur => cur ? { ...cur, insightText: t } : cur)
+    const serverText = (metricInsight?.insightText || "").trim();
+    if (!serverText) return;
+
+    // Only run when text truly changed (prevents loops)
+    if (serverText === lastTypedRef.current) return;
+
+    // Start typewriter
+    setInsight(cur => cur ? { ...cur, isTyping: true } : { isTyping: true } as any);
+    runTypewriter(serverText, t =>
+      setInsight(cur => cur ? { ...cur, insightText: t } : { insightText: t } as any)
     );
-    
-    // Clear isTyping when done
-    const ms = Math.max(200, (text.length + 2) * 12);
-    const doneId = setTimeout(() => {
-      setInsight(cur => cur ? { ...cur, isTyping: false } : cur);
+
+    // Mark this version as typed and schedule isTyping=false at the end
+    lastTypedRef.current = serverText;
+    const ms = Math.max(200, (serverText.length + 2) * 12);
+    const done = setTimeout(() => {
+      setInsight(cur => cur ? { ...cur, isTyping: false } : { isTyping: false } as any);
     }, ms);
-    return () => clearTimeout(doneId);
-  }, [metricInsight?.status, metricInsight?.insightText, insight?.isTyping]);
+    return () => clearTimeout(done);
+  }, [metricInsight?.insightText]);
   
   // NEW: show loading while the initial query is in-flight
   if (isLoadingInsights || isFetching || insightsData?.status === 'pending') {
@@ -395,8 +398,23 @@ export function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
+          // B) Fix DELETE: optimistic clear + cache surgery + suppression
+          
+          // 1) BEFORE firing the mutation/fetch:
+          suppressHydrationRef.current = true;
+          // Optimistically clear local UI to the empty state
           setInsight(null);
           onStatusChange?.(undefined);
+          
+          // 2) Immediately remove the metric from the React Query cache so hydration cannot reinsert it:
+          queryClient.setQueryData(
+            ["/api/ai-insights", clientId, canonicalPeriod],
+            (prev: any) => {
+              if (!prev || !Array.isArray(prev.insights)) return prev;
+              return { ...prev, insights: prev.insights.filter((it: any) => it.metricName !== metricName) };
+            }
+          );
+          
           try {
             // SINGLE TRANSACTIONAL DELETE - as per specification requirement
             const response = await fetch(`/api/ai-insights/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`, {
@@ -409,13 +427,17 @@ export function MetricInsightBox({
             
             const result = await response.json();
             
-            // Invalidate centralized query keys with canonical period
-            queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+            // 3) After the delete request resolves, do BOTH invalidate and refetch of the insights list:
+            await queryClient.invalidateQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod] });
+            await queryClient.refetchQueries({ queryKey: ["/api/ai-insights", clientId, canonicalPeriod], type: "active" });
             queryClient.invalidateQueries({ queryKey: QueryKeys.insightContext(clientId, metricName) });
             
             logger.component("MetricInsightBox", "Single transactional delete completed successfully");
           } catch (error) {
             logger.warn("Failed to delete insight and context via transactional operation", { error });
+          } finally {
+            // 4) Finally, allow hydration again:
+            suppressHydrationRef.current = false;
           }
         }}
       />
