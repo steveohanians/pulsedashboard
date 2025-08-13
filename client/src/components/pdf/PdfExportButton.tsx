@@ -68,7 +68,7 @@ export default function PdfExportButton({
 
       pdf.save(base);
     } catch (err) {
-      // (intentionally no console noise per safety rules)
+      console.error("PDF generation failed:", err);
     } finally {
       setIsGenerating(false);
     }
