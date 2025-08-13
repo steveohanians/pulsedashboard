@@ -34,8 +34,12 @@ export default function PdfExportButton({
         useCORS: true,
         allowTaint: true,
         logging: false,
+        foreignObjectRendering: false,
         ignoreElements: (element) => {
-          return element.tagName === 'IFRAME';
+          return element.tagName === 'IFRAME' || 
+                 element.tagName === 'SCRIPT' ||
+                 element.classList?.contains('vite-error-overlay') ||
+                 element.id === 'vite-error-overlay';
         }
       });
 
