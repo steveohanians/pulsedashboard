@@ -216,14 +216,23 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
   sourceMetrics.forEach((metric) => {
     if (metric.channel) {
       const channelName = metric.channel;
-      const value = parseFloat(metric.value);
+      let value;
       
-      if (channelSums.has(channelName)) {
-        channelSums.set(channelName, channelSums.get(channelName) + value);
-        channelCounts.set(channelName, channelCounts.get(channelName) + 1);
+      // Handle CD_Avg metrics that have complex value objects
+      if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
+        value = parseFloat(metric.value.percentage);
       } else {
-        channelSums.set(channelName, value);
-        channelCounts.set(channelName, 1);
+        value = parseFloat(metric.value);
+      }
+      
+      if (!isNaN(value)) {
+        if (channelSums.has(channelName)) {
+          channelSums.set(channelName, channelSums.get(channelName) + value);
+          channelCounts.set(channelName, channelCounts.get(channelName) + 1);
+        } else {
+          channelSums.set(channelName, value);
+          channelCounts.set(channelName, 1);
+        }
       }
     } else if (metric.value && Array.isArray(metric.value)) {
       metric.value.forEach((channelData: any) => {
