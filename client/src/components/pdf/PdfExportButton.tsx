@@ -296,6 +296,7 @@ export default function PdfExportButton({
       disabled={isGenerating}
       aria-label={isGenerating ? "Generating PDF…" : "Export dashboard as PDF"}
       title={isGenerating ? "Generating PDF…" : "Export PDF"}
+      data-testid="button-export-pdf"
     >
       {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
     </Button>
