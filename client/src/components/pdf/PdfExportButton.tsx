@@ -142,9 +142,9 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('🚀 Testing PDF export - checking what actually fails');
+      console.info('🚀 Trying html2canvas with iframe bypass options');
       
-      // Test basic html2canvas import first
+      // Import libraries  
       console.info('Step 1: Testing html2canvas import...');
       const { default: html2canvas } = await import('html2canvas');
       console.info('✅ html2canvas imported successfully');
@@ -166,30 +166,46 @@ export default function PdfExportButton({
       // Small delay to ensure animations are paused
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 3: Slice-based rendering with CORS-safe capture
-      console.info('✂️ Starting slice-based capture...');
-      const slices = await captureInSlices(element, html2canvas);
-      
-      // Step 4: Stitch slices together
-      console.info('🧩 Stitching slices together...');
-      const finalCanvas = stitchSlices(slices);
-      
-      if (!finalCanvas) {
-        throw new Error('Failed to create final canvas');
-      }
-      
-      console.info('📄 Creating PDF from captured canvas...', {
-        canvasWidth: finalCanvas.width,
-        canvasHeight: finalCanvas.height
+      // Step 3: Single capture with iframe bypass options
+      console.info('📸 Starting direct capture with iframe bypass...');
+      const canvas = await html2canvas(element, {
+        // Iframe bypass options
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: '#ffffff',
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false,
+        logging: false,
+        imageTimeout: 15000,
+        removeContainer: true,
+        // Force specific window context to bypass iframe detection  
+        onclone: function(clonedDoc: Document) {
+          // Try to set window context in cloned document
+          if (window.parent && window.parent !== window) {
+            console.info('🔧 Using parent window context to bypass iframe detection');
+          }
+          return clonedDoc.documentElement;
+        }
       });
       
-      // Step 5: Create PDF with proper scaling
+      console.info('✅ Canvas captured successfully');
+      
+      console.info('📄 Creating PDF from captured canvas...', {
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height
+      });
+      
+      // Step 4: Create PDF with proper scaling
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      const imgData = finalCanvas.toDataURL('image/png', 0.8);
-      const imgAspectRatio = finalCanvas.height / finalCanvas.width;
+      const imgData = canvas.toDataURL('image/png', 0.8);
+      const imgAspectRatio = canvas.height / canvas.width;
       
       let imgWidth = pdfWidth;
       let imgHeight = pdfWidth * imgAspectRatio;
