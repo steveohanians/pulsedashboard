@@ -3583,6 +3583,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PDF generation endpoint
+  app.post('/api/generate-pdf', requireAuth, async (req, res) => {
+    try {
+      const { clientLabel, fileName } = req.body;
+      
+      // Generate PDF with client data using existing import
+      const pdfBuffer = await generatePDF({ 
+        clientLabel: clientLabel || 'Client',
+        fileName 
+      });
+
+      // Set response headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="pulse-dashboard-${clientLabel || 'client'}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      // Send PDF buffer
+      res.send(pdfBuffer);
+      
+    } catch (error) {
+      logger.error('PDF generation route error', { error: (error as Error).message });
+      res.status(500).json({ 
+        error: 'PDF generation failed', 
+        message: (error as Error).message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

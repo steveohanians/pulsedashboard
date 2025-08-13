@@ -28,7 +28,6 @@ import { Footer } from "@/components/Footer";
 import { ErrorBanner, useErrorBanner } from "@/components/ErrorBanner";
 import { APIError } from "@/lib/queryClient";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
-import FallbackPdfExport from "@/components/pdf/FallbackPdfExport";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS } from "@/utils/chartUtils";
@@ -1073,15 +1072,7 @@ export default function Dashboard() {
               )}
             </Button>
 
-            {/* Primary PDF Export with html2canvas */}
             <PdfExportButton
-              targetRef={dashboardRootRef}
-              clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
-              className="ml-1"
-            />
-            
-            {/* Fallback Print-based PDF Export */}
-            <FallbackPdfExport
               targetRef={dashboardRootRef}
               clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
               className="ml-1"
