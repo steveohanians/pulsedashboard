@@ -3583,15 +3583,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PDF generation endpoint
+  // PDF generation endpoint with actual dashboard data
   app.post('/api/generate-pdf', requireAuth, async (req, res) => {
     try {
       const { clientLabel, fileName } = req.body;
+      const clientId = req.user?.clientId || 'demo-client-id';
       
-      // Generate PDF with client data using existing import
+      // Fetch actual dashboard data for PDF generation
+      const dashboardData = await getDashboardDataOptimized(clientId, ['All'], ['All'], '2025-07');
+      
+      // Generate PDF with actual dashboard data
       const pdfBuffer = await generatePDF({ 
-        clientLabel: clientLabel || 'Client',
-        fileName 
+        clientLabel: clientLabel || dashboardData.client?.name || 'Client',
+        fileName,
+        dashboardData
       });
 
       // Set response headers for PDF download
