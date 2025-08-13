@@ -2,6 +2,25 @@ export async function generatePDF(data: any): Promise<Buffer> {
   try {
     const { jsPDF } = await import('jspdf');
     
+    console.log('🔍 PDF generator received data:', {
+      hasData: !!data,
+      dataKeys: data ? Object.keys(data) : [],
+      hasDashboardData: !!data?.dashboardData,
+      dashboardDataKeys: data?.dashboardData ? Object.keys(data.dashboardData) : [],
+      hasMetrics: !!data?.dashboardData?.metrics,
+      metricsCount: data?.dashboardData?.metrics?.length || 0,
+      hasInsights: !!data?.dashboardData?.insights,
+      insightsCount: data?.dashboardData?.insights?.length || 0,
+      // Also check if the data is directly in the root level
+      hasRootMetrics: !!data?.metrics,
+      rootMetricsCount: data?.metrics?.length || 0,
+      hasRootInsights: !!data?.insights,
+      rootInsightsCount: data?.insights?.length || 0
+    });
+    
+    // Log what the actual data structure looks like
+    console.log('🔍 PDF data structure preview:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
+    
     // Create PDF document with better layout
     const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();

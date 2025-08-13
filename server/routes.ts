@@ -3527,33 +3527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google OAuth routes for GA4 integration
   app.use("/api/oauth/google", googleOAuthRoutes);
 
-  // Legacy PDF Generation endpoint (kept for backward compatibility)
-  app.post("/api/generate-pdf", requireAuth, async (req, res) => {
-    try {
-      const { clientLabel, fileName } = req.body;
-
-      // Generate simplified PDF as fallback
-      const pdfBuffer = await generatePDF({ clientLabel, fileName });
-      
-      // Set response headers for PDF download
-      const today = new Date();
-      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-      const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
-      
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      res.send(pdfBuffer);
-      
-    } catch (error) {
-      logger.error("PDF generation error", { 
-        error: (error as Error).message,
-        stack: (error as Error).stack 
-      });
-      res.status(500).json({ message: "PDF generation failed" });
-    }
-  });
+  // Removed duplicate PDF route - using enhanced version below
 
   // Portfolio Averaging Fix Route (Admin Only)
   app.post("/api/admin/fix-portfolio-averages", requireAdmin, async (req, res) => {
@@ -3585,30 +3559,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // PDF generation endpoint with actual dashboard data
   app.post('/api/generate-pdf', requireAuth, async (req, res) => {
+    console.log('🚨 PDF ROUTE: Starting PDF generation endpoint');
+    
     try {
+      console.log('🚨 PDF ROUTE: Inside try block');
+      
       const { clientLabel, fileName } = req.body;
+      console.log('🚨 PDF ROUTE: Request body parsed:', { clientLabel, fileName });
+      
       const clientId = req.user?.clientId || 'demo-client-id';
+      console.log('🚨 PDF ROUTE: Client ID determined:', clientId);
       
-      // Fetch actual dashboard data for PDF generation
-      const dashboardData = await getDashboardDataOptimized(clientId, ['All'], ['All'], '2025-07');
+      // Get client object
+      console.log('🚨 PDF ROUTE: About to call storage.getClient...');
+      const client = await storage.getClient(clientId);
+      console.log('🚨 PDF ROUTE: Client retrieved:', { found: !!client, id: client?.id });
       
-      // Generate PDF with actual dashboard data
+      if (!client) {
+        console.log('🚨 PDF ROUTE: Client not found error');
+        throw new Error(`Client not found: ${clientId}`);
+      }
+      
+      // Get real dashboard data using the same logic as dashboard route
+      console.log('🚨 PDF ROUTE: Getting real dashboard data...');
+      const dashboardData = await getDashboardDataOptimized(
+        client,
+        ['2025-07'], 
+        'All',
+        'All',
+        'Last Month'
+      );
+      
+      console.log('🚨 PDF ROUTE: Real dashboard data retrieved:', {
+        hasClient: !!dashboardData?.client,
+        metricsCount: dashboardData?.metrics?.length || 0,
+        insightsCount: dashboardData?.insights?.length || 0
+      });
+      console.log('🚨 PDF ROUTE: About to call generatePDF with data...');
+      
+      // Generate PDF with dashboard data
       const pdfBuffer = await generatePDF({ 
-        clientLabel: clientLabel || dashboardData.client?.name || 'Client',
+        clientLabel: clientLabel || client?.name || 'Client',
         fileName,
-        dashboardData
+        dashboardData: dashboardData  // Explicitly pass dashboardData
       });
 
-      // Set response headers for PDF download
+      console.log('🚨 PDF ROUTE: PDF generated, setting headers...');
+
+      // Set headers and send
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="pulse-dashboard-${clientLabel || 'client'}.pdf"`);
       res.setHeader('Content-Length', pdfBuffer.length);
-
-      // Send PDF buffer
+      
+      console.log('🚨 PDF ROUTE: Sending PDF response...');
       res.send(pdfBuffer);
+      console.log('🚨 PDF ROUTE: PDF sent successfully');
       
     } catch (error) {
-      logger.error('PDF generation route error', { error: (error as Error).message });
+      console.error('🚨 PDF ROUTE ERROR:', error);
+      logger.error('PDF generation route error', { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ 
         error: 'PDF generation failed', 
         message: (error as Error).message 
