@@ -129,6 +129,7 @@ export default function Dashboard() {
       id: string;
       name: string;
       websiteUrl: string;
+      iconUrl?: string; // Brandfetch icon URL
     };
     metrics: DashboardMetric[];
     averagedMetrics?: Record<string, Record<string, number>>;
@@ -1185,8 +1186,26 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105">
-                <span className="text-xs sm:text-sm font-bold text-primary">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105 overflow-hidden">
+                {client?.iconUrl ? (
+                  <img 
+                    src={client.iconUrl} 
+                    alt={`${client.name} logo`}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      // Fallback to initial if image fails to load
+                      e.currentTarget.style.display = 'none';
+                      const fallbackSpan = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallbackSpan) {
+                        fallbackSpan.style.display = 'block';
+                      }
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`text-xs sm:text-sm font-bold text-primary ${client?.iconUrl ? 'hidden' : 'block'}`}
+                  style={{ display: client?.iconUrl ? 'none' : 'block' }}
+                >
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
