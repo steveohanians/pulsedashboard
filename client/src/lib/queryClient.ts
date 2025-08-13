@@ -143,6 +143,11 @@ export async function apiRequest(
 
     await validateResponse(res);
     
+    // Handle 204 No Content responses (successful deletion, etc.)
+    if (res.status === 204) {
+      return null;
+    }
+    
     const text = await res.text();
     const responseData = text ? JSON.parse(text) : null;
     
