@@ -198,27 +198,31 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       { text: renderInsight.contextText || "", setter: setDisplayedContext },
       { text: renderInsight.insightText || "", setter: setDisplayedInsight },
       { text: renderInsight.recommendationText || "", setter: setDisplayedRecommendation }
-    ];
+    ].filter(section => section.text.trim()); // Only include non-empty sections
 
     // Reset all displayed text
     setDisplayedContext("");
     setDisplayedInsight("");
     setDisplayedRecommendation("");
 
+    if (sections.length === 0) {
+      shouldAnimateRef.current = false;
+      return;
+    }
+
     const timer = setInterval(() => {
       const current = sections[currentSection];
-      if (!current || !current.text) {
-        currentSection++;
-        currentIndex = 0;
-        if (currentSection >= sections.length) {
-          clearInterval(timer);
-          shouldAnimateRef.current = false;
-          return;
-        }
+      if (!current) {
+        clearInterval(timer);
+        shouldAnimateRef.current = false;
         return;
       }
 
-      current.setter((prev) => prev + current.text[currentIndex]);
+      current.setter((prev) => {
+        const nextChar = current.text[currentIndex];
+        return nextChar ? prev + nextChar : prev;
+      });
+      
       currentIndex++;
 
       if (currentIndex >= current.text.length) {
