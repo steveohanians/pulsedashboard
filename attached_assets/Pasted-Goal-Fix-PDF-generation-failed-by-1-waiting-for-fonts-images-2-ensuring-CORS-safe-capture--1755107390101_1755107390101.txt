@@ -1,0 +1,96 @@
+Goal: Fix “PDF generation failed” by (1) waiting for fonts/images, (2) ensuring CORS‑safe capture, (3) avoiding giant canvases via sliced capture, and (4) ignoring problematic nodes. Keep UX: header icon → spinner → auto‑download → spinner off.
+
+Edit only:
+
+client/src/components/pdf/PdfExportButton.tsx
+
+client/src/pages/dashboard.tsx (only if we must add crossOrigin="anonymous" to images inside the dashboard container)
+
+Instructions (minimal diff):
+
+Add a preflight before capture in PdfExportButton.tsx:
+
+ts
+Copy
+Edit
+async function ensureAssetsReady(root: HTMLElement) {
+  if (document.fonts?.ready) { await document.fonts.ready; }
+  const imgs = Array.from(root.querySelectorAll('img'));
+  await Promise.all(imgs.map(img => img.decode?.().catch(() => {})));
+}
+CORS‑safe html2canvas options:
+
+ts
+Copy
+Edit
+const canvas = await html2canvas(element, {
+  backgroundColor: "#ffffff",
+  scale: Math.min(2, window.devicePixelRatio || 1),
+  useCORS: true,
+  logging: false,
+  // helps with weird stacking contexts
+  onclone: (doc) => {
+    // optional: strip problematic backgrounds known to be off‑origin
+    doc.querySelectorAll('[data-pdf-hide="true"]').forEach(n => n.remove());
+  }
+});
+Paginate by slices instead of one giant canvas: replace single-canvas pagination with a slice loop:
+
+ts
+Copy
+Edit
+const { jsPDF } = await import("jspdf");
+const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+const pageW = pdf.internal.pageSize.getWidth();
+const pageH = pdf.internal.pageSize.getHeight();
+
+// Render in chunks to avoid huge canvas memory
+const sliceHeightPx = 1400; // safe chunk height in CSS px
+const totalHeight = element.scrollHeight; // or getBoundingClientRect().height
+let y = 0;
+let firstPage = true;
+
+while (y < totalHeight) {
+  const slice = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: Math.min(2, window.devicePixelRatio || 1),
+    useCORS: true,
+    logging: false,
+    y,
+    height: sliceHeightPx,
+    windowWidth: element.scrollWidth,
+    windowHeight: sliceHeightPx
+  });
+  const imgData = slice.toDataURL("image/png");
+  const imgW = pageW;
+  const imgH = (slice.height * imgW) / slice.width;
+  if (!firstPage) pdf.addPage();
+  pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+  firstPage = false;
+  y += sliceHeightPx;
+}
+This avoids the single mega‑canvas that often causes “failed” crashes.
+
+Guard fixed/sticky elements: before capture, add a capture class on the root (e.g., classList.add("pdf-capture")) and in global CSS ensure .pdf-capture * { animation:none !important; } and optionally neutralize position:sticky headers if they misrender.
+
+Cross‑origin images (only if necessary): in dashboard.tsx, for <img> within the dashboard content, ensure crossOrigin="anonymous" and same‑origin URLs where possible. For images you don’t control, set data-pdf-hide="true" to skip during capture.
+
+Error handling: In the button, if anything throws, stop spinner and optionally show a small toast “Couldn’t generate PDF. Try again.” (No console spam.)
+
+Validation:
+
+No new network calls in DevTools when exporting (pure client snapshot).
+
+Large dashboards export reliably (no errors, multi‑page output).
+
+External images that lack CORS either render (if allowed) or are skipped without failing the whole export.
+
+Spinner always stops (success or failure).
+
+Safety constraints:
+
+Only touch the two files above.
+
+No new routes, no schema/config changes, no unrelated refactors or logs.
+
+Keep bundle impact low (dynamic import already in place).

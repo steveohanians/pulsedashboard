@@ -126,3 +126,8 @@ iframe[src*="__vite_plugin_runtime_error"] {
   padding-left: 12px !important;
   padding-right: 2rem !important;
 }
+
+/* PDF capture styles */
+.pdf-capture * {
+  animation: none !important;
+}

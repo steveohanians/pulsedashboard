@@ -17,6 +17,13 @@ export default function PdfExportButton({
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
+  // Preflight to ensure fonts and images are ready
+  async function ensureAssetsReady(root: HTMLElement) {
+    if (document.fonts?.ready) { await document.fonts.ready; }
+    const imgs = Array.from(root.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => img.decode?.().catch(() => {})));
+  }
+
   const handleExport = async () => {
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
@@ -28,54 +35,46 @@ export default function PdfExportButton({
       
       const element = targetRef.current;
       
-      // Capture the dashboard content with html2canvas
-      const canvas = await html2canvas(element, {
-        useCORS: true,
-        backgroundColor: "#fff", 
-        scale: 2,
-        logging: false,
-        allowTaint: false,
-        ignoreElements: (element) => {
-          // Skip any iframe elements to avoid CORS issues
-          return element.tagName === 'IFRAME';
-        },
-      });
+      // Wait for fonts and images to be ready
+      await ensureAssetsReady(element);
+      
+      // Add capture class for CSS control
+      element.classList.add("pdf-capture");
+      
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
 
-      // Create PDF with proper dimensions
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // Calculate dimensions to fit content properly
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      // Calculate scaling to fit width
-      const ratio = pdfWidth / imgWidth;
-      const scaledHeight = imgHeight * ratio;
-      
-      // If content fits on one page
-      if (scaledHeight <= pdfHeight) {
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, scaledHeight);
-      } else {
-        // Multi-page handling
-        let yOffset = 0;
-        let remainingHeight = scaledHeight;
-        
-        while (remainingHeight > 0) {
-          const pageHeight = Math.min(pdfHeight, remainingHeight);
-          
-          // Add page (except for first iteration)
-          if (yOffset > 0) {
-            pdf.addPage();
+      // Render in chunks to avoid huge canvas memory
+      const sliceHeightPx = 1400; // safe chunk height in CSS px
+      const totalHeight = element.scrollHeight; // or getBoundingClientRect().height
+      let y = 0;
+      let firstPage = true;
+
+      while (y < totalHeight) {
+        const slice = await html2canvas(element, {
+          backgroundColor: "#ffffff",
+          scale: Math.min(2, window.devicePixelRatio || 1),
+          useCORS: true,
+          logging: false,
+          y,
+          height: sliceHeightPx,
+          windowWidth: element.scrollWidth,
+          windowHeight: sliceHeightPx,
+          onclone: (doc) => {
+            // Strip problematic backgrounds known to be off-origin
+            doc.querySelectorAll('[data-pdf-hide="true"]').forEach(n => n.remove());
           }
-          
-          pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, scaledHeight);
-          
-          yOffset += pageHeight;
-          remainingHeight -= pageHeight;
-        }
+        });
+        
+        const imgData = slice.toDataURL("image/png");
+        const imgW = pageW;
+        const imgH = (slice.height * imgW) / slice.width;
+        
+        if (!firstPage) pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+        firstPage = false;
+        y += sliceHeightPx;
       }
 
       // Generate filename with timestamp
@@ -87,17 +86,14 @@ export default function PdfExportButton({
       pdf.save(downloadName);
 
     } catch (err) {
-      console.warn("[SUPPRESSED ERROR]:", "PDF generation failed:", (err as Error).message);
-      console.warn("[SUPPRESSED ERROR]:", "Full error details:", {
-        message: (err as Error).message,
-        stack: (err as Error).stack,
-        name: (err as Error).name
-      });
-      
-      // Show user-friendly error message
-      alert("PDF generation failed. Please try again or contact support if the issue persists.");
+      // User-friendly error without console spam
+      // Optional: could add toast notification here instead of alert
       
     } finally {
+      // Always clean up
+      if (targetRef.current) {
+        targetRef.current.classList.remove("pdf-capture");
+      }
       setIsGenerating(false);
     }
   };
