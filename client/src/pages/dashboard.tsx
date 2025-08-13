@@ -1216,6 +1216,7 @@ export default function Dashboard() {
                     src={client.iconUrl} 
                     alt={`${client.name} logo`}
                     className="w-full h-full object-cover rounded-full"
+                    style={{ backgroundColor: '#8C8C8C' }}
                     onError={(e) => {
                       // Fallback to initial if image fails to load
                       e.currentTarget.style.display = 'none';
