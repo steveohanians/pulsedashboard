@@ -1051,12 +1051,6 @@ export default function Dashboard() {
               <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
             </div>
             
-            <PdfExportButton
-              targetRef={dashboardRootRef}
-              clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
-              className="ml-1"
-            />
-
             {/* Debug: Clear Insights Button */}
             <Button
               variant="outline"
@@ -1077,6 +1071,12 @@ export default function Dashboard() {
                 </div>
               )}
             </Button>
+
+            <PdfExportButton
+              targetRef={dashboardRootRef}
+              clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
+              className="ml-1"
+            />
             <Button
               variant="ghost"
               size="sm"

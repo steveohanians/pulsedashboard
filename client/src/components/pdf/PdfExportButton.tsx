@@ -30,38 +30,64 @@ export default function PdfExportButton({
 
       const element = targetRef.current;
       
-      // Create canvas with development iframe filtering
+      // Create canvas with comprehensive filtering for clean PDF capture
       const canvas = await html2canvas(element, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
-        allowTaint: true,
-        logging: false,
+        allowTaint: false,
+        logging: true,
         height: element.scrollHeight,
         width: element.scrollWidth,
+        onclone: (clonedDoc, element) => {
+          // Additional cleanup in cloned document
+          const scripts = clonedDoc.querySelectorAll('script');
+          scripts.forEach(script => script.remove());
+          
+          // Remove any remaining error overlays
+          const errorOverlays = clonedDoc.querySelectorAll('[class*="vite"], [class*="error"], [id*="vite"], [id*="error"]');
+          errorOverlays.forEach(overlay => overlay.remove());
+          
+          return clonedDoc;
+        },
         ignoreElements: (element) => {
-          // Filter out development/debugging elements only
-          const tagName = element.tagName?.toLowerCase();
-          const id = element.id?.toLowerCase();
-          const className = element.className?.toLowerCase();
-          
-          // Remove Vite development overlays and error iframes
-          if (tagName === 'iframe' && (
-            id?.includes('vite') || 
-            id?.includes('error') || 
-            className?.includes('vite') || 
-            className?.includes('error')
-          )) {
-            return true;
+          try {
+            // Filter out development/debugging elements only
+            const tagName = element.tagName?.toLowerCase() || '';
+            const id = element.id?.toLowerCase() || '';
+            
+            // Handle className properly - can be string, DOMTokenList, or SVGAnimatedString
+            let className = '';
+            if (element.className) {
+              if (typeof element.className === 'string') {
+                className = element.className.toLowerCase();
+              } else if (element.className.toString) {
+                className = element.className.toString().toLowerCase();
+              }
+            }
+            
+            // Remove Vite development overlays and error iframes
+            if (tagName === 'iframe' && (
+              id.includes('vite') || 
+              id.includes('error') || 
+              className.includes('vite') || 
+              className.includes('error')
+            )) {
+              return true;
+            }
+            
+            // Remove script tags and development tools
+            if (tagName === 'script') return true;
+            
+            // Remove any Vite HMR elements
+            if (className.includes('vite-error-overlay')) return true;
+            
+            return false;
+          } catch (e) {
+            // If there's any error in filtering, just don't filter this element
+            console.warn('Error filtering element:', e);
+            return false;
           }
-          
-          // Remove script tags and development tools
-          if (tagName === 'script') return true;
-          
-          // Remove any Vite HMR elements
-          if (className?.includes('vite-error-overlay')) return true;
-          
-          return false;
         }
       });
       
