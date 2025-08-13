@@ -1210,7 +1210,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-105 overflow-hidden">
+              <div className={`w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center transition-all hover:scale-105 overflow-hidden ${!client?.iconUrl ? 'border-2 border-primary/20' : ''}`}>
                 {client?.iconUrl ? (
                   <img 
                     src={client.iconUrl} 
