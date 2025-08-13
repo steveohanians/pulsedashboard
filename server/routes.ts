@@ -2785,7 +2785,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate a secure token
-      const token = require("crypto").randomBytes(32).toString("hex");
+      const crypto = await import("crypto");
+      const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
 
@@ -2823,8 +2824,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create user with temporary password (they'll need to reset it)
-      const tempPassword = require("crypto").randomBytes(12).toString("hex");
-      const crypto = require("crypto");
+      const crypto = await import("crypto");
+      const tempPassword = crypto.randomBytes(12).toString("hex");
       const salt = crypto.randomBytes(16);
       const hashedPassword = crypto.scryptSync(tempPassword, salt, 64).toString("hex") + ":" + salt.toString("hex");
       
@@ -2837,7 +2838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Generate password reset token so they can set their own password
-      const token = require("crypto").randomBytes(32).toString("hex");
+      const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 168); // 7 days for new user setup
       
