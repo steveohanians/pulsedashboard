@@ -1904,58 +1904,103 @@ export default function AdminPanel() {
                               <Building className="w-5 h-5 text-gray-400" />
                             </div>
                           )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              if (!editingItem?.id) {
-                                toast({
-                                  title: "Save client first",
-                                  description: "Please save the client before fetching an icon.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              
-                              try {
-                                setIsLoading(true);
-                                const websiteUrl = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || editingItem.websiteUrl;
-                                if (!websiteUrl) {
-                                  throw new Error("Website URL is required");
+                          {editingItem?.iconUrl ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!editingItem?.id) {
+                                  toast({
+                                    title: "Save client first",
+                                    description: "Please save the client before clearing the icon.",
+                                    variant: "destructive",
+                                  });
+                                  return;
                                 }
                                 
-                                const domain = new URL(websiteUrl).hostname.replace('www.', '');
-                                const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
-                                
-                                if (response.iconUrl) {
-                                  // Update the editingItem to show the icon immediately
-                                  setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
+                                try {
+                                  setIsLoading(true);
+                                  const response = await apiRequest('DELETE', `/api/admin/clients/${editingItem.id}/clear-icon`);
+                                  
+                                  // Update the editingItem to remove the icon immediately
+                                  setEditingItem((prev: any) => prev ? { ...prev, iconUrl: null } : prev);
                                   toast({
-                                    title: "Icon fetched successfully",
-                                    description: "Client icon has been updated.",
+                                    title: "Icon cleared successfully",
+                                    description: "Client icon has been removed.",
                                   });
                                   
                                   // Refresh the clients list
                                   queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
-                                } else {
-                                  throw new Error("No icon found");
+                                } catch (error) {
+                                  toast({
+                                    title: "Failed to clear icon",
+                                    description: error instanceof Error ? error.message : "Unable to clear icon.",
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setIsLoading(false);
                                 }
-                              } catch (error) {
-                                toast({
-                                  title: "Failed to fetch icon",
-                                  description: error instanceof Error ? error.message : "Unable to fetch icon from Brandfetch API.",
-                                  variant: "destructive",
-                                });
-                              } finally {
-                                setIsLoading(false);
-                              }
-                            }}
-                            disabled={!editingItem?.id}
-                          >
-                            <Image className="w-4 h-4 mr-2" />
-                            Fetch Icon
-                          </Button>
+                              }}
+                              disabled={!editingItem?.id}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Clear Icon
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!editingItem?.id) {
+                                  toast({
+                                    title: "Save client first",
+                                    description: "Please save the client before fetching an icon.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                try {
+                                  setIsLoading(true);
+                                  const websiteUrl = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || editingItem.websiteUrl;
+                                  if (!websiteUrl) {
+                                    throw new Error("Website URL is required");
+                                  }
+                                  
+                                  const domain = new URL(websiteUrl).hostname.replace('www.', '');
+                                  const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
+                                  
+                                  if (response.iconUrl) {
+                                    // Update the editingItem to show the icon immediately
+                                    setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
+                                    toast({
+                                      title: "Icon fetched successfully",
+                                      description: "Client icon has been updated.",
+                                    });
+                                    
+                                    // Refresh the clients list
+                                    queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+                                  } else {
+                                    throw new Error("No icon found");
+                                  }
+                                } catch (error) {
+                                  toast({
+                                    title: "Failed to fetch icon",
+                                    description: error instanceof Error ? error.message : "Unable to fetch icon from Brandfetch API.",
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setIsLoading(false);
+                                }
+                              }}
+                              disabled={!editingItem?.id}
+                            >
+                              <Image className="w-4 h-4 mr-2" />
+                              Fetch Icon
+                            </Button>
+                          )}
                         </div>
                         <input 
                           type="hidden" 

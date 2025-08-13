@@ -2945,6 +2945,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear/remove client icon endpoint
+  app.delete("/api/admin/clients/:id/clear-icon", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify client exists
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Clear the icon URL by setting it to null
+      await storage.updateClient(id, { iconUrl: null });
+      
+      res.json({ 
+        message: "Icon cleared successfully",
+        iconUrl: null
+      });
+      
+    } catch (error) {
+      logger.error("Error clearing client icon", { 
+        error: (error as Error).message, 
+        clientId: req.params.id 
+      });
+      res.status(500).json({ 
+        message: "Failed to clear icon",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Password reset endpoints
   app.post("/api/forgot-password", async (req, res) => {
     try {
