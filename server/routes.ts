@@ -3530,10 +3530,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PDF Generation endpoint
   app.post("/api/generate-pdf", requireAuth, async (req, res) => {
     try {
-      const { html, styles, clientLabel, fileName } = req.body;
+      const { clientLabel, fileName } = req.body;
 
       // Generate PDF with simplified content
-      const pdfBuffer = generatePDF({ clientLabel, fileName });
+      const pdfBuffer = await generatePDF({ clientLabel, fileName });
       
       // Set response headers for PDF download
       const today = new Date();
@@ -3547,7 +3547,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(pdfBuffer);
       
     } catch (error) {
-      logger.error("PDF generation error", { error: (error as Error).message });
+      logger.error("PDF generation error", { 
+        error: (error as Error).message,
+        stack: (error as Error).stack 
+      });
       res.status(500).json({ message: "PDF generation failed" });
     }
   });

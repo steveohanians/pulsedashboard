@@ -21,35 +21,13 @@ export default function PdfExportButton({
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
     try {
-      // Get current page HTML and styles for server-side processing
-      const element = targetRef.current;
-      const elemHtml = element.outerHTML;
-      
-      // Get all stylesheets content
-      const styles: string[] = [];
-      document.querySelectorAll('style, link[rel="stylesheet"]').forEach((styleEl) => {
-        if (styleEl instanceof HTMLStyleElement) {
-          styles.push(styleEl.innerHTML);
-        } else if (styleEl instanceof HTMLLinkElement && styleEl.sheet) {
-          try {
-            const cssRules = Array.from(styleEl.sheet.cssRules);
-            const cssText = cssRules.map(rule => rule.cssText).join('\n');
-            styles.push(cssText);
-          } catch (e) {
-            // Skip external stylesheets that can't be accessed
-          }
-        }
-      });
-
-      // Send to server for PDF generation
+      // Send minimal data to server for PDF generation
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          html: elemHtml,
-          styles: styles.join('\n'),
           clientLabel: clientLabel,
           fileName: fileName
         })
