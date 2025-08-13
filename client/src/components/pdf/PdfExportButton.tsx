@@ -142,118 +142,129 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('🚀 Starting PDF export with iframe bypass...');
+      console.info('Starting PDF export with slice-based rendering');
       
-      // Import libraries  
-      console.info('Step 1: Testing html2canvas import...');
-      const { default: html2canvas } = await import('html2canvas');
-      console.info('✅ html2canvas imported successfully');
-      
-      console.info('Step 2: Testing jsPDF import...');
-      const { jsPDF } = await import('jspdf');
-      console.info('✅ jsPDF imported successfully');
+      // Dynamic import of PDF libraries (exact from July 31st)
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
       
       const element = targetRef.current;
+      console.info('Target element found, preparing for slice-based capture');
       
-      // Step 3: Asset preflight loading
-      console.info('📦 Asset preflight loading...');
-      await preflightAssets();
-      
-      // Step 4: CSS animation control
-      console.info('⏸️ Pausing animations for stable capture...');
-      controlAnimations(true);
-      
-      // Small delay to ensure animations are paused
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Step 5: Try direct capture with minimal options to bypass iframe bug
-      console.info('📸 Attempting direct capture with minimal options...');
-      
-      let canvas: HTMLCanvasElement;
-      try {
-        // Try with absolutely minimal options first
-        canvas = await html2canvas(element, {
-          logging: false
-        });
-        console.info('✅ Minimal options capture succeeded');
-      } catch (error) {
-        console.info('⚠️ Minimal capture failed, trying with more options...');
-        // If minimal fails, try with expanded safe options
-        canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: 1,
-          logging: false,
-          allowTaint: false,
-          useCORS: false,
-          foreignObjectRendering: true
-        });
-        console.info('✅ Extended options capture succeeded');
+      // Asset preflight loading for fonts/images (from working implementation notes)
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
       }
-
-      // Step 6: Create PDF from canvas
-      console.info('📄 Creating PDF from captured canvas...', {
-        canvasWidth: canvas.width,
-        canvasHeight: canvas.height
+      
+      // Ensure all images are loaded
+      const images = Array.from(element.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+      
+      // Small delay to ensure rendering is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // CSS animation control (disable animations during capture)
+      const originalAnimations = document.querySelectorAll('*');
+      originalAnimations.forEach((el: Element) => {
+        (el as HTMLElement).style.animationPlayState = 'paused';
       });
+      
+      console.info('Starting slice-based rendering (1400px chunks)');
+      
+      // Slice-based rendering implementation (key from working version!)
+      const SLICE_HEIGHT = 1400; // 1400px chunks as noted in working implementation
+      const totalHeight = element.scrollHeight;
+      const totalWidth = element.scrollWidth;
+      
+      console.info(`Element dimensions: ${totalWidth}x${totalHeight}, slicing into ${Math.ceil(totalHeight / SLICE_HEIGHT)} chunks`);
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      const imgData = canvas.toDataURL('image/png', 0.8);
-      const imgAspectRatio = canvas.height / canvas.width;
+      let isFirstPage = true;
       
-      let imgWidth = pdfWidth;
-      let imgHeight = pdfWidth * imgAspectRatio;
-      
-      // Handle multi-page if needed
-      let yPosition = 0;
-      const margin = 0;
-      
-      while (yPosition < imgHeight) {
-        const pageHeight = pdfHeight - margin;
-        const remainingHeight = imgHeight - yPosition;
-        const sliceHeight = Math.min(pageHeight, remainingHeight);
+      // Render each slice
+      for (let y = 0; y < totalHeight; y += SLICE_HEIGHT) {
+        const sliceHeight = Math.min(SLICE_HEIGHT, totalHeight - y);
         
-        if (yPosition > 0) {
-          pdf.addPage();
+        console.info(`Rendering slice ${Math.floor(y / SLICE_HEIGHT) + 1}: y=${y}, height=${sliceHeight}`);
+        
+        // CORS-safe capture configuration (from working implementation notes)
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#ffffff",
+          scale: 1.2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          x: 0,
+          y: y,
+          width: totalWidth,
+          height: sliceHeight,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: totalWidth,
+          windowHeight: totalHeight,
+          foreignObjectRendering: false,
+          removeContainer: false,
+          ignoreElements: (el) => {
+            return el.hasAttribute('data-pdf-hide') || el.getAttribute('data-pdf-hide') === 'true';
+          }
+        });
+
+        console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
+
+        // Calculate dimensions for this slice
+        const imgData = canvas.toDataURL('image/png');
+        const imgAspectRatio = canvas.height / canvas.width;
+        
+        let imgWidth = pdfWidth;
+        let imgHeight = pdfWidth * imgAspectRatio;
+        
+        // If the slice is too tall for the page, fit it to page height
+        if (imgHeight > pdfHeight) {
+          imgHeight = pdfHeight;
+          imgWidth = pdfHeight / imgAspectRatio;
         }
         
-        pdf.addImage(
-          imgData, 
-          'PNG', 
-          0, 
-          margin - yPosition, 
-          imgWidth, 
-          imgHeight,
-          '',
-          'FAST'
-        );
+        // Add new page for each slice (except the first)
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
         
-        yPosition += sliceHeight;
+        // Add the slice to PDF
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       }
+      
+      // Restore animations
+      originalAnimations.forEach((el: Element) => {
+        (el as HTMLElement).style.animationPlayState = '';
+      });
 
-      // Step 7: Generate filename and download
+      // Generate filename
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
       
+      console.info('Saving multi-page PDF with slice-based rendering');
       pdf.save(downloadName);
-      console.info('✅ Visual PDF export completed successfully!');
-      
+      console.info('PDF export completed successfully');
+
     } catch (error) {
-      console.error('❌ Visual PDF export failed:', error);
-      
-      // If visual capture fails, provide meaningful error
-      if (error instanceof Error && error.message.includes('iframe')) {
-        alert('PDF export temporarily unavailable due to browser security restrictions. Please contact support.');
-      } else {
-        alert('PDF export failed. Please try again or contact support if the issue persists.');
+      console.error('PDF export failed:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
       }
     } finally {
-      // Step 8: Restore animations
-      console.info('▶️ Restoring animations...');
-      controlAnimations(false);
       setIsGenerating(false);
     }
   };
