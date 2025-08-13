@@ -261,7 +261,7 @@ export default function PdfExportButton({
         
         console.info(`Rendering slice ${Math.floor(y / SLICE_HEIGHT) + 1}: y=${y}, height=${sliceHeight}`);
         
-        // CORS-safe capture configuration (from working implementation notes)
+        // Enhanced CORS-safe capture configuration with improved error handling
         const canvas = await html2canvas(element, {
           height: sliceHeight,
           width: totalWidth,
@@ -278,7 +278,41 @@ export default function PdfExportButton({
           logging: false,
           removeContainer: false,
           windowWidth: totalWidth,
-          windowHeight: totalHeight
+          windowHeight: totalHeight,
+          onclone: (clonedDoc) => {
+            // Remove any problematic iframes from the cloned document
+            const iframes = clonedDoc.querySelectorAll('iframe');
+            iframes.forEach(iframe => iframe.remove());
+          }
+        }).catch((error) => {
+          // Suppress iframe-related errors and retry with more restrictive settings
+          if (error.message && error.message.includes('iframe')) {
+            console.warn('[SUPPRESSED ERROR]:', 'PDF export failed:', error.message);
+            return html2canvas(element, {
+              height: sliceHeight,
+              width: totalWidth,
+              ignoreElements: (el) => {
+                if (shouldIgnoreForPdf(el)) return true;
+                // Also ignore any iframe-related elements
+                const tag = (el as HTMLElement).tagName;
+                return tag === 'IFRAME' || tag === 'EMBED' || tag === 'OBJECT';
+              },
+              x: 0,
+              y: y,
+              scrollX: 0,
+              scrollY: 0,
+              backgroundColor: "#ffffff",
+              scale: 1.0,
+              useCORS: false,
+              allowTaint: true,
+              foreignObjectRendering: false,
+              logging: false,
+              removeContainer: false,
+              windowWidth: totalWidth,
+              windowHeight: totalHeight
+            });
+          }
+          throw error;
         });
 
         console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
