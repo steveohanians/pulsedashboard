@@ -30,63 +30,57 @@ export default function PdfExportButton({
 
       const element = targetRef.current;
       
-      // Create canvas with comprehensive filtering for clean PDF capture
+      // Create canvas with aggressive iframe filtering to prevent "Unable to find iframe window" errors
       const canvas = await html2canvas(element, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
         allowTaint: false,
-        logging: true,
+        logging: false, // Disable logging to reduce console noise
         height: element.scrollHeight,
         width: element.scrollWidth,
-        onclone: (clonedDoc, element) => {
-          // Additional cleanup in cloned document
-          const scripts = clonedDoc.querySelectorAll('script');
-          scripts.forEach(script => script.remove());
-          
-          // Remove any remaining error overlays
-          const errorOverlays = clonedDoc.querySelectorAll('[class*="vite"], [class*="error"], [id*="vite"], [id*="error"]');
-          errorOverlays.forEach(overlay => overlay.remove());
-          
-          return clonedDoc;
-        },
+        // Completely disable iframe processing in html2canvas
         ignoreElements: (element) => {
           try {
-            // Filter out development/debugging elements only
             const tagName = element.tagName?.toLowerCase() || '';
-            const id = element.id?.toLowerCase() || '';
             
-            // Handle className properly - can be string, DOMTokenList, or SVGAnimatedString
-            let className = '';
-            if (element.className) {
-              if (typeof element.className === 'string') {
-                className = element.className.toLowerCase();
-              } else if (element.className.toString) {
-                className = element.className.toString().toLowerCase();
-              }
-            }
-            
-            // Remove Vite development overlays and error iframes
-            if (tagName === 'iframe' && (
-              id.includes('vite') || 
-              id.includes('error') || 
-              className.includes('vite') || 
-              className.includes('error')
-            )) {
+            // AGGRESSIVE: Remove ALL iframes to prevent "Unable to find iframe window" error
+            if (tagName === 'iframe') {
               return true;
             }
             
-            // Remove script tags and development tools
+            // Remove script tags
             if (tagName === 'script') return true;
             
-            // Remove any Vite HMR elements
-            if (className.includes('vite-error-overlay')) return true;
+            // Remove any elements that might contain iframes or cause issues
+            if (tagName === 'embed' || tagName === 'object') return true;
             
             return false;
           } catch (e) {
-            // If there's any error in filtering, just don't filter this element
-            console.warn('Error filtering element:', e);
-            return false;
+            // If filtering fails, exclude the element to be safe
+            return true;
+          }
+        },
+        onclone: (clonedDoc) => {
+          try {
+            // Aggressive cleanup in cloned document - remove ALL iframes and problematic elements
+            const iframes = clonedDoc.querySelectorAll('iframe');
+            iframes.forEach(iframe => iframe.remove());
+            
+            const scripts = clonedDoc.querySelectorAll('script');
+            scripts.forEach(script => script.remove());
+            
+            const embeds = clonedDoc.querySelectorAll('embed, object');
+            embeds.forEach(embed => embed.remove());
+            
+            // Remove any Vite-related elements
+            const viteElements = clonedDoc.querySelectorAll('[class*="vite"], [id*="vite"], [data-vite]');
+            viteElements.forEach(el => el.remove());
+            
+            return clonedDoc;
+          } catch (e) {
+            console.warn('Error in onclone cleanup:', e);
+            return clonedDoc;
           }
         }
       });
@@ -132,6 +126,10 @@ export default function PdfExportButton({
         stack: (err as Error).stack,
         name: (err as Error).name
       });
+      
+      // Show user-friendly error and suggest fallback
+      alert("PDF generation failed. This might be due to browser restrictions. Try using your browser's Print function (Ctrl+P) and select 'Save as PDF' instead.");
+      
     } finally {
       setIsGenerating(false);
     }
