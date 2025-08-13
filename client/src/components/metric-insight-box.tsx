@@ -172,13 +172,16 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       onStatusChange(metricInsight.status);
   }, [metricInsightKey, forcedEmpty]);
 
+  // Define renderInsight early so it can be used in shouldShowEmpty
+  const renderInsight = insight ?? metricInsight;
+
   const shouldShowEmpty =
     forcedEmpty ||
     deletedRef.current === metricName ||
     (!isLoadingInsights &&
       !isFetching &&
       !metricInsight?.insightText &&
-      !insight?.insightText);
+      !renderInsight?.insightText);
 
   // Release delete lock only after confirmed + no fetch + item gone
   useEffect(() => {
@@ -220,8 +223,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (metricInsightFromServer) => {
       suppressHydrationRef.current = false; // Allow hydration after generate
+      // Set insight state immediately for instant display
+      setInsight(metricInsightFromServer);
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -254,8 +259,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (metricInsightFromServer) => {
       suppressHydrationRef.current = false; // Allow hydration after generate
+      // Set insight state immediately for instant display
+      setInsight(metricInsightFromServer);
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -356,8 +363,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     );
   }
 
-  const displayInsightText = insight?.insightText ?? "";
-  const renderInsight = insight ?? metricInsight;
+  const displayInsightText = renderInsight?.insightText ?? "";
 
   if (renderInsight && !shouldShowEmpty) {
     return (
