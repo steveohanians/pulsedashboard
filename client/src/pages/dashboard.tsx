@@ -930,7 +930,7 @@ export default function Dashboard() {
       // Capture the original element with hidden elements
       console.log('📸 Starting canvas capture...');
       const canvas = await html2canvas(originalElement, {
-        scale: 2,
+        scale: 1.5, // Reduced scale to prevent memory issues
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
@@ -938,7 +938,21 @@ export default function Dashboard() {
         height: originalElement.scrollHeight,
         scrollX: 0,
         scrollY: 0,
-        logging: false
+        logging: false,
+        ignoreElements: (element) => {
+          // Skip problematic iframe and embedded elements
+          if (element.tagName === 'IFRAME') return true;
+          if (element.classList.contains('recharts-wrapper')) return false; // Keep charts
+          if (element.classList.contains('pdf-skip')) return true; // Custom skip class
+          return false;
+        },
+        onclone: (clonedDoc) => {
+          // Ensure all chart SVGs are properly rendered
+          const svgs = clonedDoc.querySelectorAll('svg');
+          svgs.forEach(svg => {
+            svg.style.background = 'transparent';
+          });
+        }
       });
       console.log('✅ Canvas captured successfully:', canvas.width, 'x', canvas.height);
       
@@ -972,9 +986,9 @@ export default function Dashboard() {
       const usableHeight = pdfHeight - (margin * 2);
       
       // Calculate scale to fit width while maintaining aspect ratio
-      const scaleRatio = usableWidth / (canvasWidth / 2);
+      const scaleRatio = usableWidth / (canvasWidth / 1.5); // Adjusted for new scale
       const scaledWidth = usableWidth;
-      const scaledHeight = (canvasHeight / 2) * scaleRatio;
+      const scaledHeight = (canvasHeight / 1.5) * scaleRatio;
       
       // Calculate how many pages we need
       const pageContentHeight = usableHeight;
@@ -986,8 +1000,8 @@ export default function Dashboard() {
         }
         
         // Calculate which part of the canvas to show on this page
-        const sourceY = (currentY / scaleRatio) * 2;
-        const sourceHeight = Math.min((pageContentHeight / scaleRatio) * 2, canvasHeight - sourceY);
+        const sourceY = (currentY / scaleRatio) * 1.5; // Adjusted for new scale
+        const sourceHeight = Math.min((pageContentHeight / scaleRatio) * 1.5, canvasHeight - sourceY);
         const targetHeight = Math.min(pageContentHeight, scaledHeight - currentY);
         
         if (sourceHeight > 0 && targetHeight > 0) {
