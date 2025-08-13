@@ -24,11 +24,9 @@ export default function PdfExportButton({
     try {
       console.info('Starting PDF export process');
       
-      // Dynamic import of PDF libraries
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf')
-      ]);
+      // Import PDF libraries
+      const { default: html2canvas } = await import('html2canvas');
+      const { jsPDF } = await import('jspdf');
       
       const element = targetRef.current;
       console.info('Target element found, preparing for capture');
@@ -53,21 +51,19 @@ export default function PdfExportButton({
       
       console.info('Starting html2canvas capture');
       
-      // Single capture with optimized settings
+      // Try html2canvas with specific options to avoid iframe issues
       const canvas = await html2canvas(element, {
+        height: element.scrollHeight,
+        width: element.scrollWidth,
         backgroundColor: "#ffffff",
-        scale: 1.5,
+        scale: 1.2,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        width: element.scrollWidth,
-        height: element.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
+        removeContainer: false,
+        foreignObjectRendering: false,
         ignoreElements: (el) => {
-          return el.hasAttribute('data-pdf-hide') || el.getAttribute('data-pdf-hide') === 'true';
+          return el.hasAttribute('data-pdf-hide');
         }
       });
 
@@ -99,7 +95,6 @@ export default function PdfExportButton({
       
       console.info('Saving PDF file');
       pdf.save(downloadName);
-      
       console.info('PDF export completed successfully');
 
     } catch (error) {
