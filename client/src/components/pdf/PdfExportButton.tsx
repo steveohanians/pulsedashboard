@@ -22,107 +22,126 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('Starting PDF export process');
+      console.info('Starting PDF export with slice-based rendering');
       
-      // You're absolutely right - iframe detection shouldn't be needed for static DOM capture
-      // html2canvas 1.4.1 has a bug where it incorrectly tries to detect iframes even when there are none
-      // For now, let's create a reliable text-based PDF that always works
+      // Dynamic import of PDF libraries
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
       
-      const { jsPDF } = await import('jspdf');
-      const today = new Date();
-      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+      const element = targetRef.current;
+      console.info('Target element found, preparing for slice-based capture');
       
-      console.info('Generating text-based PDF export');
+      // Asset preflight loading for fonts/images (from working implementation notes)
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
       
-      // Create PDF
+      // Ensure all images are loaded
+      const images = Array.from(element.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+      
+      // Small delay to ensure rendering is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // CSS animation control (disable animations during capture)
+      const originalAnimations = document.querySelectorAll('*');
+      originalAnimations.forEach((el: Element) => {
+        (el as HTMLElement).style.animationPlayState = 'paused';
+      });
+      
+      console.info('Starting slice-based rendering (1400px chunks)');
+      
+      // Slice-based rendering implementation (key from working version!)
+      const elementRect = element.getBoundingClientRect();
+      const SLICE_HEIGHT = 1400; // 1400px chunks as noted in working implementation
+      const totalHeight = element.scrollHeight;
+      const totalWidth = element.scrollWidth;
+      
+      console.info(`Element dimensions: ${totalWidth}x${totalHeight}, slicing into ${Math.ceil(totalHeight / SLICE_HEIGHT)} chunks`);
+      
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      // Add header with Clear Digital branding
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Pulse Dashboard™', 20, 25);
-      pdf.text('Analytics Export', 20, 35);
+      let isFirstPage = true;
       
-      // Add client info
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Client: ${clientLabel || 'Demo Company'}`, 20, 50);
-      pdf.text(`Export Date: ${today.toLocaleDateString()}`, 20, 58);
-      pdf.text(`Report Period: Last Month`, 20, 66);
-      
-      // Add separator line
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(20, 75, 190, 75);
-      
-      // Add content sections
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Dashboard Summary', 20, 90);
-      
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      const contentLines = [
-        'This export contains analytics from your Pulse Dashboard:',
-        '',
-        '📊 Key Performance Metrics',
-        '   • Bounce Rate Analysis',
-        '   • Session Duration Tracking',
-        '   • Pages per Session Metrics',
-        '   • Conversion Rate Optimization',
-        '',
-        '🔍 Traffic Source Analysis',
-        '   • Organic Search Performance',
-        '   • Direct Traffic Insights',
-        '   • Social Media Engagement',
-        '   • Paid Campaign Results',
-        '',
-        '📱 Device & Audience Insights',
-        '   • Desktop vs Mobile Distribution',
-        '   • Geographic Performance Data',
-        '   • User Behavior Patterns',
-        '',
-        '🤖 AI-Powered Recommendations',
-        '   • Competitive Analysis Insights',
-        '   • Growth Opportunity Identification',
-        '   • Performance Optimization Suggestions',
-        '',
-        '💡 Next Steps',
-        '   • Review competitor benchmarking data',
-        '   • Implement AI-suggested improvements',
-        '   • Monitor performance trends monthly',
-        '',
-        '---',
-        'For full visual charts and interactive analytics,',
-        'access your live dashboard at your Replit deployment.',
-        '',
-        `Report generated: ${today.toLocaleString()}`,
-        'Powered by Clear Digital Pulse Dashboard™'
-      ];
-      
-      let yPosition = 102;
-      contentLines.forEach(line => {
-        if (yPosition > 270) { // Add new page if needed
-          pdf.addPage();
-          yPosition = 20;
+      // Render each slice
+      for (let y = 0; y < totalHeight; y += SLICE_HEIGHT) {
+        const sliceHeight = Math.min(SLICE_HEIGHT, totalHeight - y);
+        
+        console.info(`Rendering slice ${Math.floor(y / SLICE_HEIGHT) + 1}: y=${y}, height=${sliceHeight}`);
+        
+        // CORS-safe capture configuration (from working implementation notes)
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#ffffff",
+          scale: 1.2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          x: 0,
+          y: y,
+          width: totalWidth,
+          height: sliceHeight,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: totalWidth,
+          windowHeight: totalHeight,
+          foreignObjectRendering: false,
+          removeContainer: false,
+          ignoreElements: (el) => {
+            return el.hasAttribute('data-pdf-hide') || el.getAttribute('data-pdf-hide') === 'true';
+          }
+        });
+
+        console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
+
+        // Calculate dimensions for this slice
+        const imgData = canvas.toDataURL('image/png');
+        const imgAspectRatio = canvas.height / canvas.width;
+        
+        let imgWidth = pdfWidth;
+        let imgHeight = pdfWidth * imgAspectRatio;
+        
+        // If the slice is too tall for the page, fit it to page height
+        if (imgHeight > pdfHeight) {
+          imgHeight = pdfHeight;
+          imgWidth = pdfHeight / imgAspectRatio;
         }
-        pdf.text(line, 20, yPosition);
-        yPosition += 5;
+        
+        // Add new page for each slice (except the first)
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
+        
+        // Add the slice to PDF
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      }
+      
+      // Restore animations
+      originalAnimations.forEach((el: Element) => {
+        (el as HTMLElement).style.animationPlayState = '';
       });
 
-      // Add footer
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'italic');
-      pdf.text('Page 1', 170, 285);
-
+      // Generate filename
+      const today = new Date();
+      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
       
-      console.info('Saving PDF file');
+      console.info('Saving multi-page PDF with slice-based rendering');
       pdf.save(downloadName);
       console.info('PDF export completed successfully');
 
     } catch (error) {
       console.error('PDF export failed:', error);
-      // Show user-friendly error message
       if (error instanceof Error) {
         console.error('Error details:', error.message);
       }
