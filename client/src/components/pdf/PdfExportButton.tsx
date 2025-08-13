@@ -51,19 +51,20 @@ export default function PdfExportButton({
       
       console.info('Starting html2canvas capture');
       
-      // Try html2canvas with specific options to avoid iframe issues
+      // Try html2canvas with minimal options to avoid iframe issues
       const canvas = await html2canvas(element, {
-        height: element.scrollHeight,
-        width: element.scrollWidth,
         backgroundColor: "#ffffff",
-        scale: 1.2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        removeContainer: false,
+        scale: 1,
+        useCORS: false,
+        allowTaint: false,
         foreignObjectRendering: false,
-        ignoreElements: (el) => {
-          return el.hasAttribute('data-pdf-hide');
+        proxy: undefined,
+        logging: true,
+        onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
+          // Remove any problematic elements that might cause iframe issues
+          const problematicElements = clonedDoc.querySelectorAll('iframe, embed, object, video, audio');
+          problematicElements.forEach(el => el.remove());
+          return clonedElement;
         }
       });
 
