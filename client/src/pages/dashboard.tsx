@@ -1116,7 +1116,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Metrics</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Vitals</h3>
               <ul className="space-y-2">
                 {metricNames.map((metricName) => (
                   <li key={metricName}>
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
         {/* Desktop Left Navigation */}
         <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
           <div className="p-4">
-            <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
+            <h2 className="text-base font-bold text-slate-800 mb-4">Vitals</h2>
             <ul className="space-y-2">
               {metricNames.map((metricName, index) => (
                 <li key={metricName}>
