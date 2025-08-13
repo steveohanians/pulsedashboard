@@ -101,6 +101,11 @@ export default function PdfExportButton({
 
     } catch (err) {
       console.error("PDF generation failed:", err);
+      console.error("Full error details:", {
+        message: (err as Error).message,
+        stack: (err as Error).stack,
+        name: (err as Error).name
+      });
     } finally {
       setIsGenerating(false);
     }
