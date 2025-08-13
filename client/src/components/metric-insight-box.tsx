@@ -59,6 +59,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const [displayedInsight, setDisplayedInsight] = useState("");
   const [displayedRecommendation, setDisplayedRecommendation] = useState("");
   const shouldAnimateRef = useRef(false);
+  const [animationTrigger, setAnimationTrigger] = useState(0);
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -236,7 +237,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     }, 10); // 2x faster (was 20ms)
 
     return () => clearInterval(timer);
-  }, [renderInsight?.contextText, renderInsight?.insightText, renderInsight?.recommendationText]);
+  }, [renderInsight?.contextText, renderInsight?.insightText, renderInsight?.recommendationText, animationTrigger]);
 
   const shouldShowEmpty =
     forcedEmpty ||
@@ -290,6 +291,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
+      // Trigger animation if flag is set
+      if (shouldAnimateRef.current) {
+        setAnimationTrigger(prev => prev + 1);
+      }
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -326,6 +331,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
+      // Trigger animation if flag is set
+      if (shouldAnimateRef.current) {
+        setAnimationTrigger(prev => prev + 1);
+      }
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
