@@ -1,19 +1,22 @@
 import { Router, Request, Response } from 'express';
-// import puppeteer from 'puppeteer-core';
 import { z } from 'zod';
 import logger from '../utils/logging/logger';
 import { requireAuth } from '../middleware/auth';
+import { generatePDF } from '../pdf';
 
 const router = Router();
 
-// Input validation schema
+// Input validation schema for dashboard PDF export
 const exportPdfSchema = z.object({
   html: z.string().max(4 * 1024 * 1024), // 4MB limit
-  title: z.string().optional(),
-  page: z.object({
-    format: z.enum(['A4', 'Letter']).optional(),
-    landscape: z.boolean().optional(),
-  }).optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  clientLabel: z.string().optional(),
+  styles: z.string().optional(),
+  elementStyles: z.string().optional(),
+  viewportWidth: z.number().optional(),
+  viewportHeight: z.number().optional(),
+  devicePixelRatio: z.number().optional(),
 });
 
 // Sanitize HTML to remove scripts and event handlers
@@ -54,10 +57,10 @@ router.post('/pdf', requireAuth, async (req: Request, res: Response) => {
       });
     }
 
-    const { html, title = 'Pulse-Dashboard', page: pageOptions = {} } = parseResult.data;
+    const dashboardData = parseResult.data;
 
     // Check body size
-    const bodySize = Buffer.byteLength(html, 'utf8');
+    const bodySize = Buffer.byteLength(dashboardData.html, 'utf8');
     if (bodySize > 4 * 1024 * 1024) {
       return res.status(413).json({
         ok: false,
@@ -68,33 +71,40 @@ router.post('/pdf', requireAuth, async (req: Request, res: Response) => {
     concurrentExports++;
 
     // Sanitize HTML
-    const sanitizedHtml = sanitizeHtml(html);
+    const sanitizedHtml = sanitizeHtml(dashboardData.html);
 
-    // Add base href for relative URLs
-    const baseHref = `${req.protocol}://${req.get('host')}/`;
-    const htmlWithBase = sanitizedHtml.replace(
-      '<head>',
-      `<head>\n    <base href="${baseHref}">`
-    );
+    // Prepare data for PDF generation
+    const pdfData = {
+      ...dashboardData,
+      html: sanitizedHtml
+    };
 
-    // Temporary fallback - return the original client-side approach until Puppeteer is installed
-    const renderTime = Date.now() - startTime;
-    
-    logger.info('PDF export requested (fallback mode)', {
+    logger.info('Generating PDF from dashboard data', {
       userId: req.user?.id,
       clientId: req.user?.clientId,
       htmlSizeBytes: bodySize,
-      renderTimeMs: renderTime,
-      title,
-      note: 'Puppeteer not available, returning 501'
+      clientLabel: pdfData.clientLabel,
+      dimensions: pdfData.width && pdfData.height ? `${pdfData.width}x${pdfData.height}` : 'unknown'
     });
 
-    // Return not implemented for now
-    return res.status(501).json({
-      ok: false,
-      error: 'Server-side PDF generation not yet available. Please use client-side export.',
-      fallback: true
+    // Generate PDF using our enhanced PDF generator
+    const pdfBuffer = await generatePDF(pdfData);
+    const renderTime = Date.now() - startTime;
+
+    logger.info('PDF generated successfully', {
+      userId: req.user?.id,
+      clientId: req.user?.clientId,
+      renderTimeMs: renderTime,
+      pdfSizeBytes: pdfBuffer.length
     });
+
+    // Set proper headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Pulse-Dashboard-${pdfData.clientLabel || 'Export'}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    // Send the PDF buffer
+    return res.send(pdfBuffer);
 
   } catch (error) {
     const renderTime = Date.now() - startTime;

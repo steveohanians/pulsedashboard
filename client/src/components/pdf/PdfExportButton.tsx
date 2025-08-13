@@ -61,7 +61,7 @@ export default function PdfExportButton({
         dimensions: `${elementData.width}x${elementData.height}`
       });
 
-      const response = await fetch('/api/export-pdf', {
+      const response = await fetch('/api/export/pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
