@@ -507,8 +507,26 @@ export default function Dashboard() {
 
     // CD Average data
     const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
+    console.log('🔍 CD_AVG TRAFFIC DEBUG:', {
+      allTrafficMetricsCount: trafficMetrics.length,
+      cdMetricsCount: cdMetrics.length,
+      cdMetricsSample: cdMetrics.slice(0, 3).map(m => ({
+        sourceType: m.sourceType,
+        metricName: m.metricName,
+        channel: 'channel' in m ? m.channel : undefined,
+        value: m.value,
+        timePeriod: 'timePeriod' in m ? m.timePeriod : undefined
+      })),
+      allCdAvgMetrics: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').map(m => ({
+        metricName: m.metricName,
+        channel: 'channel' in m ? m.channel : undefined,
+        hasChannel: 'channel' in m && !!m.channel
+      }))
+    });
+    
     if (cdMetrics.length > 0) {
       const channelMap = aggregateChannelData(cdMetrics);
+      console.log('🔍 CD_AVG CHANNEL MAP:', Array.from(channelMap.entries()));
       const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
         ...channel,
         color: getChannelColor(channel.name)
@@ -518,6 +536,8 @@ export default function Dashboard() {
         label: 'Clear Digital Client Avg',
         channels: sortedChannels
       });
+    } else {
+      console.warn('❌ NO CD_AVG TRAFFIC METRICS FOUND!');
     }
 
     // Industry Average data

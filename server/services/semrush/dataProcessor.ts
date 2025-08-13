@@ -376,7 +376,8 @@ export class SemrushDataProcessor {
   ): void {
     const channelData = new Map<string, { percentages: number[], sessions: number[] }>();
 
-    // Collect all channel data for this period
+    // First, try to collect data for the exact requested period
+    let foundDataForPeriod = false;
     for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
       const relevantMetrics = metricName === 'Traffic Channels' 
         ? data.trafficChannelMetrics 
@@ -384,6 +385,7 @@ export class SemrushDataProcessor {
 
       for (const metric of relevantMetrics) {
         if (metric.timePeriod === period && metric.channel) {
+          foundDataForPeriod = true;
           if (!channelData.has(metric.channel)) {
             channelData.set(metric.channel, { percentages: [], sessions: [] });
           }
@@ -392,6 +394,53 @@ export class SemrushDataProcessor {
           if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
             channelInfo.percentages.push(metric.value.percentage as number);
             channelInfo.sessions.push((metric.value.sessions as number) || 0);
+          }
+        }
+      }
+    }
+
+    // If no data found for exact period, use most recent available data
+    if (!foundDataForPeriod) {
+      logger.info(`No CD Portfolio ${metricName} data for ${period}, finding most recent data`);
+      
+      // Find the most recent time period with data
+      const availablePeriods = new Set<string>();
+      for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+        const relevantMetrics = metricName === 'Traffic Channels' 
+          ? data.trafficChannelMetrics 
+          : data.deviceDistributionMetrics;
+        
+        for (const metric of relevantMetrics) {
+          if (metric.channel && metric.timePeriod) {
+            availablePeriods.add(metric.timePeriod);
+          }
+        }
+      }
+
+      if (availablePeriods.size > 0) {
+        // Sort periods and get the most recent one
+        const sortedPeriods = Array.from(availablePeriods).sort().reverse();
+        const mostRecentPeriod = sortedPeriods[0];
+        logger.info(`Using most recent CD Portfolio ${metricName} data from ${mostRecentPeriod} for ${period}`);
+
+        // Collect data from the most recent period
+        for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+          const relevantMetrics = metricName === 'Traffic Channels' 
+            ? data.trafficChannelMetrics 
+            : data.deviceDistributionMetrics;
+
+          for (const metric of relevantMetrics) {
+            if (metric.timePeriod === mostRecentPeriod && metric.channel) {
+              if (!channelData.has(metric.channel)) {
+                channelData.set(metric.channel, { percentages: [], sessions: [] });
+              }
+              
+              const channelInfo = channelData.get(metric.channel)!;
+              if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
+                channelInfo.percentages.push(metric.value.percentage as number);
+                channelInfo.sessions.push((metric.value.sessions as number) || 0);
+              }
+            }
           }
         }
       }
