@@ -287,7 +287,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     },
   });
 
+  const [manualBusy, setIsBusy] = useState(false);
+  
   const isBusy =
+    manualBusy ||
     isLoadingInsights ||
     isFetching ||
     insightsData?.status === "pending" ||
@@ -428,6 +431,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
+          setIsBusy(true);
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
@@ -478,9 +482,11 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
             // Mark ready to release once refetch shows item is gone
             deleteConfirmRef.current = true;
+            setIsBusy(false);
           } catch (error) {
             suppressHydrationRef.current = false;
             setForcedEmpty(false);
+            setIsBusy(false);
             deletedRef.current = null; // Clear tombstone on error (immediate rollback)
             logger.warn(
               "Failed to delete insight and context via transactional operation",
