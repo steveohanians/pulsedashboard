@@ -55,7 +55,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
-  const [displayedText, setDisplayedText] = useState("");
+  const [displayedContext, setDisplayedContext] = useState("");
+  const [displayedInsight, setDisplayedInsight] = useState("");
+  const [displayedRecommendation, setDisplayedRecommendation] = useState("");
   const shouldAnimateRef = useRef(false);
   const queryClient = useQueryClient();
 
@@ -177,29 +179,60 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   // Define renderInsight early so it can be used in shouldShowEmpty
   const renderInsight = insight ?? metricInsight;
 
-  // Typewriter effect for insight text
+  // Sequential typewriter effect for all sections
   useEffect(() => {
-    if (!renderInsight?.insightText) return;
+    if (!renderInsight?.contextText && !renderInsight?.insightText && !renderInsight?.recommendationText) return;
 
     if (!shouldAnimateRef.current) {
-      setDisplayedText(renderInsight.insightText);
+      // Immediate display for page loads
+      setDisplayedContext(renderInsight.contextText || "");
+      setDisplayedInsight(renderInsight.insightText || "");
+      setDisplayedRecommendation(renderInsight.recommendationText || "");
       return;
     }
 
-    let i = 0;
-    const text = renderInsight.insightText;
-    setDisplayedText("");
+    // Sequential typing animation
+    let currentSection = 0;
+    let currentIndex = 0;
+    const sections = [
+      { text: renderInsight.contextText || "", setter: setDisplayedContext },
+      { text: renderInsight.insightText || "", setter: setDisplayedInsight },
+      { text: renderInsight.recommendationText || "", setter: setDisplayedRecommendation }
+    ];
+
+    // Reset all displayed text
+    setDisplayedContext("");
+    setDisplayedInsight("");
+    setDisplayedRecommendation("");
+
     const timer = setInterval(() => {
-      setDisplayedText((prev) => prev + text[i]);
-      i++;
-      if (i >= text.length) {
-        clearInterval(timer);
-        shouldAnimateRef.current = false;
+      const current = sections[currentSection];
+      if (!current || !current.text) {
+        currentSection++;
+        currentIndex = 0;
+        if (currentSection >= sections.length) {
+          clearInterval(timer);
+          shouldAnimateRef.current = false;
+          return;
+        }
+        return;
       }
-    }, 20); // adjust typing speed if needed
+
+      current.setter((prev) => prev + current.text[currentIndex]);
+      currentIndex++;
+
+      if (currentIndex >= current.text.length) {
+        currentSection++;
+        currentIndex = 0;
+        if (currentSection >= sections.length) {
+          clearInterval(timer);
+          shouldAnimateRef.current = false;
+        }
+      }
+    }, 10); // 2x faster (was 20ms)
 
     return () => clearInterval(timer);
-  }, [renderInsight?.insightText]);
+  }, [renderInsight?.contextText, renderInsight?.insightText, renderInsight?.recommendationText]);
 
   const shouldShowEmpty =
     forcedEmpty ||
@@ -400,9 +433,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     return (
       <div ref={containerRef}>
         <AIInsights
-        context={renderInsight.contextText || ""}
-        insight={displayedText}
-        recommendation={renderInsight.recommendationText || ""}
+        context={displayedContext}
+        insight={displayedInsight}
+        recommendation={displayedRecommendation}
         status={renderInsight.status}
         isTyping={false}
         hasCustomContext={renderInsight.hasContext === true}
