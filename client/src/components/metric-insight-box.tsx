@@ -302,6 +302,11 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     },
     onSuccess: async (metricInsightFromServer) => {
       suppressHydrationRef.current = false; // Allow hydration after generate
+      // Clear displayed text BEFORE setting new data to prevent flash
+      setDisplayedContext("");
+      setDisplayedInsight("");
+      setDisplayedRecommendation("");
+      setAnimationComplete(false);
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
       // Force animation trigger for regeneration
@@ -341,6 +346,11 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     },
     onSuccess: async (metricInsightFromServer) => {
       suppressHydrationRef.current = false; // Allow hydration after generate
+      // Clear displayed text BEFORE setting new data to prevent flash
+      setDisplayedContext("");
+      setDisplayedInsight("");
+      setDisplayedRecommendation("");
+      setAnimationComplete(false);
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
       // Force animation trigger for regeneration
