@@ -39,7 +39,7 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **Security Features**: Robust session security, rate limiting, comprehensive security headers, structured authentication logging, Zod schema-based input validation, and Scrypt hashing.
 - **Production Readiness**: Health checks, structured logging, comprehensive error handling, templated email service integration, and environment-driven configuration.
 - **White-Label Capability**: Designed for flexible deployment with centralized configuration and dynamic company branding.
-- **AI Prompt System**: Centralized AI prompt management with executive-optimized output formatting and server-side input sanitization. Implements a versioned AI insights architecture with persistence, server-computed badge persistence, and transactional deletion.
+- **AI Prompt System**: Centralized AI prompt management with executive-optimized output formatting and server-side input sanitization. Implements a versioned AI insights architecture with persistence, server-computed badge persistence, transactional deletion, and comprehensive "With Context" badge system featuring blue-themed badges with AI sparkles icons for genuine user-provided context.
 - **GA4 Integration Architecture**: Clients provide GA4 Property ID and grant guest access; Clear Digital uses Google service account for API access. Automated ETL transforms GA4 data. Authentic data integration ensures access token refresh and empty states instead of synthetic data.
 - **Database Performance Optimization System**: Comprehensive performance enhancement system with composite database indexing, explicit SELECT column optimization, intelligent caching, parallelized database queries, background AI processing, chart optimization, and connection pooling.
 - **Unified Device Model**: Standardized device distribution across GA4 and SEMrush to Desktop + Mobile.
@@ -48,11 +48,12 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **Metrics Schema**: Overhauled with `cd_portfolio_company_id` and `benchmark_company_id` for proper three-way linking and canonical metric envelope system for write-time normalization.
 - **Global Chart Data Processing Architecture**: Extracted fetching, parsing, fallback, and conversion logic into reusable utilities. Comprehensive Recharts hardening system prevents crashes.
 - **Unified Color Management System**: Centralized color assignment across all six chart components with specialized functions while preserving individual chart palettes and ensuring consistent colors for shared series.
-- **Typewriter Animation System**: Resilient `requestAnimationFrame` implementation with visibility-aware pausing, progress persistence, and CPU optimization.
+- **Typewriter Animation System**: Complete sequential typewriter animation system with 2x speed (10ms intervals) covering Context → Insights → Recommendations sections. Features comprehensive animation state management, flash-prevention, and action bar timing control for all generation scenarios.
 - **Rendering Optimization**: Elimination of infinite re-render loops and optimized CPU usage through `useMemo` derivations and Set-based state management in chart components.
 - **Contract Testing**: Comprehensive "canary" contract tests using Zod schema validation.
 - **Time Period Canonicalization System**: Comprehensive canonical time period handling.
 - **Error Handling**: Standardized error handling system with UI banners and retry mechanisms.
+- **AI Insights UX Enhancement**: Complete typewriter animation system with anti-flicker protection, sequential section typing (Context → Insights → Recommendations), precise action bar timing, and comprehensive coverage of all generation cases including regenerate, regenerate with context, error fallback, and initial generation scenarios.
 
 ## External Dependencies
 **Core Infrastructure:**
