@@ -61,6 +61,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const shouldAnimateRef = useRef(false);
   const [animationTrigger, setAnimationTrigger] = useState(0);
   const forceAnimateRef = useRef(false);
+  const [animationComplete, setAnimationComplete] = useState(true);
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -190,6 +191,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       setDisplayedContext(renderInsight.contextText || "");
       setDisplayedInsight(renderInsight.insightText || "");
       setDisplayedRecommendation(renderInsight.recommendationText || "");
+      setAnimationComplete(true);
       return;
     }
 
@@ -208,21 +210,24 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       { text: renderInsight.recommendationText || "", setter: setDisplayedRecommendation }
     ].filter(section => section.text.trim()); // Only include non-empty sections
 
-    // Reset all displayed text
+    if (sections.length === 0) {
+      shouldAnimateRef.current = false;
+      setAnimationComplete(true);
+      return;
+    }
+
+    // Start animation - immediately clear all text and mark as incomplete
+    setAnimationComplete(false);
     setDisplayedContext("");
     setDisplayedInsight("");
     setDisplayedRecommendation("");
-
-    if (sections.length === 0) {
-      shouldAnimateRef.current = false;
-      return;
-    }
 
     const timer = setInterval(() => {
       const current = sections[currentSection];
       if (!current) {
         clearInterval(timer);
         shouldAnimateRef.current = false;
+        setAnimationComplete(true);
         return;
       }
 
@@ -239,6 +244,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         if (currentSection >= sections.length) {
           clearInterval(timer);
           shouldAnimateRef.current = false;
+          setAnimationComplete(true);
         }
       }
     }, 10); // 2x faster (was 20ms)
@@ -455,7 +461,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         insight={displayedInsight}
         recommendation={displayedRecommendation}
         status={renderInsight.status}
-        isTyping={false}
+        isTyping={!animationComplete}
         hasCustomContext={renderInsight.hasContext === true}
         clientId={clientId}
         metricName={metricName}

@@ -288,7 +288,7 @@ export function AIInsights({
               {renderTextWithBold(recommendation, true)}
             </div>
 
-            {shouldShowButtons && (
+            {shouldShowButtons && !isTyping && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-slate-200 space-y-2 sm:space-y-0">
                 <div className="flex items-center space-x-2">
                   <div className="text-xs text-slate-400">{timestamp}</div>
