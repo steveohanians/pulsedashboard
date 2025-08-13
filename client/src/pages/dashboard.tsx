@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QueryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +27,7 @@ import { CompetitorModal } from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";
 import { ErrorBanner, useErrorBanner } from "@/components/ErrorBanner";
 import { APIError } from "@/lib/queryClient";
+import PdfExportButton from "@/components/pdf/PdfExportButton";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS } from "@/utils/chartUtils";
@@ -53,6 +54,7 @@ const getChannelColor = (channelName: string): string => {
 };
 
 export default function Dashboard() {
+  const dashboardRootRef = useRef<HTMLDivElement>(null);
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   
@@ -1049,7 +1051,11 @@ export default function Dashboard() {
               <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
             </div>
             
-
+            <PdfExportButton
+              targetRef={dashboardRootRef}
+              clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
+              className="ml-1"
+            />
 
             {/* Debug: Clear Insights Button */}
             <Button
@@ -1231,7 +1237,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Enhanced Main Content - Responsive */}
-        <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto" id="dashboard-content">
+        <div ref={dashboardRootRef} className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto" id="dashboard-content">
           
           {/* GA4 Status Banner */}
           <StatusBanner 
