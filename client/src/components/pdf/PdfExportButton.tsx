@@ -22,7 +22,7 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('Starting PDF export with slice-based rendering');
+      console.info('Starting PDF export - attempting to bypass iframe detection bug');
       
       // Dynamic import of PDF libraries
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -31,9 +31,12 @@ export default function PdfExportButton({
       ]);
       
       const element = targetRef.current;
-      console.info('Target element found, preparing for slice-based capture');
+      console.info('Target element found, dimensions:', {
+        width: element.scrollWidth,
+        height: element.scrollHeight
+      });
       
-      // Asset preflight loading for fonts/images (from working implementation notes)
+      // Asset preflight loading
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
@@ -57,93 +60,138 @@ export default function PdfExportButton({
         (el as HTMLElement).style.animationPlayState = 'paused';
       });
       
-      console.info('Starting slice-based rendering (1400px chunks)');
+      console.info('Starting capture with iframe bug bypass options');
       
-      // Slice-based rendering implementation (key from working version!)
-      const elementRect = element.getBoundingClientRect();
-      const SLICE_HEIGHT = 1400; // 1400px chunks as noted in working implementation
-      const totalHeight = element.scrollHeight;
-      const totalWidth = element.scrollWidth;
-      
-      console.info(`Element dimensions: ${totalWidth}x${totalHeight}, slicing into ${Math.ceil(totalHeight / SLICE_HEIGHT)} chunks`);
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      let isFirstPage = true;
-      
-      // Render each slice
-      for (let y = 0; y < totalHeight; y += SLICE_HEIGHT) {
-        const sliceHeight = Math.min(SLICE_HEIGHT, totalHeight - y);
-        
-        console.info(`Rendering slice ${Math.floor(y / SLICE_HEIGHT) + 1}: y=${y}, height=${sliceHeight}`);
-        
-        // CORS-safe capture configuration (from working implementation notes)
-        const canvas = await html2canvas(element, {
-          backgroundColor: "#ffffff",
-          scale: 1.2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          x: 0,
-          y: y,
-          width: totalWidth,
-          height: sliceHeight,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: totalWidth,
-          windowHeight: totalHeight,
-          foreignObjectRendering: false,
-          removeContainer: false,
-          ignoreElements: (el) => {
-            return el.hasAttribute('data-pdf-hide') || el.getAttribute('data-pdf-hide') === 'true';
-          }
-        });
-
-        console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
-
-        // Calculate dimensions for this slice
-        const imgData = canvas.toDataURL('image/png');
-        const imgAspectRatio = canvas.height / canvas.width;
-        
-        let imgWidth = pdfWidth;
-        let imgHeight = pdfWidth * imgAspectRatio;
-        
-        // If the slice is too tall for the page, fit it to page height
-        if (imgHeight > pdfHeight) {
-          imgHeight = pdfHeight;
-          imgWidth = pdfHeight / imgAspectRatio;
+      // Ultra-minimal html2canvas options designed to avoid iframe detection bug
+      const canvas = await html2canvas(element, {
+        backgroundColor: "#ffffff",
+        scale: 1,
+        useCORS: false,
+        allowTaint: false,
+        foreignObjectRendering: false,
+        logging: false,
+        imageTimeout: 0,
+        removeContainer: false,
+        async: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        onclone: function(clonedDoc: Document, clonedElement: HTMLElement) {
+          console.info('Cleaning cloned document to prevent iframe issues');
+          // Remove any elements that might trigger iframe detection
+          const problematicElements = clonedDoc.querySelectorAll('iframe, embed, object, frame, frameset, applet');
+          problematicElements.forEach(el => {
+            console.info('Removing potentially problematic element:', el.tagName);
+            el.remove();
+          });
+          
+          // Also remove any Replit error overlay elements that might cause issues
+          const errorElements = clonedDoc.querySelectorAll('[data-vite-error-overlay]');
+          errorElements.forEach(el => el.remove());
+          
+          return clonedElement;
         }
-        
-        // Add new page for each slice (except the first)
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // Add the slice to PDF
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      }
+      });
+
+      console.info('Canvas captured successfully, dimensions:', {
+        width: canvas.width,
+        height: canvas.height
+      });
       
       // Restore animations
       originalAnimations.forEach((el: Element) => {
         (el as HTMLElement).style.animationPlayState = '';
       });
 
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Convert canvas to image data
+      const imgData = canvas.toDataURL('image/png');
+      const imgAspectRatio = canvas.height / canvas.width;
+      
+      // Calculate dimensions to fit within PDF page
+      let imgWidth = pdfWidth;
+      let imgHeight = pdfWidth * imgAspectRatio;
+      
+      // If too tall, fit to height
+      if (imgHeight > pdfHeight) {
+        imgHeight = pdfHeight;
+        imgWidth = pdfHeight / imgAspectRatio;
+      }
+      
+      // Add image to PDF
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
       // Generate filename
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
       
-      console.info('Saving multi-page PDF with slice-based rendering');
+      console.info('Saving PDF');
       pdf.save(downloadName);
       console.info('PDF export completed successfully');
 
     } catch (error) {
       console.error('PDF export failed:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
+      
+      // If it's the specific iframe error, provide detailed information
+      if (error instanceof Error && error.message.includes('iframe window')) {
+        console.error('IFRAME BUG DETECTED - This is a known issue with html2canvas 1.4.1');
+        console.error('Attempted workarounds:', {
+          removedProblematicElements: true,
+          minimalOptions: true,
+          asyncDisabled: true
+        });
+      }
+      
+      // Try server-side fallback as last resort
+      if (error instanceof Error && error.message.includes('iframe window')) {
+        console.info('Attempting server-side PDF generation as fallback');
+        try {
+          const element = targetRef.current;
+          if (element) {
+            const elementData = {
+              html: element.outerHTML,
+              width: element.scrollWidth,
+              height: element.scrollHeight,
+              clientLabel: clientLabel || 'Demo Company'
+            };
+
+            const response = await fetch('/api/export-pdf', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(elementData)
+            });
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.style.display = 'none';
+              a.href = url;
+              const today = new Date();
+              const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+              const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
+              a.download = downloadName;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              
+              console.info('Server-side PDF generation successful');
+            } else {
+              console.error('Server-side PDF generation also failed');
+            }
+          }
+        } catch (serverError) {
+          console.error('Server-side PDF fallback failed:', serverError);
+        }
       }
     } finally {
       setIsGenerating(false);
