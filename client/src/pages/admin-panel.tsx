@@ -1719,7 +1719,6 @@ export default function AdminPanel() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">Icon</TableHead>
                           <TableHead className="w-28"><SortableHeader label="Name" sortKey="name" /></TableHead>
                           <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead className="hidden xl:table-cell w-36"><SortableHeader label="GA4 Property" sortKey="gaPropertyId" /></TableHead>
@@ -1732,19 +1731,6 @@ export default function AdminPanel() {
                       <TableBody>
                         {sortedData(clients, 'clients')?.map((client: any) => (
                           <TableRow key={client.id}>
-                            <TableCell className="w-12">
-                              {client.iconUrl ? (
-                                <img 
-                                  src={client.iconUrl} 
-                                  alt={`${client.name} icon`}
-                                  className="w-8 h-8 rounded object-contain border border-pink-200"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                  <Building className="w-4 h-4 text-gray-400" />
-                                </div>
-                              )}
-                            </TableCell>
                             <TableCell className="font-medium text-xs">
                               <div>
                                 <div className="font-medium">{client.name}</div>
@@ -1986,15 +1972,14 @@ export default function AdminPanel() {
                                   const domain = new URL(websiteUrl).hostname.replace('www.', '');
                                   const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
                                   
+                                  console.log('Icon fetch response:', response);
+                                  
                                   if (response.iconUrl) {
-                                    // Update the editingItem to show the icon immediately
                                     setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
                                     toast({
                                       title: "Icon fetched successfully",
                                       description: "Client icon has been updated.",
                                     });
-                                    
-                                    // Refresh the clients list
                                     queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
                                   } else {
                                     throw new Error("No icon found");
