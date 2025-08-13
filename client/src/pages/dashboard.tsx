@@ -930,28 +930,48 @@ export default function Dashboard() {
       // Capture the original element with hidden elements
       console.log('📸 Starting canvas capture...');
       const canvas = await html2canvas(originalElement, {
-        scale: 1.5, // Reduced scale to prevent memory issues
+        scale: 1.2, // Optimized scale
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: '#ffffff',
         width: originalElement.scrollWidth,
         height: originalElement.scrollHeight,
         scrollX: 0,
         scrollY: 0,
         logging: false,
+        foreignObjectRendering: false, // Disable foreign object rendering to prevent iframe issues
+        removeContainer: true,
         ignoreElements: (element) => {
-          // Skip problematic iframe and embedded elements
+          // Skip all iframe elements that cause issues
           if (element.tagName === 'IFRAME') return true;
-          if (element.classList.contains('recharts-wrapper')) return false; // Keep charts
-          if (element.classList.contains('pdf-skip')) return true; // Custom skip class
+          if (element.tagName === 'FRAME') return true;
+          if (element.classList.contains('pdf-skip')) return true;
+          if (element.tagName === 'OBJECT' || element.tagName === 'EMBED') return true;
+          // Skip elements with problematic styling
+          if (element.style && element.style.display === 'none') return true;
           return false;
         },
         onclone: (clonedDoc) => {
+          // Clean up and optimize the cloned document for rendering
+          console.log('🧹 Cleaning cloned document for PDF...');
+          
+          // Remove all iframes from the clone
+          const iframes = clonedDoc.querySelectorAll('iframe');
+          iframes.forEach(iframe => iframe.remove());
+          
           // Ensure all chart SVGs are properly rendered
           const svgs = clonedDoc.querySelectorAll('svg');
           svgs.forEach(svg => {
             svg.style.background = 'transparent';
+            svg.style.display = 'block';
           });
+          
+          // Fix any potential layout issues in the clone
+          const body = clonedDoc.body;
+          if (body) {
+            body.style.margin = '0';
+            body.style.padding = '0';
+          }
         }
       });
       console.log('✅ Canvas captured successfully:', canvas.width, 'x', canvas.height);
