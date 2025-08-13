@@ -193,6 +193,7 @@ export default function AdminPanel() {
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
   const [dataViewerOpen, setDataViewerOpen] = useState<boolean>(false);
   const [viewingCompanyData, setViewingCompanyData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Query for fetching portfolio company data
   const companyDataQuery = useQuery({
@@ -1881,6 +1882,88 @@ export default function AdminPanel() {
                         name="serviceAccountId" 
                         defaultValue="" 
                       />
+                      
+                      {/* Icon Section */}
+                      <div className="space-y-3">
+                        <Label>Client Icon</Label>
+                        <div className="flex items-center gap-3">
+                          {editingItem?.iconUrl ? (
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={editingItem.iconUrl} 
+                                alt="Client icon" 
+                                className="w-10 h-10 rounded-lg object-contain border border-gray-200"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              <div className="text-sm text-gray-600">Icon loaded</div>
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                              <Building className="w-5 h-5 text-gray-400" />
+                            </div>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!editingItem?.id) {
+                                toast({
+                                  title: "Save client first",
+                                  description: "Please save the client before fetching an icon.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
+                              try {
+                                setIsLoading(true);
+                                const websiteUrl = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || editingItem.websiteUrl;
+                                if (!websiteUrl) {
+                                  throw new Error("Website URL is required");
+                                }
+                                
+                                const domain = new URL(websiteUrl).hostname.replace('www.', '');
+                                const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
+                                
+                                if (response.iconUrl) {
+                                  // Update the editingItem to show the icon immediately
+                                  setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
+                                  toast({
+                                    title: "Icon fetched successfully",
+                                    description: "Client icon has been updated.",
+                                  });
+                                  
+                                  // Refresh the clients list
+                                  queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+                                } else {
+                                  throw new Error("No icon found");
+                                }
+                              } catch (error) {
+                                toast({
+                                  title: "Failed to fetch icon",
+                                  description: error instanceof Error ? error.message : "Unable to fetch icon from Brandfetch API.",
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setIsLoading(false);
+                              }
+                            }}
+                            disabled={!editingItem?.id}
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Fetch Icon
+                          </Button>
+                        </div>
+                        <input 
+                          type="hidden" 
+                          name="iconUrl" 
+                          value={editingItem?.iconUrl || ""} 
+                        />
+                      </div>
+                      
                       <div>
                         <Label htmlFor="industry">Industry Vertical *</Label>
                         <NativeSelect 

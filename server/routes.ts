@@ -2869,6 +2869,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Brandfetch icon fetching endpoint
+  app.post("/api/admin/clients/:id/fetch-icon", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { domain } = req.body;
+      
+      if (!domain) {
+        return res.status(400).json({ message: "Domain is required" });
+      }
+      
+      // Verify client exists
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Call Brandfetch API
+      const brandfetchResponse = await fetch(`https://api.brandfetch.io/v2/brands/${domain}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.BRANDFETCH_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!brandfetchResponse.ok) {
+        if (brandfetchResponse.status === 404) {
+          return res.status(404).json({ message: "Brand not found on Brandfetch" });
+        }
+        throw new Error(`Brandfetch API error: ${brandfetchResponse.status}`);
+      }
+      
+      const brandData = await brandfetchResponse.json();
+      
+      // Find the best icon - prioritize "icon" type logos
+      let iconUrl = null;
+      if (brandData.logos && brandData.logos.length > 0) {
+        // First, try to find an icon type logo
+        const iconLogo = brandData.logos.find((logo: any) => logo.type === 'icon');
+        const targetLogo = iconLogo || brandData.logos[0]; // fallback to first logo
+        
+        if (targetLogo && targetLogo.formats && targetLogo.formats.length > 0) {
+          // Prefer SVG format, then PNG, then any available format
+          const svgFormat = targetLogo.formats.find((format: any) => format.format === 'svg');
+          const pngFormat = targetLogo.formats.find((format: any) => format.format === 'png');
+          const chosenFormat = svgFormat || pngFormat || targetLogo.formats[0];
+          
+          iconUrl = chosenFormat.src;
+        }
+      }
+      
+      if (!iconUrl) {
+        return res.status(404).json({ message: "No suitable icon found for this brand" });
+      }
+      
+      // Update client with the icon URL
+      await storage.updateClient(id, { iconUrl });
+      
+      res.json({ 
+        message: "Icon fetched successfully",
+        iconUrl,
+        brandName: brandData.name
+      });
+      
+    } catch (error) {
+      logger.error("Error fetching icon from Brandfetch", { 
+        error: (error as Error).message, 
+        clientId: req.params.id,
+        domain: req.body.domain 
+      });
+      res.status(500).json({ 
+        message: "Failed to fetch icon",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Password reset endpoints
   app.post("/api/forgot-password", async (req, res) => {
     try {
@@ -2881,7 +2957,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate a secure token
-      const token = require("crypto").randomBytes(32).toString("hex");
+      const crypto = await import("crypto");
+      const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
 

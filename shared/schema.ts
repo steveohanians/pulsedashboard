@@ -73,6 +73,7 @@ export const clients = pgTable("clients", {
   industryVertical: text("industry_vertical").notNull(),
   businessSize: text("business_size").notNull(),
   ga4PropertyId: text("ga4_property_id"),
+  iconUrl: text("icon_url"), // Brandfetch icon URL
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
