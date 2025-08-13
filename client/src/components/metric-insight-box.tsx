@@ -325,9 +325,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     );
   }
 
-  const displayInsightText = insight?.insightText ?? "";
-
-  // TOMBSTONE PATTERN: Completely block any content display when item is deleted
+  // TOMBSTONE PATTERN: ABSOLUTE FIRST CHECK - Completely block any content when deleted
   if (deletedRef.current === metricName) {
     return (
       <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
@@ -356,6 +354,8 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       </div>
     );
   }
+
+  const displayInsightText = insight?.insightText ?? "";
 
   if (insight && !shouldShowEmpty) {
     return (
@@ -426,10 +426,18 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           deletedRef.current = metricName; // Mark as deleted to prevent flashback
           onStatusChange?.(undefined);
 
-          // Force a re-render to immediately show empty state
+          // Force immediate re-render and ensure server data is also cleared
           setTimeout(() => {
             setInsight(null);
             setForcedEmpty(true);
+            // Also invalidate cache to prevent server data from coming back
+            queryClient.setQueryData(["/api/ai-insights", clientId, canonicalPeriod], (oldData: any) => {
+              if (!oldData?.insights) return oldData;
+              return {
+                ...oldData,
+                insights: oldData.insights.filter((ins: any) => ins.metricName !== metricName)
+              };
+            });
           }, 0);
 
           // Optimistic cache prune (optional)
