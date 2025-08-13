@@ -142,7 +142,7 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('🚀 Trying html2canvas with iframe bypass options');
+      console.info('🚀 Starting PDF export with iframe bypass...');
       
       // Import libraries  
       console.info('Step 1: Testing html2canvas import...');
@@ -155,51 +155,64 @@ export default function PdfExportButton({
       
       const element = targetRef.current;
       
-      // Step 1: Asset preflight loading
+      // Step 3: Asset preflight loading
       console.info('📦 Asset preflight loading...');
       await preflightAssets();
       
-      // Step 2: CSS animation control
+      // Step 4: CSS animation control
       console.info('⏸️ Pausing animations for stable capture...');
       controlAnimations(true);
       
       // Small delay to ensure animations are paused
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 3: Single capture with iframe bypass options
-      console.info('📸 Starting direct capture with iframe bypass...');
-      const canvas = await html2canvas(element, {
-        // Iframe bypass options
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        backgroundColor: '#ffffff',
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        foreignObjectRendering: false,
-        logging: false,
-        imageTimeout: 15000,
-        removeContainer: true,
-        // Force specific window context to bypass iframe detection  
-        onclone: function(clonedDoc: Document) {
-          // Try to set window context in cloned document
-          if (window.parent && window.parent !== window) {
-            console.info('🔧 Using parent window context to bypass iframe detection');
-          }
-          return clonedDoc.documentElement;
-        }
-      });
+      // Step 5: Force html2canvas to bypass iframe detection
+      console.info('📸 Starting capture with iframe detection bypass...');
       
-      console.info('✅ Canvas captured successfully');
+      // Create a temporary container in the main document to bypass iframe detection
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = element.scrollWidth + 'px';
+      tempContainer.style.height = element.scrollHeight + 'px';
+      tempContainer.style.overflow = 'hidden';
       
+      // Clone the element to capture
+      const clonedElement = element.cloneNode(true) as HTMLElement;
+      tempContainer.appendChild(clonedElement);
+      document.body.appendChild(tempContainer);
+      
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(clonedElement, {
+          backgroundColor: '#ffffff',
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: false,
+          logging: false,
+          imageTimeout: 15000,
+          removeContainer: true,
+          width: element.scrollWidth,
+          height: element.scrollHeight
+        });
+        
+        // Clean up temporary container
+        document.body.removeChild(tempContainer);
+        console.info('✅ Canvas captured successfully');
+      } catch (error) {
+        // Clean up on error
+        document.body.removeChild(tempContainer);
+        throw error;
+      }
+
+      // Step 6: Create PDF from canvas
       console.info('📄 Creating PDF from captured canvas...', {
         canvasWidth: canvas.width,
         canvasHeight: canvas.height
       });
       
-      // Step 4: Create PDF with proper scaling
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -237,7 +250,7 @@ export default function PdfExportButton({
         yPosition += sliceHeight;
       }
 
-      // Step 6: Generate filename and download
+      // Step 7: Generate filename and download
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
@@ -255,7 +268,7 @@ export default function PdfExportButton({
         alert('PDF export failed. Please try again or contact support if the issue persists.');
       }
     } finally {
-      // Step 7: Restore animations
+      // Step 8: Restore animations
       console.info('▶️ Restoring animations...');
       controlAnimations(false);
       setIsGenerating(false);
