@@ -142,13 +142,16 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('🚀 Starting enhanced visual PDF export with reliability features');
+      console.info('🚀 Testing PDF export - checking what actually fails');
       
-      // Dynamic import of PDF libraries
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf')
-      ]);
+      // Test basic html2canvas import first
+      console.info('Step 1: Testing html2canvas import...');
+      const { default: html2canvas } = await import('html2canvas');
+      console.info('✅ html2canvas imported successfully');
+      
+      console.info('Step 2: Testing jsPDF import...');
+      const { jsPDF } = await import('jspdf');
+      console.info('✅ jsPDF imported successfully');
       
       const element = targetRef.current;
       
