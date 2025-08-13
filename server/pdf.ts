@@ -2,49 +2,39 @@ export async function generatePDF(data: any): Promise<Buffer> {
   try {
     const { jsPDF } = await import('jspdf');
     
-    console.log('🔍 PDF generator received data:', {
-      hasData: !!data,
-      dataKeys: data ? Object.keys(data) : [],
-      hasDashboardData: !!data?.dashboardData,
-      dashboardDataKeys: data?.dashboardData ? Object.keys(data.dashboardData) : [],
-      hasMetrics: !!data?.dashboardData?.metrics,
-      metricsCount: data?.dashboardData?.metrics?.length || 0,
-      hasInsights: !!data?.dashboardData?.insights,
-      insightsCount: data?.dashboardData?.insights?.length || 0,
-      // Also check if the data is directly in the root level
-      hasRootMetrics: !!data?.metrics,
-      rootMetricsCount: data?.metrics?.length || 0,
-      hasRootInsights: !!data?.insights,
-      rootInsightsCount: data?.insights?.length || 0
+    console.log('🔍 Enhanced PDF generator processing dashboard HTML data:', {
+      hasHtml: !!data?.html,
+      htmlLength: data?.html?.length || 0,
+      hasStyles: !!data?.styles,
+      stylesLength: data?.styles?.length || 0,
+      dimensions: data?.width && data?.height ? `${data.width}x${data.height}` : 'unknown',
+      clientLabel: data?.clientLabel || 'No label'
     });
     
-    // Log what the actual data structure looks like
-    console.log('🔍 PDF data structure preview:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
-    
-    // Create PDF document with better layout
+    // Create PDF document with better layout for visual dashboard content
     const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 50;
     const usableWidth = pageWidth - (margin * 2);
     
-    // Simplified header (no navigation as requested)
+    // Enhanced header for dashboard export
     pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
     pdf.text('PULSE DASHBOARD™', margin, 60);
     
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Analytics & Competitive Intelligence Report', margin, 85);
+    pdf.text('Visual Dashboard Export', margin, 85);
     
     let yPosition = 120;
     
-    // Client info
+    // Client info with enhanced formatting
     if (data.clientLabel) {
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(data.clientLabel, margin, yPosition);
-      yPosition += 25;
+      pdf.text(`Client: ${data.clientLabel}`, margin, yPosition);
+      yPosition += 30;
     }
     
     const today = new Date();
@@ -54,8 +44,110 @@ export async function generatePDF(data: any): Promise<Buffer> {
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
-    })}`, margin, yPosition);
-    yPosition += 40;
+    })} at ${today.toLocaleTimeString('en-US')}`, margin, yPosition);
+    yPosition += 30;
+    
+    // Dashboard dimensions info
+    if (data.width && data.height) {
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Dashboard Size: ${data.width} × ${data.height} pixels`, margin, yPosition);
+      yPosition += 25;
+    }
+    
+    // Note about visual content limitation
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'italic');
+    pdf.text('Note: This PDF contains dashboard structure and data. Visual charts require', margin, yPosition);
+    yPosition += 15;
+    pdf.text('client-side rendering which is currently unavailable due to technical limitations.', margin, yPosition);
+    yPosition += 30;
+    
+    // Extract data from HTML content for comprehensive dashboard report
+    const htmlContent = data.html || '';
+    
+    // Add dashboard structure summary
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('DASHBOARD STRUCTURE SUMMARY', margin, yPosition);
+    yPosition += 25;
+    
+    // Basic HTML content analysis
+    const chartElements = (htmlContent.match(/recharts|chart|graph/gi) || []).length;
+    const metricElements = (htmlContent.match(/metric|value|percentage/gi) || []).length;
+    const insightElements = (htmlContent.match(/insight|recommendation|analysis/gi) || []).length;
+    
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`• Dashboard HTML content: ${Math.round(htmlContent.length / 1000)}KB`, margin, yPosition);
+    yPosition += 20;
+    pdf.text(`• Chart/Graph elements detected: ${chartElements}`, margin, yPosition);
+    yPosition += 20;
+    pdf.text(`• Metric elements detected: ${metricElements}`, margin, yPosition);
+    yPosition += 20;
+    pdf.text(`• AI Insight elements detected: ${insightElements}`, margin, yPosition);
+    yPosition += 35;
+    
+    // Add dashboard content sections if we have HTML
+    if (htmlContent.length > 0) {
+      // Extract key metrics from HTML content
+      const bounceRateMatch = htmlContent.match(/(\d+\.?\d*)%[\s\S]*?bounce\s*rate/i);
+      const sessionDurationMatch = htmlContent.match(/(\d+\.?\d*)\s*(?:min|minutes|sec|seconds)[\s\S]*?session/i);
+      const conversionMatch = htmlContent.match(/(\d+\.?\d*)%[\s\S]*?conversion/i);
+      
+      if (bounceRateMatch || sessionDurationMatch || conversionMatch) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('KEY PERFORMANCE METRICS', margin, yPosition);
+        yPosition += 25;
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        
+        if (bounceRateMatch) {
+          pdf.text(`• Bounce Rate: ${bounceRateMatch[1]}%`, margin, yPosition);
+          yPosition += 20;
+        }
+        if (sessionDurationMatch) {
+          pdf.text(`• Session Duration: ${sessionDurationMatch[1]} ${sessionDurationMatch[0].includes('min') ? 'minutes' : 'seconds'}`, margin, yPosition);
+          yPosition += 20;
+        }
+        if (conversionMatch) {
+          pdf.text(`• Conversion Rate: ${conversionMatch[1]}%`, margin, yPosition);
+          yPosition += 20;
+        }
+        yPosition += 15;
+      }
+      
+      // Traffic Channels section
+      const directMatch = htmlContent.match(/direct[\s\S]*?(\d+\.?\d*)%/i);
+      const organicMatch = htmlContent.match(/organic[\s\S]*?(\d+\.?\d*)%/i);
+      const socialMatch = htmlContent.match(/social[\s\S]*?(\d+\.?\d*)%/i);
+      
+      if (directMatch || organicMatch || socialMatch) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('TRAFFIC CHANNELS', margin, yPosition);
+        yPosition += 25;
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        
+        if (directMatch) {
+          pdf.text(`• Direct Traffic: ${directMatch[1]}%`, margin, yPosition);
+          yPosition += 20;
+        }
+        if (organicMatch) {
+          pdf.text(`• Organic Search: ${organicMatch[1]}%`, margin, yPosition);
+          yPosition += 20;
+        }
+        if (socialMatch) {
+          pdf.text(`• Social Media: ${socialMatch[1]}%`, margin, yPosition);
+          yPosition += 20;
+        }
+        yPosition += 15;
+      }
+    }
     
     // Add actual dashboard data if available
     if (data.dashboardData && data.dashboardData.metrics) {
