@@ -32,7 +32,11 @@ export default function PdfExportButton({
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
-        logging: false
+        allowTaint: true,
+        logging: false,
+        ignoreElements: (element) => {
+          return element.tagName === 'IFRAME';
+        }
       });
 
       const imgData = canvas.toDataURL("image/png");
