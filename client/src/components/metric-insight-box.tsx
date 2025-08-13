@@ -169,7 +169,13 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       onStatusChange(metricInsight.status);
   }, [metricInsightKey, forcedEmpty]);
 
-
+  const shouldShowEmpty =
+    forcedEmpty ||
+    deletedRef.current === metricName ||
+    (!isLoadingInsights &&
+      !isFetching &&
+      !metricInsight?.insightText &&
+      !insight?.insightText);
 
   // Release delete lock only after confirmed + no fetch + item gone
   useEffect(() => {
@@ -180,7 +186,16 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       setInsight(null);
       // Don't clear tombstone here - let it persist to prevent any flashback
     }
-  }, [metricInsight, isFetching]);
+
+    // Clear tombstone only when we're showing empty AND no longer fetching
+    if (deletedRef.current === metricName && shouldShowEmpty && !isFetching && !isLoadingInsights) {
+      // Small delay to ensure UI is stable in empty state
+      const timer = setTimeout(() => {
+        deletedRef.current = null;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [metricInsight, isFetching, metricName, shouldShowEmpty, isLoadingInsights]);
 
   const versionStatus = useMemo(() => {
     if (!insightsData) return null;
@@ -311,24 +326,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   }
 
   const displayInsightText = insight?.insightText ?? "";
-  const shouldShowEmpty =
-    forcedEmpty ||
-    deletedRef.current === metricName ||
-    (!isLoadingInsights &&
-      !isFetching &&
-      !metricInsight?.insightText &&
-      !insight?.insightText);
-
-  // Clear tombstone only when we're showing empty AND no longer fetching
-  useEffect(() => {
-    if (deletedRef.current === metricName && shouldShowEmpty && !isFetching && !isLoadingInsights) {
-      // Small delay to ensure UI is stable in empty state
-      const timer = setTimeout(() => {
-        deletedRef.current = null;
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [metricName, shouldShowEmpty, isFetching, isLoadingInsights]);
 
   if (insight && !shouldShowEmpty) {
     return (
