@@ -22,7 +22,7 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      console.info('Starting PDF export - attempting to bypass iframe detection bug');
+      console.info('IFRAME BUG DIAGNOSTIC: Starting systematic test');
       
       // Dynamic import of PDF libraries
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -31,129 +31,126 @@ export default function PdfExportButton({
       ]);
       
       const element = targetRef.current;
-      console.info('Target element found, dimensions:', {
-        width: element.scrollWidth,
-        height: element.scrollHeight
-      });
+      console.info('Target element found, testing with minimal content first');
       
-      // Asset preflight loading
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
+      // STEP 1: Test html2canvas with completely isolated simple element
+      console.info('STEP 1: Testing html2canvas with isolated test element');
+      const testDiv = document.createElement('div');
+      testDiv.style.width = '200px';
+      testDiv.style.height = '100px';
+      testDiv.style.backgroundColor = '#f0f0f0';
+      testDiv.style.position = 'absolute';
+      testDiv.style.top = '-9999px';
+      testDiv.style.left = '-9999px';
+      testDiv.innerHTML = '<p>Test</p>';
+      document.body.appendChild(testDiv);
+      
+      try {
+        const testCanvas = await html2canvas(testDiv, {
+          backgroundColor: "#ffffff",
+          width: 200,
+          height: 100
+        });
+        console.info('✅ STEP 1 SUCCESS: Basic html2canvas works, proceeding to main element');
+        document.body.removeChild(testDiv);
+      } catch (testError) {
+        console.error('❌ STEP 1 FAILED: html2canvas broken at basic level:', testError);
+        document.body.removeChild(testDiv);
+        throw new Error('html2canvas fundamentally broken - cannot proceed');
       }
       
-      // Ensure all images are loaded
-      const images = Array.from(element.querySelectorAll('img'));
-      await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => {
-          img.onload = resolve;
-          img.onerror = resolve;
+      // STEP 2: Try main element with bare minimum options
+      console.info('STEP 2: Testing main element with minimal options');
+      try {
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#ffffff"
         });
-      }));
-      
-      // Small delay to ensure rendering is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // CSS animation control (disable animations during capture)
-      const originalAnimations = document.querySelectorAll('*');
-      originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = 'paused';
-      });
-      
-      console.info('Starting capture with iframe bug bypass options');
-      
-      // Ultra-minimal html2canvas options designed to avoid iframe detection bug
-      const canvas = await html2canvas(element, {
-        backgroundColor: "#ffffff",
-        scale: 1,
-        useCORS: false,
-        allowTaint: false,
-        foreignObjectRendering: false,
-        logging: false,
-        imageTimeout: 0,
-        removeContainer: false,
-        async: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        onclone: function(clonedDoc: Document, clonedElement: HTMLElement) {
-          console.info('Cleaning cloned document to prevent iframe issues');
-          // Remove any elements that might trigger iframe detection
-          const problematicElements = clonedDoc.querySelectorAll('iframe, embed, object, frame, frameset, applet');
-          problematicElements.forEach(el => {
-            console.info('Removing potentially problematic element:', el.tagName);
-            el.remove();
-          });
-          
-          // Also remove any Replit error overlay elements that might cause issues
-          const errorElements = clonedDoc.querySelectorAll('[data-vite-error-overlay]');
-          errorElements.forEach(el => el.remove());
-          
-          return clonedElement;
+        
+        console.info('✅ STEP 2 SUCCESS: Main element captured with minimal options!');
+        
+        // Continue with PDF creation
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgAspectRatio = canvas.height / canvas.width;
+        
+        let imgWidth = pdfWidth;
+        let imgHeight = pdfWidth * imgAspectRatio;
+        
+        if (imgHeight > pdfHeight) {
+          imgHeight = pdfHeight;
+          imgWidth = pdfHeight / imgAspectRatio;
         }
-      });
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
 
-      console.info('Canvas captured successfully, dimensions:', {
-        width: canvas.width,
-        height: canvas.height
-      });
-      
-      // Restore animations
-      originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = '';
-      });
+        const today = new Date();
+        const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+        const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
+        
+        pdf.save(downloadName);
+        console.info('🎉 PDF EXPORT SUCCESSFUL with minimal options!');
+        
+      } catch (mainError) {
+        console.error('❌ STEP 2 FAILED: Main element failed with minimal options');
+        console.error('Error details:', mainError);
+        
+        // STEP 3: Try with even more minimal setup
+        if (mainError instanceof Error && mainError.message.includes('iframe')) {
+          console.info('STEP 3: Iframe error detected, trying element isolation');
+          
+          // Clone element and strip potentially problematic content
+          const clonedElement = element.cloneNode(true) as HTMLElement;
+          clonedElement.style.position = 'absolute';
+          clonedElement.style.top = '-9999px';
+          clonedElement.style.left = '-9999px';
+          document.body.appendChild(clonedElement);
+          
+          // Remove all potentially problematic elements
+          const problematic = clonedElement.querySelectorAll('iframe, embed, object, canvas, video, audio');
+          problematic.forEach(el => el.remove());
+          
+          try {
+            const isolatedCanvas = await html2canvas(clonedElement, {
+              backgroundColor: "#ffffff"
+            });
+            
+            console.info('✅ STEP 3 SUCCESS: Isolated element worked!');
+            document.body.removeChild(clonedElement);
+            
+            // Complete PDF generation with isolated canvas
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            const imgData = isolatedCanvas.toDataURL('image/png');
+            const imgAspectRatio = isolatedCanvas.height / isolatedCanvas.width;
+            
+            let imgWidth = pdfWidth;
+            let imgHeight = pdfWidth * imgAspectRatio;
+            
+            if (imgHeight > pdfHeight) {
+              imgHeight = pdfHeight;
+              imgWidth = pdfHeight / imgAspectRatio;
+            }
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
 
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // Convert canvas to image data
-      const imgData = canvas.toDataURL('image/png');
-      const imgAspectRatio = canvas.height / canvas.width;
-      
-      // Calculate dimensions to fit within PDF page
-      let imgWidth = pdfWidth;
-      let imgHeight = pdfWidth * imgAspectRatio;
-      
-      // If too tall, fit to height
-      if (imgHeight > pdfHeight) {
-        imgHeight = pdfHeight;
-        imgWidth = pdfHeight / imgAspectRatio;
-      }
-      
-      // Add image to PDF
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-
-      // Generate filename
-      const today = new Date();
-      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-      const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
-      
-      console.info('Saving PDF');
-      pdf.save(downloadName);
-      console.info('PDF export completed successfully');
-
-    } catch (error) {
-      console.error('PDF export failed:', error);
-      
-      // If it's the specific iframe error, provide detailed information
-      if (error instanceof Error && error.message.includes('iframe window')) {
-        console.error('IFRAME BUG DETECTED - This is a known issue with html2canvas 1.4.1');
-        console.error('Attempted workarounds:', {
-          removedProblematicElements: true,
-          minimalOptions: true,
-          asyncDisabled: true
-        });
-      }
-      
-      // Try server-side fallback as last resort
-      if (error instanceof Error && error.message.includes('iframe window')) {
-        console.info('Attempting server-side PDF generation as fallback');
-        try {
-          const element = targetRef.current;
-          if (element) {
+            const today = new Date();
+            const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+            const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
+            
+            pdf.save(downloadName);
+            console.info('🎉 PDF EXPORT SUCCESSFUL with isolated element!');
+            
+          } catch (isolatedError) {
+            console.error('❌ STEP 3 FAILED: Even isolated element failed');
+            document.body.removeChild(clonedElement);
+            
+            // Final fallback: Server-side PDF generation
+            console.info('FINAL STEP: Attempting server-side PDF generation');
             const elementData = {
               html: element.outerHTML,
               width: element.scrollWidth,
@@ -184,15 +181,20 @@ export default function PdfExportButton({
               window.URL.revokeObjectURL(url);
               document.body.removeChild(a);
               
-              console.info('Server-side PDF generation successful');
+              console.info('✅ FINAL STEP SUCCESS: Server-side PDF generated');
             } else {
-              console.error('Server-side PDF generation also failed');
+              console.error('❌ ALL STEPS FAILED: Neither client-side nor server-side worked');
+              throw new Error('All PDF generation methods failed');
             }
           }
-        } catch (serverError) {
-          console.error('Server-side PDF fallback failed:', serverError);
+        } else {
+          throw mainError;
         }
       }
+
+    } catch (error) {
+      console.error('🚨 COMPLETE PDF EXPORT FAILURE:', error);
+      console.error('This indicates a fundamental issue with html2canvas 1.4.1 in this environment');
     } finally {
       setIsGenerating(false);
     }
