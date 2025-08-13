@@ -104,7 +104,7 @@ router.post('/pdf', requireAuth, async (req: Request, res: Response) => {
     res.setHeader('Content-Length', pdfBuffer.length);
     
     // Send the PDF buffer
-    return res.send(pdfBuffer);
+    res.send(pdfBuffer);
 
   } catch (error) {
     const renderTime = Date.now() - startTime;
