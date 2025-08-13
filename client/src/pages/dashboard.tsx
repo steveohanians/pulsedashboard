@@ -997,7 +997,8 @@ export default function Dashboard() {
       pdf.save(fileName);
       
     } catch (error) {
-      // Error generating PDF: ${error}
+      console.error('PDF Export Error:', error);
+      
       // Clean up in case of error
       const headerToRemove = document.getElementById('temp-pdf-header');
       if (headerToRemove) {
@@ -1011,6 +1012,13 @@ export default function Dashboard() {
         if (htmlEl.style.display === 'none') {
           htmlEl.style.display = '';
         }
+      });
+      
+      // Show user-friendly error message
+      toast({
+        title: "PDF Export Failed",
+        description: error instanceof Error ? error.message : "Unable to generate PDF. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsExportingPDF(false);
