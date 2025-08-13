@@ -1970,6 +1970,7 @@ export default function AdminPanel() {
                                   }
                                   
                                   const domain = new URL(websiteUrl).hostname.replace('www.', '');
+                                  console.log('Processing URL:', websiteUrl, '→ Domain:', domain);
                                   const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
                                   
                                   console.log('Icon fetch response:', response);
