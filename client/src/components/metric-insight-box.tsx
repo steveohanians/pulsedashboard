@@ -308,6 +308,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         metricName,
       });
       try {
+        shouldAnimateRef.current = true;
         generateInsightMutation.mutate();
       } catch {}
     },
@@ -538,6 +539,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         </p>
         <Button
           onClick={() => {
+            shouldAnimateRef.current = true;
             suppressHydrationRef.current = true;
             setForcedEmpty(false);
             setInsight((cur) =>
