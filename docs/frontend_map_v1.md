@@ -39,7 +39,7 @@ Pulse Dashboard™ frontend is a modern React 18 application with TypeScript, fe
 - Dynamic filtering (business size, industry vertical, time period)
 - Six chart components for comprehensive analytics
 - AI insights integration with background processing
-- PDF export functionality
+- Dashboard analytics capabilities
 - Mobile-responsive design with collapsible navigation
 
 **Key API Calls**:
@@ -158,7 +158,7 @@ Pulse Dashboard™ frontend is a modern React 18 application with TypeScript, fe
 - **`metric-insight-box.tsx`** - Individual metric insights
 - **`competitor-modal.tsx`** - Competitor management interface
 - **`csv-import-modal.tsx`** - Data import functionality
-- **`pdf-export-component.tsx`** - Dashboard export capabilities
+- **`metric-insight-box.tsx`** - AI insights display capabilities
 
 ### UI Components (`components/ui/`)
 **Comprehensive shadcn/ui Integration**:
@@ -177,7 +177,7 @@ Pulse Dashboard™ frontend is a modern React 18 application with TypeScript, fe
 4. **Visualization**: Chart components render processed data
 5. **Interactivity**: Filters trigger re-fetching with new parameters
 6. **AI Insights**: Background processing generates insights
-7. **Export**: PDF generation for reporting
+7. **Analytics**: Comprehensive metrics display and insights
 
 ### API Patterns
 **Query Keys Structure**:
@@ -233,7 +233,7 @@ Pulse Dashboard™ frontend is a modern React 18 application with TypeScript, fe
 ## Performance Optimization
 
 ### Loading Strategies
-- **Code Splitting**: Lazy loading for PDF export
+- **Code Splitting**: Lazy loading for performance optimization
 - **Query Optimization**: Efficient cache management
 - **Image Optimization**: SVG assets for scalability
 - **Bundle Optimization**: Tree shaking with Vite
@@ -299,7 +299,7 @@ Pulse Dashboard™ frontend is a modern React 18 application with TypeScript, fe
 - **Processing Pipeline**: Metric parsing and normalization
 - **Visualization**: Chart component system
 - **User Interaction**: Filtering and real-time updates
-- **Export Capabilities**: PDF generation for reporting
+- **Dashboard Capabilities**: Comprehensive analytics and insights
 
 ---
 

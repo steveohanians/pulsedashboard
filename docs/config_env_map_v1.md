@@ -36,7 +36,7 @@
 
 **AI & External Services:**
 - `openai` v5.11.0 - AI insights generation
-- `html2canvas` v1.4.1 + `jspdf` v3.0.1 - PDF export
+- Recharts ecosystem for comprehensive data visualization
 
 **UI Framework:**
 - `@radix-ui/*` - Comprehensive UI primitives (19 packages)
@@ -232,7 +232,7 @@ PRODUCTION_SAFETY: {
 **AI Insights:** openai (requires OPENAI_API_KEY)
 **GA4 Integration:** google oauth (requires GOOGLE_CLIENT_ID/SECRET)
 **Database Operations:** drizzle-orm + @neondatabase/serverless
-**PDF Export:** html2canvas + jspdf
+**Data Visualization:** Comprehensive chart component system
 **Real-time Updates:** @tanstack/react-query with 5min stale time
 
 ---
