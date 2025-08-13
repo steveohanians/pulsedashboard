@@ -3414,7 +3414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/ga4", adminGA4Route);
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
 
+  // Export routes - must come before generic cleanup route
   app.use("/api/export", exportPdfRouter);
+  
   app.use("/api", cleanupAndFetchRoute);
   
   // Simple GA4 refresh endpoint for demo client (no auth required)
