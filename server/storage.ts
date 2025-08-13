@@ -933,8 +933,10 @@ export class DatabaseStorage implements IStorage {
       // Enhanced metric creation with canonical envelope validation
       const metricData = { ...insertMetric };
       
-      // Increment metric version when new metric is created
-      await this.incrementMetricVersion(metricData.clientId, metricData.timePeriod);
+      // Increment metric version when new metric is created (skip for portfolio averages)
+      if (metricData.clientId) {
+        await this.incrementMetricVersion(metricData.clientId, metricData.timePeriod);
+      }
       
       // Check if FEATURE_CANONICAL_ENVELOPE is enabled
       const enableCanonicalEnvelope = process.env.FEATURE_CANONICAL_ENVELOPE === 'true';
