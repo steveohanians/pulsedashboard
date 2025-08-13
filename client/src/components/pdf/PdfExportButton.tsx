@@ -17,6 +17,14 @@ export default function PdfExportButton({
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
+  // Elements we must ignore during canvas capture (iframes/canvas/video or anything tagged to hide)
+  const shouldIgnoreForPdf = (el: Element) => {
+    const node = el as HTMLElement;
+    const tag = node.tagName;
+    if (tag === 'IFRAME' || tag === 'VIDEO' || tag === 'CANVAS') return true;
+    return node.hasAttribute('data-pdf-hide') || node.getAttribute('data-pdf-hide') === 'true';
+  };
+
   // Asset preflight loading for fonts/images
   const preflightAssets = async () => {
     return new Promise((resolve) => {
@@ -86,6 +94,7 @@ export default function PdfExportButton({
       const canvas = await html2canvas(element, {
         height: sliceHeight,
         width: elementWidth,
+        ignoreElements: shouldIgnoreForPdf,
         x: 0,
         y: yOffset,
         scrollX: 0,
@@ -203,7 +212,7 @@ export default function PdfExportButton({
           backgroundColor: "#ffffff",
           scale: 1.2,
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false,
           logging: false,
           x: 0,
           y: y,
@@ -215,9 +224,7 @@ export default function PdfExportButton({
           windowHeight: totalHeight,
           foreignObjectRendering: false,
           removeContainer: false,
-          ignoreElements: (el) => {
-            return el.hasAttribute('data-pdf-hide') || el.getAttribute('data-pdf-hide') === 'true';
-          }
+          ignoreElements: shouldIgnoreForPdf
         });
 
         console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
@@ -256,7 +263,17 @@ export default function PdfExportButton({
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
       
       console.info('Saving multi-page PDF with slice-based rendering');
-      pdf.save(downloadName);
+      try {
+        pdf.save(downloadName);
+      } catch (e) {
+        console.warn('pdf.save() blocked; using sandbox-safe fallback', e);
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, '_blank');
+        if (!w) {
+          window.parent?.postMessage({ type: 'PULSE_PDF_DOWNLOAD', url, fileName: downloadName }, '*');
+        }
+      }
       console.info('PDF export completed successfully');
 
     } catch (error) {
