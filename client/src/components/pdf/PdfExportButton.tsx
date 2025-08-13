@@ -25,6 +25,60 @@ export default function PdfExportButton({
     return node.hasAttribute('data-pdf-hide') || node.getAttribute('data-pdf-hide') === 'true';
   };
 
+  // -------- Sandbox-safe download helpers (work inside/outside iframes) --------
+  const isEmbedded = () => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      // Cross-origin access throws; treat as embedded
+      return true;
+    }
+  };
+
+  const triggerDirectDownload = (url: string, fileName: string) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const askParentToDownload = async (url: string, fileName: string) => {
+    // Use a specific origin when possible; fall back to "*"
+    const origin =
+      document.referrer ? new URL(document.referrer).origin : "*";
+    const messageId = `PULSE_PDF_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
+    const ack = new Promise<boolean>((resolve) => {
+      const handler = (e: MessageEvent) => {
+        if (origin !== "*" && e.origin !== origin) return;
+        const data = e.data as any;
+        if (data && data.type === "PULSE_PDF_DOWNLOAD_ACK" && data.messageId === messageId) {
+          window.removeEventListener("message", handler);
+          resolve(true);
+        }
+      };
+      window.addEventListener("message", handler, { once: true });
+      // If no ACK arrives quickly, fall back locally (prevents console errors)
+      setTimeout(() => resolve(false), 1200);
+    });
+
+    try {
+      window.parent?.postMessage(
+        { type: "PULSE_PDF_DOWNLOAD", url, fileName, messageId },
+        origin
+      );
+    } catch {
+      // If posting fails, treat as unhandled by parent
+      return false;
+    }
+    return ack;
+  };
+  // ---------------------------------------------------------------------------
+
   // Asset preflight loading for fonts/images
   const preflightAssets = async () => {
     return new Promise((resolve) => {
@@ -209,22 +263,22 @@ export default function PdfExportButton({
         
         // CORS-safe capture configuration (from working implementation notes)
         const canvas = await html2canvas(element, {
+          height: sliceHeight,
+          width: totalWidth,
+          ignoreElements: shouldIgnoreForPdf,
+          x: 0,
+          y: y,
+          scrollX: 0,
+          scrollY: 0,
           backgroundColor: "#ffffff",
           scale: 1.2,
           useCORS: true,
           allowTaint: false,
-          logging: false,
-          x: 0,
-          y: y,
-          width: totalWidth,
-          height: sliceHeight,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: totalWidth,
-          windowHeight: totalHeight,
           foreignObjectRendering: false,
+          logging: false,
           removeContainer: false,
-          ignoreElements: shouldIgnoreForPdf
+          windowWidth: totalWidth,
+          windowHeight: totalHeight
         });
 
         console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
@@ -266,12 +320,22 @@ export default function PdfExportButton({
       try {
         pdf.save(downloadName);
       } catch (e) {
-        console.warn('pdf.save() blocked; using sandbox-safe fallback', e);
+        console.warn('pdf.save() blocked; using sandbox-aware fallback', e);
         const blob = pdf.output('blob');
         const url = URL.createObjectURL(blob);
-        const w = window.open(url, '_blank');
-        if (!w) {
-          window.parent?.postMessage({ type: 'PULSE_PDF_DOWNLOAD', url, fileName: downloadName }, '*');
+
+        if (isEmbedded()) {
+          // Try parent first; only rely on it if it ACKs quickly
+          const handledByParent = await askParentToDownload(url, downloadName);
+          if (!handledByParent) {
+            // Parent not listening or blocked—fall back locally
+            const w = window.open(url, '_blank');
+            if (!w) triggerDirectDownload(url, downloadName);
+          }
+        } else {
+          // Not embedded: handle download locally (no postMessage, no host errors)
+          const w = window.open(url, '_blank');
+          if (!w) triggerDirectDownload(url, downloadName);
         }
       }
       console.info('PDF export completed successfully');
