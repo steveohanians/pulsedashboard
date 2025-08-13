@@ -60,6 +60,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const [displayedRecommendation, setDisplayedRecommendation] = useState("");
   const shouldAnimateRef = useRef(false);
   const [animationTrigger, setAnimationTrigger] = useState(0);
+  const forceAnimateRef = useRef(false);
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -184,12 +185,18 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   useEffect(() => {
     if (!renderInsight?.contextText && !renderInsight?.insightText && !renderInsight?.recommendationText) return;
 
-    if (!shouldAnimateRef.current) {
+    if (!shouldAnimateRef.current && !forceAnimateRef.current) {
       // Immediate display for page loads
       setDisplayedContext(renderInsight.contextText || "");
       setDisplayedInsight(renderInsight.insightText || "");
       setDisplayedRecommendation(renderInsight.recommendationText || "");
       return;
+    }
+
+    // Reset force flag and ensure should animate flag is set
+    if (forceAnimateRef.current) {
+      shouldAnimateRef.current = true;
+      forceAnimateRef.current = false;
     }
 
     // Sequential typing animation
@@ -291,10 +298,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
-      // Trigger animation if flag is set
-      if (shouldAnimateRef.current) {
-        setAnimationTrigger(prev => prev + 1);
-      }
+      // Force animation trigger for regeneration
+      forceAnimateRef.current = true;
+      setAnimationTrigger(prev => prev + 1);
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -331,10 +337,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Set insight state immediately for instant display
       setInsight(metricInsightFromServer);
-      // Trigger animation if flag is set
-      if (shouldAnimateRef.current) {
-        setAnimationTrigger(prev => prev + 1);
-      }
+      // Force animation trigger for regeneration
+      forceAnimateRef.current = true;
+      setAnimationTrigger(prev => prev + 1);
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
