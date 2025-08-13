@@ -55,10 +55,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
-  
-  // RELIABLE TOMBSTONE: Use state instead of ref for consistent behavior
-  const [isDeleted, setIsDeleted] = useState(false);
-  
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -69,6 +65,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Confirmed delete flag (set only after DELETE + refetch)
   const deleteConfirmRef = useRef(false);
+
+  // Tombstone pattern: track deleted items to prevent flashback
+  const deletedRef = useRef<string | null>(null);
 
   // Canonical YYYY-MM
   const canonicalPeriod = useMemo(() => {
@@ -125,7 +124,9 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Preload (props) when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || isDeleted) return;
+    if (suppressHydrationRef.current || forcedEmpty) return;
+    if (deletedRef.current === metricName) return;
+    if (!metricInsight) return; // prevent repopulating from stale props
     if (!preloadedInsight) return;
 
     setInsight({
@@ -154,7 +155,8 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Hydrate from server when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || isDeleted) return;
+    if (suppressHydrationRef.current || forcedEmpty) return;
+    if (deletedRef.current === metricName) return;
     if (!metricInsight) return;
 
     setInsight({
@@ -172,7 +174,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   const shouldShowEmpty =
     forcedEmpty ||
-    isDeleted ||
+    deletedRef.current === metricName ||
     (!isLoadingInsights &&
       !isFetching &&
       !metricInsight?.insightText &&
@@ -188,15 +190,11 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       // Don't clear tombstone here - let it persist to prevent any flashback
     }
 
-    // Clear tombstone only when we're showing empty AND no longer fetching
-    if (isDeleted && shouldShowEmpty && !isFetching && !isLoadingInsights) {
-      // Much longer delay to ensure UI is completely stable
-      const timer = setTimeout(() => {
-        setIsDeleted(false);
-      }, 500);
-      return () => clearTimeout(timer);
+    // Clear tombstone only when truly empty
+    if (deletedRef.current === metricName && !isFetching && !metricInsight && !preloadedInsight) {
+      deletedRef.current = null;
     }
-  }, [metricInsight, isFetching, shouldShowEmpty, isLoadingInsights, isDeleted]);
+  }, [metricInsight, isFetching, metricName, preloadedInsight]);
 
   const versionStatus = useMemo(() => {
     if (!insightsData) return null;
@@ -223,6 +221,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       return await response.json();
     },
     onSuccess: async () => {
+      suppressHydrationRef.current = false; // Allow hydration after generate
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -256,6 +255,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       return await response.json();
     },
     onSuccess: async () => {
+      suppressHydrationRef.current = false; // Allow hydration after generate
       await queryClient.invalidateQueries({
         queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
       });
@@ -327,7 +327,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   }
 
   // TOMBSTONE PATTERN: ABSOLUTE FIRST CHECK - Completely block any content when deleted
-  if (isDeleted) {
+  if (deletedRef.current === metricName) {
     return (
       <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
@@ -340,7 +340,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
             onClick={() => {
               suppressHydrationRef.current = true;
               setForcedEmpty(false);
-              setIsDeleted(false); // Clear tombstone when user wants to generate new
+              deletedRef.current = null; // Clear tombstone when user wants to generate new
               setInsight((cur) =>
                 cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
               );
@@ -357,17 +357,18 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   }
 
   const displayInsightText = insight?.insightText ?? "";
+  const renderInsight = insight ?? metricInsight;
 
-  if (insight && !shouldShowEmpty) {
+  if (renderInsight && !shouldShowEmpty) {
     return (
       <div ref={containerRef}>
         <AIInsights
-        context={insight.contextText || ""}
-        insight={displayInsightText}
-        recommendation={insight.recommendationText || ""}
-        status={insight.status}
+        context={renderInsight.contextText || ""}
+        insight={renderInsight.insightText || ""}
+        recommendation={renderInsight.recommendationText || ""}
+        status={renderInsight.status}
         isTyping={false}
-        hasCustomContext={insight.hasContext === true}
+        hasCustomContext={renderInsight.hasContext === true}
         clientId={clientId}
         metricName={metricName}
         timePeriod={canonicalPeriod}
@@ -421,14 +422,13 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
-          // IMMEDIATE TOMBSTONE: Mark as deleted before anything else
-          setIsDeleted(true);
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
+          deletedRef.current = metricName; // Mark as deleted to prevent flashback
           onStatusChange?.(undefined);
 
-          // IMMEDIATE CACHE SURGERY: Remove from cache instantly
+          // Prune cache for the matching key
           queryClient.setQueryData(["/api/ai-insights", clientId, canonicalPeriod], (oldData: any) => {
             if (!oldData?.insights) return oldData;
             return {
