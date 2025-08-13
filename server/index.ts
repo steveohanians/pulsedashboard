@@ -31,8 +31,9 @@ setupHealthCheck(app);
 // Rate limiting (after health checks)
 app.use('/api', generalLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Increase body size limit for PDF export HTML payloads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -103,8 +103,14 @@ export default function PdfExportButton({
       const { jsPDF } = await import('jspdf');
       
       const element = targetRef.current;
+      if (!element) {
+        console.error('Target element not found for PDF generation');
+        throw new Error("Unable to find target element");
+      }
       
-      // Wait for fonts and images
+      console.info('Starting client-side PDF generation');
+      
+      // Wait for fonts and images to load completely
       if (document.fonts?.ready) { 
         await document.fonts.ready; 
       }
@@ -127,13 +133,21 @@ export default function PdfExportButton({
           backgroundColor: "#ffffff",
           scale: Math.min(2, window.devicePixelRatio || 1),
           useCORS: true,
+          allowTaint: true,
           logging: false,
+          removeContainer: true,
           y,
           height: sliceHeightPx,
           windowWidth: element.scrollWidth,
           windowHeight: sliceHeightPx,
-          onclone: (doc) => {
-            doc.querySelectorAll('[data-pdf-hide="true"]').forEach(n => n.remove());
+          ignoreElements: (element) => {
+            return element.hasAttribute('data-pdf-hide');
+          },
+          onclone: (clonedDoc, clonedElement) => {
+            // Remove elements marked for hiding in PDF
+            clonedDoc.querySelectorAll('[data-pdf-hide="true"]').forEach(n => n.remove());
+            // Ensure all styles are properly applied
+            return clonedElement;
           }
         });
         

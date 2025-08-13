@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-// import puppeteer from 'puppeteer';
+// import puppeteer from 'puppeteer-core';
 import { z } from 'zod';
 import logger from '../utils/logging/logger';
 import { requireAuth } from '../middleware/auth';
