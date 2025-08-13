@@ -835,14 +835,24 @@ export default function Dashboard() {
 
   // PDF Export function that processes in background without visual flash
   const exportToPDF = async () => {
-    if (!client?.name) return;
+    console.log('🔄 PDF Export started');
+    
+    if (!client?.name) {
+      console.error('❌ No client name found');
+      return;
+    }
     
     setIsExportingPDF(true);
     
     try {
+      console.log('📄 Looking for dashboard content...');
       // Get the main dashboard content
       const originalElement = document.getElementById('dashboard-content');
-      if (!originalElement) throw new Error('Dashboard content not found');
+      if (!originalElement) {
+        console.error('❌ Dashboard content element not found');
+        throw new Error('Dashboard content not found');
+      }
+      console.log('✅ Dashboard content found:', originalElement);
       
       // Hide PDF-hide elements temporarily on original element
       const elementsToHide = originalElement.querySelectorAll('.pdf-hide');
@@ -909,12 +919,16 @@ export default function Dashboard() {
       originalElement.insertBefore(pdfHeader, originalElement.firstChild);
       
       // Wait for any layout changes
+      console.log('⏳ Waiting for layout changes...');
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Lazy load html2canvas library for performance
+      console.log('📚 Loading html2canvas...');
       const html2canvas = (await import('html2canvas')).default;
+      console.log('✅ html2canvas loaded successfully');
       
       // Capture the original element with hidden elements
+      console.log('📸 Starting canvas capture...');
       const canvas = await html2canvas(originalElement, {
         scale: 2,
         useCORS: true,
@@ -926,6 +940,7 @@ export default function Dashboard() {
         scrollY: 0,
         logging: false
       });
+      console.log('✅ Canvas captured successfully:', canvas.width, 'x', canvas.height);
       
       // Restore original state
       const headerToRemove = document.getElementById('temp-pdf-header');
@@ -940,7 +955,9 @@ export default function Dashboard() {
       });
       
       // Lazy load jsPDF library for performance
+      console.log('📄 Loading jsPDF...');
       const { jsPDF } = await import('jspdf');
+      console.log('✅ jsPDF loaded successfully');
       
       // Create PDF with improved pagination
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -994,7 +1011,15 @@ export default function Dashboard() {
       
       // Save the PDF
       const fileName = `${client.name.replace(/[^a-zA-Z0-9]/g, '_')}_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      console.log('💾 Saving PDF with filename:', fileName);
       pdf.save(fileName);
+      console.log('✅ PDF download initiated successfully');
+      
+      // Show success message
+      toast({
+        title: "PDF Generated Successfully",
+        description: `Analytics report downloaded as ${fileName}`,
+      });
       
     } catch (error) {
       console.error('PDF Export Error:', error);
