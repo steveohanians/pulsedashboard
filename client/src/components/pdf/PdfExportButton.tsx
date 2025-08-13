@@ -166,45 +166,28 @@ export default function PdfExportButton({
       // Small delay to ensure animations are paused
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 5: Force html2canvas to bypass iframe detection
-      console.info('📸 Starting capture with iframe detection bypass...');
-      
-      // Create a temporary container in the main document to bypass iframe detection
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = element.scrollWidth + 'px';
-      tempContainer.style.height = element.scrollHeight + 'px';
-      tempContainer.style.overflow = 'hidden';
-      
-      // Clone the element to capture
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-      tempContainer.appendChild(clonedElement);
-      document.body.appendChild(tempContainer);
+      // Step 5: Try direct capture with minimal options to bypass iframe bug
+      console.info('📸 Attempting direct capture with minimal options...');
       
       let canvas: HTMLCanvasElement;
       try {
-        canvas = await html2canvas(clonedElement, {
-          backgroundColor: '#ffffff',
-          scale: 1,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          logging: false,
-          imageTimeout: 15000,
-          removeContainer: true,
-          width: element.scrollWidth,
-          height: element.scrollHeight
+        // Try with absolutely minimal options first
+        canvas = await html2canvas(element, {
+          logging: false
         });
-        
-        // Clean up temporary container
-        document.body.removeChild(tempContainer);
-        console.info('✅ Canvas captured successfully');
+        console.info('✅ Minimal options capture succeeded');
       } catch (error) {
-        // Clean up on error
-        document.body.removeChild(tempContainer);
-        throw error;
+        console.info('⚠️ Minimal capture failed, trying with more options...');
+        // If minimal fails, try with expanded safe options
+        canvas = await html2canvas(element, {
+          backgroundColor: null,
+          scale: 1,
+          logging: false,
+          allowTaint: false,
+          useCORS: false,
+          foreignObjectRendering: true
+        });
+        console.info('✅ Extended options capture succeeded');
       }
 
       // Step 6: Create PDF from canvas
