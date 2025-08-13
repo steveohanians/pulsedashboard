@@ -17,11 +17,29 @@ export default function PdfExportButton({
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
-  // Preflight to ensure fonts and images are ready
-  async function ensureAssetsReady(root: HTMLElement) {
-    if (document.fonts?.ready) { await document.fonts.ready; }
-    const imgs = Array.from(root.querySelectorAll('img'));
-    await Promise.all(imgs.map(img => img.decode?.().catch(() => {})));
+  // Inline computed styles for print fidelity
+  function inlineStyles(root: HTMLElement) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let node = walker.currentNode as HTMLElement | null;
+    while (node) {
+      const style = window.getComputedStyle(node);
+      const cssText = Array.from(style).map(k => `${k}:${style.getPropertyValue(k)};`).join('');
+      node.setAttribute('style', cssText);
+      node = walker.nextNode() as HTMLElement | null;
+    }
+  }
+
+  // Canvas → img fallback (for charts)
+  function canvasesToImages(root: HTMLElement) {
+    root.querySelectorAll('canvas').forEach(c => {
+      try {
+        const img = document.createElement('img');
+        img.src = (c as HTMLCanvasElement).toDataURL('image/png');
+        img.width = (c as HTMLCanvasElement).width;
+        img.height = (c as HTMLCanvasElement).height;
+        c.replaceWith(img);
+      } catch {}
+    });
   }
 
   const handleExport = async () => {
@@ -29,25 +47,78 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      // Dynamic imports for client-side PDF generation
-      const html2canvas = (await import('html2canvas')).default;
+      // Try server-side export first
+      const dashboardRoot = targetRef.current;
+      const cloned = dashboardRoot.cloneNode(true) as HTMLElement;
+      
+      // Convert canvas elements to images
+      canvasesToImages(cloned);
+      
+      // Inline computed styles
+      inlineStyles(cloned);
+
+      // Generate HTML document for server
+      const htmlDoc = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Pulse Dashboard</title>
+    <link rel="stylesheet" href="/global.css"/>
+    <style>
+      @page { size: Letter; margin: 0.4in; }
+      /* Avoid page breaks in cards */
+      .card, .metric-insight-box { break-inside: avoid; }
+    </style>
+  </head>
+  <body class="bg-white">
+    ${cloned.outerHTML}
+  </body>
+</html>`;
+
+      // Try server-side PDF generation
+      const response = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          html: htmlDoc, 
+          title: `Pulse-${clientLabel || 'Dashboard'}-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}`
+        })
+      });
+
+      if (response.ok) {
+        // Server-side success
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Pulse-${clientLabel || 'Dashboard'}-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Fallback to client-side generation
+      const { default: html2canvas } = await import('html2canvas');
       const { jsPDF } = await import('jspdf');
       
       const element = targetRef.current;
       
-      // Wait for fonts and images to be ready
-      await ensureAssetsReady(element);
+      // Wait for fonts and images
+      if (document.fonts?.ready) { 
+        await document.fonts.ready; 
+      }
+      const imgs = Array.from(element.querySelectorAll('img'));
+      await Promise.all(imgs.map(img => img.decode?.().catch(() => {})));
       
-      // Add capture class for CSS control
       element.classList.add("pdf-capture");
       
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
 
-      // Render in chunks to avoid huge canvas memory
-      const sliceHeightPx = 1400; // safe chunk height in CSS px
-      const totalHeight = element.scrollHeight; // or getBoundingClientRect().height
+      // Render in chunks to avoid memory issues
+      const sliceHeightPx = 1400;
+      const totalHeight = element.scrollHeight;
       let y = 0;
       let firstPage = true;
 
@@ -62,7 +133,6 @@ export default function PdfExportButton({
           windowWidth: element.scrollWidth,
           windowHeight: sliceHeightPx,
           onclone: (doc) => {
-            // Strip problematic backgrounds known to be off-origin
             doc.querySelectorAll('[data-pdf-hide="true"]').forEach(n => n.remove());
           }
         });
@@ -82,15 +152,12 @@ export default function PdfExportButton({
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
       
-      // Download the PDF
       pdf.save(downloadName);
 
     } catch (err) {
-      // User-friendly error without console spam
-      // Optional: could add toast notification here instead of alert
+      console.warn('PDF export failed:', err);
       
     } finally {
-      // Always clean up
       if (targetRef.current) {
         targetRef.current.classList.remove("pdf-capture");
       }
