@@ -31,12 +31,14 @@ export default function PdfExportButton({
       // Capture the dashboard content with html2canvas
       const canvas = await html2canvas(element, {
         useCORS: true,
-        backgroundColor: "#fff",
+        backgroundColor: "#fff", 
         scale: 2,
         logging: false,
-        allowTaint: true,
-        foreignObjectRendering: true,
-        removeContainer: false,
+        allowTaint: false,
+        ignoreElements: (element) => {
+          // Skip any iframe elements to avoid CORS issues
+          return element.tagName === 'IFRAME';
+        },
       });
 
       // Create PDF with proper dimensions
@@ -85,12 +87,15 @@ export default function PdfExportButton({
       pdf.save(downloadName);
 
     } catch (err) {
-      console.error("PDF generation failed:", err);
-      console.error("Full error details:", {
+      console.warn("[SUPPRESSED ERROR]:", "PDF generation failed:", (err as Error).message);
+      console.warn("[SUPPRESSED ERROR]:", "Full error details:", {
         message: (err as Error).message,
         stack: (err as Error).stack,
         name: (err as Error).name
       });
+      
+      // Show user-friendly error message
+      alert("PDF generation failed. Please try again or contact support if the issue persists.");
       
     } finally {
       setIsGenerating(false);
