@@ -55,6 +55,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
+  
+  // RELIABLE TOMBSTONE: Use state instead of ref for consistent behavior
+  const [isDeleted, setIsDeleted] = useState(false);
+  
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -65,9 +69,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Confirmed delete flag (set only after DELETE + refetch)
   const deleteConfirmRef = useRef(false);
-
-  // Tombstone pattern: track deleted items to prevent flashback
-  const deletedRef = useRef<string | null>(null);
 
   // Canonical YYYY-MM
   const canonicalPeriod = useMemo(() => {
@@ -124,7 +125,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Preload (props) when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || deletedRef.current === metricName) return;
+    if (suppressHydrationRef.current || forcedEmpty || isDeleted) return;
     if (!preloadedInsight) return;
 
     setInsight({
@@ -153,7 +154,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Hydrate from server when allowed
   useEffect(() => {
-    if (suppressHydrationRef.current || forcedEmpty || deletedRef.current === metricName) return;
+    if (suppressHydrationRef.current || forcedEmpty || isDeleted) return;
     if (!metricInsight) return;
 
     setInsight({
@@ -171,7 +172,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   const shouldShowEmpty =
     forcedEmpty ||
-    deletedRef.current === metricName ||
+    isDeleted ||
     (!isLoadingInsights &&
       !isFetching &&
       !metricInsight?.insightText &&
@@ -188,14 +189,14 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     }
 
     // Clear tombstone only when we're showing empty AND no longer fetching
-    if (deletedRef.current === metricName && shouldShowEmpty && !isFetching && !isLoadingInsights) {
+    if (isDeleted && shouldShowEmpty && !isFetching && !isLoadingInsights) {
       // Much longer delay to ensure UI is completely stable
       const timer = setTimeout(() => {
-        deletedRef.current = null;
+        setIsDeleted(false);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [metricInsight, isFetching, metricName, shouldShowEmpty, isLoadingInsights]);
+  }, [metricInsight, isFetching, shouldShowEmpty, isLoadingInsights, isDeleted]);
 
   const versionStatus = useMemo(() => {
     if (!insightsData) return null;
@@ -326,7 +327,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   }
 
   // TOMBSTONE PATTERN: ABSOLUTE FIRST CHECK - Completely block any content when deleted
-  if (deletedRef.current === metricName) {
+  if (isDeleted) {
     return (
       <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
         <div className="text-center">
@@ -339,7 +340,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
             onClick={() => {
               suppressHydrationRef.current = true;
               setForcedEmpty(false);
-              deletedRef.current = null; // Clear tombstone when user wants to generate new
+              setIsDeleted(false); // Clear tombstone when user wants to generate new
               setInsight((cur) =>
                 cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
               );
@@ -420,25 +421,21 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           generateInsightWithContextMutation.mutate(userContext);
         }}
         onClear={async () => {
+          // IMMEDIATE TOMBSTONE: Mark as deleted before anything else
+          setIsDeleted(true);
           suppressHydrationRef.current = true;
           setForcedEmpty(true);
           setInsight(null);
-          deletedRef.current = metricName; // Mark as deleted to prevent flashback
           onStatusChange?.(undefined);
 
-          // Force immediate re-render and ensure server data is also cleared
-          setTimeout(() => {
-            setInsight(null);
-            setForcedEmpty(true);
-            // Also invalidate cache to prevent server data from coming back
-            queryClient.setQueryData(["/api/ai-insights", clientId, canonicalPeriod], (oldData: any) => {
-              if (!oldData?.insights) return oldData;
-              return {
-                ...oldData,
-                insights: oldData.insights.filter((ins: any) => ins.metricName !== metricName)
-              };
-            });
-          }, 0);
+          // IMMEDIATE CACHE SURGERY: Remove from cache instantly
+          queryClient.setQueryData(["/api/ai-insights", clientId, canonicalPeriod], (oldData: any) => {
+            if (!oldData?.insights) return oldData;
+            return {
+              ...oldData,
+              insights: oldData.insights.filter((ins: any) => ins.metricName !== metricName)
+            };
+          });
 
           // Optimistic cache prune (optional)
           queryClient.setQueryData(
