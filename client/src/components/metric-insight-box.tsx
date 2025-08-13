@@ -55,6 +55,8 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     | null
   >(null);
   const [forcedEmpty, setForcedEmpty] = useState(false);
+  const [displayedText, setDisplayedText] = useState("");
+  const shouldAnimateRef = useRef(false);
   const queryClient = useQueryClient();
 
   // Guards / flags
@@ -174,6 +176,30 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   // Define renderInsight early so it can be used in shouldShowEmpty
   const renderInsight = insight ?? metricInsight;
+
+  // Typewriter effect for insight text
+  useEffect(() => {
+    if (!renderInsight?.insightText) return;
+
+    if (!shouldAnimateRef.current) {
+      setDisplayedText(renderInsight.insightText);
+      return;
+    }
+
+    let i = 0;
+    const text = renderInsight.insightText;
+    setDisplayedText("");
+    const timer = setInterval(() => {
+      setDisplayedText((prev) => prev + text[i]);
+      i++;
+      if (i >= text.length) {
+        clearInterval(timer);
+        shouldAnimateRef.current = false;
+      }
+    }, 20); // adjust typing speed if needed
+
+    return () => clearInterval(timer);
+  }, [renderInsight?.insightText]);
 
   const shouldShowEmpty =
     forcedEmpty ||
@@ -348,6 +374,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           </p>
           <Button
             onClick={() => {
+              shouldAnimateRef.current = true;
               suppressHydrationRef.current = true;
               setForcedEmpty(false);
               deletedRef.current = null; // Clear tombstone when user wants to generate new
@@ -373,7 +400,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       <div ref={containerRef}>
         <AIInsights
         context={renderInsight.contextText || ""}
-        insight={renderInsight.insightText || ""}
+        insight={displayedText}
         recommendation={renderInsight.recommendationText || ""}
         status={renderInsight.status}
         isTyping={false}
@@ -383,6 +410,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         timePeriod={canonicalPeriod}
         metricData={metricData}
         onRegenerate={async () => {
+          shouldAnimateRef.current = true;
           try {
             const contextResponse = await fetch(
               `/api/insight-context/${clientId}/${encodeURIComponent(metricName)}?period=${encodeURIComponent(canonicalPeriod)}`,
@@ -416,6 +444,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           generateInsightMutation.mutate();
         }}
         onRegenerateWithContext={(userContext: string) => {
+          shouldAnimateRef.current = true;
           suppressHydrationRef.current = true;
           setForcedEmpty(false);
           setInsight((cur) =>
