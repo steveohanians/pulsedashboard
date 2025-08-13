@@ -1894,7 +1894,11 @@ export default function AdminPanel() {
                                 alt="Client icon" 
                                 className="w-10 h-10 rounded-lg object-contain border border-gray-200"
                                 onError={(e) => {
+                                  console.log('Icon failed to load:', editingItem.iconUrl);
                                   e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('Icon loaded successfully:', editingItem.iconUrl);
                                 }}
                               />
                               <div className="text-sm text-gray-600">Icon loaded</div>

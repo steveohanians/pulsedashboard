@@ -2902,18 +2902,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const brandData = await brandfetchResponse.json();
       
-      // Find the best icon - prioritize "icon" type logos
+      // Find the best icon - prioritize "icon", then "logo" type
       let iconUrl = null;
       if (brandData.logos && brandData.logos.length > 0) {
         // First, try to find an icon type logo
         const iconLogo = brandData.logos.find((logo: any) => logo.type === 'icon');
-        const targetLogo = iconLogo || brandData.logos[0]; // fallback to first logo
+        // If no icon, try logo type
+        const logoLogo = brandData.logos.find((logo: any) => logo.type === 'logo');
+        const targetLogo = iconLogo || logoLogo || brandData.logos[0]; // fallback to first logo
         
         if (targetLogo && targetLogo.formats && targetLogo.formats.length > 0) {
-          // Prefer SVG format, then PNG, then any available format
-          const svgFormat = targetLogo.formats.find((format: any) => format.format === 'svg');
+          // Prefer PNG format first (better compatibility), then SVG, then any available format
           const pngFormat = targetLogo.formats.find((format: any) => format.format === 'png');
-          const chosenFormat = svgFormat || pngFormat || targetLogo.formats[0];
+          const svgFormat = targetLogo.formats.find((format: any) => format.format === 'svg');
+          const chosenFormat = pngFormat || svgFormat || targetLogo.formats[0];
           
           iconUrl = chosenFormat.src;
         }
