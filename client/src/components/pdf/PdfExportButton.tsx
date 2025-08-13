@@ -22,37 +22,67 @@ export default function PdfExportButton({
     setIsGenerating(true);
     
     try {
-      // Send dashboard data to server for PDF generation using Puppeteer
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientLabel: clientLabel || 'Client',
-          fileName: fileName
-        })
+      // Dynamic imports for client-side PDF generation
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const element = targetRef.current;
+      
+      // Capture the dashboard content with html2canvas
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        backgroundColor: "#fff",
+        scale: 2,
+        logging: false,
+        allowTaint: true,
+        foreignObjectRendering: true,
+        removeContainer: false,
       });
 
-      if (!response.ok) {
-        throw new Error(`Server PDF generation failed: ${response.statusText}`);
+      // Create PDF with proper dimensions
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // Calculate dimensions to fit content properly
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      // Calculate scaling to fit width
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+      
+      // If content fits on one page
+      if (scaledHeight <= pdfHeight) {
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, scaledHeight);
+      } else {
+        // Multi-page handling
+        let yOffset = 0;
+        let remainingHeight = scaledHeight;
+        
+        while (remainingHeight > 0) {
+          const pageHeight = Math.min(pdfHeight, remainingHeight);
+          
+          // Add page (except for first iteration)
+          if (yOffset > 0) {
+            pdf.addPage();
+          }
+          
+          pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, scaledHeight);
+          
+          yOffset += pageHeight;
+          remainingHeight -= pageHeight;
+        }
       }
 
-      // Download the PDF
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
+      // Generate filename with timestamp
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
       
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Download the PDF
+      pdf.save(downloadName);
 
     } catch (err) {
       console.error("PDF generation failed:", err);

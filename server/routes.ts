@@ -3527,8 +3527,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google OAuth routes for GA4 integration
   app.use("/api/oauth/google", googleOAuthRoutes);
 
-  // Removed duplicate PDF route - using enhanced version below
-
   // Portfolio Averaging Fix Route (Admin Only)
   app.post("/api/admin/fix-portfolio-averages", requireAdmin, async (req, res) => {
     try {
@@ -3557,73 +3555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PDF generation endpoint with actual dashboard data
-  app.post('/api/generate-pdf', requireAuth, async (req, res) => {
-    console.log('🚨 PDF ROUTE: Starting PDF generation endpoint');
-    
-    try {
-      console.log('🚨 PDF ROUTE: Inside try block');
-      
-      const { clientLabel, fileName } = req.body;
-      console.log('🚨 PDF ROUTE: Request body parsed:', { clientLabel, fileName });
-      
-      const clientId = req.user?.clientId || 'demo-client-id';
-      console.log('🚨 PDF ROUTE: Client ID determined:', clientId);
-      
-      // Get client object
-      console.log('🚨 PDF ROUTE: About to call storage.getClient...');
-      const client = await storage.getClient(clientId);
-      console.log('🚨 PDF ROUTE: Client retrieved:', { found: !!client, id: client?.id });
-      
-      if (!client) {
-        console.log('🚨 PDF ROUTE: Client not found error');
-        throw new Error(`Client not found: ${clientId}`);
-      }
-      
-      // Get real dashboard data using the same logic as dashboard route
-      console.log('🚨 PDF ROUTE: Getting real dashboard data...');
-      const dashboardData = await getDashboardDataOptimized(
-        client,
-        ['2025-07'], 
-        'All',
-        'All',
-        'Last Month'
-      );
-      
-      console.log('🚨 PDF ROUTE: Real dashboard data retrieved:', {
-        hasClient: !!dashboardData?.client,
-        metricsCount: dashboardData?.metrics?.length || 0,
-        insightsCount: dashboardData?.insights?.length || 0
-      });
-      console.log('🚨 PDF ROUTE: About to call generatePDF with data...');
-      
-      // Generate PDF with dashboard data
-      const pdfBuffer = await generatePDF({ 
-        clientLabel: clientLabel || client?.name || 'Client',
-        fileName,
-        dashboardData: dashboardData  // Explicitly pass dashboardData
-      });
-
-      console.log('🚨 PDF ROUTE: PDF generated, setting headers...');
-
-      // Set headers and send
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="pulse-dashboard-${clientLabel || 'client'}.pdf"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      console.log('🚨 PDF ROUTE: Sending PDF response...');
-      res.send(pdfBuffer);
-      console.log('🚨 PDF ROUTE: PDF sent successfully');
-      
-    } catch (error) {
-      console.error('🚨 PDF ROUTE ERROR:', error);
-      logger.error('PDF generation route error', { error: (error as Error).message, stack: (error as Error).stack });
-      res.status(500).json({ 
-        error: 'PDF generation failed', 
-        message: (error as Error).message 
-      });
-    }
-  });
+  // Removed server-side PDF route - using client-side snapshot approach
 
   const httpServer = createServer(app);
   return httpServer;
