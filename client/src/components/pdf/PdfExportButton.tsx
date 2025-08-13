@@ -20,38 +20,84 @@ export default function PdfExportButton({
   const handleExport = async () => {
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
+    
     try {
-      // Send minimal data to server for PDF generation
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientLabel: clientLabel,
-          fileName: fileName
-        })
-      });
+      // Dynamic imports to avoid build issues with SSR
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf")
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`PDF generation failed: ${response.statusText}`);
+      const element = targetRef.current;
+      
+      // Create canvas with development iframe filtering
+      const canvas = await html2canvas(element, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        height: element.scrollHeight,
+        width: element.scrollWidth,
+        ignoreElements: (element) => {
+          // Filter out development/debugging elements only
+          const tagName = element.tagName?.toLowerCase();
+          const id = element.id?.toLowerCase();
+          const className = element.className?.toLowerCase();
+          
+          // Remove Vite development overlays and error iframes
+          if (tagName === 'iframe' && (
+            id?.includes('vite') || 
+            id?.includes('error') || 
+            className?.includes('vite') || 
+            className?.includes('error')
+          )) {
+            return true;
+          }
+          
+          // Remove script tags and development tools
+          if (tagName === 'script') return true;
+          
+          // Remove any Vite HMR elements
+          if (className?.includes('vite-error-overlay')) return true;
+          
+          return false;
+        }
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+
+      // Create PDF with proper dimensions
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Scale image to fit page width
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let remainingHeight = imgHeight;
+      let positionY = 0;
+
+      // First page
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      remainingHeight -= pageHeight;
+      positionY = -pageHeight;
+
+      // Additional pages if needed
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, positionY, imgWidth, imgHeight);
+        remainingHeight -= pageHeight;
+        positionY -= pageHeight;
       }
 
-      // Download the PDF
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
+      // Generate filename
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      pdf.save(downloadName);
 
     } catch (err) {
       console.error("PDF generation failed:", err);

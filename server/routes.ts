@@ -3527,12 +3527,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google OAuth routes for GA4 integration
   app.use("/api/oauth/google", googleOAuthRoutes);
 
-  // PDF Generation endpoint
+  // Legacy PDF Generation endpoint (kept for backward compatibility)
   app.post("/api/generate-pdf", requireAuth, async (req, res) => {
     try {
       const { clientLabel, fileName } = req.body;
 
-      // Generate PDF with simplified content
+      // Generate simplified PDF as fallback
       const pdfBuffer = await generatePDF({ clientLabel, fileName });
       
       // Set response headers for PDF download
