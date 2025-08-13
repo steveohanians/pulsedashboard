@@ -2905,19 +2905,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find the best icon - prioritize "symbol" (icon only), then "logo" (full logo with text)
       let iconUrl = null;
       if (brandData.logos && brandData.logos.length > 0) {
-        // First, try to find a symbol type (icon/symbol only, no text)
-        const symbolLogo = brandData.logos.find((logo: any) => logo.type === 'symbol');
-        // If no symbol, try logo type (full logo with text)
-        const logoLogo = brandData.logos.find((logo: any) => logo.type === 'logo');
-        const targetLogo = symbolLogo || logoLogo || brandData.logos[0]; // fallback to first logo
-        
-        if (targetLogo && targetLogo.formats && targetLogo.formats.length > 0) {
+        // Helper function to validate image URL
+        const validateImageUrl = async (url: string): Promise<boolean> => {
+          try {
+            const imageResponse = await fetch(url, { method: 'HEAD' });
+            return imageResponse.ok && imageResponse.headers.get('content-length') !== '0';
+          } catch {
+            return false;
+          }
+        };
+
+        // Helper function to get best format from a logo
+        const getBestFormat = (logo: any) => {
+          if (!logo?.formats?.length) return null;
           // Prefer PNG format first (better compatibility), then SVG, then any available format
-          const pngFormat = targetLogo.formats.find((format: any) => format.format === 'png');
-          const svgFormat = targetLogo.formats.find((format: any) => format.format === 'svg');
-          const chosenFormat = pngFormat || svgFormat || targetLogo.formats[0];
-          
-          iconUrl = chosenFormat.src;
+          const pngFormat = logo.formats.find((format: any) => format.format === 'png');
+          const svgFormat = logo.formats.find((format: any) => format.format === 'svg');
+          return pngFormat || svgFormat || logo.formats[0];
+        };
+
+        // Try different logo types in order of preference
+        const logoTypes = [
+          brandData.logos.find((logo: any) => logo.type === 'symbol'), // icon/symbol only
+          brandData.logos.find((logo: any) => logo.type === 'logo'),   // full logo with text
+          brandData.logos[0] // fallback to first available
+        ].filter(Boolean);
+
+        for (const logo of logoTypes) {
+          const format = getBestFormat(logo);
+          if (format?.src) {
+            const isValid = await validateImageUrl(format.src);
+            if (isValid) {
+              iconUrl = format.src;
+              break; // Use the first valid image found
+            }
+          }
         }
       }
       
