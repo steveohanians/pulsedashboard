@@ -189,10 +189,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
     // Clear tombstone only when we're showing empty AND no longer fetching
     if (deletedRef.current === metricName && shouldShowEmpty && !isFetching && !isLoadingInsights) {
-      // Small delay to ensure UI is stable in empty state
+      // Much longer delay to ensure UI is completely stable
       const timer = setTimeout(() => {
         deletedRef.current = null;
-      }, 100);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [metricInsight, isFetching, metricName, shouldShowEmpty, isLoadingInsights]);
@@ -327,6 +327,36 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
 
   const displayInsightText = insight?.insightText ?? "";
 
+  // TOMBSTONE PATTERN: Completely block any content display when item is deleted
+  if (deletedRef.current === metricName) {
+    return (
+      <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
+        <div className="text-center">
+          <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
+            Get strategic competitive intelligence and actionable recommendations
+            for <span className="font-medium text-primary">{metricName}</span> for{" "}
+            {monthLabel}
+          </p>
+          <Button
+            onClick={() => {
+              suppressHydrationRef.current = true;
+              setForcedEmpty(false);
+              deletedRef.current = null; // Clear tombstone when user wants to generate new
+              setInsight((cur) =>
+                cur ? { ...cur, insightText: "", recommendationText: "" } : cur,
+              );
+              generateInsightMutation.mutate();
+            }}
+            size="sm"
+            className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5"
+          >
+            Generate AI Insights
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (insight && !shouldShowEmpty) {
     return (
       <div ref={containerRef}>
@@ -395,6 +425,12 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           setInsight(null);
           deletedRef.current = metricName; // Mark as deleted to prevent flashback
           onStatusChange?.(undefined);
+
+          // Force a re-render to immediately show empty state
+          setTimeout(() => {
+            setInsight(null);
+            setForcedEmpty(true);
+          }, 0);
 
           // Optimistic cache prune (optional)
           queryClient.setQueryData(
