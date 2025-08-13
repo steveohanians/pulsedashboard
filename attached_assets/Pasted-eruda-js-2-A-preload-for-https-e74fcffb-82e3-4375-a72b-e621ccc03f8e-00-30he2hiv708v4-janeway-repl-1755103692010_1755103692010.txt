@@ -1,0 +1,126 @@
+eruda.js:2 A preload for 'https://e74fcffb-82e3-4375-a72b-e621ccc03f8e-00-30he2hiv708v4.janeway.replit.dev/api/user' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+window.fetch @ eruda.js:2
+apply @ injected.js:253
+(anonymous) @ queryClient.ts:118
+fetchFn @ @tanstack_react-query.js?v=14c68a22:852
+run @ @tanstack_react-query.js?v=14c68a22:495
+start @ @tanstack_react-query.js?v=14c68a22:536
+fetch @ @tanstack_react-query.js?v=14c68a22:935
+#executeFetch @ @tanstack_react-query.js?v=14c68a22:2043
+onSubscribe @ @tanstack_react-query.js?v=14c68a22:1926
+subscribe @ @tanstack_react-query.js?v=14c68a22:19
+(anonymous) @ @tanstack_react-query.js?v=14c68a22:3085
+subscribeToStore @ chunk-NXESFFTV.js?v=14c68a22:12032
+commitHookEffectListMount @ chunk-NXESFFTV.js?v=14c68a22:16963
+commitPassiveMountOnFiber @ chunk-NXESFFTV.js?v=14c68a22:18206
+commitPassiveMountEffects_complete @ chunk-NXESFFTV.js?v=14c68a22:18179
+commitPassiveMountEffects_begin @ chunk-NXESFFTV.js?v=14c68a22:18169
+commitPassiveMountEffects @ chunk-NXESFFTV.js?v=14c68a22:18159
+flushPassiveEffectsImpl @ chunk-NXESFFTV.js?v=14c68a22:19543
+flushPassiveEffects @ chunk-NXESFFTV.js?v=14c68a22:19500
+performSyncWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18921
+flushSyncCallbacks @ chunk-NXESFFTV.js?v=14c68a22:9166
+commitRootImpl @ chunk-NXESFFTV.js?v=14c68a22:19485
+commitRoot @ chunk-NXESFFTV.js?v=14c68a22:19330
+finishConcurrentRender @ chunk-NXESFFTV.js?v=14c68a22:18858
+performConcurrentWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18768
+workLoop @ chunk-NXESFFTV.js?v=14c68a22:197
+flushWork @ chunk-NXESFFTV.js?v=14c68a22:176
+performWorkUntilDeadline @ chunk-NXESFFTV.js?v=14c68a22:384Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar86%3A:142 Refused to load the script 'https://replit.com/public/js/beacon.js' because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval'". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+
+onIframeLoad @ workspace_iframe.html?initialPath=%2F&id=%3Ar86%3A:142Understand this error
+eruda.js:2 🔍 CD_AVG TRAFFIC DEBUG: {allTrafficMetricsCount: 36, cdMetricsCount: 14, cdMetricsSample: Array(3), allCdAvgMetrics: Array(14)}
+eruda.js:2 🔍 CD_AVG CHANNEL MAP: (7) [Array(2), Array(2), Array(2), Array(2), Array(2), Array(2), Array(2)]
+eruda.js:2 [AI] fetch {url: '/api/ai-insights/demo-client-id?period=2025-07', clientId: 'demo-client-id', canonicalPeriod: '2025-07'}
+eruda.js:2  GET https://e74fcffb-82e3-4375-a72b-e621ccc03f8e-00-30he2hiv708v4.janeway.replit.dev/api/ga4-data/status/demo-client-id?period=2025-07 404 (Not Found)
+window.fetch @ eruda.js:2
+apply @ injected.js:253
+queryFn @ useGA4Status.ts:6
+fetchFn @ @tanstack_react-query.js?v=14c68a22:852
+run @ @tanstack_react-query.js?v=14c68a22:495
+start @ @tanstack_react-query.js?v=14c68a22:536
+fetch @ @tanstack_react-query.js?v=14c68a22:935
+#executeFetch @ @tanstack_react-query.js?v=14c68a22:2043
+onSubscribe @ @tanstack_react-query.js?v=14c68a22:1926
+subscribe @ @tanstack_react-query.js?v=14c68a22:19
+(anonymous) @ @tanstack_react-query.js?v=14c68a22:3085
+subscribeToStore @ chunk-NXESFFTV.js?v=14c68a22:12032
+commitHookEffectListMount @ chunk-NXESFFTV.js?v=14c68a22:16963
+commitPassiveMountOnFiber @ chunk-NXESFFTV.js?v=14c68a22:18206
+commitPassiveMountEffects_complete @ chunk-NXESFFTV.js?v=14c68a22:18179
+commitPassiveMountEffects_begin @ chunk-NXESFFTV.js?v=14c68a22:18169
+commitPassiveMountEffects @ chunk-NXESFFTV.js?v=14c68a22:18159
+flushPassiveEffectsImpl @ chunk-NXESFFTV.js?v=14c68a22:19543
+flushPassiveEffects @ chunk-NXESFFTV.js?v=14c68a22:19500
+commitRootImpl @ chunk-NXESFFTV.js?v=14c68a22:19469
+commitRoot @ chunk-NXESFFTV.js?v=14c68a22:19330
+performSyncWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18948
+flushSyncCallbacks @ chunk-NXESFFTV.js?v=14c68a22:9166
+(anonymous) @ chunk-NXESFFTV.js?v=14c68a22:18677
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=14c68a22:546
+flush @ @tanstack_react-query.js?v=14c68a22:570
+batch @ @tanstack_react-query.js?v=14c68a22:588
+#dispatch @ @tanstack_react-query.js?v=14c68a22:1006
+setData @ @tanstack_react-query.js?v=14c68a22:693
+onSuccess @ @tanstack_react-query.js?v=14c68a22:907
+resolve @ @tanstack_react-query.js?v=14c68a22:460
+Promise.then
+run @ @tanstack_react-query.js?v=14c68a22:499
+start @ @tanstack_react-query.js?v=14c68a22:536
+fetch @ @tanstack_react-query.js?v=14c68a22:935
+#executeFetch @ @tanstack_react-query.js?v=14c68a22:2043
+onSubscribe @ @tanstack_react-query.js?v=14c68a22:1926
+subscribe @ @tanstack_react-query.js?v=14c68a22:19
+(anonymous) @ @tanstack_react-query.js?v=14c68a22:3085
+subscribeToStore @ chunk-NXESFFTV.js?v=14c68a22:12032
+commitHookEffectListMount @ chunk-NXESFFTV.js?v=14c68a22:16963
+commitPassiveMountOnFiber @ chunk-NXESFFTV.js?v=14c68a22:18206
+commitPassiveMountEffects_complete @ chunk-NXESFFTV.js?v=14c68a22:18179
+commitPassiveMountEffects_begin @ chunk-NXESFFTV.js?v=14c68a22:18169
+commitPassiveMountEffects @ chunk-NXESFFTV.js?v=14c68a22:18159
+flushPassiveEffectsImpl @ chunk-NXESFFTV.js?v=14c68a22:19543
+flushPassiveEffects @ chunk-NXESFFTV.js?v=14c68a22:19500
+commitRootImpl @ chunk-NXESFFTV.js?v=14c68a22:19469
+commitRoot @ chunk-NXESFFTV.js?v=14c68a22:19330
+performSyncWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18948
+flushSyncCallbacks @ chunk-NXESFFTV.js?v=14c68a22:9166
+(anonymous) @ chunk-NXESFFTV.js?v=14c68a22:18677
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=14c68a22:546
+flush @ @tanstack_react-query.js?v=14c68a22:570
+batch @ @tanstack_react-query.js?v=14c68a22:588
+#dispatch @ @tanstack_react-query.js?v=14c68a22:1006
+setData @ @tanstack_react-query.js?v=14c68a22:693
+onSuccess @ @tanstack_react-query.js?v=14c68a22:907
+resolve @ @tanstack_react-query.js?v=14c68a22:460
+Promise.then
+run @ @tanstack_react-query.js?v=14c68a22:499
+start @ @tanstack_react-query.js?v=14c68a22:536
+fetch @ @tanstack_react-query.js?v=14c68a22:935
+#executeFetch @ @tanstack_react-query.js?v=14c68a22:2043
+onSubscribe @ @tanstack_react-query.js?v=14c68a22:1926
+subscribe @ @tanstack_react-query.js?v=14c68a22:19
+(anonymous) @ @tanstack_react-query.js?v=14c68a22:3085
+subscribeToStore @ chunk-NXESFFTV.js?v=14c68a22:12032
+commitHookEffectListMount @ chunk-NXESFFTV.js?v=14c68a22:16963
+commitPassiveMountOnFiber @ chunk-NXESFFTV.js?v=14c68a22:18206
+commitPassiveMountEffects_complete @ chunk-NXESFFTV.js?v=14c68a22:18179
+commitPassiveMountEffects_begin @ chunk-NXESFFTV.js?v=14c68a22:18169
+commitPassiveMountEffects @ chunk-NXESFFTV.js?v=14c68a22:18159
+flushPassiveEffectsImpl @ chunk-NXESFFTV.js?v=14c68a22:19543
+flushPassiveEffects @ chunk-NXESFFTV.js?v=14c68a22:19500
+performSyncWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18921
+flushSyncCallbacks @ chunk-NXESFFTV.js?v=14c68a22:9166
+commitRootImpl @ chunk-NXESFFTV.js?v=14c68a22:19485
+commitRoot @ chunk-NXESFFTV.js?v=14c68a22:19330
+finishConcurrentRender @ chunk-NXESFFTV.js?v=14c68a22:18858
+performConcurrentWorkOnRoot @ chunk-NXESFFTV.js?v=14c68a22:18768
+workLoop @ chunk-NXESFFTV.js?v=14c68a22:197
+flushWork @ chunk-NXESFFTV.js?v=14c68a22:176
+performWorkUntilDeadline @ chunk-NXESFFTV.js?v=14c68a22:384Understand this error
+eruda.js:2 [AI] data {status: 'available', period: '2025-07', insights: Array(1)}
+eruda.js:2 🔍 CD_AVG TRAFFIC DEBUG: {allTrafficMetricsCount: 36, cdMetricsCount: 14, cdMetricsSample: Array(3), allCdAvgMetrics: Array(14)}
+eruda.js:2 🔍 CD_AVG CHANNEL MAP: (7) [Array(2), Array(2), Array(2), Array(2), Array(2), Array(2), Array(2)]
+eruda.js:2 [SUPPRESSED ERROR]: PDF generation failed: Unable to find iframe window

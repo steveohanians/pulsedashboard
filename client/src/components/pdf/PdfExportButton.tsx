@@ -26,28 +26,28 @@ export default function PdfExportButton({
         import("jspdf")
       ]);
 
-      // Clone and clean the target element
+      // Get the target element
       const element = targetRef.current;
-      const clonedElement = element.cloneNode(true) as HTMLElement;
       
-      // Remove all iframes from the clone
-      const iframes = clonedElement.querySelectorAll('iframe');
-      iframes.forEach(iframe => iframe.remove());
-      
-      // Add clone to DOM temporarily for rendering
-      clonedElement.style.position = 'absolute';
-      clonedElement.style.left = '-9999px';
-      clonedElement.style.top = '-9999px';
-      document.body.appendChild(clonedElement);
-      
-      try {
-        const canvas = await html2canvas(clonedElement, {
-          backgroundColor: "#ffffff",
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false
-        });
+      // Create canvas with comprehensive iframe blocking
+      const canvas = await html2canvas(element, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        height: element.scrollHeight,
+        width: element.scrollWidth,
+        onclone: (clonedDoc) => {
+          // Remove all iframes from cloned document
+          const iframes = clonedDoc.querySelectorAll('iframe');
+          iframes.forEach(iframe => iframe.remove());
+          
+          // Also remove any elements with iframe-like behavior
+          const embeds = clonedDoc.querySelectorAll('embed, object, applet');
+          embeds.forEach(embed => embed.remove());
+        }
+      });
         
         
         const imgData = canvas.toDataURL("image/png");
@@ -82,16 +82,6 @@ export default function PdfExportButton({
         const base = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
 
         pdf.save(base);
-        
-        // Clean up clone
-        document.body.removeChild(clonedElement);
-      } catch (canvasErr) {
-        // Clean up clone if canvas creation failed
-        if (document.body.contains(clonedElement)) {
-          document.body.removeChild(clonedElement);
-        }
-        throw canvasErr;
-      }
     } catch (err) {
       console.error("PDF generation failed:", err);
     } finally {
