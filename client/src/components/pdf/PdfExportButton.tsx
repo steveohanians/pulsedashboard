@@ -21,67 +21,60 @@ export default function PdfExportButton({
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf")
-      ]);
-
-      // Get the target element
+      // Get current page HTML and styles for server-side processing
       const element = targetRef.current;
+      const elemHtml = element.outerHTML;
       
-      // Create canvas with comprehensive iframe blocking
-      const canvas = await html2canvas(element, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        height: element.scrollHeight,
-        width: element.scrollWidth,
-        onclone: (clonedDoc) => {
-          // Remove all iframes from cloned document
-          const iframes = clonedDoc.querySelectorAll('iframe');
-          iframes.forEach(iframe => iframe.remove());
-          
-          // Also remove any elements with iframe-like behavior
-          const embeds = clonedDoc.querySelectorAll('embed, object, applet');
-          embeds.forEach(embed => embed.remove());
+      // Get all stylesheets content
+      const styles: string[] = [];
+      document.querySelectorAll('style, link[rel="stylesheet"]').forEach((styleEl) => {
+        if (styleEl instanceof HTMLStyleElement) {
+          styles.push(styleEl.innerHTML);
+        } else if (styleEl instanceof HTMLLinkElement && styleEl.sheet) {
+          try {
+            const cssRules = Array.from(styleEl.sheet.cssRules);
+            const cssText = cssRules.map(rule => rule.cssText).join('\n');
+            styles.push(cssText);
+          } catch (e) {
+            // Skip external stylesheets that can't be accessed
+          }
         }
       });
-        
-        
-        const imgData = canvas.toDataURL("image/png");
 
-        // PDF dimensions (A4 portrait)
-        const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+      // Send to server for PDF generation
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: elemHtml,
+          styles: styles.join('\n'),
+          clientLabel: clientLabel,
+          fileName: fileName
+        })
+      });
 
-        // Scale image to fit page width, then paginate vertically
-        const imgWidth = pageWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      if (!response.ok) {
+        throw new Error(`PDF generation failed: ${response.statusText}`);
+      }
 
-        let remainingHeight = imgHeight;
-        let positionY = 0;
+      // Download the PDF
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const today = new Date();
+      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+      const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-        // First page
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-        remainingHeight -= pageHeight;
-        positionY = -pageHeight;
-
-        // Additional pages if needed
-        while (remainingHeight > 0) {
-          pdf.addPage();
-          pdf.addImage(imgData, "PNG", 0, positionY, imgWidth, imgHeight);
-          remainingHeight -= pageHeight;
-          positionY -= pageHeight;
-        }
-
-        const today = new Date();
-        const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-        const base = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
-
-        pdf.save(base);
     } catch (err) {
       console.error("PDF generation failed:", err);
     } finally {

@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
+import { generatePDF } from "./pdf";
 import { ga4DataService } from "./services/ga4/PulseDataService";
 import ga4StatusRouter from "./routes/ga4StatusRoute";
 import { z } from "zod";
@@ -3525,6 +3526,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Google OAuth routes for GA4 integration
   app.use("/api/oauth/google", googleOAuthRoutes);
+
+  // PDF Generation endpoint
+  app.post("/api/generate-pdf", requireAuth, async (req, res) => {
+    try {
+      const { html, styles, clientLabel, fileName } = req.body;
+
+      // Generate PDF with simplified content
+      const pdfBuffer = generatePDF({ clientLabel, fileName });
+      
+      // Set response headers for PDF download
+      const today = new Date();
+      const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+      const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "client"}-${stamp}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+      
+    } catch (error) {
+      logger.error("PDF generation error", { error: (error as Error).message });
+      res.status(500).json({ message: "PDF generation failed" });
+    }
+  });
 
   // Portfolio Averaging Fix Route (Admin Only)
   app.post("/api/admin/fix-portfolio-averages", requireAdmin, async (req, res) => {
