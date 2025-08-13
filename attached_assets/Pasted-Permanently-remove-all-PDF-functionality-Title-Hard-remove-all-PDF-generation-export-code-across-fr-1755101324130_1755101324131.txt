@@ -1,0 +1,97 @@
+Permanently remove all PDF functionality
+Title: Hard-remove all PDF generation/export code across frontend & backend
+
+Goal:
+Delete every PDF-related file, import, route, UI trigger, utility, type, env var, and dependency so the project builds cleanly with zero PDF code remaining.
+
+Authoritative scope (what to remove):
+
+Frontend files & UI
+
+Delete client/src/components/pdf-export-component.tsx (this is the known exporter component).frontend_map_v1
+
+Remove any “Export PDF”, “Download PDF”, or similar buttons/menus on the dashboard page (client/src/pages/dashboard.tsx), which currently advertises PDF export as a feature.frontend_map_v1
+
+Remove any hooks/handlers/utilities specifically wired to PDF export.
+
+Dependencies
+
+Remove html2canvas and jspdf from package.json (these are the known PDF libs in this repo).config_env_map_v1
+
+If present, remove react-pdf, pdf-lib, or any other PDF libs.
+
+Backend
+
+Remove any API routes/handlers purely for PDF export (search for “pdf” or “export-pdf”). (The public maps don’t list a specific PDF route, but we must search and delete if found.)backend_map_v1data_flow_maps_v1
+
+Config & Env
+
+Delete any PDF-related env keys from .env.example (search for PDF_), and delete any config code paths that reference them.config_env_map_v1
+
+Types / shared code
+
+Remove shared types/interfaces that exist solely for PDFs.
+
+Destructive tasks (do these explicitly):
+
+Delete files:
+
+client/src/components/pdf-export-component.tsxfrontend_map_v1
+
+Any other files with “pdf” in their path/filename across client/, server/, shared/, scripts/.
+
+Purge imports & usage:
+
+In client/src/pages/dashboard.tsx, remove all PDF-related imports, props, functions, and UI elements (buttons, menu items, toolbars).frontend_map_v1
+
+Remove any leftover references in other components (search for “PDF”, “jspdf”, “html2canvas”).
+
+Remove dependencies:
+
+From package.json, remove html2canvas and jspdf.config_env_map_v1
+
+If present, remove react-pdf, pdf-lib, or other PDF libs.
+
+Run the appropriate package manager action to update lockfile.
+
+Backend sweep:
+
+Remove any /api/*pdf* routes, controllers, or services (search “pdf”, “export-pdf”). Ensure no route registration remains in server/routes.ts.backend_map_v1
+
+Config/Env:
+
+Remove any PDF_* env keys from .env.example and any code that reads them (search “PDF_”).config_env_map_v1
+
+TypeScript hygiene:
+
+Remove dead exports, fix type errors. If a function previously returned a PDF blob, remove its callsites rather than stubbing.
+
+Docs/Comments:
+
+Remove comments that advertise PDF export in user-facing UI copy.
+
+Repository-wide search checklist (execute & fix results):
+
+Case-insensitive search for: pdf, PDF, jspdf, html2canvas, react-pdf, pdf-lib, exportPdf, downloadPdf.
+
+Delete files/usages found, or rewrite code to remove those branches completely.
+
+Validation (must pass before finishing):
+
+npm run check (TypeScript passes with 0 errors).config_env_map_v1
+
+npm run build succeeds.config_env_map_v1
+
+Dashboard loads with no “Export/Download PDF” UI and no runtime errors.
+
+package.json contains no PDF libraries.config_env_map_v1
+
+Safety constraints:
+
+Edit only files tied to PDF functionality; do not change unrelated flows (GA4, AI insights, charts, auth, etc.).frontend_map_v1data_flow_maps_v1
+
+No refactors outside the scope. No new debug logs. No cosmetic rewrites.
+
+Don’t touch DB schema or feature flags unrelated to PDF.
+
+Keep diffs minimal but complete for PDF removal.

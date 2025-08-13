@@ -146,12 +146,6 @@ export const loadChartingLibrary = async () => {
   return { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer };
 };
 
-export const loadPDFLibraries = async () => {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf')
-  ]);
-  return { html2canvas, jsPDF };
-};
+
 
 export { PerformanceMonitor, RenderTimer, BrowserPerformanceTimer };

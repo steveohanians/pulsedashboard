@@ -42,7 +42,6 @@ import {
   shouldConvertToPercentage,
   shouldConvertToMinutes 
 } from "@/utils/chartUtils";
-// PDF libraries will be lazy loaded on demand for better performance
 import { logger } from "@/utils/logger";
 
 
@@ -101,7 +100,7 @@ export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
+
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
   const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -853,213 +852,6 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  // PDF Export function that processes in background without visual flash
-  const exportToPDF = async () => {
-    console.log('🔄 PDF Export started');
-    
-    if (!client?.name) {
-      console.error('❌ No client name found');
-      return;
-    }
-    
-    setIsExportingPDF(true);
-    
-    try {
-      console.log('📄 Looking for dashboard content...');
-      // Get the main dashboard content
-      const originalElement = document.getElementById('dashboard-content');
-      if (!originalElement) {
-        console.error('❌ Dashboard content element not found');
-        throw new Error('Dashboard content not found');
-      }
-      console.log('✅ Dashboard content found:', originalElement);
-      
-      // Hide PDF-hide elements temporarily on original element
-      const elementsToHide = originalElement.querySelectorAll('.pdf-hide');
-      const originalDisplayValues: string[] = [];
-      
-      elementsToHide.forEach((el, index) => {
-        const htmlEl = el as HTMLElement;
-        originalDisplayValues[index] = htmlEl.style.display;
-        htmlEl.style.display = 'none';
-      });
-      
-      // Add PDF header to original element temporarily
-      const pdfHeader = document.createElement('div');
-      pdfHeader.id = 'temp-pdf-header';
-      pdfHeader.style.cssText = `
-        padding: 20px 0;
-        border-bottom: 2px solid #e5e7eb;
-        margin-bottom: 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      `;
-      
-      // Create header content safely using DOM methods
-      const leftDiv = document.createElement('div');
-      leftDiv.style.cssText = 'display: flex; align-items: center;';
-      
-      const logoImg = document.createElement('img');
-      logoImg.src = clearLogoPath;
-      logoImg.alt = 'Clear Digital';
-      logoImg.style.cssText = 'height: 40px; margin-right: 20px;';
-      
-      const textDiv = document.createElement('div');
-      const titleH1 = document.createElement('h1');
-      titleH1.textContent = 'Pulse Dashboard™';
-      titleH1.style.cssText = 'font-size: 24px; font-weight: bold; margin: 0; color: #1f2937;';
-      
-      const subtitleP = document.createElement('p');
-      subtitleP.textContent = `Analytics Report for ${client.name}`;
-      subtitleP.style.cssText = 'margin: 0; color: #6b7280; font-size: 14px;';
-      
-      textDiv.appendChild(titleH1);
-      textDiv.appendChild(subtitleP);
-      leftDiv.appendChild(logoImg);
-      leftDiv.appendChild(textDiv);
-      
-      const rightDiv = document.createElement('div');
-      rightDiv.style.cssText = 'text-align: right; color: #6b7280; font-size: 12px;';
-      
-      const generatedP = document.createElement('p');
-      generatedP.textContent = `Generated: ${new Date().toLocaleDateString()}`;
-      generatedP.style.margin = '0';
-      
-      const periodP = document.createElement('p');
-      periodP.textContent = `Period: ${timePeriod}`;
-      periodP.style.margin = '0';
-      
-      rightDiv.appendChild(generatedP);
-      rightDiv.appendChild(periodP);
-      
-      pdfHeader.appendChild(leftDiv);
-      pdfHeader.appendChild(rightDiv);
-      
-      originalElement.insertBefore(pdfHeader, originalElement.firstChild);
-      
-      // Wait for any layout changes
-      console.log('⏳ Waiting for layout changes...');
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Lazy load html2canvas library for performance
-      console.log('📚 Loading html2canvas...');
-      const html2canvas = (await import('html2canvas')).default;
-      console.log('✅ html2canvas loaded successfully');
-      
-      const canvas = await html2canvas(originalElement, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-      
-      // Restore original state
-      const headerToRemove = document.getElementById('temp-pdf-header');
-      if (headerToRemove) {
-        originalElement.removeChild(headerToRemove);
-      }
-      
-      // Restore visibility of hidden elements
-      elementsToHide.forEach((el, index) => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.display = originalDisplayValues[index] || '';
-      });
-      
-      // Lazy load jsPDF library for performance
-      console.log('📄 Loading jsPDF...');
-      const { jsPDF } = await import('jspdf');
-      console.log('✅ jsPDF loaded successfully');
-      
-      // Create PDF with improved pagination
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      
-      // Calculate proper scaling and pagination
-      const margin = 10; // 10mm margin
-      const usableWidth = pdfWidth - (margin * 2);
-      const usableHeight = pdfHeight - (margin * 2);
-      
-      // Calculate scale to fit width while maintaining aspect ratio
-      const scaleRatio = usableWidth / (canvasWidth / 1.5); // Adjusted for new scale
-      const scaledWidth = usableWidth;
-      const scaledHeight = (canvasHeight / 1.5) * scaleRatio;
-      
-      // Calculate how many pages we need
-      const pageContentHeight = usableHeight;
-      let currentY = 0;
-      
-      while (currentY < scaledHeight) {
-        if (currentY > 0) {
-          pdf.addPage();
-        }
-        
-        // Calculate which part of the canvas to show on this page
-        const sourceY = (currentY / scaleRatio) * 1.5; // Adjusted for new scale
-        const sourceHeight = Math.min((pageContentHeight / scaleRatio) * 1.5, canvasHeight - sourceY);
-        const targetHeight = Math.min(pageContentHeight, scaledHeight - currentY);
-        
-        if (sourceHeight > 0 && targetHeight > 0) {
-          // Create a temporary canvas for this page section
-          const pageCanvas = document.createElement('canvas');
-          pageCanvas.width = canvasWidth;
-          pageCanvas.height = sourceHeight;
-          const pageCtx = pageCanvas.getContext('2d');
-          
-          if (pageCtx) {
-            pageCtx.fillStyle = '#ffffff';
-            pageCtx.fillRect(0, 0, canvasWidth, sourceHeight);
-            pageCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
-            const pageImgData = pageCanvas.toDataURL('image/png');
-            pdf.addImage(pageImgData, 'PNG', margin, margin, scaledWidth, targetHeight);
-          }
-        }
-        
-        currentY += pageContentHeight;
-      }
-      
-      // Save the PDF
-      const fileName = `${client.name.replace(/[^a-zA-Z0-9]/g, '_')}_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      console.log('💾 Saving PDF with filename:', fileName);
-      pdf.save(fileName);
-      console.log('✅ PDF download initiated successfully');
-      
-      // Show success message
-      toast({
-        title: "PDF Generated Successfully",
-        description: `Analytics report downloaded as ${fileName}`,
-      });
-      
-    } catch (error) {
-      console.error('PDF Export Error:', error);
-      
-      // Clean up in case of error
-      const headerToRemove = document.getElementById('temp-pdf-header');
-      if (headerToRemove) {
-        headerToRemove.remove();
-      }
-      
-      // Restore visibility of any hidden elements
-      const elementsToRestore = document.querySelectorAll('.pdf-hide');
-      elementsToRestore.forEach(el => {
-        const htmlEl = el as HTMLElement;
-        if (htmlEl.style.display === 'none') {
-          htmlEl.style.display = '';
-        }
-      });
-      
-      // Show user-friendly error message
-      toast({
-        title: "PDF Export Failed",
-        description: error instanceof Error ? error.message : "Unable to generate PDF. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExportingPDF(false);
-    }
-  };
 
   // Scroll-based section highlighting with throttling and manual click protection
   useEffect(() => {
@@ -1257,26 +1049,7 @@ export default function Dashboard() {
               <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
             </div>
             
-            {/* PDF Export Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportToPDF}
-              disabled={isExportingPDF}
-              className="export-button pdf-hide hover:bg-primary hover:text-white transition-all duration-200 text-xs sm:text-sm"
-            >
-              {isExportingPDF ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  <span className="hidden sm:inline">Exporting...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Export PDF</span>
-                </div>
-              )}
-            </Button>
+
 
             {/* Debug: Clear Insights Button */}
             <Button
@@ -1284,7 +1057,7 @@ export default function Dashboard() {
               size="sm"
               onClick={() => clearInsightsMutation.mutate()}
               disabled={clearInsightsMutation.isPending}
-              className="pdf-hide hover:bg-red-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-red-200 text-red-600"
+              className="hover:bg-red-500 hover:text-white transition-all duration-200 text-xs sm:text-sm border-red-200 text-red-600"
             >
               {clearInsightsMutation.isPending ? (
                 <div className="flex items-center space-x-2">
@@ -1302,7 +1075,7 @@ export default function Dashboard() {
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden hover:bg-slate-100 transition-all duration-200 p-1 sm:p-2 pdf-hide"
+              className="lg:hidden hover:bg-slate-100 transition-all duration-200 p-1 sm:p-2"
             >
               <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -1311,7 +1084,7 @@ export default function Dashboard() {
               size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
-              className="logout-button pdf-hide hover:bg-slate-100 transition-all duration-200 hover:scale-105 p-1 sm:p-2"
+              className="logout-button hover:bg-slate-100 transition-all duration-200 hover:scale-105 p-1 sm:p-2"
             >
               <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -1321,7 +1094,7 @@ export default function Dashboard() {
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 mobile-menu pdf-hide" onClick={() => setMobileMenuOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 mobile-menu" onClick={() => setMobileMenuOpen(false)}>
           <nav className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
@@ -1405,7 +1178,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Desktop Left Navigation */}
-        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block pdf-hide">
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
           <div className="p-4">
             <h2 className="text-base font-bold text-slate-800 mb-4">Metrics</h2>
             <ul className="space-y-2">
@@ -1475,11 +1248,11 @@ export default function Dashboard() {
               refetchDashboard();
             }}
             onDismiss={dismissDashboardError}
-            className="pdf-hide"
+            className=""
           />
 
         {/* Enhanced Filters Section - Responsive */}
-        <div className="filters-section pdf-hide grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
+        <div className="filters-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
           <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center text-base font-semibold">
@@ -1732,7 +1505,7 @@ export default function Dashboard() {
               {competitors.length < 3 && (
                 <Button
                   onClick={() => setShowCompetitorModal(true)}
-                  className={`add-competitor-button pdf-hide w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
+                  className={`add-competitor-button w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
                     competitors.length > 0 ? 'mt-2' : 'mt-3'
                   }`}
                 >
