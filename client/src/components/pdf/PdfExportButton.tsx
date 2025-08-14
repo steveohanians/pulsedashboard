@@ -171,9 +171,15 @@ export default function PdfExportButton({
         `🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
       );
 
-      // Yield to UI before each slice to keep animations running
+      // Triple-yield to UI with forced style updates to keep animations running
       await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
+      // Force DOM to update animations by triggering a reflow
+      document.body.offsetHeight;
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // CORS-safe capture configuration with robust onclone adjustments
       let canvas: HTMLCanvasElement;
@@ -225,9 +231,14 @@ export default function PdfExportButton({
 
       canvases.push(canvas);
 
-      // Yield to UI after each slice completion and add delay
+      // Aggressive yielding after slice completion to maintain animations
       await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
+      // Force reflow to ensure spinner keeps animating
+      document.body.offsetHeight;
+      
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     return canvases;
@@ -329,9 +340,12 @@ export default function PdfExportButton({
         }
         pdf.addImage(imgData, "PNG", 0, 0, w, h);
         
-        // Small delay after each page to keep animations running
+        // Aggressive yielding during PDF composition
         if (idx < slices.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          document.body.offsetHeight; // Force reflow
+          await new Promise(resolve => setTimeout(resolve, 30));
         }
       }
 
