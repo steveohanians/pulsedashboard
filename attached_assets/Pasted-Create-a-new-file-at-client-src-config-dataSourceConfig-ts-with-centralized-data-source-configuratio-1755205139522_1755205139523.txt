@@ -1,0 +1,192 @@
+Create a new file at client/src/config/dataSourceConfig.ts with centralized data source configuration:
+
+```typescript
+/**
+ * Centralized Data Source Configuration
+ * Manages all data source settings, delays, and fallback values
+ */
+
+// Data source characteristics
+export const DATA_SOURCE_CONFIG = {
+  GA4: {
+    id: 'ga4',
+    name: 'Google Analytics 4',
+    dataDelay: 0, // Current month available
+    hasDaily: true,
+    hasPeriods: ['daily', 'monthly'],
+    maxHistoricalMonths: 15,
+    availability: {
+      daily: 'T-1', // Yesterday's data available today
+      monthly: 'M-0' // Current month available
+    }
+  },
+  SEMRUSH: {
+    id: 'semrush',
+    name: 'SEMrush',
+    dataDelay: 1, // 1 month behind
+    hasDaily: false,
+    hasPeriods: ['monthly'],
+    maxHistoricalMonths: 15,
+    availability: {
+      monthly: 'M-1' // Last month's data available mid-current month
+    }
+  }
+} as const;
+
+// Default metric values for fallbacks (from chartUtils.ts getDefaultMetricValue)
+export const FALLBACK_METRICS = {
+  "Bounce Rate": {
+    Client: 38.2,
+    Industry_Avg: 45.8,
+    CD_Avg: 35.1,
+    Competitor: 42.3
+  },
+  "Session Duration": {
+    Client: 245, // in seconds
+    Industry_Avg: 180,
+    CD_Avg: 220,
+    Competitor: 200
+  },
+  "Pages per Session": {
+    Client: 2.4,
+    Industry_Avg: 2.1,
+    CD_Avg: 2.3,
+    Competitor: 2.2
+  },
+  "Sessions per User": {
+    Client: 1.8,
+    Industry_Avg: 1.5,
+    CD_Avg: 1.7,
+    Competitor: 1.6
+  },
+  "Traffic Channels": {
+    default: [
+      { channel: "Organic Search", percentage: 40 },
+      { channel: "Direct", percentage: 25 },
+      { channel: "Social Media", percentage: 15 },
+      { channel: "Paid Search", percentage: 12 },
+      { channel: "Email", percentage: 5 },
+      { channel: "Referral", percentage: 3 }
+    ]
+  },
+  "Device Distribution": {
+    default: {
+      Desktop: 55,
+      Mobile: 45
+    }
+  }
+} as const;
+
+// Environment-based feature flags
+export const DATA_SOURCE_FLAGS = {
+  // Use mock data for missing values in development
+  USE_MOCK_FOR_MISSING: import.meta.env.DEV,
+  
+  // Enable/disable specific data sources
+  SEMRUSH_ENABLED: import.meta.env.VITE_SEMRUSH_ENABLED !== 'false',
+  GA4_ENABLED: import.meta.env.VITE_GA4_ENABLED !== 'false',
+  
+  // Debug logging for data sources
+  DEBUG_DATA_SOURCES: import.meta.env.VITE_DEBUG_DATA_SOURCES === 'true',
+  
+  // Show data source indicators in UI
+  SHOW_DATA_SOURCE_INDICATORS: import.meta.env.VITE_SHOW_DATA_INDICATORS !== 'false',
+  
+  // Use aligned periods (both sources show same month)
+  USE_ALIGNED_PERIODS: import.meta.env.VITE_USE_ALIGNED_PERIODS === 'true'
+} as const;
+
+// Metric configuration
+export const METRIC_CONFIG = {
+  // Metrics that need percentage conversion
+  PERCENTAGE_METRICS: ['Bounce Rate'],
+  
+  // Metrics that need time conversion (seconds to minutes)
+  TIME_METRICS: ['Session Duration'],
+  
+  // Metrics that should never use fallback values
+  REQUIRED_METRICS: ['Bounce Rate', 'Session Duration'],
+  
+  // Display units for each metric
+  METRIC_UNITS: {
+    'Bounce Rate': '%',
+    'Session Duration': 'min',
+    'Pages per Session': 'pages',
+    'Sessions per User': 'sessions',
+    'Traffic Channels': '%',
+    'Device Distribution': '%'
+  }
+} as const;
+
+// Data quality thresholds
+export const DATA_QUALITY = {
+  // Minimum confidence scores
+  HIGH_CONFIDENCE: 0.9,
+  MEDIUM_CONFIDENCE: 0.7,
+  LOW_CONFIDENCE: 0.5,
+  
+  // Data age thresholds (in days)
+  FRESH_DATA: 1,
+  RECENT_DATA: 7,
+  STALE_DATA: 30,
+  
+  // Completeness thresholds
+  COMPLETE: 0.95,
+  PARTIAL: 0.7,
+  INCOMPLETE: 0.5
+} as const;
+
+// Cache configuration
+export const CACHE_CONFIG = {
+  // TTL in milliseconds
+  GA4_CACHE_TTL: 5 * 60 * 1000, // 5 minutes
+  SEMRUSH_CACHE_TTL: 60 * 60 * 1000, // 1 hour
+  
+  // Cache keys
+  CACHE_PREFIX: 'pulse_dashboard_',
+  
+  // Max cache size
+  MAX_CACHE_ENTRIES: 100
+} as const;
+
+// Export helper functions
+export function getMetricFallback(
+  metricName: string, 
+  sourceType: string
+): number | any {
+  const metric = FALLBACK_METRICS[metricName as keyof typeof FALLBACK_METRICS];
+  
+  if (!metric) {
+    console.warn(`No fallback value for metric: ${metricName}`);
+    return 0;
+  }
+  
+  if (metricName === "Traffic Channels" || metricName === "Device Distribution") {
+    return metric.default || metric;
+  }
+  
+  return metric[sourceType as keyof typeof metric] || 0;
+}
+
+export function shouldConvertToPercentage(metricName: string): boolean {
+  return METRIC_CONFIG.PERCENTAGE_METRICS.includes(metricName);
+}
+
+export function shouldConvertToMinutes(metricName: string): boolean {
+  return METRIC_CONFIG.TIME_METRICS.includes(metricName);
+}
+
+export function isRequiredMetric(metricName: string): boolean {
+  return METRIC_CONFIG.REQUIRED_METRICS.includes(metricName);
+}
+
+export function getMetricUnit(metricName: string): string {
+  return METRIC_CONFIG.METRIC_UNITS[metricName as keyof typeof METRIC_CONFIG.METRIC_UNITS] || '';
+}
+
+// Debug logger that respects environment
+export function debugLog(category: string, message: string, data?: any): void {
+  if (DATA_SOURCE_FLAGS.DEBUG_DATA_SOURCES) {
+    console.log(`[${category}] ${message}`, data || '');
+  }
+}

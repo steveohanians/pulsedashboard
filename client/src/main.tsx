@@ -1,7 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./global.css";
-import './services/periodService.test';
 
 // Nuclear option: completely disable error overlay and runtime error plugin
 (window as any).process = { env: { NODE_ENV: 'production', DISABLE_OVERLAY: 'true' } };
