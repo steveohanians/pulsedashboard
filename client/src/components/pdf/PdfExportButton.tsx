@@ -240,105 +240,29 @@ export default function PdfExportButton({
         (el as HTMLElement).style.animationPlayState = 'paused';
       });
       
-      console.info('Starting slice-based rendering (1400px chunks)');
-      
-      // Slice-based rendering implementation (key from working version!)
-      const SLICE_HEIGHT = 1400; // 1400px chunks as noted in working implementation
-      const totalHeight = element.scrollHeight;
-      const totalWidth = element.scrollWidth;
-      
-      console.info(`Element dimensions: ${totalWidth}x${totalHeight}, slicing into ${Math.ceil(totalHeight / SLICE_HEIGHT)} chunks`);
-      
+      console.info('Starting slice-based rendering via captureInSlices()');
+      const slices = await captureInSlices(element, html2canvas);
+      if (!slices || slices.length === 0) {
+        throw new Error('No slices captured (captureInSlices returned 0 canvases)');
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      let isFirstPage = true;
-      
-      // Render each slice
-      for (let y = 0; y < totalHeight; y += SLICE_HEIGHT) {
-        const sliceHeight = Math.min(SLICE_HEIGHT, totalHeight - y);
-        
-        console.info(`Rendering slice ${Math.floor(y / SLICE_HEIGHT) + 1}: y=${y}, height=${sliceHeight}`);
-        
-        // Enhanced CORS-safe capture configuration with improved error handling
-        const canvas = await html2canvas(element, {
-          height: sliceHeight,
-          width: totalWidth,
-          ignoreElements: shouldIgnoreForPdf,
-          x: 0,
-          y: y,
-          scrollX: 0,
-          scrollY: 0,
-          backgroundColor: "#ffffff",
-          scale: 1.2,
-          useCORS: true,
-          allowTaint: false,
-          foreignObjectRendering: false,
-          logging: false,
-          removeContainer: false,
-          windowWidth: totalWidth,
-          windowHeight: totalHeight,
-          onclone: (clonedDoc) => {
-            // Remove any problematic iframes from the cloned document
-            const iframes = clonedDoc.querySelectorAll('iframe');
-            iframes.forEach(iframe => iframe.remove());
-          }
-        }).catch((error) => {
-          // Suppress iframe-related errors and retry with more restrictive settings
-          if (error.message && error.message.includes('iframe')) {
-            console.warn('[SUPPRESSED ERROR]:', 'PDF export failed:', error.message);
-            return html2canvas(element, {
-              height: sliceHeight,
-              width: totalWidth,
-              ignoreElements: (el) => {
-                if (shouldIgnoreForPdf(el)) return true;
-                // Also ignore any iframe-related elements
-                const tag = (el as HTMLElement).tagName;
-                return tag === 'IFRAME' || tag === 'EMBED' || tag === 'OBJECT';
-              },
-              x: 0,
-              y: y,
-              scrollX: 0,
-              scrollY: 0,
-              backgroundColor: "#ffffff",
-              scale: 1.0,
-              useCORS: false,
-              allowTaint: true,
-              foreignObjectRendering: false,
-              logging: false,
-              removeContainer: false,
-              windowWidth: totalWidth,
-              windowHeight: totalHeight
-            });
-          }
-          throw error;
-        });
 
-        console.info(`Slice ${Math.floor(y / SLICE_HEIGHT) + 1} rendered successfully`);
-
-        // Calculate dimensions for this slice
+      console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
+      slices.forEach((canvas, idx) => {
+        if (idx > 0) pdf.addPage();
         const imgData = canvas.toDataURL('image/png');
-        const imgAspectRatio = canvas.height / canvas.width;
-        
-        let imgWidth = pdfWidth;
-        let imgHeight = pdfWidth * imgAspectRatio;
-        
-        // If the slice is too tall for the page, fit it to page height
-        if (imgHeight > pdfHeight) {
-          imgHeight = pdfHeight;
-          imgWidth = pdfHeight / imgAspectRatio;
+        const aspect = canvas.height / canvas.width;
+        let w = pdfWidth;
+        let h = w * aspect;
+        if (h > pdfHeight) {
+          h = pdfHeight;
+          w = h / aspect;
         }
-        
-        // Add new page for each slice (except the first)
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // Add the slice to PDF
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      }
+        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+      });
       
       // Restore animations
       originalAnimations.forEach((el: Element) => {
@@ -369,16 +293,11 @@ export default function PdfExportButton({
       console.info('PDF export completed successfully');
 
     } catch (error) {
-      // Some environments surface "Unable to find iframe window" from background downloaders.
-      // Treat that as benign since we use our own save path above.
+      // Log the *real* failure for visibility
       const msg = (error instanceof Error && error.message) ? error.message : String(error);
-      if (msg && msg.toLowerCase().includes('unable to find iframe window')) {
-        console.info('PDF export: benign iframe-window warning suppressed');
-      } else {
-        console.error('PDF export failed:', error);
-      }
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
+      console.error('PDF export failed:', msg);
+      if (error instanceof Error && (error as any).stack) {
+        console.error('Stack:', (error as any).stack);
       }
     } finally {
       setIsGenerating(false);
