@@ -233,11 +233,11 @@ export default function PdfExportButton({
         resolve(canvas);
       };
       
-      // Try to load the Clear logo from assets - try multiple paths
+      // Try to load the Clear logo from assets - use the correct Replit path
       const tryLoadLogo = () => {
+        console.log('🔄 Starting logo loading process...');
         const paths = [
           '/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png',
-          './attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png',
           'attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png'
         ];
         
@@ -386,18 +386,24 @@ export default function PdfExportButton({
                 
                 if (isMetricBox) {
                   console.log(`🎯 Found metric/card element with classes: ${classStr}`);
-                  element.style.backgroundColor = 'transparent';
-                  element.style.background = 'transparent';
+                  element.style.setProperty('background-color', 'transparent', 'important');
+                  element.style.setProperty('background', 'transparent', 'important');
+                  // Remove Tailwind background classes
+                  element.className = classStr.replace(/bg-\S+/g, '').replace(/backdrop-blur-\S+/g, '').trim();
                   removedBgCount++;
                 }
                 
+                // More aggressive background removal for all DIVs
                 if (element.tagName === 'DIV') {
                   const computedStyle = getComputedStyle(element);
                   const bgColor = computedStyle.backgroundColor;
                   if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
                     console.log(`🔍 DIV with computed bg: ${bgColor}, classes: ${classStr}`);
-                    element.style.backgroundColor = 'transparent';
-                    element.style.background = 'transparent';
+                    element.style.setProperty('background-color', 'transparent', 'important');
+                    element.style.setProperty('background', 'transparent', 'important');
+                    element.style.setProperty('background-image', 'none', 'important');
+                    // Remove background classes from className
+                    element.className = classStr.replace(/bg-\S+/g, '').replace(/backdrop-blur-\S+/g, '').replace(/from-\S+/g, '').replace(/via-\S+/g, '').replace(/to-\S+/g, '').trim();
                     removedBgCount++;
                   }
                 }
