@@ -1,0 +1,56 @@
+--- a/PdfExportButton.tsx
++++ b/PdfExportButton.tsx
+@@ -228,23 +228,33 @@
+       const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
+       
+-      console.info('Saving multi-page PDF with slice-based rendering');
+-      try {
+-        pdf.save(downloadName);
+-      } catch (e) {
+-        console.warn('pdf.save() blocked; using sandbox-aware fallback', e);
+-        const blob = pdf.output('blob');
+-        const url = URL.createObjectURL(blob);
+-
+-        if (isEmbedded()) {
+-          // Try parent first; only rely on it if it ACKs quickly
+-          const handledByParent = await askParentToDownload(url, downloadName);
+-          if (!handledByParent) {
+-            // Parent not listening or blocked—fall back locally
+-            triggerDirectDownload(url, downloadName);
+-          }
+-        } else {
+-          // Not embedded: handle download locally (no postMessage, no window.open)
+-          triggerDirectDownload(url, downloadName);
+-        }
+-      }
++      console.info('Saving multi-page PDF with slice-based rendering');
++      // Use a consistent, environment-agnostic save path to avoid jsPDF's iframe saver
++      const blob = pdf.output('blob');
++      const url = URL.createObjectURL(blob);
++
++      if (isEmbedded()) {
++        // Try parent first; only rely on it if it ACKs quickly
++        const handledByParent = await askParentToDownload(url, downloadName);
++        if (!handledByParent) {
++          // Parent not listening or blocked—fall back locally
++          triggerDirectDownload(url, downloadName);
++        }
++      } else {
++        // Not embedded: handle download locally (no postMessage, no window.open)
++        triggerDirectDownload(url, downloadName);
++      }
+       console.info('PDF export completed successfully');
+ 
+     } catch (error) {
+-      console.error('PDF export failed:', error);
++      // Some environments surface "Unable to find iframe window" from background downloaders.
++      // Treat that as benign since we use our own save path above.
++      const msg = (error instanceof Error && error.message) ? error.message : String(error);
++      if (msg && msg.toLowerCase().includes('unable to find iframe window')) {
++        console.info('PDF export: benign iframe-window warning suppressed');
++      } else {
++        console.error('PDF export failed:', error);
++      }
+       if (error instanceof Error) {
+         console.error('Error details:', error.message);
+       }
