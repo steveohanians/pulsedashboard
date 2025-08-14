@@ -9,8 +9,38 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { LogOut, Settings, Filter, Menu, Download, CheckCircle2, AlertTriangle, Trash2, ExternalLink, Clock, Building2, TrendingUp, Users, Plus, Info, Calendar, X, CheckCircle, AlertCircle, XCircle, Sparkles, RefreshCw } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  LogOut,
+  Settings,
+  Filter,
+  Menu,
+  Download,
+  CheckCircle2,
+  AlertTriangle,
+  Trash2,
+  ExternalLink,
+  Clock,
+  Building2,
+  TrendingUp,
+  Users,
+  Plus,
+  Info,
+  Calendar,
+  X,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Sparkles,
+  RefreshCw,
+} from "lucide-react";
 import StatusBanner from "@/components/StatusBanner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -31,25 +61,33 @@ import PdfExportButton from "@/components/pdf/PdfExportButton";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 import { CHART_COLORS } from "@/utils/chartUtils";
-import { deduplicateByChannel, formatPeriodDisplay, getDefaultMetricValue, isPercentageMetric } from "@/utils/chartUtils";
+import {
+  deduplicateByChannel,
+  formatPeriodDisplay,
+  getDefaultMetricValue,
+  isPercentageMetric,
+} from "@/utils/chartUtils";
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
-import { aggregateChannelData, sortChannelsByLegendOrder } from "@/utils/chartGenerators";
+import {
+  aggregateChannelData,
+  sortChannelsByLegendOrder,
+} from "@/utils/chartGenerators";
 import { parseMetricValue } from "@/utils/metricParser";
-import { 
-  processCompanyMetrics, 
-  processDeviceDistribution
+import {
+  processCompanyMetrics,
+  processDeviceDistribution,
 } from "@/utils/chartDataProcessor";
-import { 
+import {
   shouldConvertToPercentage,
-  shouldConvertToMinutes 
+  shouldConvertToMinutes,
 } from "@/utils/chartUtils";
 import { logger } from "@/utils/logger";
 
-
-
 const getChannelColor = (channelName: string): string => {
   // CHART_COLORS contains functions that return color strings
-  const colorFunction = CHART_COLORS[channelName as keyof typeof CHART_COLORS] || CHART_COLORS.Other;
+  const colorFunction =
+    CHART_COLORS[channelName as keyof typeof CHART_COLORS] ||
+    CHART_COLORS.Other;
   return colorFunction();
 };
 
@@ -57,21 +95,21 @@ export default function Dashboard() {
   const dashboardRootRef = useRef<HTMLDivElement>(null);
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
-  
+
   // Component state management
   const queryClient = useQueryClient();
 
   // Refresh data function for admin users
   const handleRefreshData = async () => {
     setIsRefreshing(true);
-    
+
     try {
       // Directly refetch the dashboard data
       await refetchDashboard();
-      
-      // Also refresh filters 
+
+      // Also refresh filters
       queryClient.invalidateQueries({ queryKey: QueryKeys.allFilters() });
-      
+
       toast({
         title: "Dashboard refreshed",
         description: "All data has been refreshed from the latest sources.",
@@ -87,11 +125,11 @@ export default function Dashboard() {
     } finally {
       setIsRefreshing(false);
     }
-    
+
     // Close mobile menu after refresh
     setMobileMenuOpen(false);
   };
-  const [timePeriod, setTimePeriod] = useState("Last Month");  // Default to Last Month
+  const [timePeriod, setTimePeriod] = useState("Last Month"); // Default to Last Month
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
@@ -103,18 +141,30 @@ export default function Dashboard() {
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
-  const [deletingCompetitorId, setDeletingCompetitorId] = useState<string | null>(null);
-  const [metricStatuses, setMetricStatuses] = useState<Record<string, 'success' | 'needs_improvement' | 'warning' | undefined>>({});
+  const [deletingCompetitorId, setDeletingCompetitorId] = useState<
+    string | null
+  >(null);
+  const [metricStatuses, setMetricStatuses] = useState<
+    Record<string, "success" | "needs_improvement" | "warning" | undefined>
+  >({});
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Error banner state
-  const { error: dashboardError, showError: showDashboardError, dismissError: dismissDashboardError, clearError: clearDashboardError } = useErrorBanner();
 
-  // Get the actual data period (one month before current) 
+  // Error banner state
+  const {
+    error: dashboardError,
+    showError: showDashboardError,
+    dismissError: dismissDashboardError,
+    clearError: clearDashboardError,
+  } = useErrorBanner();
+
+  // Get the actual data period (one month before current)
   const getDataPeriodDisplay = () => {
     const now = new Date();
     const dataMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1); // One month before current
-    return dataMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return dataMonth.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
   };
 
   interface DashboardMetric {
@@ -134,12 +184,15 @@ export default function Dashboard() {
     };
     metrics: DashboardMetric[];
     averagedMetrics?: Record<string, Record<string, number>>;
-    timeSeriesData?: Record<string, Array<{
-      metricName: string;
-      value: string;
-      sourceType: string;
-      competitorId?: string;
-    }>>;
+    timeSeriesData?: Record<
+      string,
+      Array<{
+        metricName: string;
+        value: string;
+        sourceType: string;
+        competitorId?: string;
+      }>
+    >;
     competitors: Array<{
       id: string;
       domain: string;
@@ -154,7 +207,12 @@ export default function Dashboard() {
     }>;
     isTimeSeries?: boolean;
     periods?: string[];
-    trafficChannelMetrics?: Array<{ metricName: string; value: number; sourceType: string; channel: string }>;
+    trafficChannelMetrics?: Array<{
+      metricName: string;
+      value: number;
+      sourceType: string;
+      channel: string;
+    }>;
   }
 
   interface FiltersData {
@@ -164,13 +222,22 @@ export default function Dashboard() {
   }
 
   // Use custom date range if selected, otherwise use timePeriod
-  const effectiveTimePeriod = timePeriod === "Custom Date Range" && customDateRange ? customDateRange : timePeriod;
-  
+  const effectiveTimePeriod =
+    timePeriod === "Custom Date Range" && customDateRange
+      ? customDateRange
+      : timePeriod;
+
   const dashboardQuery = useQuery<DashboardData>({
-    queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
+    queryKey: QueryKeys.dashboard(
+      user?.clientId || "",
+      effectiveTimePeriod || "Last Month",
+    ),
     queryFn: async () => {
       try {
-        return await apiRequest('GET', `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}&businessSize=${encodeURIComponent(businessSize || 'All')}&industryVertical=${encodeURIComponent(industryVertical || 'All')}`);
+        return await apiRequest(
+          "GET",
+          `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || "Last Month")}&businessSize=${encodeURIComponent(businessSize || "All")}&industryVertical=${encodeURIComponent(industryVertical || "All")}`,
+        );
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -180,23 +247,29 @@ export default function Dashboard() {
     },
     enabled: !!user?.clientId,
     staleTime: 0, // Force fresh data on each request
-    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnMount: "always", // Always refetch when component mounts
     gcTime: 0, // Don't cache results
     refetchOnReconnect: true, // Refetch when reconnecting
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
-  
-  const { data: dashboardData, isLoading, refetch: refetchDashboard } = dashboardQuery;
-  
+
+  const {
+    data: dashboardData,
+    isLoading,
+    refetch: refetchDashboard,
+  } = dashboardQuery;
+
   // Manual refresh function removed per user request
 
   // Data processing and validation
   useEffect(() => {
     if (dashboardData?.metrics) {
       // Validate data structure for consistent processing
-      const competitorMetrics = dashboardData.metrics.filter((m: DashboardMetric) => m.sourceType === 'Competitor');
+      const competitorMetrics = dashboardData.metrics.filter(
+        (m: DashboardMetric) => m.sourceType === "Competitor",
+      );
       if (competitorMetrics.length === 0) {
-        console.warn('No competitor data available for analysis');
+        console.warn("No competitor data available for analysis");
       }
     }
   }, [dashboardData?.metrics]);
@@ -205,7 +278,10 @@ export default function Dashboard() {
     queryKey: QueryKeys.filters(),
     queryFn: async () => {
       try {
-        return await apiRequest('GET', `/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`);
+        return await apiRequest(
+          "GET",
+          `/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`,
+        );
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -217,10 +293,16 @@ export default function Dashboard() {
 
   // Load AI insights for dashboard metrics
   const insightsQuery = useQuery({
-    queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month'),
+    queryKey: QueryKeys.aiInsights(
+      user?.clientId || "",
+      effectiveTimePeriod || "Last Month",
+    ),
     queryFn: async () => {
       try {
-        return await apiRequest('GET', `/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || 'Last Month')}`);
+        return await apiRequest(
+          "GET",
+          `/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || "Last Month")}`,
+        );
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -231,16 +313,25 @@ export default function Dashboard() {
     enabled: !!user?.clientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1
+    retry: 1,
   });
-  
-  const { data: insightsData, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = insightsQuery;
+
+  const {
+    data: insightsData,
+    isLoading: insightsLoading,
+    error: insightsError,
+    refetch: refetchInsights,
+  } = insightsQuery;
 
   // Create insights lookup map from loaded insights
   const insightsLookup = useMemo(() => {
     const lookup: Record<string, any> = {};
-    
-    if (insightsData && typeof insightsData === 'object' && 'insights' in insightsData) {
+
+    if (
+      insightsData &&
+      typeof insightsData === "object" &&
+      "insights" in insightsData
+    ) {
       const insights = (insightsData as any).insights;
       if (insights && Array.isArray(insights)) {
         insights.forEach((insight: any) => {
@@ -248,7 +339,7 @@ export default function Dashboard() {
         });
       }
     }
-    
+
     return lookup;
   }, [insightsData]);
 
@@ -263,12 +354,14 @@ export default function Dashboard() {
         },
         credentials: "include", // Important: include session cookies for authentication
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`,
+        );
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -277,21 +370,37 @@ export default function Dashboard() {
       setMetricStatuses({});
       // Clear localStorage insights to prevent loading from cache
       try {
-        localStorage.removeItem('pulse_dashboard_insights'); // This is the actual key used!
-        logger.info("Cleared localStorage insights cache (pulse_dashboard_insights)");
-        
-          // localStorage operations disabled for performance
+        localStorage.removeItem("pulse_dashboard_insights"); // This is the actual key used!
+        logger.info(
+          "Cleared localStorage insights cache (pulse_dashboard_insights)",
+        );
+
+        // localStorage operations disabled for performance
       } catch (error) {
         logger.warn("Failed to clear localStorage:", error);
       }
       // Invalidate and refetch all related queries with correct key patterns
-      queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.metricInsights(user?.clientId || '') });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.dashboard(
+          user?.clientId || "",
+          effectiveTimePeriod || "Last Month",
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.aiInsights(
+          user?.clientId || "",
+          effectiveTimePeriod || "Last Month",
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.metricInsights(user?.clientId || ""),
+      });
       // Force refetch all data immediately
       dashboardQuery.refetch();
       refetchInsights();
-      logger.info("State reset, cache invalidated, localStorage cleared, and dashboard refetched");
+      logger.info(
+        "State reset, cache invalidated, localStorage cleared, and dashboard refetched",
+      );
       // Force page reload to ensure all components reset their state
       window.location.reload();
     },
@@ -302,17 +411,17 @@ export default function Dashboard() {
         logger.error("Error message:", error.message);
         logger.error("Error stack:", error.stack);
       }
-    }
+    },
   });
 
-  // Delete competitor mutation  
+  // Delete competitor mutation
   const deleteCompetitorMutation = useMutation({
     mutationFn: async (competitorId: string) => {
       logger.info("Deleting competitor:", competitorId);
       try {
         const response = await fetch(`/api/competitors/${competitorId}`, {
-          method: 'DELETE',
-          credentials: 'include'
+          method: "DELETE",
+          credentials: "include",
         });
         if (!response.ok) {
           throw new Error(`Failed to delete competitor: ${response.status}`);
@@ -330,9 +439,21 @@ export default function Dashboard() {
     onSuccess: () => {
       logger.info("Delete mutation onSuccess triggered");
       // Invalidate cache first, then refetch - ensures UI updates properly
-      queryClient.invalidateQueries({ queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod || 'Last Month') });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.metricInsights(user?.clientId || '') });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.dashboard(
+          user?.clientId || "",
+          effectiveTimePeriod || "Last Month",
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.aiInsights(
+          user?.clientId || "",
+          effectiveTimePeriod || "Last Month",
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.metricInsights(user?.clientId || ""),
+      });
       // Force refetch all data immediately
       dashboardQuery.refetch();
       refetchInsights();
@@ -342,7 +463,7 @@ export default function Dashboard() {
     onError: (error) => {
       logger.error("Delete mutation onError triggered:", error);
       setDeletingCompetitorId(null);
-    }
+    },
   });
 
   // Reset filters if current selection is no longer available
@@ -368,66 +489,99 @@ export default function Dashboard() {
 
   // Debug timeSeriesData to understand why charts are using fallback
 
-
-
   // Group metrics by name for chart display - FIXED to calculate averages across time periods
   const groupedMetrics = useMemo(() => {
     // Quick return for empty states
     if (!dashboardData) return {};
-    
-    if (isTimeSeries && averagedMetrics && typeof averagedMetrics === 'object' && Object.keys(averagedMetrics).length > 0) {
-      return averagedMetrics as Record<string, Record<string, number>>;
+
+    // Debug: Check what's different for Last Month
+    if (timePeriod === "Last Month") {
+      console.log("Last Month Debug - averagedMetrics:", averagedMetrics);
+      console.log("Last Month Debug - isTimeSeries:", isTimeSeries);
+      console.log(
+        "Last Month Debug - CD_Avg in metrics:",
+        metrics.filter((m) => m.sourceType.toLowerCase().includes("cd")),
+      );
     }
-    
-    // DEBUG: Check raw metrics for Bounce Rate specifically
-    const bounceRateMetrics = dashboardData?.metrics ? 
-      dashboardData.metrics.filter((m: DashboardMetric) => m.metricName === 'Bounce Rate') : [];
-    // Bounce rate metrics processed
-    
+
+    if (
+      isTimeSeries &&
+      averagedMetrics &&
+      typeof averagedMetrics === "object" &&
+      Object.keys(averagedMetrics).length > 0
+    ) {
+      // For Last Month, backend might not be including CD_Avg in averagedMetrics
+      // Check if CD_Avg exists in averagedMetrics
+      const hasCDAvg = Object.values(averagedMetrics).some(
+        (metric) =>
+          metric &&
+          typeof metric === "object" &&
+          ("CD_Avg" in metric || "cd_avg" in metric || "CD_AVG" in metric),
+      );
+
+      if (!hasCDAvg && timePeriod === "Last Month") {
+        console.log(
+          "CD_Avg missing from averagedMetrics for Last Month, falling back to manual calculation",
+        );
+        // Fall through to manual calculation
+      } else {
+        return averagedMetrics as Record<string, Record<string, number>>;
+      }
+    }
+
     // Calculate averages when multiple time periods are involved
     const result: Record<string, Record<string, number>> = {};
     const counts: Record<string, Record<string, number>> = {};
-    
+
     for (const metric of metrics) {
+      // FIX: Normalize sourceType to handle different casings from backend
+      let normalizedSourceType = metric.sourceType;
+      if (normalizedSourceType.toLowerCase() === "cd_avg") {
+        normalizedSourceType = "CD_Avg";
+      }
+
       if (!result[metric.metricName]) {
         result[metric.metricName] = {};
         counts[metric.metricName] = {};
       }
-      if (!result[metric.metricName][metric.sourceType]) {
-        result[metric.metricName][metric.sourceType] = 0;
-        counts[metric.metricName][metric.sourceType] = 0;
+      if (!result[metric.metricName][normalizedSourceType]) {
+        result[metric.metricName][normalizedSourceType] = 0;
+        counts[metric.metricName][normalizedSourceType] = 0;
       }
-      
-      let value = parseMetricValue(metric.value);
-      
-      // Convert Session Duration from seconds to minutes for all source types
-      if (metric.metricName === 'Session Duration' && value > 60) {
 
+      let value = parseMetricValue(metric.value);
+
+      // Convert Session Duration from seconds to minutes for all source types
+      if (metric.metricName === "Session Duration" && value > 60) {
         value = value / 60;
       }
-      
-      result[metric.metricName][metric.sourceType] += value;
-      counts[metric.metricName][metric.sourceType] += 1;
+
+      result[metric.metricName][normalizedSourceType] += value;
+      counts[metric.metricName][normalizedSourceType] += 1;
     }
-    
+
     // Calculate averages
     for (const metricName in result) {
       for (const sourceType in result[metricName]) {
         if (counts[metricName][sourceType] > 0) {
-          result[metricName][sourceType] = result[metricName][sourceType] / counts[metricName][sourceType];
+          result[metricName][sourceType] =
+            result[metricName][sourceType] / counts[metricName][sourceType];
         }
       }
     }
-    
+
     return result;
-  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);
+  }, [
+    dashboardData?.metrics,
+    dashboardData?.averagedMetrics,
+    isTimeSeries,
+    timePeriod,
+  ]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
-
-    
     let trafficMetrics = [];
-    
+
     if (dashboardData?.trafficChannelMetrics) {
       // Use dedicated traffic channel data when available (both single and multi-period)
       trafficMetrics = dashboardData.trafficChannelMetrics;
@@ -435,16 +589,21 @@ export default function Dashboard() {
       // Debug logging disabled for performance - logger.debug(`Using dedicated trafficChannelMetrics: ${trafficMetrics.length} records`);
     } else if (isTimeSeries && timeSeriesData) {
       // Fallback: extract from time series data for multi-period
-      trafficMetrics = timeSeriesData && typeof timeSeriesData === 'object' 
-        ? Object.values(timeSeriesData).flat().filter(m => m.metricName === 'Traffic Channels')
-        : [];
+      trafficMetrics =
+        timeSeriesData && typeof timeSeriesData === "object"
+          ? Object.values(timeSeriesData)
+              .flat()
+              .filter((m) => m.metricName === "Traffic Channels")
+          : [];
       // Debug logging disabled for performance - logger.debug(`Using timeSeriesData fallback: ${trafficMetrics.length} records`);
     } else {
       // For single-period queries without trafficChannelMetrics, use regular metrics
-      trafficMetrics = metrics.filter(m => m.metricName === 'Traffic Channels');
+      trafficMetrics = metrics.filter(
+        (m) => m.metricName === "Traffic Channels",
+      );
       // Debug logging disabled for performance - logger.debug(`Using regular metrics fallback: ${trafficMetrics.length} records`);
     }
-    
+
     // Debug logging disabled for performance
     // logger.debug(`Traffic Channel Debug:`, {
     //   isTimeSeries,
@@ -456,191 +615,233 @@ export default function Dashboard() {
     //   trafficMetrics: trafficMetrics.slice(0, 5), // First 5 for debugging
     //   sampleTrafficChannelData: trafficMetrics.filter((m: { channel?: string }) => m.channel).slice(0, 3) // Only channel data
     // });
-    
-    // Quick validation that GA4 data is found
-    const clientMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    const ga4ArrayMetric = clientMetrics.find(m => Array.isArray(m.value));
-    if (ga4ArrayMetric) {
 
+    // Quick validation that GA4 data is found
+    const clientMetrics = trafficMetrics.filter(
+      (m) => m.sourceType === "Client",
+    );
+    const ga4ArrayMetric = clientMetrics.find((m) => Array.isArray(m.value));
+    if (ga4ArrayMetric) {
     }
-    
+
     // Debug traffic channel data processing
     // Traffic channel metrics processed
-    
+
     if (trafficMetrics.length === 0) {
       logger.warn(`No traffic metrics found! Debug:`, {
         metricsCount: metrics.length,
-        timeSeriesData: timeSeriesData ? 'exists' : 'missing',
+        timeSeriesData: timeSeriesData ? "exists" : "missing",
         isTimeSeries,
-        sampleMetricNames: metrics.map(m => m.metricName).slice(0, 5)
+        sampleMetricNames: metrics.map((m) => m.metricName).slice(0, 5),
       });
     }
-    
+
     const result = [];
 
     // Client data
-    const clientTrafficMetrics = trafficMetrics.filter(m => m.sourceType === 'Client');
-    
-    if (clientTrafficMetrics.length > 0) {
+    const clientTrafficMetrics = trafficMetrics.filter(
+      (m) => m.sourceType === "Client",
+    );
 
-      
+    if (clientTrafficMetrics.length > 0) {
       // Use the corrected processChannelData function from chartGenerators.ts
       const channelMap = aggregateChannelData(clientTrafficMetrics);
 
-      
-      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
-        ...channel,
-        color: getChannelColor(channel.name)
-      }));
-      
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(
+        (channel) => ({
+          ...channel,
+          color: getChannelColor(channel.name),
+        }),
+      );
+
       const clientEntry = {
-        sourceType: 'Client',
-        label: client?.name || 'Demo Company',
-        channels: sortedChannels
+        sourceType: "Client",
+        label: client?.name || "Demo Company",
+        channels: sortedChannels,
       };
-      
 
       result.push(clientEntry);
     } else {
-      console.warn('❌ No client traffic metrics found! Available metrics:', 
-        trafficMetrics.map(m => ({ sourceType: m.sourceType, metricName: m.metricName })));
+      console.warn(
+        "❌ No client traffic metrics found! Available metrics:",
+        trafficMetrics.map((m) => ({
+          sourceType: m.sourceType,
+          metricName: m.metricName,
+        })),
+      );
     }
 
     // CD Average data
-    const cdMetrics = trafficMetrics.filter(m => m.sourceType === 'CD_Avg');
-    console.log('🔍 CD_AVG TRAFFIC DEBUG:', {
+    const cdMetrics = trafficMetrics.filter((m) => m.sourceType === "CD_Avg");
+    console.log("🔍 CD_AVG TRAFFIC DEBUG:", {
       allTrafficMetricsCount: trafficMetrics.length,
       cdMetricsCount: cdMetrics.length,
-      cdMetricsSample: cdMetrics.slice(0, 3).map(m => ({
+      cdMetricsSample: cdMetrics.slice(0, 3).map((m) => ({
         sourceType: m.sourceType,
         metricName: m.metricName,
-        channel: 'channel' in m ? m.channel : undefined,
+        channel: "channel" in m ? m.channel : undefined,
         value: m.value,
-        timePeriod: 'timePeriod' in m ? m.timePeriod : undefined
+        timePeriod: "timePeriod" in m ? m.timePeriod : undefined,
       })),
-      allCdAvgMetrics: trafficMetrics.filter(m => m.sourceType === 'CD_Avg').map(m => ({
-        metricName: m.metricName,
-        channel: 'channel' in m ? m.channel : undefined,
-        hasChannel: 'channel' in m && !!m.channel
-      }))
+      allCdAvgMetrics: trafficMetrics
+        .filter((m) => m.sourceType === "CD_Avg")
+        .map((m) => ({
+          metricName: m.metricName,
+          channel: "channel" in m ? m.channel : undefined,
+          hasChannel: "channel" in m && !!m.channel,
+        })),
     });
-    
+
     if (cdMetrics.length > 0) {
       const channelMap = aggregateChannelData(cdMetrics);
-      console.log('🔍 CD_AVG CHANNEL MAP:', Array.from(channelMap.entries()));
-      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
-        ...channel,
-        color: getChannelColor(channel.name)
-      }));
+      console.log("🔍 CD_AVG CHANNEL MAP:", Array.from(channelMap.entries()));
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(
+        (channel) => ({
+          ...channel,
+          color: getChannelColor(channel.name),
+        }),
+      );
       result.push({
-        sourceType: 'CD_Avg',
-        label: 'Clear Digital Client Avg',
-        channels: sortedChannels
+        sourceType: "CD_Avg",
+        label: "Clear Digital Client Avg",
+        channels: sortedChannels,
       });
     } else {
-      console.warn('❌ NO CD_AVG TRAFFIC METRICS FOUND!');
+      console.warn("❌ NO CD_AVG TRAFFIC METRICS FOUND!");
     }
 
     // Industry Average data
-    const industryMetrics = trafficMetrics.filter(m => m.sourceType === 'Industry_Avg');
+    const industryMetrics = trafficMetrics.filter(
+      (m) => m.sourceType === "Industry_Avg",
+    );
     if (industryMetrics.length > 0) {
       const channelMap = aggregateChannelData(industryMetrics);
-      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
-        ...channel,
-        color: getChannelColor(channel.name)
-      }));
+      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(
+        (channel) => ({
+          ...channel,
+          color: getChannelColor(channel.name),
+        }),
+      );
       result.push({
-        sourceType: 'Industry_Avg',
-        label: 'Industry Avg',
-        channels: sortedChannels
+        sourceType: "Industry_Avg",
+        label: "Industry Avg",
+        channels: sortedChannels,
       });
     }
 
     // Dynamic competitor data - use actual database data
     competitors.forEach((competitor) => {
       const competitorLabel = cleanDomainName(competitor.domain);
-      const competitorMetrics = trafficMetrics.filter(m => 
-        m.sourceType === 'Competitor' && 'competitorId' in m && m.competitorId === competitor.id
+      const competitorMetrics = trafficMetrics.filter(
+        (m) =>
+          m.sourceType === "Competitor" &&
+          "competitorId" in m &&
+          m.competitorId === competitor.id,
       );
-      
+
       if (competitorMetrics.length > 0) {
         const channelMap = aggregateChannelData(competitorMetrics);
-        const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
-          ...channel,
-          color: getChannelColor(channel.name)
-        }));
+        const sortedChannels = sortChannelsByLegendOrder(channelMap).map(
+          (channel) => ({
+            ...channel,
+            color: getChannelColor(channel.name),
+          }),
+        );
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
-          channels: sortedChannels
+          channels: sortedChannels,
         });
       } else {
         // Fallback if no data - generate consistent but varied data
         const baseData = [
-          { name: 'Organic Search', base: 40 + (competitor.id.length % 10), variance: 5 },
-          { name: 'Direct', base: 25 + (competitor.id.length % 6), variance: 4 },
-          { name: 'Social Media', base: 15 + (competitor.id.length % 8), variance: 6 },
-          { name: 'Paid Search', base: 12 + (competitor.id.length % 4), variance: 3 },
-          { name: 'Email', base: 3 + (competitor.id.length % 3), variance: 2 }
+          {
+            name: "Organic Search",
+            base: 40 + (competitor.id.length % 10),
+            variance: 5,
+          },
+          {
+            name: "Direct",
+            base: 25 + (competitor.id.length % 6),
+            variance: 4,
+          },
+          {
+            name: "Social Media",
+            base: 15 + (competitor.id.length % 8),
+            variance: 6,
+          },
+          {
+            name: "Paid Search",
+            base: 12 + (competitor.id.length % 4),
+            variance: 3,
+          },
+          { name: "Email", base: 3 + (competitor.id.length % 3), variance: 2 },
         ];
 
-        let channels = baseData.map(channel => {
-          const variance = (competitor.id.charCodeAt(0) % (channel.variance * 2)) - channel.variance;
+        let channels = baseData.map((channel) => {
+          const variance =
+            (competitor.id.charCodeAt(0) % (channel.variance * 2)) -
+            channel.variance;
           const value = Math.max(1, channel.base + variance);
           return {
             name: channel.name,
             value: value,
             percentage: value,
-            color: CHART_COLORS[channel.name as keyof typeof CHART_COLORS] || CHART_COLORS.Other
+            color:
+              CHART_COLORS[channel.name as keyof typeof CHART_COLORS] ||
+              CHART_COLORS.Other,
           };
         });
 
         // Normalize to 100%
         const total = channels.reduce((sum, channel) => sum + channel.value, 0);
-        channels = channels.map(channel => ({
+        channels = channels.map((channel) => ({
           ...channel,
           value: Math.round((channel.value / total) * 100),
-          percentage: Math.round((channel.value / total) * 100)
+          percentage: Math.round((channel.value / total) * 100),
         }));
 
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: competitorLabel,
-          channels: channels
+          channels: channels,
         });
       }
     });
-    
+
     return result;
   };
 
   // Process device distribution data for donut charts
   const processDeviceDistributionData = () => {
-    const deviceMetrics = metrics.filter(m => m.metricName === 'Device Distribution');
-    
+    const deviceMetrics = metrics.filter(
+      (m) => m.metricName === "Device Distribution",
+    );
+
     // Comprehensive device debugging
 
-    
     // Debug competitor device metrics specifically
-    const competitorDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Competitor');
+    const competitorDeviceMetrics = deviceMetrics.filter(
+      (m) => m.sourceType === "Competitor",
+    );
 
-    
     if (competitorDeviceMetrics.length > 0) {
-
     } else {
-
     }
-    
+
     // Quick validation that GA4 device data is found
-    const clientDeviceMetrics = deviceMetrics.filter(m => m.sourceType === 'Client');
-    const ga4DeviceArrayMetric = clientDeviceMetrics.find(m => Array.isArray(m.value));
+    const clientDeviceMetrics = deviceMetrics.filter(
+      (m) => m.sourceType === "Client",
+    );
+    const ga4DeviceArrayMetric = clientDeviceMetrics.find((m) =>
+      Array.isArray(m.value),
+    );
     if (ga4DeviceArrayMetric) {
-
     }
-    
+
     const DEVICE_COLORS = {
-      'Desktop': '#3b82f6',
-      'Mobile': '#10b981'
+      Desktop: "#3b82f6",
+      Mobile: "#10b981",
     };
 
     const result = [];
@@ -649,13 +850,13 @@ export default function Dashboard() {
     const aggregateDeviceData = (sourceMetrics: any[]) => {
       const deviceSums = new Map();
       const deviceCounts = new Map();
-      
-      sourceMetrics.forEach(metric => {
+
+      sourceMetrics.forEach((metric) => {
         // Handle individual device records (competitors/averages format)
         if (metric.channel) {
           const deviceName = metric.channel;
           const value = parseFloat(metric.value);
-          
+
           if (deviceSums.has(deviceName)) {
             deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
             deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
@@ -667,8 +868,10 @@ export default function Dashboard() {
           // GA4 array format - already parsed by backend
           metric.value.forEach((device: any) => {
             const deviceName = device.device || device.name || device.category;
-            const value = parseFloat(device.percentage || device.value || device.sessions);
-            
+            const value = parseFloat(
+              device.percentage || device.value || device.sessions,
+            );
+
             if (deviceName && !isNaN(value)) {
               if (deviceSums.has(deviceName)) {
                 deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
@@ -679,36 +882,48 @@ export default function Dashboard() {
               }
             }
           });
-        } else if (typeof metric.value === 'string') {
+        } else if (typeof metric.value === "string") {
           // GA4 JSON string format - handle escaped JSON
           try {
             // Handle multiple levels of JSON escaping from database
             let jsonString = metric.value;
-            
+
             // Remove outer quotes if present
             if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
               jsonString = jsonString.slice(1, -1);
             }
-            
+
             // Unescape JSON
             jsonString = jsonString.replace(/\\"/g, '"');
-            
-            console.log('🔍 DEVICE PARSE - Attempting to parse:', jsonString.substring(0, 100));
-            
+
+            console.log(
+              "🔍 DEVICE PARSE - Attempting to parse:",
+              jsonString.substring(0, 100),
+            );
+
             const deviceData = JSON.parse(jsonString);
-            console.log('✅ DEVICE PARSE - Success:', deviceData);
-            
+            console.log("✅ DEVICE PARSE - Success:", deviceData);
+
             if (Array.isArray(deviceData)) {
               deviceData.forEach((device: any) => {
-                const deviceName = device.device || device.name || device.category;
-                const value = parseFloat(device.percentage || device.value || device.sessions);
-                
-                console.log('📱 DEVICE ITEM:', { deviceName, value, device });
-                
+                const deviceName =
+                  device.device || device.name || device.category;
+                const value = parseFloat(
+                  device.percentage || device.value || device.sessions,
+                );
+
+                console.log("📱 DEVICE ITEM:", { deviceName, value, device });
+
                 if (deviceName && !isNaN(value)) {
                   if (deviceSums.has(deviceName)) {
-                    deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
-                    deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
+                    deviceSums.set(
+                      deviceName,
+                      deviceSums.get(deviceName) + value,
+                    );
+                    deviceCounts.set(
+                      deviceName,
+                      deviceCounts.get(deviceName) + 1,
+                    );
                   } else {
                     deviceSums.set(deviceName, value);
                     deviceCounts.set(deviceName, 1);
@@ -717,15 +932,23 @@ export default function Dashboard() {
               });
             }
           } catch (e) {
-            console.error(`❌ Invalid device JSON data:`, e, metric.value?.substring?.(0, 100));
+            console.error(
+              `❌ Invalid device JSON data:`,
+              e,
+              metric.value?.substring?.(0, 100),
+            );
           }
         } else if (metric.channel && metric.value) {
           // Handle individual device channel records (from backend processing)
           const deviceName = metric.channel;
           const value = parseFloat(metric.value);
-          
-          console.log('📱 INDIVIDUAL DEVICE RECORD:', { deviceName, value, metric });
-          
+
+          console.log("📱 INDIVIDUAL DEVICE RECORD:", {
+            deviceName,
+            value,
+            metric,
+          });
+
           if (deviceName && !isNaN(value)) {
             if (deviceSums.has(deviceName)) {
               deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
@@ -736,7 +959,7 @@ export default function Dashboard() {
             }
           }
         } else {
-          console.warn('🚨 UNKNOWN DEVICE FORMAT:', metric);
+          console.warn("🚨 UNKNOWN DEVICE FORMAT:", metric);
         }
       });
 
@@ -750,12 +973,15 @@ export default function Dashboard() {
       // Convert to array format expected by chart with normalized device names
       const devices = Array.from(deviceMap.entries()).map(([name, value]) => {
         // Normalize device names to match chart expectations (capitalize first letter)
-        const normalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        const normalizedName =
+          name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         return {
           name: normalizedName,
           value: Math.round(value),
           percentage: Math.round(value),
-          color: DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] || DEVICE_COLORS.Mobile
+          color:
+            DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] ||
+            DEVICE_COLORS.Mobile,
         };
       });
 
@@ -781,32 +1007,36 @@ export default function Dashboard() {
     };
 
     // Client data
-    const clientDeviceData = deviceMetrics.filter(m => m.sourceType === 'Client');
+    const clientDeviceData = deviceMetrics.filter(
+      (m) => m.sourceType === "Client",
+    );
     if (clientDeviceData.length > 0) {
       result.push({
-        sourceType: 'Client',
-        label: client?.name || 'Client',
-        devices: aggregateDeviceData(clientDeviceData)
+        sourceType: "Client",
+        label: client?.name || "Client",
+        devices: aggregateDeviceData(clientDeviceData),
       });
     }
 
     // CD Average data
-    const cdDeviceData = deviceMetrics.filter(m => m.sourceType === 'CD_Avg');
+    const cdDeviceData = deviceMetrics.filter((m) => m.sourceType === "CD_Avg");
     if (cdDeviceData.length > 0) {
       result.push({
-        sourceType: 'CD_Avg',
-        label: 'Clear Digital Client Avg',
-        devices: aggregateDeviceData(cdDeviceData)
+        sourceType: "CD_Avg",
+        label: "Clear Digital Client Avg",
+        devices: aggregateDeviceData(cdDeviceData),
       });
     }
 
     // Industry Average data
-    const industryDeviceData = deviceMetrics.filter(m => m.sourceType === 'Industry_Avg');
+    const industryDeviceData = deviceMetrics.filter(
+      (m) => m.sourceType === "Industry_Avg",
+    );
     if (industryDeviceData.length > 0) {
       result.push({
-        sourceType: 'Industry_Avg',
-        label: 'Industry Avg',
-        devices: aggregateDeviceData(industryDeviceData)
+        sourceType: "Industry_Avg",
+        label: "Industry Avg",
+        devices: aggregateDeviceData(industryDeviceData),
       });
     }
 
@@ -818,26 +1048,27 @@ export default function Dashboard() {
   };
 
   const metricNames = [
-    "Bounce Rate", 
-    "Session Duration", 
-    "Pages per Session", 
-    "Sessions per User", 
-    "Traffic Channels", 
-    "Device Distribution"
+    "Bounce Rate",
+    "Session Duration",
+    "Pages per Session",
+    "Sessions per User",
+    "Traffic Channels",
+    "Device Distribution",
   ] as const;
 
   const scrollToMetric = (metricName: string) => {
-    const elementId = `metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`;
+    const elementId = `metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`;
     const element = document.getElementById(elementId);
-    
+
     if (element) {
       const HEADER_HEIGHT = 64;
       const PADDING_OFFSET = 20;
-      const elementPosition = element.offsetTop - HEADER_HEIGHT - PADDING_OFFSET;
-      
+      const elementPosition =
+        element.offsetTop - HEADER_HEIGHT - PADDING_OFFSET;
+
       window.scrollTo({
         top: elementPosition,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   };
@@ -847,39 +1078,38 @@ export default function Dashboard() {
     setManualClick(true);
     setActiveSection(metricName);
     scrollToMetric(metricName);
-    
+
     // Allow scroll handler to resume after scroll animation completes
     setTimeout(() => {
       setManualClick(false);
     }, 1000);
   };
 
-
   // Scroll-based section highlighting with throttling and manual click protection
   useEffect(() => {
     if (isLoading) return;
-    
+
     const THROTTLE_DELAY = 400;
     const TRIGGER_OFFSET = 200;
-    
+
     let isThrottled = false;
     let lastActiveSection = activeSection;
-    
+
     const handleScroll = () => {
       if (isThrottled || manualClick) return;
       isThrottled = true;
-      
+
       setTimeout(() => {
         const scrollY = window.scrollY;
         const triggerPoint = scrollY + TRIGGER_OFFSET;
-        
+
         let closestSection = metricNames[0] as string; // Default to first section
         let closestDistance = Infinity;
-        
-        metricNames.forEach(metricName => {
-          const elementId = `metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`;
+
+        metricNames.forEach((metricName) => {
+          const elementId = `metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`;
           const element = document.getElementById(elementId);
-          
+
           if (element) {
             const distance = Math.abs(element.offsetTop - triggerPoint);
             if (distance < closestDistance) {
@@ -888,23 +1118,22 @@ export default function Dashboard() {
             }
           }
         });
-        
+
         // Only update if the section actually changed to prevent flashing
         if (closestSection !== lastActiveSection) {
           setActiveSection(closestSection);
           lastActiveSection = closestSection;
         }
-        
+
         isThrottled = false;
       }, THROTTLE_DELAY);
     };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [isLoading, metricNames, activeSection, manualClick]);
 
   // Performance tracking removed per user request
-
 
   if (isLoading || isRefreshing) {
     return (
@@ -925,18 +1154,21 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="flex">
           {/* Desktop Navigation Skeleton */}
           <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4 hidden lg:block">
             <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-8 bg-slate-200 rounded animate-pulse"></div>
+                <div
+                  key={i}
+                  className="h-8 bg-slate-200 rounded animate-pulse"
+                ></div>
               ))}
             </div>
           </div>
-          
+
           {/* Content Skeleton */}
           <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
             {/* Mobile-specific client info */}
@@ -948,17 +1180,23 @@ export default function Dashboard() {
             {/* Filter section skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                <div
+                  key={i}
+                  className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm"
+                >
                   <div className="h-4 w-24 sm:h-5 sm:w-32 bg-slate-200 rounded animate-pulse mb-3 sm:mb-4"></div>
                   <div className="h-8 sm:h-10 bg-slate-200 rounded animate-pulse"></div>
                 </div>
               ))}
             </div>
-            
+
             {/* Metric Cards Skeleton */}
             <div className="space-y-8 sm:space-y-10 lg:space-y-12">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm">
+                <div
+                  key={i}
+                  className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm"
+                >
                   <div className="h-5 w-32 sm:h-6 sm:w-48 bg-slate-200 rounded animate-pulse mb-4 sm:mb-6"></div>
                   <div className="h-48 sm:h-56 lg:h-64 bg-slate-200 rounded-lg animate-pulse mb-4 sm:mb-6"></div>
                   {/* AI Insights skeleton */}
@@ -991,29 +1229,35 @@ export default function Dashboard() {
       <header className="bg-gradient-to-r from-white via-white to-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-4 sm:px-6 py-3 sm:py-5 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
-            <img 
-              src={clearLogoPath} 
-              alt="Clear Digital Logo" 
+            <img
+              src={clearLogoPath}
+              alt="Clear Digital Logo"
               className="h-6 sm:h-8 md:h-10 w-auto flex-shrink-0"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-4">
-                <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Pulse Dashboard™</h1>
-
+                <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                  Pulse Dashboard™
+                </h1>
               </div>
               <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
-                {client?.name || (user?.role === "Admin" ? "No Client (Admin Only)" : "Loading...")}
+                {client?.name ||
+                  (user?.role === "Admin"
+                    ? "No Client (Admin Only)"
+                    : "Loading...")}
                 {client?.websiteUrl && (
                   <>
                     <span className="hidden sm:inline"> | </span>
                     <span className="block sm:inline">
-                      <a 
-                        href={client.websiteUrl} 
-                        target="_blank" 
+                      <a
+                        href={client.websiteUrl}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary underline inline-flex items-center gap-1 group"
                       >
-                        <span className="truncate max-w-32 sm:max-w-none">{client.websiteUrl.replace(/^https?:\/\//, '')}</span>
+                        <span className="truncate max-w-32 sm:max-w-none">
+                          {client.websiteUrl.replace(/^https?:\/\//, "")}
+                        </span>
                         <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                       </a>
                     </span>
@@ -1024,33 +1268,38 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              <div className={`w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center transition-all hover:scale-105 overflow-hidden ${!client?.iconUrl ? 'border-2 border-primary/20' : ''}`}>
+              <div
+                className={`w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center transition-all hover:scale-105 overflow-hidden ${!client?.iconUrl ? "border-2 border-primary/20" : ""}`}
+              >
                 {client?.iconUrl ? (
-                  <img 
-                    src={client.iconUrl} 
+                  <img
+                    src={client.iconUrl}
                     alt={`${client.name} logo`}
                     className="w-full h-full object-contain rounded-full"
-                    style={{ backgroundColor: '#8C8C8C' }}
+                    style={{ backgroundColor: "#8C8C8C" }}
                     onError={(e) => {
                       // Fallback to initial if image fails to load
-                      e.currentTarget.style.display = 'none';
-                      const fallbackSpan = e.currentTarget.nextElementSibling as HTMLElement;
+                      e.currentTarget.style.display = "none";
+                      const fallbackSpan = e.currentTarget
+                        .nextElementSibling as HTMLElement;
                       if (fallbackSpan) {
-                        fallbackSpan.style.display = 'block';
+                        fallbackSpan.style.display = "block";
                       }
                     }}
                   />
                 ) : null}
-                <span 
-                  className={`text-xs sm:text-sm font-bold text-primary ${client?.iconUrl ? 'hidden' : 'block'}`}
-                  style={{ display: client?.iconUrl ? 'none' : 'block' }}
+                <span
+                  className={`text-xs sm:text-sm font-bold text-primary ${client?.iconUrl ? "hidden" : "block"}`}
+                  style={{ display: client?.iconUrl ? "none" : "block" }}
                 >
                   {user?.name?.charAt(0) || "U"}
                 </span>
               </div>
-              <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">{user?.name}</span>
+              <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:block truncate max-w-24 lg:max-w-none">
+                {user?.name}
+              </span>
             </div>
-            
+
             {/* Debug: Clear Insights Button */}
             <Button
               variant="outline"
@@ -1074,7 +1323,9 @@ export default function Dashboard() {
 
             <PdfExportButton
               targetRef={dashboardRootRef}
-              clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
+              clientLabel={
+                dashboardQuery.data?.client?.name || user?.clientId || undefined
+              }
               clientName={dashboardQuery.data?.client?.name || undefined}
               className="ml-1"
             />
@@ -1101,11 +1352,19 @@ export default function Dashboard() {
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 mobile-menu" onClick={() => setMobileMenuOpen(false)}>
-          <nav className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/50 mobile-menu"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <nav
+            className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900">Analytics Menu</h2>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Analytics Menu
+                </h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1117,7 +1376,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Vitals</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">
+                Vitals
+              </h3>
               <ul className="space-y-2">
                 {metricNames.map((metricName) => (
                   <li key={metricName}>
@@ -1128,15 +1389,19 @@ export default function Dashboard() {
                       }}
                       className={`w-full text-left px-4 py-3 text-sm transition-all duration-200 rounded-lg group hover:bg-slate-50 ${
                         activeSection === metricName
-                          ? 'bg-primary/10 text-primary font-semibold border-l-4 border-primary shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? "bg-primary/10 text-primary font-semibold border-l-4 border-primary shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
                       <span className="flex items-center justify-between">
                         {metricName}
-                        <TrendingUp className={`w-4 h-4 transition-all duration-200 ${
-                          activeSection === metricName ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-50'
-                        }`} />
+                        <TrendingUp
+                          className={`w-4 h-4 transition-all duration-200 ${
+                            activeSection === metricName
+                              ? "opacity-100 text-primary"
+                              : "opacity-0 group-hover:opacity-50"
+                          }`}
+                        />
                       </span>
                     </button>
                   </li>
@@ -1146,7 +1411,9 @@ export default function Dashboard() {
               {/* Admin Panel Link */}
               {user?.role === "Admin" && (
                 <div className="mt-6 pt-4 border-t border-slate-200">
-                  <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Admin</h3>
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">
+                    Admin
+                  </h3>
                   <div className="space-y-2">
                     <Link href="/admin">
                       <button
@@ -1162,7 +1429,7 @@ export default function Dashboard() {
                         </span>
                       </button>
                     </Link>
-                    
+
                     {/* Refresh Data Button */}
                     <button
                       onClick={handleRefreshData}
@@ -1195,15 +1462,15 @@ export default function Dashboard() {
                     onClick={() => handleNavigationClick(metricName)}
                     className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
                       activeSection === metricName
-                        ? 'bg-slate-100 text-primary'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-primary'
+                        ? "bg-slate-100 text-primary"
+                        : "text-slate-700 hover:bg-slate-100 hover:text-primary"
                     }`}
                   >
                     {metricName}
                   </button>
                 </li>
               ))}
-              
+
               {/* Admin Panel Link after Device Distribution */}
               {user?.role === "Admin" && (
                 <>
@@ -1221,7 +1488,7 @@ export default function Dashboard() {
                     </Link>
                   </li>
                   <li key="refresh-data">
-                    <button 
+                    <button
                       onClick={handleRefreshData}
                       className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
                     >
@@ -1238,11 +1505,14 @@ export default function Dashboard() {
         </nav>
 
         {/* Enhanced Main Content - Responsive */}
-        <div ref={dashboardRootRef} className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto" id="dashboard-content">
-          
+        <div
+          ref={dashboardRootRef}
+          className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
+          id="dashboard-content"
+        >
           {/* GA4 Status Banner */}
-          <StatusBanner 
-            clientId={user?.clientId || "demo-client-id"} 
+          <StatusBanner
+            clientId={user?.clientId || "demo-client-id"}
             timePeriod={timePeriod}
             isAdmin={user?.role === "Admin"}
           />
@@ -1258,562 +1528,736 @@ export default function Dashboard() {
             className=""
           />
 
-        {/* Enhanced Filters Section - Responsive */}
-        <div className="filters-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-base font-semibold">
-                <Filter className="h-5 w-5 mr-3 text-primary" />
-                Industry Filters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">Business Size</label>
+          {/* Enhanced Filters Section - Responsive */}
+          <div className="filters-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
+            <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-base font-semibold">
+                  <Filter className="h-5 w-5 mr-3 text-primary" />
+                  Industry Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Business Size
+                  </label>
+                  <NativeSelect
+                    value={businessSize || ""}
+                    onChange={(e) => {
+                      try {
+                        setBusinessSize(e.target.value);
+                      } catch (error) {
+                        console.warn("Business size selection error:", error);
+                      }
+                    }}
+                    options={
+                      filtersData?.businessSizes?.map((size) => ({
+                        value: size,
+                        label: size,
+                      })) || [{ value: "All", label: "All" }]
+                    }
+                    placeholder="Select business size"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Industry Vertical
+                  </label>
+                  <NativeSelect
+                    value={industryVertical || ""}
+                    onChange={(e) => {
+                      try {
+                        setIndustryVertical(e.target.value);
+                      } catch (error) {
+                        console.warn(
+                          "Industry vertical selection error:",
+                          error,
+                        );
+                      }
+                    }}
+                    options={
+                      filtersData?.industryVerticals?.map((vertical) => ({
+                        value: vertical,
+                        label: vertical,
+                      })) || [{ value: "All", label: "All" }]
+                    }
+                    placeholder="Select industry"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-base font-semibold">
+                  <Clock className="h-5 w-5 mr-3 text-primary" />
+                  Time Period
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <NativeSelect
-                  value={businessSize || ""}
+                  value={timePeriod || ""}
                   onChange={(e) => {
                     try {
-                      setBusinessSize(e.target.value);
+                      if (e.target.value === "Custom Date Range") {
+                        setShowDatePicker(true);
+                      } else {
+                        setTimePeriod(e.target.value);
+                        setCustomDateRange("");
+                      }
                     } catch (error) {
-                      console.warn('Business size selection error:', error);
+                      console.warn("Time period selection error:", error);
                     }
                   }}
-                  options={filtersData?.businessSizes?.map(size => ({ value: size, label: size })) || [{ value: "All", label: "All" }]}
-                  placeholder="Select business size"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">Industry Vertical</label>
-                <NativeSelect
-                  value={industryVertical || ""}
-                  onChange={(e) => {
-                    try {
-                      setIndustryVertical(e.target.value);
-                    } catch (error) {
-                      console.warn('Industry vertical selection error:', error);
-                    }
-                  }}
-                  options={filtersData?.industryVerticals?.map(vertical => ({ value: vertical, label: vertical })) || [{ value: "All", label: "All" }]}
-                  placeholder="Select industry"
-                />
-                
-
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-base font-semibold">
-                <Clock className="h-5 w-5 mr-3 text-primary" />
-                Time Period
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NativeSelect
-                value={timePeriod || ""}
-                onChange={(e) => {
-                  try {
-                    if (e.target.value === "Custom Date Range") {
-                      setShowDatePicker(true);
-                    } else {
-                      setTimePeriod(e.target.value);
-                      setCustomDateRange("");
-                    }
-                  } catch (error) {
-                    console.warn('Time period selection error:', error);
+                  options={
+                    filtersData?.timePeriods
+                      ?.filter((period) => period && period !== "Year")
+                      .map((period) => ({ value: period, label: period })) || [
+                      { value: "Last Month", label: "Last Month" },
+                    ]
                   }
-                }}
-                options={filtersData?.timePeriods?.filter(period => period && period !== "Year").map(period => ({ value: period, label: period })) || [{ value: "Last Month", label: "Last Month" }]}
-                placeholder="Select time period"
-              />
-              
-              {/* Display time period details below dropdown */}
-              {(() => {
-                let displayText = "";
-                if (timePeriod === "Custom Date Range" && customDateRange) {
-                  displayText = customDateRange;
-                } else if (timePeriod === "Last Month") {
-                  // Use Pacific Time calculation: current PT month - 1
-                  const now = new Date();
-                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'America/Los_Angeles',
-                    year: 'numeric',
-                    month: '2-digit'
-                  });
-                  const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
-                  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-                  displayText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                } else if (timePeriod === "Last Quarter") {
-                  // Show the last 3 months ending with PT target month
-                  const now = new Date();
-                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'America/Los_Angeles',
-                    year: 'numeric',
-                    month: '2-digit'
-                  });
-                  const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
-                  const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
-                  
-                  // Calculate start month (2 months before target month)
-                  const startMonth = new Date(targetMonth);
-                  startMonth.setMonth(targetMonth.getMonth() - 2);
-                  
-                  const startText = startMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                  const endText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                  displayText = `${startText} - ${endText}`;
-                } else if (timePeriod === "Last Year") {
-                  // Use Pacific Time for year calculation - Last Year should be rolling 12 months ending in previous month
-                  const now = new Date();
-                  const ptFormatter = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'America/Los_Angeles',
-                    year: 'numeric',
-                    month: '2-digit'
-                  });
-                  const ptParts = ptFormatter.formatToParts(now);
-                  const ptYear = parseInt(ptParts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
-                  const ptMonth = parseInt(ptParts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1)) - 1;
-                  
-                  // End date is previous month (July 2025)
-                  const endDate = new Date(ptYear, ptMonth - 1, 1);
-                  
-                  // Start date is 12 months before end date (August 2024)
-                  const startDate = new Date(endDate);
-                  startDate.setMonth(startDate.getMonth() - 11); // 11 months back from end month = 12 months total
-                  
-                  displayText = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-                }
-                
-                return displayText ? (
-                  <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs font-medium text-slate-600">Selected Period:</p>
-                    <p className="text-xs font-semibold text-slate-800 leading-tight">{displayText}</p>
-                  </div>
-                ) : null;
-              })()}
-              
-              {/* Custom Date Range Dialog */}
-              <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Select Custom Date Range</DialogTitle>
-                    <DialogDescription>
-                      Choose the start and end dates for your custom time period
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="start-date">Start Date</Label>
-                      <Input
-                        id="start-date"
-                        type="date"
-                        value={startDate}
-                        max={new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setStartDate(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="end-date">End Date</Label>
-                      <Input
-                        id="end-date"
-                        type="date"
-                        value={endDate}
-                        max={new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setEndDate(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setShowDatePicker(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          if (startDate && endDate) {
-                            const start = new Date(startDate);
-                            const end = new Date(endDate);
-                            const formattedRange = `${start.toLocaleDateString('en-US')} to ${end.toLocaleDateString('en-US')}`;
-                            setCustomDateRange(formattedRange);
-                            setTimePeriod("Custom Date Range");
-                            setShowDatePicker(false);
-                          }
-                        }}
-                        disabled={!startDate || !endDate}
-                      >
-                        Apply Range
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
+                  placeholder="Select time period"
+                />
 
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-base font-semibold">
-                <Building2 className="h-5 w-5 mr-3 text-primary" />
-                Competitors
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {competitors.length > 0 ? (
-                <div className="space-y-2">
-                  {competitors.map((competitor: any) => {
-                    const isDeleting = deletingCompetitorId === competitor.id;
-                    return (
-                      <div
-                        key={competitor.id}
-                        className={`flex items-center justify-between h-10 px-3 rounded-lg border transition-all duration-200 ${
-                          isDeleting 
-                            ? 'bg-slate-100 border-slate-300 opacity-60' 
-                            : 'bg-slate-50 border-slate-200'
-                        }`}
-                      >
-                        <span className={`text-sm truncate flex-1 mr-2 transition-colors ${
-                          isDeleting ? 'text-slate-500' : 'text-slate-900'
-                        }`}>
-                          {competitor.domain.replace('https://', '').replace('http://', '')}
-                        </span>
+                {/* Display time period details below dropdown */}
+                {(() => {
+                  let displayText = "";
+                  if (timePeriod === "Custom Date Range" && customDateRange) {
+                    displayText = customDateRange;
+                  } else if (timePeriod === "Last Month") {
+                    // Use Pacific Time calculation: current PT month - 1
+                    const now = new Date();
+                    const ptFormatter = new Intl.DateTimeFormat("en-US", {
+                      timeZone: "America/Los_Angeles",
+                      year: "numeric",
+                      month: "2-digit",
+                    });
+                    const ptParts = ptFormatter.formatToParts(now);
+                    const ptYear = parseInt(
+                      ptParts.find((p) => p.type === "year")?.value ||
+                        String(now.getFullYear()),
+                    );
+                    const ptMonth =
+                      parseInt(
+                        ptParts.find((p) => p.type === "month")?.value ||
+                          String(now.getMonth() + 1),
+                      ) - 1;
+                    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+                    displayText = targetMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    });
+                  } else if (timePeriod === "Last Quarter") {
+                    // Show the last 3 months ending with PT target month
+                    const now = new Date();
+                    const ptFormatter = new Intl.DateTimeFormat("en-US", {
+                      timeZone: "America/Los_Angeles",
+                      year: "numeric",
+                      month: "2-digit",
+                    });
+                    const ptParts = ptFormatter.formatToParts(now);
+                    const ptYear = parseInt(
+                      ptParts.find((p) => p.type === "year")?.value ||
+                        String(now.getFullYear()),
+                    );
+                    const ptMonth =
+                      parseInt(
+                        ptParts.find((p) => p.type === "month")?.value ||
+                          String(now.getMonth() + 1),
+                      ) - 1;
+                    const targetMonth = new Date(ptYear, ptMonth - 1, 1); // 1 month before current PT
+
+                    // Calculate start month (2 months before target month)
+                    const startMonth = new Date(targetMonth);
+                    startMonth.setMonth(targetMonth.getMonth() - 2);
+
+                    const startText = startMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    });
+                    const endText = targetMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    });
+                    displayText = `${startText} - ${endText}`;
+                  } else if (timePeriod === "Last Year") {
+                    // Use Pacific Time for year calculation - Last Year should be rolling 12 months ending in previous month
+                    const now = new Date();
+                    const ptFormatter = new Intl.DateTimeFormat("en-US", {
+                      timeZone: "America/Los_Angeles",
+                      year: "numeric",
+                      month: "2-digit",
+                    });
+                    const ptParts = ptFormatter.formatToParts(now);
+                    const ptYear = parseInt(
+                      ptParts.find((p) => p.type === "year")?.value ||
+                        String(now.getFullYear()),
+                    );
+                    const ptMonth =
+                      parseInt(
+                        ptParts.find((p) => p.type === "month")?.value ||
+                          String(now.getMonth() + 1),
+                      ) - 1;
+
+                    // End date is previous month (July 2025)
+                    const endDate = new Date(ptYear, ptMonth - 1, 1);
+
+                    // Start date is 12 months before end date (August 2024)
+                    const startDate = new Date(endDate);
+                    startDate.setMonth(startDate.getMonth() - 11); // 11 months back from end month = 12 months total
+
+                    displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+                  }
+
+                  return displayText ? (
+                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                      <p className="text-xs font-medium text-slate-600">
+                        Selected Period:
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800 leading-tight">
+                        {displayText}
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Custom Date Range Dialog */}
+                <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Select Custom Date Range</DialogTitle>
+                      <DialogDescription>
+                        Choose the start and end dates for your custom time
+                        period
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="start-date">Start Date</Label>
+                        <Input
+                          id="start-date"
+                          type="date"
+                          value={startDate}
+                          max={new Date().toISOString().split("T")[0]}
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="end-date">End Date</Label>
+                        <Input
+                          id="end-date"
+                          type="date"
+                          value={endDate}
+                          max={new Date().toISOString().split("T")[0]}
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isDeleting}
-                          onClick={() => {
-                            setDeletingCompetitorId(competitor.id);
-                            deleteCompetitorMutation.mutate(competitor.id);
-                          }}
-                          className={`h-6 w-6 p-0 transition-all duration-200 ${
-                            isDeleting 
-                              ? 'cursor-not-allowed' 
-                              : 'hover:bg-red-100 hover:text-red-600'
-                          }`}
+                          variant="outline"
+                          onClick={() => setShowDatePicker(false)}
                         >
-                          {isDeleting ? (
-                            <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <X className="h-3 w-3" />
-                          )}
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (startDate && endDate) {
+                              const start = new Date(startDate);
+                              const end = new Date(endDate);
+                              const formattedRange = `${start.toLocaleDateString("en-US")} to ${end.toLocaleDateString("en-US")}`;
+                              setCustomDateRange(formattedRange);
+                              setTimePeriod("Custom Date Range");
+                              setShowDatePicker(false);
+                            }
+                          }}
+                          disabled={!startDate || !endDate}
+                        >
+                          Apply Range
                         </Button>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center text-slate-500 py-4">
-                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">No competitors added yet</p>
-                </div>
-              )}
-              {competitors.length < 3 && (
-                <Button
-                  onClick={() => setShowCompetitorModal(true)}
-                  className={`add-competitor-button w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
-                    competitors.length > 0 ? 'mt-2' : 'mt-3'
-                  }`}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Manage Competitors
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
 
-
-        </div>
-
-
-
-        {/* Enhanced Metrics Grid */}
-        <div className="space-y-8 lg:space-y-16">
-          {(() => {
-
-            return metricNames;
-          })().map((metricName) => {
-
-            const metricData = groupedMetrics[metricName] || {};
-            const insight = insights.find((i: any) => i.metricName === metricName);
-            
-            // Data processing verified - debug logs removed for production
-            
-
-            
-
-            
-            return (
-              <Card 
-                key={metricName} 
-                id={`metric-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
-                className="border-slate-200/60 hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
-              >
-                <CardHeader className="pb-4 lg:pb-6">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">{metricName}</CardTitle>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            {timePeriod === 'Last Month' ? 'Last Month' :
-                             timePeriod === 'Last Quarter' ? 'Last Quarter' :
-                             timePeriod === 'Last Year' ? 'Last Year' :
-                             timePeriod === 'Custom' ? `${startDate} - ${endDate}` :
-                             timePeriod}
+            <Card className="border-slate-200/60 shadow-sm hover:shadow-[0_0_15px_rgba(255,20,147,0.15)] transition-all duration-200 rounded-xl bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-base font-semibold">
+                  <Building2 className="h-5 w-5 mr-3 text-primary" />
+                  Competitors
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {competitors.length > 0 ? (
+                  <div className="space-y-2">
+                    {competitors.map((competitor: any) => {
+                      const isDeleting = deletingCompetitorId === competitor.id;
+                      return (
+                        <div
+                          key={competitor.id}
+                          className={`flex items-center justify-between h-10 px-3 rounded-lg border transition-all duration-200 ${
+                            isDeleting
+                              ? "bg-slate-100 border-slate-300 opacity-60"
+                              : "bg-slate-50 border-slate-200"
+                          }`}
+                        >
+                          <span
+                            className={`text-sm truncate flex-1 mr-2 transition-colors ${
+                              isDeleting ? "text-slate-500" : "text-slate-900"
+                            }`}
+                          >
+                            {competitor.domain
+                              .replace("https://", "")
+                              .replace("http://", "")}
                           </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isDeleting}
+                            onClick={() => {
+                              setDeletingCompetitorId(competitor.id);
+                              deleteCompetitorMutation.mutate(competitor.id);
+                            }}
+                            className={`h-6 w-6 p-0 transition-all duration-200 ${
+                              isDeleting
+                                ? "cursor-not-allowed"
+                                : "hover:bg-red-100 hover:text-red-600"
+                            }`}
+                          >
+                            {isDeleting ? (
+                              <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Filter className="h-3 w-3" />
-                          <span>{industryVertical === 'All' ? 'All Industries' : industryVertical}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Filter className="h-3 w-3" />
-                          <span>{businessSize === 'All' ? 'All Sizes' : businessSize}</span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center text-slate-500 py-4">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No competitors added yet</p>
+                  </div>
+                )}
+                {competitors.length < 3 && (
+                  <Button
+                    onClick={() => setShowCompetitorModal(true)}
+                    className={`add-competitor-button w-full h-10 hover:shadow-[0_0_15px_rgba(156,163,175,0.25)] transition-all duration-200 ${
+                      competitors.length > 0 ? "mt-2" : "mt-3"
+                    }`}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manage Competitors
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced Metrics Grid */}
+          <div className="space-y-8 lg:space-y-16">
+            {(() => {
+              return metricNames;
+            })().map((metricName) => {
+              const metricData = groupedMetrics[metricName] || {};
+              const insight = insights.find(
+                (i: any) => i.metricName === metricName,
+              );
+
+              // Data processing verified - debug logs removed for production
+
+              return (
+                <Card
+                  key={metricName}
+                  id={`metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`}
+                  className="border-slate-200/60 hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm"
+                >
+                  <CardHeader className="pb-4 lg:pb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">
+                          {metricName}
+                        </CardTitle>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {timePeriod === "Last Month"
+                                ? "Last Month"
+                                : timePeriod === "Last Quarter"
+                                  ? "Last Quarter"
+                                  : timePeriod === "Last Year"
+                                    ? "Last Year"
+                                    : timePeriod === "Custom"
+                                      ? `${startDate} - ${endDate}`
+                                      : timePeriod}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Filter className="h-3 w-3" />
+                            <span>
+                              {industryVertical === "All"
+                                ? "All Industries"
+                                : industryVertical}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Filter className="h-3 w-3" />
+                            <span>
+                              {businessSize === "All"
+                                ? "All Sizes"
+                                : businessSize}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      {metricName !== "Traffic Channels" &&
+                        metricName !== "Device Distribution" && (
+                          <div className="text-left sm:text-right">
+                            <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
+                              {metricData.Client
+                                ? metricName.includes("Session Duration")
+                                  ? `${Math.round(metricData.Client * 10) / 10} min`
+                                  : `${Math.round(metricData.Client * 10) / 10}${metricName.includes("Rate") ? "%" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}`
+                                : "N/A"}
+                            </span>
+                            <span className="text-sm text-slate-500 font-medium">
+                              Your Performance
+                            </span>
+                          </div>
+                        )}
                     </div>
-{metricName !== "Traffic Channels" && metricName !== "Device Distribution" && (
-                    <div className="text-left sm:text-right">
-                      <span className="text-2xl lg:text-3xl font-light text-primary block tracking-tight">
-                        {metricData.Client ? (
-                          metricName.includes("Session Duration") 
-                            ? `${Math.round(metricData.Client * 10) / 10} min`
-                            : `${Math.round(metricData.Client * 10) / 10}${metricName.includes("Rate") ? "%" : metricName.includes("Pages per Session") ? " pages" : metricName.includes("Sessions per User") ? " sessions" : ""}`
-                        ) : "N/A"}
-                      </span>
-                      <span className="text-sm text-slate-500 font-medium">Your Performance</span>
-                    </div>
-                  )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6 lg:space-y-8">
-                  {/* Enhanced Chart Container */}
-                  <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6">
-                    <div className={`relative ${metricName === "Device Distribution" ? "overflow-visible" : metricName === "Traffic Channels" ? "overflow-visible" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}>
-                      {metricName === "Bounce Rate" ? (
-                        <TimeSeriesChart 
-                          metricName={metricName}
-                          timePeriod={timePeriod}
-                          clientData={metricData.Client || 0}
-                          industryAvg={metricData.Industry_Avg || 0}
-                          cdAvg={metricData.CD_Avg || 0}
-                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                          timeSeriesData={timeSeriesData}
-                          periods={periods}
-                          competitors={processCompanyMetrics(competitors, metrics, {
-                            metricName,
-                            displayMode: 'individual',
-                            sourceType: 'Competitor',
-                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
-                            convertToPercentage: shouldConvertToPercentage(metricName),
-                            convertToMinutes: shouldConvertToMinutes(metricName)
-                          })}
-                        />
-                      ) : metricName === "Session Duration" ? (
-                        <MetricBarChart 
-                          metricName={metricName}
-                          timePeriod={timePeriod}
-                          clientData={metricData.Client || 0}
-                          industryAvg={metricData.Industry_Avg || 0}
-                          cdAvg={metricData.CD_Avg || 0}
-                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                          timeSeriesData={timeSeriesData}
-                          periods={periods}
-                          competitors={processCompanyMetrics(competitors, metrics, {
-                            metricName,
-                            displayMode: 'individual',
-                            sourceType: 'Competitor',
-                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
-                            convertToPercentage: shouldConvertToPercentage(metricName),
-                            convertToMinutes: shouldConvertToMinutes(metricName)
-                          })}
-                        />
-                      ) : metricName === "Traffic Channels" ? (
-                        (() => {
-                          const trafficData = processTrafficChannelData();
-
-                          return (
-                            <StackedBarChart 
-                              data={trafficData}
-                              title="Traffic Channel Distribution"
-                              description="Percentage breakdown of traffic sources"
-                            />
-                          );
-                        })()
-                      ) : metricName === "Pages per Session" || metricName === "Sessions per User" ? (
-                        <TimeSeriesChart 
-                          metricName={metricName}
-                          timePeriod={timePeriod}
-                          clientData={metricData.Client || 0}
-                          industryAvg={metricData.Industry_Avg || 0}
-                          cdAvg={metricData.CD_Avg || 0}
-                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                          timeSeriesData={timeSeriesData}
-                          periods={periods}
-                          competitors={processCompanyMetrics(competitors, metrics, {
-                            metricName,
-                            displayMode: 'individual',
-                            sourceType: 'Competitor',
-                            fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
-                            convertToPercentage: shouldConvertToPercentage(metricName),
-                            convertToMinutes: shouldConvertToMinutes(metricName)
-                          })}
-                        />
-                      ) : metricName === "Device Distribution" ? (
-                        <LollipopChart 
-                          data={(() => {
-                            const deviceData = processDeviceDistributionData();
-                            const clientData = deviceData.find(d => d.sourceType === 'Client');
-                            const result = { Desktop: 0, Mobile: 0 }; // Simplified 2-device model
-                            clientData?.devices.forEach(device => {
-                              result[device.name as keyof typeof result] = device.percentage;
-                            });
-                            return result;
-                          })()}
-                          competitors={processDeviceDistribution(competitors, metrics, 'Competitor')}
-                          clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                          clientName={dashboardData?.client?.name}
-                          industryAvg={(() => {
-                            const deviceData = processDeviceDistributionData();
-                            const industryData = deviceData.find(d => d.sourceType === 'Industry_Avg');
-                            const result = { Desktop: 45, Mobile: 55 }; // Simplified 2-device model
-                            industryData?.devices.forEach(device => {
-                              result[device.name as keyof typeof result] = device.percentage;
-                            });
-                            return result;
-                          })()}
-                          cdAvg={(() => {
-                            const deviceData = processDeviceDistributionData();
-                            const cdData = deviceData.find(d => d.sourceType === 'CD_Avg');
-                            const result = { Desktop: 50, Mobile: 50 }; // Simplified 2-device model
-                            cdData?.devices.forEach(device => {
-                              result[device.name as keyof typeof result] = device.percentage;
-                            });
-                            return result;
-                          })()}
-                        />
-                      ) : metricName === "Session Duration" ? (
-                        timePeriod === 'Last Quarter' ? (
-                          <TimeSeriesChart 
+                  </CardHeader>
+                  <CardContent className="space-y-6 lg:space-y-8">
+                    {/* Enhanced Chart Container */}
+                    <div className="bg-slate-50/50 rounded-xl p-2 sm:p-3 lg:p-6">
+                      <div
+                        className={`relative ${metricName === "Device Distribution" ? "overflow-visible" : metricName === "Traffic Channels" ? "overflow-visible" : "h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden"}`}
+                      >
+                        {metricName === "Bounce Rate" ? (
+                          <TimeSeriesChart
                             metricName={metricName}
                             timePeriod={timePeriod}
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
-                            clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
+                            clientUrl={dashboardData?.client?.websiteUrl
+                              ?.replace("https://", "")
+                              .replace("http://", "")}
                             timeSeriesData={timeSeriesData}
                             periods={periods}
-                            competitors={processCompanyMetrics(competitors, metrics, {
-                              metricName,
-                              displayMode: 'individual',
-                              sourceType: 'Competitor',
-                              fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
-                              convertToPercentage: shouldConvertToPercentage(metricName),
-                              convertToMinutes: shouldConvertToMinutes(metricName)
-                            })}
+                            competitors={processCompanyMetrics(
+                              competitors,
+                              metrics,
+                              {
+                                metricName,
+                                displayMode: "individual",
+                                sourceType: "Competitor",
+                                fallbackValue: getDefaultMetricValue(
+                                  metricName,
+                                  "Competitor",
+                                ),
+                                convertToPercentage:
+                                  shouldConvertToPercentage(metricName),
+                                convertToMinutes:
+                                  shouldConvertToMinutes(metricName),
+                              },
+                            )}
                           />
-                        ) : (
-                          <MetricBarChart 
+                        ) : metricName === "Session Duration" ? (
+                          <MetricBarChart
                             metricName={metricName}
                             timePeriod={timePeriod}
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
-                            clientUrl={dashboardData?.client?.websiteUrl?.replace('https://', '').replace('http://', '')}
-                            competitors={processCompanyMetrics(competitors, metrics, {
-                              metricName,
-                              displayMode: 'individual',
-                              sourceType: 'Competitor',
-                              fallbackValue: getDefaultMetricValue(metricName, 'Competitor'),
-                              convertToPercentage: shouldConvertToPercentage(metricName),
-                              convertToMinutes: shouldConvertToMinutes(metricName)
-                            })}
+                            clientUrl={dashboardData?.client?.websiteUrl
+                              ?.replace("https://", "")
+                              .replace("http://", "")}
+                            timeSeriesData={timeSeriesData}
+                            periods={periods}
+                            competitors={processCompanyMetrics(
+                              competitors,
+                              metrics,
+                              {
+                                metricName,
+                                displayMode: "individual",
+                                sourceType: "Competitor",
+                                fallbackValue: getDefaultMetricValue(
+                                  metricName,
+                                  "Competitor",
+                                ),
+                                convertToPercentage:
+                                  shouldConvertToPercentage(metricName),
+                                convertToMinutes:
+                                  shouldConvertToMinutes(metricName),
+                              },
+                            )}
                           />
-                        )
-                      ) : (
-                        <MetricsChart metricName={metricName} data={metricData} />
-                      )}
+                        ) : metricName === "Traffic Channels" ? (
+                          (() => {
+                            const trafficData = processTrafficChannelData();
+
+                            return (
+                              <StackedBarChart
+                                data={trafficData}
+                                title="Traffic Channel Distribution"
+                                description="Percentage breakdown of traffic sources"
+                              />
+                            );
+                          })()
+                        ) : metricName === "Pages per Session" ||
+                          metricName === "Sessions per User" ? (
+                          <TimeSeriesChart
+                            metricName={metricName}
+                            timePeriod={timePeriod}
+                            clientData={metricData.Client || 0}
+                            industryAvg={metricData.Industry_Avg || 0}
+                            cdAvg={metricData.CD_Avg || 0}
+                            clientUrl={dashboardData?.client?.websiteUrl
+                              ?.replace("https://", "")
+                              .replace("http://", "")}
+                            timeSeriesData={timeSeriesData}
+                            periods={periods}
+                            competitors={processCompanyMetrics(
+                              competitors,
+                              metrics,
+                              {
+                                metricName,
+                                displayMode: "individual",
+                                sourceType: "Competitor",
+                                fallbackValue: getDefaultMetricValue(
+                                  metricName,
+                                  "Competitor",
+                                ),
+                                convertToPercentage:
+                                  shouldConvertToPercentage(metricName),
+                                convertToMinutes:
+                                  shouldConvertToMinutes(metricName),
+                              },
+                            )}
+                          />
+                        ) : metricName === "Device Distribution" ? (
+                          <LollipopChart
+                            data={(() => {
+                              const deviceData =
+                                processDeviceDistributionData();
+                              const clientData = deviceData.find(
+                                (d) => d.sourceType === "Client",
+                              );
+                              const result = { Desktop: 0, Mobile: 0 }; // Simplified 2-device model
+                              clientData?.devices.forEach((device) => {
+                                result[device.name as keyof typeof result] =
+                                  device.percentage;
+                              });
+                              return result;
+                            })()}
+                            competitors={processDeviceDistribution(
+                              competitors,
+                              metrics,
+                              "Competitor",
+                            )}
+                            clientUrl={dashboardData?.client?.websiteUrl
+                              ?.replace("https://", "")
+                              .replace("http://", "")}
+                            clientName={dashboardData?.client?.name}
+                            industryAvg={(() => {
+                              const deviceData =
+                                processDeviceDistributionData();
+                              const industryData = deviceData.find(
+                                (d) => d.sourceType === "Industry_Avg",
+                              );
+                              const result = { Desktop: 45, Mobile: 55 }; // Simplified 2-device model
+                              industryData?.devices.forEach((device) => {
+                                result[device.name as keyof typeof result] =
+                                  device.percentage;
+                              });
+                              return result;
+                            })()}
+                            cdAvg={(() => {
+                              const deviceData =
+                                processDeviceDistributionData();
+                              const cdData = deviceData.find(
+                                (d) => d.sourceType === "CD_Avg",
+                              );
+                              const result = { Desktop: 50, Mobile: 50 }; // Simplified 2-device model
+                              cdData?.devices.forEach((device) => {
+                                result[device.name as keyof typeof result] =
+                                  device.percentage;
+                              });
+                              return result;
+                            })()}
+                          />
+                        ) : metricName === "Session Duration" ? (
+                          timePeriod === "Last Quarter" ? (
+                            <TimeSeriesChart
+                              metricName={metricName}
+                              timePeriod={timePeriod}
+                              clientData={metricData.Client || 0}
+                              industryAvg={metricData.Industry_Avg || 0}
+                              cdAvg={metricData.CD_Avg || 0}
+                              clientUrl={dashboardData?.client?.websiteUrl
+                                ?.replace("https://", "")
+                                .replace("http://", "")}
+                              timeSeriesData={timeSeriesData}
+                              periods={periods}
+                              competitors={processCompanyMetrics(
+                                competitors,
+                                metrics,
+                                {
+                                  metricName,
+                                  displayMode: "individual",
+                                  sourceType: "Competitor",
+                                  fallbackValue: getDefaultMetricValue(
+                                    metricName,
+                                    "Competitor",
+                                  ),
+                                  convertToPercentage:
+                                    shouldConvertToPercentage(metricName),
+                                  convertToMinutes:
+                                    shouldConvertToMinutes(metricName),
+                                },
+                              )}
+                            />
+                          ) : (
+                            <MetricBarChart
+                              metricName={metricName}
+                              timePeriod={timePeriod}
+                              clientData={metricData.Client || 0}
+                              industryAvg={metricData.Industry_Avg || 0}
+                              cdAvg={metricData.CD_Avg || 0}
+                              clientUrl={dashboardData?.client?.websiteUrl
+                                ?.replace("https://", "")
+                                .replace("http://", "")}
+                              competitors={processCompanyMetrics(
+                                competitors,
+                                metrics,
+                                {
+                                  metricName,
+                                  displayMode: "individual",
+                                  sourceType: "Competitor",
+                                  fallbackValue: getDefaultMetricValue(
+                                    metricName,
+                                    "Competitor",
+                                  ),
+                                  convertToPercentage:
+                                    shouldConvertToPercentage(metricName),
+                                  convertToMinutes:
+                                    shouldConvertToMinutes(metricName),
+                                },
+                              )}
+                            />
+                          )
+                        ) : (
+                          <MetricsChart
+                            metricName={metricName}
+                            data={metricData}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Enhanced AI-Generated Insights */}
-                  <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm mt-6 sm:mt-8 lg:mt-12">
-                    <div className="flex items-center mb-4 sm:mb-6">
-                      <div className="mr-3 sm:mr-4 flex-shrink-0">
-                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">Pulse AI Insight</h3>
-                        <p className="text-xs sm:text-sm text-slate-600">
-                          AI-powered analysis and recommendations for {getDataPeriodDisplay()}
-                        </p>
-                      </div>
-                      {/* Enhanced Status Icon with Glow Pulse */}
-                      {metricStatuses[metricName] && (
-                        <div className="ml-4 flex-shrink-0">
-                          {metricStatuses[metricName] === 'success' && (
-                            <div className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center status-icon-success" title="Performance is on target">
-                              <CheckCircle2 className="h-6 w-6 text-white relative z-10" />
-                            </div>
-                          )}
-                          {metricStatuses[metricName] === 'needs_improvement' && (
-                            <div className="w-12 h-12 bg-orange-500/70 rounded-full flex items-center justify-center status-icon-warning" title="Performance needs improvement">
-                              <AlertTriangle className="h-6 w-6 text-white relative z-10" />
-                            </div>
-                          )}
-                          {metricStatuses[metricName] === 'warning' && (
-                            <div className="w-12 h-12 bg-red-500/80 rounded-full flex items-center justify-center status-icon-error" title="Performance requires attention">
-                              <XCircle className="h-6 w-6 text-white relative z-10" />
-                            </div>
-                          )}
+
+                    {/* Enhanced AI-Generated Insights */}
+                    <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 shadow-sm mt-6 sm:mt-8 lg:mt-12">
+                      <div className="flex items-center mb-4 sm:mb-6">
+                        <div className="mr-3 sm:mr-4 flex-shrink-0">
+                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                         </div>
-                      )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base sm:text-lg font-bold text-primary tracking-tight">
+                            Pulse AI Insight
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-600">
+                            AI-powered analysis and recommendations for{" "}
+                            {getDataPeriodDisplay()}
+                          </p>
+                        </div>
+                        {/* Enhanced Status Icon with Glow Pulse */}
+                        {metricStatuses[metricName] && (
+                          <div className="ml-4 flex-shrink-0">
+                            {metricStatuses[metricName] === "success" && (
+                              <div
+                                className="w-12 h-12 bg-green-500/70 rounded-full flex items-center justify-center status-icon-success"
+                                title="Performance is on target"
+                              >
+                                <CheckCircle2 className="h-6 w-6 text-white relative z-10" />
+                              </div>
+                            )}
+                            {metricStatuses[metricName] ===
+                              "needs_improvement" && (
+                              <div
+                                className="w-12 h-12 bg-orange-500/70 rounded-full flex items-center justify-center status-icon-warning"
+                                title="Performance needs improvement"
+                              >
+                                <AlertTriangle className="h-6 w-6 text-white relative z-10" />
+                              </div>
+                            )}
+                            {metricStatuses[metricName] === "warning" && (
+                              <div
+                                className="w-12 h-12 bg-red-500/80 rounded-full flex items-center justify-center status-icon-error"
+                                title="Performance requires attention"
+                              >
+                                <XCircle className="h-6 w-6 text-white relative z-10" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <MetricInsightBox
+                        metricName={metricName}
+                        clientId={client?.id || ""}
+                        timePeriod={timePeriod}
+                        metricData={{
+                          metricName,
+                          clientValue: metricData?.Client || null,
+                          industryAverage: metricData?.Industry_Avg || null,
+                          cdAverage: metricData?.CD_Avg || null,
+                          competitorValues: [],
+                          competitorNames: [],
+                        }}
+                        preloadedInsight={insightsLookup[metricName] || null}
+                        onStatusChange={(
+                          status:
+                            | "success"
+                            | "needs_improvement"
+                            | "warning"
+                            | undefined,
+                        ) => {
+                          logger.debug(
+                            `Status change for ${metricName}:`,
+                            status,
+                          );
+                          setMetricStatuses((prev) => ({
+                            ...prev,
+                            [metricName]: status,
+                          }));
+                        }}
+                      />
                     </div>
-                    <MetricInsightBox 
-                      metricName={metricName}
-                      clientId={client?.id || ''}
-                      timePeriod={timePeriod}
-                      metricData={{
-                        metricName,
-                        clientValue: metricData?.Client || null,
-                        industryAverage: metricData?.Industry_Avg || null,
-                        cdAverage: metricData?.CD_Avg || null,
-                        competitorValues: [],
-                        competitorNames: []
-                      }}
-                      preloadedInsight={insightsLookup[metricName] || null}
-                      onStatusChange={(status: "success" | "needs_improvement" | "warning" | undefined) => {
-                        logger.debug(`Status change for ${metricName}:`, status);
-                        setMetricStatuses(prev => ({
-                          ...prev,
-                          [metricName]: status
-                        }));
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
 
-
-        </div>
-
-        {/* Keep the original Pulse AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
+          {/* Keep the original Pulse AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
         </div>
 
         {/* Competitor Modal */}
         <CompetitorModal
           isOpen={showCompetitorModal}
           onClose={() => setShowCompetitorModal(false)}
-          competitors={competitors.map(c => ({ ...c, status: c.status || 'active' }))}
+          competitors={competitors.map((c) => ({
+            ...c,
+            status: c.status || "active",
+          }))}
           clientId={user?.clientId || ""}
         />
       </div>
-      
+
       {/* Footer positioned to account for left navigation */}
       <div className="lg:ml-64">
         <Footer />
