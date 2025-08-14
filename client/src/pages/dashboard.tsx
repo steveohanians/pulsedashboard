@@ -494,42 +494,41 @@ export default function Dashboard() {
     // Quick return for empty states
     if (!dashboardData) return {};
 
-    // Debug: Check what's different for Last Month
-    if (timePeriod === "Last Month") {
-      console.log("Last Month Debug - averagedMetrics:", averagedMetrics);
-      console.log("Last Month Debug - isTimeSeries:", isTimeSeries);
-      console.log(
-        "Last Month Debug - CD_Avg in metrics:",
-        metrics.filter((m) => m.sourceType.toLowerCase().includes("cd")),
-      );
-    }
-
+    // Check if averagedMetrics has CD_Avg data for the metrics we care about
+    let shouldUseAveragedMetrics = false;
     if (
       isTimeSeries &&
       averagedMetrics &&
       typeof averagedMetrics === "object" &&
       Object.keys(averagedMetrics).length > 0
     ) {
-      // For Last Month, backend might not be including CD_Avg in averagedMetrics
-      // Check if CD_Avg exists in averagedMetrics
-      const hasCDAvg = Object.values(averagedMetrics).some(
-        (metric) =>
-          metric &&
-          typeof metric === "object" &&
-          ("CD_Avg" in metric || "cd_avg" in metric || "CD_AVG" in metric),
+      // Check if CD_Avg exists for at least one metric (excluding Traffic Channels and Device Distribution)
+      const metricsToCheck = [
+        "Bounce Rate",
+        "Session Duration",
+        "Pages per Session",
+        "Sessions per User",
+      ];
+      const hasCDAvg = metricsToCheck.some(
+        (metricName) =>
+          averagedMetrics[metricName] &&
+          averagedMetrics[metricName]["CD_Avg"] !== undefined,
       );
 
-      if (!hasCDAvg && timePeriod === "Last Month") {
-        console.log(
-          "CD_Avg missing from averagedMetrics for Last Month, falling back to manual calculation",
-        );
-        // Fall through to manual calculation
+      if (hasCDAvg) {
+        shouldUseAveragedMetrics = true;
       } else {
-        return averagedMetrics as Record<string, Record<string, number>>;
+        console.log(
+          "CD_Avg missing from averagedMetrics, using fallback calculation",
+        );
       }
     }
 
-    // Calculate averages when multiple time periods are involved
+    if (shouldUseAveragedMetrics) {
+      return averagedMetrics as Record<string, Record<string, number>>;
+    }
+
+    // Fallback: Calculate averages manually from raw metrics
     const result: Record<string, Record<string, number>> = {};
     const counts: Record<string, Record<string, number>> = {};
 
@@ -571,12 +570,7 @@ export default function Dashboard() {
     }
 
     return result;
-  }, [
-    dashboardData?.metrics,
-    dashboardData?.averagedMetrics,
-    isTimeSeries,
-    timePeriod,
-  ]);
+  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
