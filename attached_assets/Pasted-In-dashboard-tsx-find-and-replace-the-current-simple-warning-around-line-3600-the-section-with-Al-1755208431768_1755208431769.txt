@@ -1,0 +1,78 @@
+In dashboard.tsx, find and replace the current simple warning (around line 3600, the section with AlertTriangle) with this enhanced version:
+
+```typescript
+{orchestratedData?.dataQuality && (
+  <div className={`mb-4 p-4 rounded-lg border ${
+    orchestratedData.dataQuality.completeness === 1 
+      ? 'bg-green-50 border-green-200' 
+      : 'bg-yellow-50 border-yellow-200'
+  }`}>
+    <div className="flex items-start">
+      {orchestratedData.dataQuality.completeness === 1 ? (
+        <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+      ) : (
+        <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
+      )}
+      <div className="flex-1">
+        <p className={`text-sm font-medium ${
+          orchestratedData.dataQuality.completeness === 1 
+            ? 'text-green-800' 
+            : 'text-yellow-800'
+        }`}>
+          Data Source Status ({Math.round(orchestratedData.dataQuality.completeness * 100)}% Complete)
+        </p>
+        
+        {/* Data source availability */}
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className="flex items-center gap-1">
+            {orchestratedData.dataQuality.hasClientData ? (
+              <CheckCircle className="h-3 w-3 text-green-500" />
+            ) : (
+              <XCircle className="h-3 w-3 text-gray-400" />
+            )}
+            <span className={orchestratedData.dataQuality.hasClientData ? 'text-green-700' : 'text-gray-500'}>
+              Client Data (GA4): {orchestratedData.dataQuality.hasClientData 
+                ? orchestratedData.periodMetadata.displayPeriod 
+                : 'Not available'}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            {orchestratedData.dataQuality.hasPortfolioData ? (
+              <CheckCircle className="h-3 w-3 text-green-500" />
+            ) : (
+              <XCircle className="h-3 w-3 text-gray-400" />
+            )}
+            <span className={orchestratedData.dataQuality.hasPortfolioData ? 'text-green-700' : 'text-gray-500'}>
+              CD Portfolio Data: {orchestratedData.dataQuality.hasPortfolioData 
+                ? new Date(orchestratedData.periodMetadata.semrushPeriod + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : 'Not available'}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            {orchestratedData.dataQuality.hasCompetitorData ? (
+              <CheckCircle className="h-3 w-3 text-green-500" />
+            ) : (
+              <XCircle className="h-3 w-3 text-gray-400" />
+            )}
+            <span className={orchestratedData.dataQuality.hasCompetitorData ? 'text-green-700' : 'text-gray-500'}>
+              Competitor Data: {orchestratedData.dataQuality.hasCompetitorData 
+                ? new Date(orchestratedData.periodMetadata.semrushPeriod + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : 'Not configured'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Warnings if any */}
+        {orchestratedData.dataQuality.warnings.length > 0 && (
+          <ul className="mt-2 text-xs text-yellow-700 space-y-1">
+            {orchestratedData.dataQuality.warnings.map((warning, index) => (
+              <li key={index}>• {warning}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  </div>
+)}
