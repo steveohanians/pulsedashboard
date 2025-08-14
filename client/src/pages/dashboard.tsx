@@ -163,32 +163,6 @@ export default function Dashboard() {
     markPerformance('Component mounted');
   }, []);
 
-  // Performance summary that shows after loading
-  useEffect(() => {
-    if (!isLoading && dashboardData) {
-      markPerformance('All data ready');
-      console.log('[PERF] Summary:', performanceMarkers.current);
-      
-      // Identify slow operations (>5 seconds)
-      const slowOps = Object.entries(performanceMarkers.current)
-        .filter(([_, time]) => time > 5000)
-        .sort((a, b) => b[1] - a[1]);
-      
-      if (slowOps.length > 0) {
-        console.warn('[PERF] Slow operations detected:', slowOps);
-      }
-
-      // Identify operations over 2 seconds
-      const moderatelySlowOps = Object.entries(performanceMarkers.current)
-        .filter(([_, time]) => time > 2000 && time <= 5000)
-        .sort((a, b) => b[1] - a[1]);
-      
-      if (moderatelySlowOps.length > 0) {
-        console.warn('[PERF] Moderately slow operations (>2s):', moderatelySlowOps);
-      }
-    }
-  }, [isLoading, dashboardData]);
-
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<
     string | null
   >(null);
@@ -309,6 +283,32 @@ export default function Dashboard() {
     isLoading,
     refetch: refetchDashboard,
   } = dashboardQuery;
+
+  // Performance summary that shows after loading
+  useEffect(() => {
+    if (!isLoading && dashboardData) {
+      markPerformance('All data ready');
+      console.log('[PERF] Summary:', performanceMarkers.current);
+      
+      // Identify slow operations (>5 seconds)
+      const slowOps = Object.entries(performanceMarkers.current)
+        .filter(([_, time]) => time > 5000)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (slowOps.length > 0) {
+        console.warn('[PERF] Slow operations detected:', slowOps);
+      }
+
+      // Identify operations over 2 seconds
+      const moderatelySlowOps = Object.entries(performanceMarkers.current)
+        .filter(([_, time]) => time > 2000 && time <= 5000)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (moderatelySlowOps.length > 0) {
+        console.warn('[PERF] Moderately slow operations (>2s):', moderatelySlowOps);
+      }
+    }
+  }, [isLoading, dashboardData]);
 
   // Manual refresh function removed per user request
 
