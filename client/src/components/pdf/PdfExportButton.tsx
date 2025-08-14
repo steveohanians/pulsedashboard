@@ -232,8 +232,65 @@ export default function PdfExportButton({
         resolve(canvas);
       };
       
-      // Try to load the Clear logo from assets
-      logo.src = '/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png';
+      // Try to load the Clear logo from assets - try multiple paths
+      const tryLoadLogo = () => {
+        const paths = [
+          '/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png',
+          './attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png',
+          'attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png'
+        ];
+        
+        let attempts = 0;
+        const fallbackToText = () => {
+          // Final fallback - draw text logo
+          ctx.fillStyle = '#1f2937';
+          ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillText('clear.', 40, 40);
+          
+          ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillText('Pulse Dashboard™', 130, 32);
+          
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
+          
+          const currentDate = new Date().toLocaleDateString('en-US', { 
+            month: 'numeric', 
+            day: 'numeric', 
+            year: 'numeric' 
+          });
+          
+          ctx.textAlign = 'right';
+          ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
+          ctx.fillText('Period: Last Month', canvas.width - 40, 50);
+          
+          resolve(canvas);
+        };
+        
+        const attemptLoad = () => {
+          if (attempts >= paths.length) {
+            console.warn('Failed to load Clear logo from all paths, using fallback');
+            fallbackToText();
+            return;
+          }
+          
+          console.log(`Attempting to load logo from: ${paths[attempts]}`);
+          logo.src = paths[attempts];
+          attempts++;
+        };
+        
+        logo.onerror = () => {
+          if (attempts < paths.length) {
+            setTimeout(attemptLoad, 100);
+          } else {
+            fallbackToText();
+          }
+        };
+        
+        attemptLoad();
+      };
+      
+      tryLoadLogo();
     });
   };
 
@@ -298,20 +355,46 @@ export default function PdfExportButton({
               )
               .forEach((n: Element) => n.parentNode?.removeChild(n));
             
-            // Remove grey backgrounds - make charts outline only
+            // Remove grey backgrounds - make everything outline only
             doc.querySelectorAll("*").forEach((el: Element) => {
               const element = el as HTMLElement;
               if (element.style) {
-                // Remove background colors but keep borders/outlines
-                if (element.style.backgroundColor) {
+                // Remove all background colors but keep borders/outlines
+                if (element.style.backgroundColor && 
+                    element.style.backgroundColor !== 'transparent' &&
+                    element.style.backgroundColor !== 'white') {
                   element.style.backgroundColor = 'transparent';
                 }
-                // For chart containers, remove fill colors
-                if (element.classList.contains('recharts-surface') || 
-                    element.tagName === 'svg' || 
-                    element.classList.contains('chart-container')) {
+                
+                // Target specific UI components that commonly have grey backgrounds
+                const classes = element.className || '';
+                const isMetricBox = classes.includes('metric') || 
+                                  classes.includes('card') || 
+                                  classes.includes('bg-') ||
+                                  classes.includes('surface') ||
+                                  classes.includes('container') ||
+                                  classes.includes('box') ||
+                                  classes.includes('panel');
+                
+                if (isMetricBox || element.tagName === 'svg' || element.tagName === 'DIV') {
                   element.style.backgroundColor = 'transparent';
+                  // Also remove any background properties
+                  element.style.background = 'transparent';
                 }
+              }
+              
+              // Remove computed background colors by checking common grey colors
+              const computedStyle = getComputedStyle(element);
+              const bgColor = computedStyle.backgroundColor;
+              if (bgColor && (
+                bgColor.includes('rgb(243, 244, 246)') || // bg-gray-100
+                bgColor.includes('rgb(249, 250, 251)') || // bg-gray-50
+                bgColor.includes('rgb(229, 231, 235)') || // bg-gray-200
+                bgColor.includes('gray') ||
+                bgColor.includes('grey')
+              )) {
+                element.style.backgroundColor = 'transparent !important';
+                element.style.background = 'transparent !important';
               }
             });
             
