@@ -188,10 +188,9 @@ export default function PdfExportButton({
           x: 0,
           y: yOffset,
           scrollX: 0,
-          // IMPORTANT: do not counteract the y-offset via scrollY; it breaks FO slicing
-          scrollY: 0,
+          scrollY: -yOffset,
           backgroundColor: "#ffffff",
-          scale: 2, // sharper capture
+          scale: 1,
           useCORS: true,
           allowTaint: false,
           foreignObjectRendering: true,
@@ -208,21 +207,6 @@ export default function PdfExportButton({
                 'iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]',
               )
               .forEach((n: Element) => n.parentNode?.removeChild(n));
-            
-            // Neutralize sticky/fixed items that can overlap content in FO mode
-            doc
-              .querySelectorAll(
-                '[style*="position: sticky"], .sticky, header.sticky, [style*="position: fixed"]',
-              )
-              .forEach((n: Element) => {
-                try {
-                  (n as HTMLElement).style.position = "static";
-                  (n as HTMLElement).style.top = "";
-                  (n as HTMLElement).style.left = "";
-                  (n as HTMLElement).style.right = "";
-                } catch {}
-              });
-            
             // Add crossOrigin/referrerpolicy to images in the clone
             doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
               if (!img.getAttribute("crossorigin"))
@@ -335,30 +319,19 @@ export default function PdfExportButton({
       setProgress({ current: slices.length, total: slices.length, phase: "Composing PDF" });
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Small page margin in mm
-      const margin = 8;
-      const maxW = pdfWidth - margin * 2;
-      const maxH = pdfHeight - margin * 2;
-
-      slices.forEach((canvas, idx) => {
+      for (let idx = 0; idx < slices.length; idx++) {
+        const canvas = slices[idx];
         if (idx > 0) pdf.addPage();
         const imgData = canvas.toDataURL("image/png");
         const aspect = canvas.height / canvas.width;
-        
-        // Fit within max box while preserving aspect
-        let w = maxW;
+        let w = pdfWidth;
         let h = w * aspect;
-        if (h > maxH) {
-          h = maxH;
+        if (h > pdfHeight) {
+          h = pdfHeight;
           w = h / aspect;
         }
-        
-        // Center on page
-        const x = (pdfWidth - w) / 2;
-        const y = (pdfHeight - h) / 2;
-        
-        pdf.addImage(imgData, "PNG", x, y, w, h);
-      });
+        pdf.addImage(imgData, "PNG", 0, 0, w, h);
+      }
 
       // Restore animations
       originalAnimations.forEach((el: Element) => {
