@@ -98,6 +98,16 @@ const getChannelColor = (channelName: string): string => {
 };
 
 export default function Dashboard() {
+  // Performance debugging
+  const performanceStartTime = useRef(performance.now());
+  const performanceMarkers = useRef<Record<string, number>>({});
+  
+  const markPerformance = (label: string) => {
+    const elapsed = performance.now() - performanceStartTime.current;
+    performanceMarkers.current[label] = elapsed;
+    console.log(`[PERF] ${label}: ${elapsed.toFixed(0)}ms`);
+  };
+
   const dashboardRootRef = useRef<HTMLDivElement>(null);
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
@@ -147,6 +157,37 @@ export default function Dashboard() {
   const [dataBannerDismissed, setDataBannerDismissed] = useState(false);
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Mark component mount
+  useEffect(() => {
+    markPerformance('Component mounted');
+  }, []);
+
+  // Performance summary that shows after loading
+  useEffect(() => {
+    if (!isLoading && dashboardData) {
+      markPerformance('All data ready');
+      console.log('[PERF] Summary:', performanceMarkers.current);
+      
+      // Identify slow operations (>5 seconds)
+      const slowOps = Object.entries(performanceMarkers.current)
+        .filter(([_, time]) => time > 5000)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (slowOps.length > 0) {
+        console.warn('[PERF] Slow operations detected:', slowOps);
+      }
+
+      // Identify operations over 2 seconds
+      const moderatelySlowOps = Object.entries(performanceMarkers.current)
+        .filter(([_, time]) => time > 2000 && time <= 5000)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (moderatelySlowOps.length > 0) {
+        console.warn('[PERF] Moderately slow operations (>2s):', moderatelySlowOps);
+      }
+    }
+  }, [isLoading, dashboardData]);
 
   const [deletingCompetitorId, setDeletingCompetitorId] = useState<
     string | null
@@ -241,10 +282,13 @@ export default function Dashboard() {
     ),
     queryFn: async () => {
       try {
-        return await apiRequest(
+        markPerformance('Starting dashboard fetch');
+        const result = await apiRequest(
           "GET",
           `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || "Last Month")}&businessSize=${encodeURIComponent(businessSize || "All")}&industryVertical=${encodeURIComponent(industryVertical || "All")}`,
         );
+        markPerformance('Dashboard data fetched');
+        return result;
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -268,6 +312,13 @@ export default function Dashboard() {
 
   // Manual refresh function removed per user request
 
+  // Performance tracking for data availability
+  useEffect(() => {
+    if (dashboardData) {
+      markPerformance('Dashboard data available');
+    }
+  }, [dashboardData]);
+
   // Data processing and validation
   useEffect(() => {
     if (dashboardData?.metrics) {
@@ -285,10 +336,13 @@ export default function Dashboard() {
     queryKey: QueryKeys.filters(),
     queryFn: async () => {
       try {
-        return await apiRequest(
+        markPerformance('Starting filters fetch');
+        const result = await apiRequest(
           "GET",
           `/api/filters?businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`,
         );
+        markPerformance('Filters data fetched');
+        return result;
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -306,10 +360,13 @@ export default function Dashboard() {
     ),
     queryFn: async () => {
       try {
-        return await apiRequest(
+        markPerformance('Starting AI insights fetch');
+        const result = await apiRequest(
           "GET",
           `/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod || "Last Month")}`,
         );
+        markPerformance('AI insights fetched');
+        return result;
       } catch (error) {
         if (error instanceof APIError) {
           showDashboardError(error);
@@ -512,7 +569,10 @@ export default function Dashboard() {
 
   // Orchestrated data processing with quality assessment
   const orchestratedData = useMemo(() => {
-    return dataOrchestrator.orchestrateData(dashboardData, timePeriod);
+    markPerformance('Starting orchestration');
+    const result = dataOrchestrator.orchestrateData(dashboardData, timePeriod);
+    markPerformance('Orchestration complete');
+    return result;
   }, [dashboardData, timePeriod]);
 
   // Process traffic channel data for stacked bar chart

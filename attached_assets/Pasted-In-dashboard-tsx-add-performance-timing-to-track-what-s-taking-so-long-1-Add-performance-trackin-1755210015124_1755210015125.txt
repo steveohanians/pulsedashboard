@@ -1,0 +1,87 @@
+In dashboard.tsx, add performance timing to track what's taking so long:
+
+1. Add performance tracking at the very start of the Dashboard component (right after the component declaration, around line 1650):
+
+```typescript
+export default function Dashboard() {
+  // Performance debugging
+  const performanceStartTime = useRef(performance.now());
+  const performanceMarkers = useRef<Record<string, number>>({});
+  
+  const markPerformance = (label: string) => {
+    const elapsed = performance.now() - performanceStartTime.current;
+    performanceMarkers.current[label] = elapsed;
+    console.log(`[PERF] ${label}: ${elapsed.toFixed(0)}ms`);
+  };
+
+  // Mark component mount
+  useEffect(() => {
+    markPerformance('Component mounted');
+  }, []);
+
+Add markers after each major data fetch. Find these sections and add timing:
+
+After the main dashboard query (around line 1780):
+typescriptconst { data: dashboardData, isLoading, error } = useQuery({
+  queryKey: [/* ... */],
+  queryFn: async () => {
+    markPerformance('Starting dashboard fetch');
+    const result = await fetchDashboardData(/* ... */);
+    markPerformance('Dashboard data fetched');
+    return result;
+  },
+  // ... rest of query options
+});
+After AI insights query (if it exists):
+typescriptuseEffect(() => {
+  if (dashboardData) {
+    markPerformance('Dashboard data available');
+  }
+}, [dashboardData]);
+After orchestrated data calculation:
+typescriptconst orchestratedData = useMemo(() => {
+  markPerformance('Starting orchestration');
+  const result = dataOrchestrator.orchestrateData(dashboardData, timePeriod);
+  markPerformance('Orchestration complete');
+  return result;
+}, [dashboardData, timePeriod]);
+
+Add a performance summary that shows after loading:
+
+typescriptuseEffect(() => {
+  if (!isLoading && dashboardData) {
+    markPerformance('All data ready');
+    console.log('[PERF] Summary:', performanceMarkers.current);
+    
+    // Identify slow operations (>5 seconds)
+    const slowOps = Object.entries(performanceMarkers.current)
+      .filter(([_, time]) => time > 5000)
+      .sort((a, b) => b[1] - a[1]);
+    
+    if (slowOps.length > 0) {
+      console.warn('[PERF] Slow operations detected:', slowOps);
+    }
+  }
+}, [isLoading, dashboardData]);
+
+Also add timing to the fetchDashboardData function to see which queries are slow:
+
+typescriptconst fetchDashboardData = async (/* params */) => {
+  const queryStartTime = performance.now();
+  
+  // Log each sub-query
+  console.log('[PERF] Fetching client data...');
+  const clientStart = performance.now();
+  const client = await /* ... */;
+  console.log(`[PERF] Client data: ${(performance.now() - clientStart).toFixed(0)}ms`);
+  
+  console.log('[PERF] Fetching metrics...');
+  const metricsStart = performance.now();
+  const metrics = await /* ... */;
+  console.log(`[PERF] Metrics: ${(performance.now() - metricsStart).toFixed(0)}ms`);
+  
+  // Continue for other queries...
+  
+  console.log(`[PERF] Total query time: ${(performance.now() - queryStartTime).toFixed(0)}ms`);
+  return { client, metrics, /* ... */ };
+};
