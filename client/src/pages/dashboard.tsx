@@ -67,6 +67,7 @@ import {
   getDefaultMetricValue,
   isPercentageMetric,
 } from "@/utils/chartUtils";
+import { debugLog } from '@/config/dataSourceConfig';
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -269,7 +270,7 @@ export default function Dashboard() {
         (m: DashboardMetric) => m.sourceType === "Competitor",
       );
       if (competitorMetrics.length === 0) {
-        console.warn("No competitor data available for analysis");
+        debugLog('WARNING', 'No competitor data available for analysis');
       }
     }
   }, [dashboardData?.metrics]);
@@ -658,39 +659,22 @@ export default function Dashboard() {
 
       result.push(clientEntry);
     } else {
-      console.warn(
-        "❌ No client traffic metrics found! Available metrics:",
-        trafficMetrics.map((m) => ({
-          sourceType: m.sourceType,
-          metricName: m.metricName,
-        })),
-      );
+      debugLog('WARNING', 'No client traffic metrics found', {
+        availableMetrics: trafficMetrics.length,
+        sourceTypes: Array.from(new Set(trafficMetrics.map(m => m.sourceType)))
+      });
     }
 
     // CD Average data
     const cdMetrics = trafficMetrics.filter((m) => m.sourceType === "CD_Avg");
-    console.log("🔍 CD_AVG TRAFFIC DEBUG:", {
-      allTrafficMetricsCount: trafficMetrics.length,
-      cdMetricsCount: cdMetrics.length,
-      cdMetricsSample: cdMetrics.slice(0, 3).map((m) => ({
-        sourceType: m.sourceType,
-        metricName: m.metricName,
-        channel: "channel" in m ? m.channel : undefined,
-        value: m.value,
-        timePeriod: "timePeriod" in m ? m.timePeriod : undefined,
-      })),
-      allCdAvgMetrics: trafficMetrics
-        .filter((m) => m.sourceType === "CD_Avg")
-        .map((m) => ({
-          metricName: m.metricName,
-          channel: "channel" in m ? m.channel : undefined,
-          hasChannel: "channel" in m && !!m.channel,
-        })),
+    debugLog('TRAFFIC', 'CD_Avg traffic data processing', {
+      totalMetrics: trafficMetrics.length,
+      cdAvgCount: cdMetrics.length
     });
 
     if (cdMetrics.length > 0) {
       const channelMap = aggregateChannelData(cdMetrics);
-      console.log("🔍 CD_AVG CHANNEL MAP:", Array.from(channelMap.entries()));
+      debugLog('TRAFFIC', 'CD_Avg channel mapping complete');
       const sortedChannels = sortChannelsByLegendOrder(channelMap).map(
         (channel) => ({
           ...channel,
@@ -703,7 +687,7 @@ export default function Dashboard() {
         channels: sortedChannels,
       });
     } else {
-      console.warn("❌ NO CD_AVG TRAFFIC METRICS FOUND!");
+      debugLog('WARNING', 'No CD_Avg traffic metrics found');
     }
 
     // Industry Average data
@@ -892,13 +876,10 @@ export default function Dashboard() {
             // Unescape JSON
             jsonString = jsonString.replace(/\\"/g, '"');
 
-            console.log(
-              "🔍 DEVICE PARSE - Attempting to parse:",
-              jsonString.substring(0, 100),
-            );
+            debugLog('DEVICE', 'Parsing device JSON data');
 
             const deviceData = JSON.parse(jsonString);
-            console.log("✅ DEVICE PARSE - Success:", deviceData);
+            debugLog('DEVICE', 'Device JSON parsed successfully');
 
             if (Array.isArray(deviceData)) {
               deviceData.forEach((device: any) => {
@@ -908,7 +889,7 @@ export default function Dashboard() {
                   device.percentage || device.value || device.sessions,
                 );
 
-                console.log("📱 DEVICE ITEM:", { deviceName, value, device });
+                debugLog('DEVICE', 'Processing device item', { deviceName, value });
 
                 if (deviceName && !isNaN(value)) {
                   if (deviceSums.has(deviceName)) {
@@ -928,22 +909,14 @@ export default function Dashboard() {
               });
             }
           } catch (e) {
-            console.error(
-              `❌ Invalid device JSON data:`,
-              e,
-              metric.value?.substring?.(0, 100),
-            );
+            debugLog('ERROR', 'Invalid device JSON data', { error: e instanceof Error ? e.message : String(e) });
           }
         } else if (metric.channel && metric.value) {
           // Handle individual device channel records (from backend processing)
           const deviceName = metric.channel;
           const value = parseFloat(metric.value);
 
-          console.log("📱 INDIVIDUAL DEVICE RECORD:", {
-            deviceName,
-            value,
-            metric,
-          });
+          debugLog('DEVICE', 'Processing individual device record', { deviceName, value });
 
           if (deviceName && !isNaN(value)) {
             if (deviceSums.has(deviceName)) {
@@ -955,7 +928,7 @@ export default function Dashboard() {
             }
           }
         } else {
-          console.warn("🚨 UNKNOWN DEVICE FORMAT:", metric);
+          debugLog('WARNING', 'Unknown device format', { metricName: metric.metricName });
         }
       });
 
@@ -1544,7 +1517,7 @@ export default function Dashboard() {
                       try {
                         setBusinessSize(e.target.value);
                       } catch (error) {
-                        console.warn("Business size selection error:", error);
+                        debugLog('WARNING', 'Business size selection error', { error: error instanceof Error ? error.message : String(error) });
                       }
                     }}
                     options={
@@ -1566,10 +1539,7 @@ export default function Dashboard() {
                       try {
                         setIndustryVertical(e.target.value);
                       } catch (error) {
-                        console.warn(
-                          "Industry vertical selection error:",
-                          error,
-                        );
+                        debugLog('WARNING', 'Industry vertical selection error', { error: error instanceof Error ? error.message : String(error) });
                       }
                     }}
                     options={
@@ -1603,7 +1573,7 @@ export default function Dashboard() {
                         setCustomDateRange("");
                       }
                     } catch (error) {
-                      console.warn("Time period selection error:", error);
+                      debugLog('WARNING', 'Time period selection error', { error: error instanceof Error ? error.message : String(error) });
                     }
                   }}
                   options={
