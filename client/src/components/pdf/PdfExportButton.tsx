@@ -151,6 +151,55 @@ export default function PdfExportButton({
     });
   };
 
+  // Create PDF header matching the screenshot
+  const createPdfHeader = (): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    
+    // Set canvas dimensions (A4 width in pixels at 96 DPI)
+    canvas.width = 794; // 210mm at 96 DPI
+    canvas.height = 80; // ~21mm at 96 DPI
+    
+    // Fill white background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw bottom border
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 1);
+    ctx.lineTo(canvas.width, canvas.height - 1);
+    ctx.stroke();
+    
+    // Draw Clear logo
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('clear.', 40, 40);
+    
+    // Draw main title
+    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('Pulse Dashboard™', 130, 32);
+    
+    // Draw subtitle
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('Analytics Report for Demo Company', 130, 50);
+    
+    // Draw generated info on the right
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      month: 'numeric', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    
+    ctx.textAlign = 'right';
+    ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
+    ctx.fillText('Period: Last Month', canvas.width - 40, 50);
+    
+    return canvas;
+  };
+
   // Slice-based rendering (1400px chunks) to prevent memory crashes
   const captureInSlices = async (element: HTMLElement, html2canvas: any) => {
     const SLICE_HEIGHT = 1400;
@@ -163,6 +212,10 @@ export default function PdfExportButton({
     );
 
     const canvases: HTMLCanvasElement[] = [];
+    
+    // Add header as first slice
+    const headerCanvas = createPdfHeader();
+    canvases.push(headerCanvas);
 
     for (let i = 0; i < totalSlices; i++) {
       const yOffset = i * SLICE_HEIGHT;
