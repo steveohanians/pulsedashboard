@@ -1800,18 +1800,15 @@ export default function Dashboard() {
 
 
         </div>
-
-        {/* Keep the original Pulse AI Insight boxes in each metric card - they should remain as placeholder/individual insights */}
-        </div>
-
-        {/* Competitor Modal */}
-        <CompetitorModal
-          isOpen={showCompetitorModal}
-          onClose={() => setShowCompetitorModal(false)}
-          competitors={competitors.map(c => ({ ...c, status: c.status || 'active' }))}
-          clientId={user?.clientId || ""}
-        />
       </div>
+
+      {/* Competitor Modal */}
+      <CompetitorModal
+        isOpen={showCompetitorModal}
+        onClose={() => setShowCompetitorModal(false)}
+        competitors={competitors.map(c => ({ ...c, status: c.status || 'active' }))}
+        clientId={user?.clientId || ""}
+      />
       
       {/* Footer positioned to account for left navigation */}
       <div className="lg:ml-64">
