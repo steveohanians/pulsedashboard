@@ -180,9 +180,16 @@ export default function PdfExportButton({
       const logo = new Image();
       logo.crossOrigin = 'anonymous';
       logo.onload = () => {
-        console.log('✅ Clear logo loaded successfully from:', logo.src);
-        // Draw logo at appropriate size
-        ctx.drawImage(logo, 40, 20, 60, 40);
+        console.log('✅ Clear logo loaded successfully');
+        
+        // Calculate proper aspect ratio to avoid squeezing
+        const logoHeight = 40; // Fixed height
+        const logoWidth = (logo.width / logo.height) * logoHeight;
+        
+        console.log(`Logo dimensions: ${logo.width}x${logo.height}, scaling to: ${logoWidth}x${logoHeight}`);
+        
+        // Draw logo with proper aspect ratio
+        ctx.drawImage(logo, 40, 20, logoWidth, logoHeight);
         
         // Draw main title
         ctx.fillStyle = '#1f2937';
