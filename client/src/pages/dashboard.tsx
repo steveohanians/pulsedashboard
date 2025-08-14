@@ -501,8 +501,15 @@ export default function Dashboard() {
     const result: Record<string, Record<string, number>> = {};
     const counts: Record<string, Record<string, number>> = {};
 
+    // For single-period queries (like "Last Month"), filter to only the target period
+    // For time series queries, process all metrics
+    const targetPeriod = timePeriod === "Last Month" ? "2025-07" : null;
+    const metricsToProcess = targetPeriod && !isTimeSeries 
+      ? metrics.filter(m => m.timePeriod === targetPeriod)
+      : metrics;
+
     // First, process raw metrics
-    for (const metric of metrics) {
+    for (const metric of metricsToProcess) {
       // Normalize sourceType to handle different casings from backend
       let normalizedSourceType = metric.sourceType;
       if (normalizedSourceType.toLowerCase() === "cd_avg") {
