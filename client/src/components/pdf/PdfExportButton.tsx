@@ -382,7 +382,7 @@ export default function PdfExportButton({
     <div className="relative inline-flex items-center">
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="icon"
         className={className}
         onClick={handleExport}
