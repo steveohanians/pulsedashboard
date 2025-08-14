@@ -514,6 +514,15 @@ export default function Dashboard() {
     return dataOrchestrator.orchestrateData(dashboardData, timePeriod);
   }, [dashboardData, timePeriod]);
 
+  // Debug period metadata
+  if (orchestratedData) {
+    console.log('Period Debug:', {
+      ga4Period: orchestratedData.periodMetadata.ga4Period,
+      semrushPeriod: orchestratedData.periodMetadata.semrushPeriod,
+      displayPeriod: orchestratedData.periodMetadata.displayPeriod
+    });
+  }
+
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
     return trafficChannelService.processChannels(
@@ -1061,7 +1070,10 @@ export default function Dashboard() {
                       )}
                       <span className={orchestratedData.dataQuality.hasPortfolioData ? 'text-green-700' : 'text-gray-500'}>
                         CD Portfolio Data: {orchestratedData.dataQuality.hasPortfolioData 
-                          ? new Date(orchestratedData.periodMetadata.semrushPeriod + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                          ? (() => {
+                              const [year, month] = orchestratedData.periodMetadata.semrushPeriod.split('-');
+                              return new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            })()
                           : 'Not available'}
                       </span>
                     </div>
@@ -1074,7 +1086,10 @@ export default function Dashboard() {
                       )}
                       <span className={orchestratedData.dataQuality.hasCompetitorData ? 'text-green-700' : 'text-gray-500'}>
                         Competitor Data: {orchestratedData.dataQuality.hasCompetitorData 
-                          ? new Date(orchestratedData.periodMetadata.semrushPeriod + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                          ? (() => {
+                              const [year, month] = orchestratedData.periodMetadata.semrushPeriod.split('-');
+                              return new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            })()
                           : 'Not configured'}
                       </span>
                     </div>
