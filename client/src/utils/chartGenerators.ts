@@ -1,5 +1,5 @@
 import { seededRandom, seededRandomRange, seededVariance } from '@shared/seededRandom';
-import { logger } from '@/utils/logger';
+import { debugLog } from '@/config/dataSourceConfig';
 
 export { seededRandom, seededRandomRange, seededVariance };
 
@@ -101,7 +101,7 @@ export async function fetchStoredDailyMetrics(
     const response = await fetch(`/api/metrics/daily/${clientId}/${period}/${encodeURIComponent(metricName)}`);
     
     if (!response.ok) {
-      logger.debug(`No stored daily data found for ${metricName}`);
+      debugLog('DEBUG', 'No stored daily data found', { metricName });
       return [];
     }
     
@@ -113,7 +113,7 @@ export async function fetchStoredDailyMetrics(
     return [];
     
   } catch (error) {
-    logger.error('Error fetching stored daily metrics:', error);
+    debugLog('ERROR', 'Error fetching stored daily metrics', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -129,12 +129,12 @@ export async function generateTemporalVariation(
   if (clientId && period && metricName) {
     const realData = await fetchStoredDailyMetrics(clientId, period, metricName);
     if (realData.length > 0) {
-      logger.debug(`Using real GA4 daily data for ${metricName}: ${realData.length} days`);
+      debugLog('DEBUG', 'Using authentic GA4 daily data', { metricName, daysCount: realData.length });
       return realData.slice(0, dates.length);
     }
   }
   
-  logger.warn(`No authentic data found for ${metricName}, returning empty array`);
+  debugLog('WARNING', 'No authentic data found, returning empty array', { metricName });
   return [];
 }
 
@@ -144,7 +144,7 @@ export function generateTemporalVariationSync(
   metricName: string,
   seed: string = 'default'
 ): number[] {
-  logger.warn(`No authentic temporal data available for ${metricName}`);
+  debugLog('WARNING', 'No authentic temporal data available', { metricName });
   return [];
 }
 
@@ -269,7 +269,7 @@ export function aggregateChannelData(sourceMetrics: any[]): Map<string, number> 
           });
         }
       } catch (e) {
-        logger.warn('Invalid JSON in metric value:', metric.value);
+        debugLog('WARNING', 'Invalid JSON in metric value');
       }
     }
   });
