@@ -387,8 +387,8 @@ export default function PdfExportButton({
         className={className}
         onClick={handleExport}
         disabled={isGenerating}
-        aria-label={isGenerating ? `${progress.phase} ${progress.current}/${progress.total}` : "Export dashboard as PDF"}
-        title={isGenerating ? `${progress.phase} ${progress.current}/${progress.total}` : "Export PDF"}
+        aria-label={isGenerating ? `${progress.phase} ${Math.round(progressPercentage)}%` : "Export dashboard as PDF"}
+        title={isGenerating ? `${progress.phase} ${Math.round(progressPercentage)}%` : "Export PDF"}
         data-testid="button-export-pdf"
       >
         {isGenerating ? (
@@ -397,9 +397,9 @@ export default function PdfExportButton({
               {progress.total > 0 ? (
                 <div className="w-4 h-4 rounded-full border-2 border-gray-300">
                   <div 
-                    className="w-4 h-4 rounded-full border-2 border-blue-500 transition-all duration-300"
+                    className="w-4 h-4 rounded-full border-2 border-black transition-all duration-300"
                     style={{
-                      background: `conic-gradient(#3b82f6 ${progressPercentage * 3.6}deg, transparent 0deg)`
+                      background: `conic-gradient(#000000 ${progressPercentage * 3.6}deg, transparent 0deg)`
                     }}
                   />
                 </div>
@@ -415,7 +415,7 @@ export default function PdfExportButton({
       
       {isGenerating && progress.phase && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap pointer-events-none z-10">
-          {progress.phase} {progress.total > 0 && `${progress.current}/${progress.total}`}
+          {progress.phase} {progress.total > 0 && `${Math.round(progressPercentage)}%`}
         </div>
       )}
     </div>
