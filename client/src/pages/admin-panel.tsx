@@ -216,37 +216,38 @@ export default function AdminPanel() {
     }
   }, [location]);
 
+  // Lazy-loaded queries - only fetch data for active tab
   const { data: clients, isLoading: clientsLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.clients(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "clients",
   });
 
   const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.benchmarkCompanies(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "benchmark",
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.users(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "users",
   });
 
   // Query for CD portfolio companies (independent from clients)
   const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.cdPortfolio(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "cd-clients",
   });
 
   // Query for filter options to populate dropdowns dynamically
   const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.filterOptions(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "filters",
   });
 
   // Query for metric prompts
   const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.metricPrompts(),
-    enabled: user?.role === "Admin",
+    enabled: user?.role === "Admin" && activeTab === "prompts",
   });
 
   // Mutations for client management
