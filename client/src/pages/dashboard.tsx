@@ -490,50 +490,20 @@ export default function Dashboard() {
   // Debug timeSeriesData to understand why charts are using fallback
 
   // Group metrics by name for chart display - FIXED to calculate averages across time periods
+  // REPLACE your existing groupedMetrics useMemo function with this:
+
   const groupedMetrics = useMemo(() => {
     // Quick return for empty states
     if (!dashboardData) return {};
 
-    // Check if averagedMetrics has CD_Avg data for the metrics we care about
-    let shouldUseAveragedMetrics = false;
-    if (
-      isTimeSeries &&
-      averagedMetrics &&
-      typeof averagedMetrics === "object" &&
-      Object.keys(averagedMetrics).length > 0
-    ) {
-      // Check if CD_Avg exists for at least one metric (excluding Traffic Channels and Device Distribution)
-      const metricsToCheck = [
-        "Bounce Rate",
-        "Session Duration",
-        "Pages per Session",
-        "Sessions per User",
-      ];
-      const hasCDAvg = metricsToCheck.some(
-        (metricName) =>
-          averagedMetrics[metricName] &&
-          averagedMetrics[metricName]["CD_Avg"] !== undefined,
-      );
-
-      if (hasCDAvg) {
-        shouldUseAveragedMetrics = true;
-      } else {
-        console.log(
-          "CD_Avg missing from averagedMetrics, using fallback calculation",
-        );
-      }
-    }
-
-    if (shouldUseAveragedMetrics) {
-      return averagedMetrics as Record<string, Record<string, number>>;
-    }
-
-    // Fallback: Calculate averages manually from raw metrics
+    // ALWAYS calculate from raw metrics for consistency
+    // This ensures CD_Avg is processed the same way for all time periods
     const result: Record<string, Record<string, number>> = {};
     const counts: Record<string, Record<string, number>> = {};
 
+    // First, process raw metrics
     for (const metric of metrics) {
-      // FIX: Normalize sourceType to handle different casings from backend
+      // Normalize sourceType to handle different casings from backend
       let normalizedSourceType = metric.sourceType;
       if (normalizedSourceType.toLowerCase() === "cd_avg") {
         normalizedSourceType = "CD_Avg";
@@ -559,12 +529,33 @@ export default function Dashboard() {
       counts[metric.metricName][normalizedSourceType] += 1;
     }
 
-    // Calculate averages
+    // Calculate averages from counts
     for (const metricName in result) {
       for (const sourceType in result[metricName]) {
         if (counts[metricName][sourceType] > 0) {
           result[metricName][sourceType] =
             result[metricName][sourceType] / counts[metricName][sourceType];
+        }
+      }
+    }
+
+    // If we have averagedMetrics, merge them in (but don't replace our calculated CD_Avg)
+    if (
+      isTimeSeries &&
+      averagedMetrics &&
+      typeof averagedMetrics === "object"
+    ) {
+      for (const metricName in averagedMetrics) {
+        if (!result[metricName]) {
+          result[metricName] = {};
+        }
+        for (const sourceType in averagedMetrics[metricName]) {
+          // Only use averagedMetrics if we don't already have this value
+          // This preserves our calculated CD_Avg values
+          if (!result[metricName][sourceType]) {
+            result[metricName][sourceType] =
+              averagedMetrics[metricName][sourceType];
+          }
         }
       }
     }

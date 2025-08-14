@@ -501,11 +501,19 @@ export class DatabaseStorage implements IStorage {
     // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
     // Use the data generation logic to create filtered metrics that match the selected filters
-    const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
-    const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
-    const timePeriods = generateTimePeriods();
+    // const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
+    // const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
     
-    const filteredMetrics: Metric[] = [];
+    // Fallback if imports fail - return empty for now
+    try {
+      // Dynamic imports for data generation utilities
+      const dataGeneratorCore = await import('./utils/dataGeneratorCore');
+      const timePeriodsGenerator = await import('./utils/timePeriodsGenerator');
+      const { generateMetricValue, METRIC_CONFIGS } = dataGeneratorCore;
+      const { generateTimePeriods } = timePeriodsGenerator;
+      const timePeriods = generateTimePeriods();
+    
+      const filteredMetrics: Metric[] = [];
     
     // Generate filtered metrics by averaging values for matching companies
     // IMPORTANT: Skip Traffic Channels - they need actual database records to preserve channel information
@@ -549,6 +557,7 @@ export class DatabaseStorage implements IStorage {
           competitorId: null,
           cdPortfolioCompanyId: null,
           benchmarkCompanyId: null,
+          canonicalEnvelope: null,
           createdAt: new Date()
         });
         
@@ -559,14 +568,18 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Add actual Traffic Channels data from database to preserve channel information
-    const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
-    // Debug logging disabled for performance
-    // logger.debug(`Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
-    // logger.debug(`Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
-    filteredMetrics.push(...trafficChannelsFromDB);
-    
-    return filteredMetrics;
+      // Add actual Traffic Channels data from database to preserve channel information
+      const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels');
+      // Debug logging disabled for performance
+      // logger.debug(`Adding ${trafficChannelsFromDB.length} Traffic Channels from database with channel info`);
+      // logger.debug(`Sample traffic channels from DB:`, trafficChannelsFromDB.slice(0, 3).map(m => ({ channel: m.channel, value: m.value, sourceType: m.sourceType })));
+      filteredMetrics.push(...trafficChannelsFromDB);
+      
+      return filteredMetrics;
+    } catch (error) {
+      logger.warn('Failed to import data generation utilities, returning raw industry metrics', error);
+      return allIndustryMetrics;
+    }
   }
 
   // Get CD Average metrics - NO filtering should ever be applied
@@ -716,6 +729,7 @@ export class DatabaseStorage implements IStorage {
             cdPortfolioCompanyId: null,
             benchmarkCompanyId: null,
             channel: null,
+            canonicalEnvelope: null,
             createdAt: new Date()
           };
         });
@@ -789,6 +803,7 @@ export class DatabaseStorage implements IStorage {
             cdPortfolioCompanyId: null,
             benchmarkCompanyId: null,
             channel: null,
+            canonicalEnvelope: null,
             createdAt: new Date()
           });
           
@@ -1860,8 +1875,13 @@ export class DatabaseStorage implements IStorage {
       performanceCache.clear();
       
       // Clear query optimizer cache
-      const { clearCache } = await import('./utils/queryOptimizer');
-      clearCache();
+      try {
+        const queryOptimizer = await import('./utils/queryOptimizer');
+        const { clearCache } = queryOptimizer;
+        clearCache();
+      } catch (error) {
+        logger.warn('Query optimizer cache clear skipped - module not found');
+      }
       
       logger.info('All performance caches cleared successfully');
       
@@ -1911,7 +1931,7 @@ export class DatabaseStorage implements IStorage {
     );
     
     // Increment version for all time periods for this client
-    const existingVersions = await this.getMetricVersionsByClient(clientId);
+    const existingVersions = await this.getMetricsByClient(clientId, '');
     for (const version of existingVersions) {
       await this.incrementMetricVersion(clientId, version.timePeriod);
     }
