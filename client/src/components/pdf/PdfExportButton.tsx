@@ -16,6 +16,7 @@ export default function PdfExportButton({
   className,
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [progress, setProgress] = React.useState({ current: 0, total: 0, phase: "" });
 
   // Elements we must ignore during canvas capture (iframes/canvas/video or anything tagged to hide)
   const shouldIgnoreForPdf = (el: Element) => {
@@ -171,15 +172,11 @@ export default function PdfExportButton({
         `🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
       );
 
-      // Triple-yield to UI with forced style updates to keep animations running
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => requestAnimationFrame(resolve));
+      // Update progress before capture
+      setProgress({ current: i + 1, total: totalSlices, phase: "Capturing" });
       
-      // Force DOM to update animations by triggering a reflow
-      document.body.offsetHeight;
-      
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Brief yield to allow progress update to render
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // CORS-safe capture configuration with robust onclone adjustments
       let canvas: HTMLCanvasElement;
@@ -230,15 +227,6 @@ export default function PdfExportButton({
       }
 
       canvases.push(canvas);
-
-      // Aggressive yielding after slice completion to maintain animations
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      
-      // Force reflow to ensure spinner keeps animating
-      document.body.offsetHeight;
-      
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     return canvases;
@@ -272,6 +260,7 @@ export default function PdfExportButton({
   const handleExport = async () => {
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
+    setProgress({ current: 0, total: 0, phase: "Preparing..." });
 
     try {
       console.info("Starting PDF export with slice-based rendering");
@@ -327,6 +316,9 @@ export default function PdfExportButton({
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
+      setProgress({ current: slices.length, total: slices.length, phase: "Composing PDF" });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       for (let idx = 0; idx < slices.length; idx++) {
         const canvas = slices[idx];
         if (idx > 0) pdf.addPage();
@@ -339,14 +331,6 @@ export default function PdfExportButton({
           w = h / aspect;
         }
         pdf.addImage(imgData, "PNG", 0, 0, w, h);
-        
-        // Aggressive yielding during PDF composition
-        if (idx < slices.length - 1) {
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          document.body.offsetHeight; // Force reflow
-          await new Promise(resolve => setTimeout(resolve, 30));
-        }
       }
 
       // Restore animations
@@ -387,26 +371,53 @@ export default function PdfExportButton({
       }
     } finally {
       setIsGenerating(false);
+      setProgress({ current: 0, total: 0, phase: "" });
     }
   };
 
+  // Calculate progress percentage
+  const progressPercentage = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+  
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={className}
-      onClick={handleExport}
-      disabled={isGenerating}
-      aria-label={isGenerating ? "Generating PDF…" : "Export dashboard as PDF"}
-      title={isGenerating ? "Generating PDF…" : "Export PDF"}
-      data-testid="button-export-pdf"
-    >
-      {isGenerating ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <FileDown className="h-4 w-4" />
+    <div className="relative inline-flex items-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className={className}
+        onClick={handleExport}
+        disabled={isGenerating}
+        aria-label={isGenerating ? `${progress.phase} ${progress.current}/${progress.total}` : "Export dashboard as PDF"}
+        title={isGenerating ? `${progress.phase} ${progress.current}/${progress.total}` : "Export PDF"}
+        data-testid="button-export-pdf"
+      >
+        {isGenerating ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className="relative w-4 h-4">
+              {progress.total > 0 ? (
+                <div className="w-4 h-4 rounded-full border-2 border-gray-300">
+                  <div 
+                    className="w-4 h-4 rounded-full border-2 border-blue-500 transition-all duration-300"
+                    style={{
+                      background: `conic-gradient(#3b82f6 ${progressPercentage * 3.6}deg, transparent 0deg)`
+                    }}
+                  />
+                </div>
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+            </div>
+          </div>
+        ) : (
+          <FileDown className="h-4 w-4" />
+        )}
+      </Button>
+      
+      {isGenerating && progress.phase && (
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap pointer-events-none z-10">
+          {progress.phase} {progress.total > 0 && `${progress.current}/${progress.total}`}
+        </div>
       )}
-    </Button>
+    </div>
   );
 }
