@@ -71,6 +71,7 @@ import { debugLog } from '@/config/dataSourceConfig';
 import { metricProcessingService } from '@/services/metricProcessingService';
 import { trafficChannelService } from '@/services/trafficChannelService';
 import { deviceDistributionService } from '@/services/deviceDistributionService';
+import { dataOrchestrator } from '@/services/dataOrchestrator';
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -506,6 +507,11 @@ export default function Dashboard() {
       }
     );
   }, [metrics, averagedMetrics, timePeriod, dashboardData?.isTimeSeries]);
+
+  // Orchestrated data processing with quality assessment
+  const orchestratedData = useMemo(() => {
+    return dataOrchestrator.orchestrateData(dashboardData, timePeriod);
+  }, [dashboardData, timePeriod]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
@@ -1008,6 +1014,23 @@ export default function Dashboard() {
             onDismiss={dismissDashboardError}
             className=""
           />
+
+          {/* Data Quality Warning Banner */}
+          {orchestratedData?.dataQuality && orchestratedData.dataQuality.warnings.length > 0 && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Data Quality Notice</p>
+                  <ul className="mt-1 text-xs text-yellow-700 space-y-1">
+                    {orchestratedData.dataQuality.warnings.map((warning, index) => (
+                      <li key={index}>• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Enhanced Filters Section - Responsive */}
           <div className="filters-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
