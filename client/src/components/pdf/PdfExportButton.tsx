@@ -193,7 +193,7 @@ export default function PdfExportButton({
           scale: 1,
           useCORS: true,
           allowTaint: false,
-          foreignObjectRendering: true,
+          foreignObjectRendering: false,
           logging: false,
           imageTimeout: 15000,
           removeContainer: true,
