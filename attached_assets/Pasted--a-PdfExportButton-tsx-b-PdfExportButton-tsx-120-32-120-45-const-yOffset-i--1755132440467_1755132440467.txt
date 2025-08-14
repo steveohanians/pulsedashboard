@@ -1,0 +1,100 @@
+--- a/PdfExportButton.tsx
++++ b/PdfExportButton.tsx
+@@ -120,32 +120,45 @@
+       const yOffset = i * SLICE_HEIGHT;
+       const sliceHeight = Math.min(SLICE_HEIGHT, elementHeight - yOffset);
+ 
+       console.info(`🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`);
+ 
+-      // CORS-safe capture configuration with robust onclone adjustments
++      // CORS-safe capture configuration with robust onclone adjustments
+       let canvas: HTMLCanvasElement;
+       try {
+         canvas = await html2canvas(element, {
+           height: sliceHeight,
+           width: elementWidth,
+           ignoreElements: shouldIgnoreForPdf,
+           x: 0,
+           y: yOffset,
+           scrollX: 0,
+-          scrollY: -yOffset,
++          // IMPORTANT: do not counteract the y-offset via scrollY; it breaks FO slicing
++          scrollY: 0,
+           backgroundColor: '#ffffff',
+-          scale: 1,
++          scale: 2, // sharper capture
+           useCORS: true,
+           allowTaint: false,
+-          foreignObjectRendering: false,
++          foreignObjectRendering: true,
+           logging: false,
+           imageTimeout: 15000,
+           removeContainer: true,
+           async: true,
+-          windowWidth: elementWidth,
+-          windowHeight: sliceHeight,
++          windowWidth: elementWidth,
++          windowHeight: sliceHeight,
+           onclone: (doc) => {
+             // Strip risky elements in the clone to avoid runtime errors
+             doc.querySelectorAll('iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]').forEach((n) => n.parentNode?.removeChild(n));
++            // Neutralize sticky/fixed items that can overlap content in FO mode
++            doc.querySelectorAll('[style*="position: sticky"], .sticky, header.sticky, [style*="position: fixed"]').forEach((n: any) => {
++              try {
++                (n as HTMLElement).style.position = 'static';
++                (n as HTMLElement).style.top = '';
++                (n as HTMLElement).style.left = '';
++                (n as HTMLElement).style.right = '';
++              } catch {}
++            });
+             // Add crossOrigin/referrerpolicy to images in the clone
+             doc.querySelectorAll('img').forEach((img) => {
+               if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
+               if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+             });
+@@ -212,23 +225,41 @@
+       const pdf = new jsPDF('p', 'mm', 'a4');
+       const pdfWidth = pdf.internal.pageSize.getWidth();
+       const pdfHeight = pdf.internal.pageSize.getHeight();
+ 
+-      console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
++      console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
++      // small page margin in mm
++      const margin = 8;
++      const maxW = pdfWidth - margin * 2;
++      const maxH = pdfHeight - margin * 2;
++
+       slices.forEach((canvas, idx) => {
+         if (idx > 0) pdf.addPage();
+         const imgData = canvas.toDataURL('image/png');
+-        const aspect = canvas.height / canvas.width;
+-        let w = pdfWidth;
+-        let h = w * aspect;
+-        if (h > pdfHeight) {
+-          h = pdfHeight;
+-          w = h / aspect;
+-        }
+-        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
++        const aspect = canvas.height / canvas.width;
++        // Fit within max box while preserving aspect
++        let w = maxW;
++        let h = w * aspect;
++        if (h > maxH) {
++          h = maxH;
++          w = h / aspect;
++        }
++        // center on page
++        const x = (pdfWidth - w) / 2;
++        const y = (pdfHeight - h) / 2;
++        pdf.addImage(imgData, 'PNG', x, y, w, h);
+       });
+@@ -238,7 +269,7 @@
+       console.info('Saving multi-page PDF with slice-based rendering');
+       // Use a consistent, environment-agnostic save path (no jsPDF internal saver)
+-      const blob = pdf.output('blob');
++      const blob = pdf.output('blob'); // stays the same; we just changed layout/scaling
+       const url = URL.createObjectURL(blob);
+ 
+       if (isEmbedded()) {
+         // Try parent first; only rely on it if it ACKs quickly
+         const handledByParent = await askParentToDownload(url, downloadName);
