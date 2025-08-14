@@ -221,8 +221,8 @@ export default function PdfExportButton({
 
       canvases.push(canvas);
 
-      // Small delay between slices to prevent memory overload
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Longer delay between slices to keep animations running smoothly
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
     return canvases;
@@ -311,7 +311,8 @@ export default function PdfExportButton({
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
-      slices.forEach((canvas, idx) => {
+      for (let idx = 0; idx < slices.length; idx++) {
+        const canvas = slices[idx];
         if (idx > 0) pdf.addPage();
         const imgData = canvas.toDataURL("image/png");
         const aspect = canvas.height / canvas.width;
@@ -322,7 +323,12 @@ export default function PdfExportButton({
           w = h / aspect;
         }
         pdf.addImage(imgData, "PNG", 0, 0, w, h);
-      });
+        
+        // Small delay after each page to keep animations running
+        if (idx < slices.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
 
       // Restore animations
       originalAnimations.forEach((el: Element) => {
