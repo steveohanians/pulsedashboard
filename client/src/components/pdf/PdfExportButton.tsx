@@ -13,7 +13,7 @@ export default function PdfExportButton({
   targetRef,
   fileName,
   clientLabel,
-  className
+  className,
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
@@ -21,22 +21,25 @@ export default function PdfExportButton({
   const shouldIgnoreForPdf = (el: Element) => {
     const node = el as HTMLElement;
     const tag = node.tagName;
-    if (tag === 'IFRAME' || tag === 'VIDEO' || tag === 'CANVAS') return true;
-    return node.hasAttribute('data-pdf-hide') || node.getAttribute('data-pdf-hide') === 'true';
+    if (tag === "IFRAME" || tag === "VIDEO" || tag === "CANVAS") return true;
+    return (
+      node.hasAttribute("data-pdf-hide") ||
+      node.getAttribute("data-pdf-hide") === "true"
+    );
   };
 
   // Ensure <img> tags won't taint canvas: add crossOrigin to in-page images
   const prepareImagesForCors = (root: HTMLElement) => {
-    const imgs = Array.from(root.querySelectorAll('img'));
+    const imgs = Array.from(root.querySelectorAll("img"));
     imgs.forEach((img) => {
       try {
         // Don't stomp on explicit dev settings
-        if (!img.getAttribute('crossorigin')) {
-          img.setAttribute('crossorigin', 'anonymous');
+        if (!img.getAttribute("crossorigin")) {
+          img.setAttribute("crossorigin", "anonymous");
         }
         // Optional: reduces Referer-based hotlinking/CORS rejections in some setups
-        if (!img.getAttribute('referrerpolicy')) {
-          img.setAttribute('referrerpolicy', 'no-referrer');
+        if (!img.getAttribute("referrerpolicy")) {
+          img.setAttribute("referrerpolicy", "no-referrer");
         }
       } catch {}
     });
@@ -63,8 +66,7 @@ export default function PdfExportButton({
 
   const askParentToDownload = async (url: string, fileName: string) => {
     // Use a specific origin when possible; fall back to "*"
-    const origin =
-      document.referrer ? new URL(document.referrer).origin : "*";
+    const origin = document.referrer ? new URL(document.referrer).origin : "*";
     const messageId = `PULSE_PDF_${Date.now()}_${Math.random()
       .toString(36)
       .slice(2)}`;
@@ -73,7 +75,11 @@ export default function PdfExportButton({
       const handler = (e: MessageEvent) => {
         if (origin !== "*" && e.origin !== origin) return;
         const data = e.data as any;
-        if (data && data.type === "PULSE_PDF_DOWNLOAD_ACK" && data.messageId === messageId) {
+        if (
+          data &&
+          data.type === "PULSE_PDF_DOWNLOAD_ACK" &&
+          data.messageId === messageId
+        ) {
           window.removeEventListener("message", handler);
           resolve(true);
         }
@@ -86,7 +92,7 @@ export default function PdfExportButton({
     try {
       window.parent?.postMessage(
         { type: "PULSE_PDF_DOWNLOAD", url, fileName, messageId },
-        origin
+        origin,
       );
     } catch {
       // If posting fails, treat as unhandled by parent
@@ -99,7 +105,7 @@ export default function PdfExportButton({
   // Asset preflight loading for fonts/images
   const preflightAssets = async () => {
     return new Promise((resolve) => {
-      const images = document.querySelectorAll('img');
+      const images = document.querySelectorAll("img");
       let loadedCount = 0;
       const totalImages = images.length;
 
@@ -131,15 +137,15 @@ export default function PdfExportButton({
 
   // CSS animation control - pause animations during capture
   const controlAnimations = (pause: boolean) => {
-    const animatedElements = document.querySelectorAll('*');
+    const animatedElements = document.querySelectorAll("*");
     animatedElements.forEach((el) => {
       const element = el as HTMLElement;
       if (pause) {
-        element.style.animationPlayState = 'paused';
-        element.style.transitionDuration = '0s';
+        element.style.animationPlayState = "paused";
+        element.style.transitionDuration = "0s";
       } else {
-        element.style.animationPlayState = '';
-        element.style.transitionDuration = '';
+        element.style.animationPlayState = "";
+        element.style.transitionDuration = "";
       }
     });
   };
@@ -150,17 +156,21 @@ export default function PdfExportButton({
     const elementHeight = element.scrollHeight;
     const elementWidth = element.scrollWidth;
     const totalSlices = Math.ceil(elementHeight / SLICE_HEIGHT);
-    
-    console.info(`📐 Slice-based capture: ${totalSlices} slices of ${SLICE_HEIGHT}px each`);
-    
+
+    console.info(
+      `📐 Slice-based capture: ${totalSlices} slices of ${SLICE_HEIGHT}px each`,
+    );
+
     const canvases: HTMLCanvasElement[] = [];
-    
+
     for (let i = 0; i < totalSlices; i++) {
       const yOffset = i * SLICE_HEIGHT;
       const sliceHeight = Math.min(SLICE_HEIGHT, elementHeight - yOffset);
-      
-      console.info(`🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`);
-      
+
+      console.info(
+        `🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
+      );
+
       // CORS-safe capture configuration with robust onclone adjustments
       let canvas: HTMLCanvasElement;
       try {
@@ -172,11 +182,11 @@ export default function PdfExportButton({
           y: yOffset,
           scrollX: 0,
           scrollY: -yOffset,
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           scale: 1,
           useCORS: true,
           allowTaint: false,
-          foreignObjectRendering: false,
+          foreignObjectRendering: true,
           logging: false,
           imageTimeout: 15000,
           removeContainer: true,
@@ -185,26 +195,36 @@ export default function PdfExportButton({
           windowHeight: sliceHeight,
           onclone: (doc: Document) => {
             // Strip risky elements in the clone to avoid runtime errors
-            doc.querySelectorAll('iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]').forEach((n: Element) => n.parentNode?.removeChild(n));
+            doc
+              .querySelectorAll(
+                'iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]',
+              )
+              .forEach((n: Element) => n.parentNode?.removeChild(n));
             // Add crossOrigin/referrerpolicy to images in the clone
-            doc.querySelectorAll('img').forEach((img: HTMLImageElement) => {
-              if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
-              if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+            doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
+              if (!img.getAttribute("crossorigin"))
+                img.setAttribute("crossorigin", "anonymous");
+              if (!img.getAttribute("referrerpolicy"))
+                img.setAttribute("referrerpolicy", "no-referrer");
             });
           },
         });
       } catch (err) {
-        const msg = (err instanceof Error && err.message) ? err.message : String(err);
-        console.error(`❌ html2canvas failed on slice ${i + 1}/${totalSlices} at y=${yOffset}:`, msg);
+        const msg =
+          err instanceof Error && err.message ? err.message : String(err);
+        console.error(
+          `❌ html2canvas failed on slice ${i + 1}/${totalSlices} at y=${yOffset}:`,
+          msg,
+        );
         throw err; // bubble to outer handler so we don't hang silently
       }
-      
+
       canvases.push(canvas);
-      
+
       // Small delay between slices to prevent memory overload
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     return canvases;
   };
 
@@ -216,16 +236,16 @@ export default function PdfExportButton({
     const totalHeight = slices.reduce((sum, canvas) => sum + canvas.height, 0);
     const width = slices[0].width;
 
-    const finalCanvas = document.createElement('canvas');
+    const finalCanvas = document.createElement("canvas");
     finalCanvas.width = width;
     finalCanvas.height = totalHeight;
-    
-    const ctx = finalCanvas.getContext('2d')!;
-    ctx.fillStyle = '#ffffff';
+
+    const ctx = finalCanvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, totalHeight);
 
     let currentY = 0;
-    slices.forEach(canvas => {
+    slices.forEach((canvas) => {
       ctx.drawImage(canvas, 0, currentY);
       currentY += canvas.height;
     });
@@ -236,19 +256,19 @@ export default function PdfExportButton({
   const handleExport = async () => {
     if (!targetRef.current || isGenerating) return;
     setIsGenerating(true);
-    
+
     try {
-      console.info('Starting PDF export with slice-based rendering');
-      
+      console.info("Starting PDF export with slice-based rendering");
+
       // Dynamic import of PDF libraries (exact from July 31st)
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf')
+        import("html2canvas"),
+        import("jspdf"),
       ]);
-      
+
       const element = targetRef.current;
-      console.info('Target element found, preparing for slice-based capture');
-      
+      console.info("Target element found, preparing for slice-based capture");
+
       // Asset preflight loading for fonts/images (from working implementation notes)
       if (document.fonts?.ready) {
         await document.fonts.ready;
@@ -258,38 +278,42 @@ export default function PdfExportButton({
       prepareImagesForCors(element);
 
       // Ensure all images are loaded
-      const images = Array.from(element.querySelectorAll('img'));
-      await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      }));
-      
+      const images = Array.from(element.querySelectorAll("img"));
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        }),
+      );
+
       // Small delay to ensure rendering is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // CSS animation control (disable animations during capture)
-      const originalAnimations = document.querySelectorAll('*');
+      const originalAnimations = document.querySelectorAll("*");
       originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = 'paused';
+        (el as HTMLElement).style.animationPlayState = "paused";
       });
-      
-      console.info('Starting slice-based rendering via captureInSlices()');
+
+      console.info("Starting slice-based rendering via captureInSlices()");
       const slices = await captureInSlices(element, html2canvas);
       if (!slices || slices.length === 0) {
-        throw new Error('No slices captured (captureInSlices returned 0 canvases)');
+        throw new Error(
+          "No slices captured (captureInSlices returned 0 canvases)",
+        );
       }
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
       slices.forEach((canvas, idx) => {
         if (idx > 0) pdf.addPage();
-        const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL("image/png");
         const aspect = canvas.height / canvas.width;
         let w = pdfWidth;
         let h = w * aspect;
@@ -297,22 +321,23 @@ export default function PdfExportButton({
           h = pdfHeight;
           w = h / aspect;
         }
-        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+        pdf.addImage(imgData, "PNG", 0, 0, w, h);
       });
-      
+
       // Restore animations
       originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = '';
+        (el as HTMLElement).style.animationPlayState = "";
       });
 
       // Generate filename
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-      const downloadName = fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
-      
-      console.info('Saving multi-page PDF with slice-based rendering');
+      const downloadName =
+        fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
+
+      console.info("Saving multi-page PDF with slice-based rendering");
       // Use a consistent, environment-agnostic save path to avoid jsPDF's iframe saver
-      const blob = pdf.output('blob');
+      const blob = pdf.output("blob");
       const url = URL.createObjectURL(blob);
 
       if (isEmbedded()) {
@@ -326,14 +351,14 @@ export default function PdfExportButton({
         // Not embedded: handle download locally (no postMessage, no window.open)
         triggerDirectDownload(url, downloadName);
       }
-      console.info('PDF export completed successfully');
-
+      console.info("PDF export completed successfully");
     } catch (error) {
       // Log the *real* failure for visibility
-      const msg = (error instanceof Error && error.message) ? error.message : String(error);
-      console.error('PDF export failed:', msg);
+      const msg =
+        error instanceof Error && error.message ? error.message : String(error);
+      console.error("PDF export failed:", msg);
       if (error instanceof Error && (error as any).stack) {
-        console.error('Stack:', (error as any).stack);
+        console.error("Stack:", (error as any).stack);
       }
     } finally {
       setIsGenerating(false);
@@ -352,7 +377,11 @@ export default function PdfExportButton({
       title={isGenerating ? "Generating PDF…" : "Export PDF"}
       data-testid="button-export-pdf"
     >
-      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+      {isGenerating ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <FileDown className="h-4 w-4" />
+      )}
     </Button>
   );
 }

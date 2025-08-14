@@ -76,14 +76,28 @@ document.createElement = function(tagName: string, ...args: any[]) {
 const originalAppendChild = document.body?.appendChild;
 if (originalAppendChild) {
   document.body.appendChild = function(child: any) {
-    // Block any elements that look like error overlays
-    if (child && (
-      child.className?.includes('error') ||
-      child.id?.includes('error') ||
-      child.style?.position === 'fixed'
-    )) {
-      return child; // Return but don't actually append
+    // Allow html2canvas helpers (often position:fixed) and only block known overlay IDs/classes
+    try {
+      const tag = child?.tagName?.toLowerCase?.() || '';
+      const id  = (child?.id || '').toString();
+      const cls = (child?.className || '').toString();
+
+      // Whitelist: anything html2canvas creates
+      if (tag === 'iframe' || id.includes('html2canvas') || cls.includes('html2canvas')) {
+        return originalAppendChild.call(this, child);
+      }
+
+      // Block only obvious dev overlays (vite/replit/error/overlay), not generic fixed nodes
+      const looksLikeOverlay =
+        /vite|overlay|replit|error/i.test(id) ||
+        /vite|overlay|replit|error/i.test(cls);
+      if (looksLikeOverlay) {
+        return child; // swallow overlay
+      }
+    } catch {
+      // if anything goes wrong, fall through and append
     }
+
     return originalAppendChild.call(this, child);
   };
 }
