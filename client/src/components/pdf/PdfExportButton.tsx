@@ -25,6 +25,23 @@ export default function PdfExportButton({
     return node.hasAttribute('data-pdf-hide') || node.getAttribute('data-pdf-hide') === 'true';
   };
 
+  // Ensure <img> tags won't taint canvas: add crossOrigin to in-page images
+  const prepareImagesForCors = (root: HTMLElement) => {
+    const imgs = Array.from(root.querySelectorAll('img'));
+    imgs.forEach((img) => {
+      try {
+        // Don't stomp on explicit dev settings
+        if (!img.getAttribute('crossorigin')) {
+          img.setAttribute('crossorigin', 'anonymous');
+        }
+        // Optional: reduces Referer-based hotlinking/CORS rejections in some setups
+        if (!img.getAttribute('referrerpolicy')) {
+          img.setAttribute('referrerpolicy', 'no-referrer');
+        }
+      } catch {}
+    });
+  };
+
   // -------- Sandbox-safe download helpers (work inside/outside iframes) --------
   const isEmbedded = () => {
     try {
@@ -144,27 +161,43 @@ export default function PdfExportButton({
       
       console.info(`🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`);
       
-      // CORS-safe capture configuration
-      const canvas = await html2canvas(element, {
-        height: sliceHeight,
-        width: elementWidth,
-        ignoreElements: shouldIgnoreForPdf,
-        x: 0,
-        y: yOffset,
-        scrollX: 0,
-        scrollY: -yOffset,
-        backgroundColor: '#ffffff',
-        scale: 1,
-        useCORS: true,
-        allowTaint: false,
-        foreignObjectRendering: false,
-        logging: false,
-        imageTimeout: 15000,
-        removeContainer: true,
-        async: true,
-        windowWidth: elementWidth,
-        windowHeight: sliceHeight
-      });
+      // CORS-safe capture configuration with robust onclone adjustments
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(element, {
+          height: sliceHeight,
+          width: elementWidth,
+          ignoreElements: shouldIgnoreForPdf,
+          x: 0,
+          y: yOffset,
+          scrollX: 0,
+          scrollY: -yOffset,
+          backgroundColor: '#ffffff',
+          scale: 1,
+          useCORS: true,
+          allowTaint: false,
+          foreignObjectRendering: false,
+          logging: false,
+          imageTimeout: 15000,
+          removeContainer: true,
+          async: true,
+          windowWidth: elementWidth,
+          windowHeight: sliceHeight,
+          onclone: (doc: Document) => {
+            // Strip risky elements in the clone to avoid runtime errors
+            doc.querySelectorAll('iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]').forEach((n: Element) => n.parentNode?.removeChild(n));
+            // Add crossOrigin/referrerpolicy to images in the clone
+            doc.querySelectorAll('img').forEach((img: HTMLImageElement) => {
+              if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
+              if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+            });
+          },
+        });
+      } catch (err) {
+        const msg = (err instanceof Error && err.message) ? err.message : String(err);
+        console.error(`❌ html2canvas failed on slice ${i + 1}/${totalSlices} at y=${yOffset}:`, msg);
+        throw err; // bubble to outer handler so we don't hang silently
+      }
       
       canvases.push(canvas);
       
@@ -220,7 +253,10 @@ export default function PdfExportButton({
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
-      
+
+      // Ensure in-page <img> won't taint the canvas
+      prepareImagesForCors(element);
+
       // Ensure all images are loaded
       const images = Array.from(element.querySelectorAll('img'));
       await Promise.all(images.map(img => {
