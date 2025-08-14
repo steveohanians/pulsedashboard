@@ -171,6 +171,10 @@ export default function PdfExportButton({
         `🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
       );
 
+      // Yield to UI before each slice to keep animations running
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // CORS-safe capture configuration with robust onclone adjustments
       let canvas: HTMLCanvasElement;
       try {
@@ -221,8 +225,9 @@ export default function PdfExportButton({
 
       canvases.push(canvas);
 
-      // Longer delay between slices to keep animations running smoothly
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Yield to UI after each slice completion and add delay
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
     return canvases;
