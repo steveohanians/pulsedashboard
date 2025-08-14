@@ -19,9 +19,12 @@ export default function PdfExportButton({
   className,
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
-  const [progress, setProgress] = React.useState({ current: 0, total: 0, phase: "" });
+  const [progress, setProgress] = React.useState({
+    current: 0,
+    total: 0,
+    phase: "",
+  });
 
-  // Elements we must ignore during canvas capture (iframes/canvas/video or anything tagged to hide)
   const shouldIgnoreForPdf = (el: Element) => {
     const node = el as HTMLElement;
     const tag = node.tagName;
@@ -32,16 +35,13 @@ export default function PdfExportButton({
     );
   };
 
-  // Ensure <img> tags won't taint canvas: add crossOrigin to in-page images
   const prepareImagesForCors = (root: HTMLElement) => {
     const imgs = Array.from(root.querySelectorAll("img"));
     imgs.forEach((img) => {
       try {
-        // Don't stomp on explicit dev settings
         if (!img.getAttribute("crossorigin")) {
           img.setAttribute("crossorigin", "anonymous");
         }
-        // Optional: reduces Referer-based hotlinking/CORS rejections in some setups
         if (!img.getAttribute("referrerpolicy")) {
           img.setAttribute("referrerpolicy", "no-referrer");
         }
@@ -49,12 +49,10 @@ export default function PdfExportButton({
     });
   };
 
-  // -------- Sandbox-safe download helpers (work inside/outside iframes) --------
   const isEmbedded = () => {
     try {
       return window.self !== window.top;
     } catch {
-      // Cross-origin access throws; treat as embedded
       return true;
     }
   };
@@ -69,7 +67,6 @@ export default function PdfExportButton({
   };
 
   const askParentToDownload = async (url: string, fileName: string) => {
-    // Use a specific origin when possible; fall back to "*"
     const origin = document.referrer ? new URL(document.referrer).origin : "*";
     const messageId = `PULSE_PDF_${Date.now()}_${Math.random()
       .toString(36)
@@ -89,7 +86,6 @@ export default function PdfExportButton({
         }
       };
       window.addEventListener("message", handler, { once: true });
-      // If no ACK arrives quickly, fall back locally (prevents console errors)
       setTimeout(() => resolve(false), 1200);
     });
 
@@ -99,14 +95,11 @@ export default function PdfExportButton({
         origin,
       );
     } catch {
-      // If posting fails, treat as unhandled by parent
       return false;
     }
     return ack;
   };
-  // ---------------------------------------------------------------------------
 
-  // Asset preflight loading for fonts/images
   const preflightAssets = async () => {
     return new Promise((resolve) => {
       const images = document.querySelectorAll("img");
@@ -134,12 +127,10 @@ export default function PdfExportButton({
         }
       });
 
-      // Timeout after 3 seconds
       setTimeout(() => resolve(true), 3000);
     });
   };
 
-  // CSS animation control - pause animations during capture
   const controlAnimations = (pause: boolean) => {
     const animatedElements = document.querySelectorAll("*");
     animatedElements.forEach((el) => {
@@ -154,100 +145,305 @@ export default function PdfExportButton({
     });
   };
 
-  // Create PDF header with actual Clear logo
   const createPdfHeader = (clientName: string): Promise<HTMLCanvasElement> => {
     return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      
-      // Set canvas dimensions (A4 width in pixels at 96 DPI)
-      canvas.width = 794; // 210mm at 96 DPI
-      canvas.height = 80; // ~21mm at 96 DPI
-      
-      // Fill white background
-      ctx.fillStyle = 'white';
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d")!;
+
+      canvas.width = 794;
+      canvas.height = 100;
+
+      ctx.fillStyle = "white";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw bottom border
-      ctx.strokeStyle = '#e5e7eb';
+
+      ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, canvas.height - 1);
-      ctx.lineTo(canvas.width, canvas.height - 1);
+      ctx.moveTo(40, canvas.height - 1);
+      ctx.lineTo(canvas.width - 40, canvas.height - 1);
       ctx.stroke();
-      
-      // Load and draw the actual Clear logo
+
       const logo = new Image();
-      logo.crossOrigin = 'anonymous';
+      logo.crossOrigin = "anonymous";
       logo.onload = () => {
-        console.log('✅ Clear logo loaded successfully');
-        
-        // Calculate proper aspect ratio to avoid squeezing
-        const logoHeight = 40; // Fixed height
-        const logoWidth = (logo.width / logo.height) * logoHeight;
-        
-        console.log(`Logo dimensions: ${logo.width}x${logo.height}, scaling to: ${logoWidth}x${logoHeight}`);
-        
-        // Draw logo with proper aspect ratio
-        ctx.drawImage(logo, 40, 20, logoWidth, logoHeight);
-        
-        // Draw main title
-        ctx.fillStyle = '#1f2937';
-        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillText('Pulse Dashboard™', 130, 32);
-        
-        // Draw subtitle
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
-        
-        // Draw generated info on the right
-        const currentDate = new Date().toLocaleDateString('en-US', { 
-          month: 'numeric', 
-          day: 'numeric', 
-          year: 'numeric' 
+        console.log("✅ Clear logo loaded successfully");
+
+        const maxLogoHeight = 35;
+        const maxLogoWidth = 120;
+        let logoHeight = maxLogoHeight;
+        let logoWidth = (logo.width / logo.height) * logoHeight;
+
+        if (logoWidth > maxLogoWidth) {
+          logoWidth = maxLogoWidth;
+          logoHeight = (logo.height / logo.width) * logoWidth;
+        }
+
+        console.log(
+          `Logo dimensions: ${logo.width}x${logo.height}, scaling to: ${logoWidth}x${logoHeight}`,
+        );
+
+        const logoY = (canvas.height - logoHeight) / 2 - 10;
+        ctx.drawImage(logo, 40, logoY, logoWidth, logoHeight);
+
+        const textStartX = 40 + logoWidth + 30;
+
+        ctx.fillStyle = "#1f2937";
+        ctx.font =
+          'bold 20px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = "left";
+        ctx.fillText("Pulse Dashboard™", textStartX, 35);
+
+        ctx.fillStyle = "#6b7280";
+        ctx.font =
+          '14px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Analytics Report for ${clientName}`, textStartX, 55);
+
+        const currentDate = new Date().toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
         });
-        
-        ctx.textAlign = 'right';
-        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
-        ctx.fillText('Period: Last Month', canvas.width - 40, 50);
-        
+
+        ctx.textAlign = "right";
+        ctx.font =
+          '12px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 35);
+        ctx.fillText("Period: Last Month", canvas.width - 40, 55);
+
         resolve(canvas);
       };
-      
+
       logo.onerror = () => {
-        // Fallback to text logo if image fails
-        ctx.fillStyle = '#1f2937';
-        ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillText('clear.', 40, 40);
-        
-        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillText('Pulse Dashboard™', 130, 32);
-        
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
-        
-        const currentDate = new Date().toLocaleDateString('en-US', { 
-          month: 'numeric', 
-          day: 'numeric', 
-          year: 'numeric' 
+        ctx.fillStyle = "#1f2937";
+        ctx.font =
+          'bold 28px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = "left";
+        ctx.fillText("clear.", 40, 45);
+
+        const textStartX = 150;
+
+        ctx.font =
+          'bold 20px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText("Pulse Dashboard™", textStartX, 35);
+
+        ctx.fillStyle = "#6b7280";
+        ctx.font =
+          '14px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Analytics Report for ${clientName}`, textStartX, 55);
+
+        const currentDate = new Date().toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
         });
-        
-        ctx.textAlign = 'right';
-        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
-        ctx.fillText('Period: Last Month', canvas.width - 40, 50);
-        
+
+        ctx.textAlign = "right";
+        ctx.font =
+          '12px Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 35);
+        ctx.fillText("Period: Last Month", canvas.width - 40, 55);
+
         resolve(canvas);
       };
-      
-      // Simply load the imported Clear logo
+
       logo.src = clearLogo;
     });
   };
 
-  // Slice-based rendering (1400px chunks) to prevent memory crashes
-  const captureInSlices = async (element: HTMLElement, html2canvas: any, clientName: string) => {
+  // Find individual cards/sections for one-per-page rendering
+  const findCardElements = (element: HTMLElement): HTMLElement[] => {
+    const cards: HTMLElement[] = [];
+    const selectors = [
+      "[data-metric-card]",
+      "[data-dashboard-card]",
+      ".metric-card",
+      ".dashboard-card",
+      ".stat-card",
+      ".kpi-card",
+      ".card",
+      '[class*="card"]',
+    ];
+
+    selectors.forEach((selector) => {
+      element.querySelectorAll(selector).forEach((card) => {
+        const cardEl = card as HTMLElement;
+        // Skip only these specific three cards
+        const cardText = cardEl.textContent || "";
+        const shouldSkip =
+          cardText.includes("Industry Filters") ||
+          cardText.includes("Time Period") ||
+          cardText.includes("Competitors");
+
+        if (!shouldSkip && !cards.includes(cardEl)) {
+          cards.push(cardEl);
+        }
+      });
+    });
+
+    if (cards.length === 0) {
+      console.warn(
+        "No card elements found, falling back to slice-based capture",
+      );
+      return [];
+    }
+
+    return cards;
+  };
+
+  // Capture individual cards
+  const captureCardsAsPdf = async (
+    element: HTMLElement,
+    html2canvas: any,
+    clientName: string,
+  ) => {
+    const cards = findCardElements(element);
+
+    // If no cards found, fall back to slice-based approach
+    if (cards.length === 0) {
+      return captureInSlices(element, html2canvas, clientName);
+    }
+
+    console.info(`📊 Found ${cards.length} cards to capture`);
+
+    const canvases: HTMLCanvasElement[] = [];
+    const headerCanvas = await createPdfHeader(clientName);
+    canvases.push(headerCanvas);
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      console.info(`📸 Capturing card ${i + 1}/${cards.length}`);
+
+      setProgress({
+        current: i + 1,
+        total: cards.length,
+        phase: "Capturing cards",
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      try {
+        const canvas = await html2canvas(card, {
+          backgroundColor: "#ffffff",
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: false,
+          foreignObjectRendering: false,
+          logging: false,
+          imageTimeout: 15000,
+          removeContainer: true,
+          async: true,
+          ignoreElements: shouldIgnoreForPdf,
+          onclone: (doc: Document) => {
+            doc
+              .querySelectorAll(
+                'iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]',
+              )
+              .forEach((n: Element) => n.parentNode?.removeChild(n));
+
+            doc.querySelectorAll("*").forEach((el: Element) => {
+              const element = el as HTMLElement;
+              if (!element.style) return;
+
+              const classStr = element.className
+                ? element.className.toString()
+                : "";
+              const computedStyle = doc.defaultView?.getComputedStyle(element);
+
+              const isDataViz =
+                element.tagName === "CANVAS" ||
+                element.closest("svg") ||
+                element.querySelector("canvas") ||
+                element.querySelector("svg") ||
+                classStr.includes("chart") ||
+                classStr.includes("graph") ||
+                classStr.includes("plot") ||
+                classStr.includes("visualization");
+
+              const isImportantUI =
+                classStr.includes("metric-value") ||
+                classStr.includes("metric-card") ||
+                classStr.includes("stat-card") ||
+                classStr.includes("kpi") ||
+                classStr.includes("dashboard-card") ||
+                element.hasAttribute("data-metric") ||
+                element.hasAttribute("data-stat");
+
+              if (!isDataViz && !isImportantUI) {
+                const bgColor = computedStyle?.backgroundColor || "";
+                const isGrayish =
+                  bgColor.includes("rgb(24") ||
+                  bgColor.includes("rgb(31") ||
+                  bgColor.includes("rgb(55") ||
+                  bgColor.includes("rgb(75") ||
+                  bgColor.includes("rgb(107") ||
+                  bgColor.includes("rgb(156") ||
+                  bgColor.includes("rgb(209") ||
+                  bgColor.includes("rgb(229") ||
+                  bgColor.includes("rgb(243");
+
+                if (isGrayish && !element.textContent?.trim()) {
+                  element.style.setProperty(
+                    "background-color",
+                    "transparent",
+                    "important",
+                  );
+                  element.style.setProperty(
+                    "background",
+                    "transparent",
+                    "important",
+                  );
+                } else if (
+                  isGrayish &&
+                  element.tagName === "DIV" &&
+                  !element.querySelector("img")
+                ) {
+                  element.style.setProperty(
+                    "background-color",
+                    "white",
+                    "important",
+                  );
+                  element.style.setProperty("background", "white", "important");
+                }
+              } else if (isImportantUI) {
+                element.style.setProperty(
+                  "background-color",
+                  "white",
+                  "important",
+                );
+                element.style.setProperty(
+                  "border",
+                  "1px solid #e5e7eb",
+                  "important",
+                );
+                element.style.setProperty("border-radius", "8px", "important");
+                element.style.setProperty("padding", "16px", "important");
+              }
+            });
+
+            doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
+              if (!img.getAttribute("crossorigin"))
+                img.setAttribute("crossorigin", "anonymous");
+              if (!img.getAttribute("referrerpolicy"))
+                img.setAttribute("referrerpolicy", "no-referrer");
+            });
+          },
+        });
+
+        canvases.push(canvas);
+      } catch (err) {
+        console.error(`❌ Failed capturing card ${i + 1}:`, err);
+        throw err;
+      }
+    }
+
+    return canvases;
+  };
+
+  // Fallback slice-based rendering for when cards aren't found
+  const captureInSlices = async (
+    element: HTMLElement,
+    html2canvas: any,
+    clientName: string,
+  ) => {
     const SLICE_HEIGHT = 1400;
     const elementHeight = element.scrollHeight;
     const elementWidth = element.scrollWidth;
@@ -258,8 +454,6 @@ export default function PdfExportButton({
     );
 
     const canvases: HTMLCanvasElement[] = [];
-    
-    // Add header as first slice
     const headerCanvas = await createPdfHeader(clientName);
     canvases.push(headerCanvas);
 
@@ -268,19 +462,13 @@ export default function PdfExportButton({
       const sliceHeight = Math.min(SLICE_HEIGHT, elementHeight - yOffset);
 
       console.info(
-        `🔍 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
+        `📸 Capturing slice ${i + 1}/${totalSlices} at y=${yOffset}, height=${sliceHeight}`,
       );
-
-      // Update progress before capture
       setProgress({ current: i + 1, total: totalSlices, phase: "Capturing" });
-      
-      // Brief yield to allow progress update to render
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // CORS-safe capture configuration with robust onclone adjustments
-      let canvas: HTMLCanvasElement;
       try {
-        canvas = await html2canvas(element, {
+        const canvas = await html2canvas(element, {
           height: sliceHeight,
           width: elementWidth,
           ignoreElements: shouldIgnoreForPdf,
@@ -289,7 +477,7 @@ export default function PdfExportButton({
           scrollX: 0,
           scrollY: -yOffset,
           backgroundColor: "#ffffff",
-          scale: 1,
+          scale: 1.5,
           useCORS: true,
           allowTaint: false,
           foreignObjectRendering: false,
@@ -300,67 +488,13 @@ export default function PdfExportButton({
           windowWidth: elementWidth,
           windowHeight: sliceHeight,
           onclone: (doc: Document) => {
-            // Strip risky elements in the clone to avoid runtime errors
+            // Same clone logic as card capture
             doc
               .querySelectorAll(
                 'iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]',
               )
               .forEach((n: Element) => n.parentNode?.removeChild(n));
-            
-            // Remove grey backgrounds - make everything outline only
-            let removedBgCount = 0;
-            doc.querySelectorAll("*").forEach((el: Element) => {
-              const element = el as HTMLElement;
-              if (element.style) {
-                const originalBg = element.style.backgroundColor;
-                
-                // Remove all background colors but keep borders/outlines
-                if (element.style.backgroundColor && 
-                    element.style.backgroundColor !== 'transparent' &&
-                    element.style.backgroundColor !== 'white') {
-                  element.style.backgroundColor = 'transparent';
-                  removedBgCount++;
-                  console.log(`🎨 Removed background from element with original bg: ${originalBg}`);
-                }
-                
-                // Target specific UI components that commonly have grey backgrounds
-                const classStr = element.className ? element.className.toString() : '';
-                const isMetricBox = classStr.includes('metric') || 
-                                  classStr.includes('card') || 
-                                  classStr.includes('bg-') ||
-                                  classStr.includes('surface') ||
-                                  classStr.includes('container') ||
-                                  classStr.includes('box') ||
-                                  classStr.includes('panel');
-                
-                if (isMetricBox) {
-                  console.log(`🎯 Found metric/card element with classes: ${classStr}`);
-                  element.style.setProperty('background-color', 'transparent', 'important');
-                  element.style.setProperty('background', 'transparent', 'important');
-                  // Remove Tailwind background classes
-                  element.className = classStr.replace(/bg-\S+/g, '').replace(/backdrop-blur-\S+/g, '').trim();
-                  removedBgCount++;
-                }
-                
-                // More aggressive background removal for all DIVs
-                if (element.tagName === 'DIV') {
-                  const computedStyle = getComputedStyle(element);
-                  const bgColor = computedStyle.backgroundColor;
-                  if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                    console.log(`🔍 DIV with computed bg: ${bgColor}, classes: ${classStr}`);
-                    element.style.setProperty('background-color', 'transparent', 'important');
-                    element.style.setProperty('background', 'transparent', 'important');
-                    element.style.setProperty('background-image', 'none', 'important');
-                    // Remove background classes from className
-                    element.className = classStr.replace(/bg-\S+/g, '').replace(/backdrop-blur-\S+/g, '').replace(/from-\S+/g, '').replace(/via-\S+/g, '').replace(/to-\S+/g, '').trim();
-                    removedBgCount++;
-                  }
-                }
-              }
-            });
-            console.log(`🎨 Total backgrounds removed: ${removedBgCount}`);
-            
-            // Add crossOrigin/referrerpolicy to images in the clone
+
             doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
               if (!img.getAttribute("crossorigin"))
                 img.setAttribute("crossorigin", "anonymous");
@@ -369,45 +503,18 @@ export default function PdfExportButton({
             });
           },
         });
-      } catch (err) {
-        const msg =
-          err instanceof Error && err.message ? err.message : String(err);
-        console.error(
-          `❌ html2canvas failed on slice ${i + 1}/${totalSlices} at y=${yOffset}:`,
-          msg,
-        );
-        throw err; // bubble to outer handler so we don't hang silently
-      }
 
-      canvases.push(canvas);
+        canvases.push(canvas);
+      } catch (err) {
+        console.error(
+          `❌ html2canvas failed on slice ${i + 1}/${totalSlices}:`,
+          err,
+        );
+        throw err;
+      }
     }
 
     return canvases;
-  };
-
-  // Stitch slices into final canvas
-  const stitchSlices = (slices: HTMLCanvasElement[]) => {
-    if (slices.length === 0) return null;
-    if (slices.length === 1) return slices[0];
-
-    const totalHeight = slices.reduce((sum, canvas) => sum + canvas.height, 0);
-    const width = slices[0].width;
-
-    const finalCanvas = document.createElement("canvas");
-    finalCanvas.width = width;
-    finalCanvas.height = totalHeight;
-
-    const ctx = finalCanvas.getContext("2d")!;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, totalHeight);
-
-    let currentY = 0;
-    slices.forEach((canvas) => {
-      ctx.drawImage(canvas, 0, currentY);
-      currentY += canvas.height;
-    });
-
-    return finalCanvas;
   };
 
   const handleExport = async () => {
@@ -416,140 +523,113 @@ export default function PdfExportButton({
     setProgress({ current: 0, total: 0, phase: "Preparing..." });
 
     try {
-      console.info("Starting PDF export with slice-based rendering");
+      console.info("Starting PDF export");
 
-      // Dynamic import of PDF libraries (exact from July 31st)
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf"),
       ]);
 
       const element = targetRef.current;
-      console.info("Target element found, preparing for slice-based capture");
+      console.info("Target element found, preparing for capture");
 
-      // Asset preflight loading for fonts/images (from working implementation notes)
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
 
-      // Ensure in-page <img> won't taint the canvas
       prepareImagesForCors(element);
-
-      // Ensure all images are loaded
-      const images = Array.from(element.querySelectorAll("img"));
-      await Promise.all(
-        images.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          });
-        }),
-      );
-
-      // Small delay to ensure rendering is complete
+      await preflightAssets();
       await new Promise((resolve) => setTimeout(resolve, 100));
+      controlAnimations(true);
 
-      // CSS animation control (disable animations during capture)
-      const originalAnimations = document.querySelectorAll("*");
-      originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = "paused";
-      });
-
-      console.info("Starting slice-based rendering via captureInSlices()");
-      const slices = await captureInSlices(element, html2canvas, clientName);
-      if (!slices || slices.length === 0) {
-        throw new Error(
-          "No slices captured (captureInSlices returned 0 canvases)",
-        );
+      console.info("Starting capture");
+      const canvases = await captureCardsAsPdf(
+        element,
+        html2canvas,
+        clientName,
+      );
+      if (!canvases || canvases.length === 0) {
+        throw new Error("No content captured");
       }
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const availableWidth = pdfWidth - 2 * margin;
+      const availableHeight = pdfHeight - 2 * margin;
 
-      console.info(`Captured ${slices.length} slice(s); composing PDF pages`);
-      setProgress({ current: slices.length, total: slices.length, phase: "Composing PDF" });
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Handle header and content positioning
-      let currentPage = 1;
-      let currentY = 0;
-      
-      for (let idx = 0; idx < slices.length; idx++) {
-        const canvas = slices[idx];
-        const imgData = canvas.toDataURL("image/png");
+      console.info(`Captured ${canvases.length} item(s); composing PDF`);
+      setProgress({
+        current: canvases.length,
+        total: canvases.length,
+        phase: "Composing PDF",
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // First canvas is header, rest are cards (1 per page if using card mode)
+      canvases.forEach((canvas, idx) => {
+        if (idx > 1) pdf.addPage();
+
+        const imgData = canvas.toDataURL("image/png", 1.0);
         const aspect = canvas.height / canvas.width;
-        
-        let w = pdfWidth;
+        let w = availableWidth;
         let h = w * aspect;
-        if (h > pdfHeight) {
-          h = pdfHeight;
+
+        if (h > availableHeight) {
+          h = availableHeight;
           w = h / aspect;
         }
-        
-        // For first slice (header), place at top
-        if (idx === 0) {
-          pdf.addImage(imgData, "PNG", 0, 0, w, h);
-          currentY = h;
-        } else {
-          // Check if content fits on current page
-          if (currentY + h > pdfHeight) {
-            // Start new page
-            pdf.addPage();
-            currentY = 0;
-          }
-          
-          pdf.addImage(imgData, "PNG", 0, currentY, w, h);
-          currentY += h;
-        }
-      }
 
-      // Restore animations
-      originalAnimations.forEach((el: Element) => {
-        (el as HTMLElement).style.animationPlayState = "";
+        const xOffset = margin + (availableWidth - w) / 2;
+        const yOffset = idx === 0 ? margin : margin + 20;
+
+        pdf.addImage(imgData, "PNG", xOffset, yOffset, w, h);
+
+        if (idx > 0) {
+          pdf.setFontSize(10);
+          pdf.setTextColor(150);
+          pdf.text(`Page ${idx}`, pdfWidth / 2, pdfHeight - 5, {
+            align: "center",
+          });
+        }
       });
 
-      // Generate filename
+      controlAnimations(false);
+
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const downloadName =
         fileName || `Pulse-Dashboard-${clientLabel || "Export"}-${stamp}.pdf`;
 
-      console.info("Saving multi-page PDF with slice-based rendering");
-      // Use a consistent, environment-agnostic save path to avoid jsPDF's iframe saver
+      console.info("Saving PDF");
       const blob = pdf.output("blob");
       const url = URL.createObjectURL(blob);
 
       if (isEmbedded()) {
-        // Try parent first; only rely on it if it ACKs quickly
         const handledByParent = await askParentToDownload(url, downloadName);
         if (!handledByParent) {
-          // Parent not listening or blocked—fall back locally
           triggerDirectDownload(url, downloadName);
         }
       } else {
-        // Not embedded: handle download locally (no postMessage, no window.open)
         triggerDirectDownload(url, downloadName);
       }
+
+      URL.revokeObjectURL(url);
       console.info("PDF export completed successfully");
     } catch (error) {
-      // Log the *real* failure for visibility
       const msg =
         error instanceof Error && error.message ? error.message : String(error);
       console.error("PDF export failed:", msg);
-      if (error instanceof Error && (error as any).stack) {
-        console.error("Stack:", (error as any).stack);
-      }
     } finally {
       setIsGenerating(false);
       setProgress({ current: 0, total: 0, phase: "" });
     }
   };
 
-  // Calculate progress percentage
-  const progressPercentage = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
-  
+  const progressPercentage =
+    progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+
   return (
     <div className="relative inline-flex items-center">
       <Button
@@ -559,36 +639,46 @@ export default function PdfExportButton({
         className={className}
         onClick={handleExport}
         disabled={isGenerating}
-        aria-label={isGenerating ? `${progress.phase} ${Math.round(progressPercentage)}%` : "Export dashboard as PDF"}
-        title={isGenerating ? `${progress.phase} ${Math.round(progressPercentage)}%` : "Export PDF"}
+        aria-label={
+          isGenerating
+            ? `${progress.phase} ${Math.round(progressPercentage)}%`
+            : "Export dashboard as PDF"
+        }
+        title={
+          isGenerating
+            ? `${progress.phase} ${Math.round(progressPercentage)}%`
+            : "Export PDF"
+        }
         data-testid="button-export-pdf"
       >
         {isGenerating ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="relative w-4 h-4">
-              {progress.total > 0 ? (
-                <div className="w-4 h-4 rounded-full border-2 border-gray-300 opacity-100">
-                  <div 
-                    className="w-4 h-4 rounded-full border-2 border-black transition-all duration-300 opacity-100"
-                    style={{
-                      background: `conic-gradient(#000000 ${progressPercentage * 3.6}deg, transparent 0deg)`,
-                      opacity: 1
-                    }}
-                  />
-                </div>
-              ) : (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-            </div>
+          <div className="relative w-4 h-4">
+            {progress.total > 0 ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: `conic-gradient(#000 ${progressPercentage * 3.6}deg, transparent 0deg)`,
+                    mask: "radial-gradient(circle, transparent 60%, black 60%)",
+                    WebkitMask:
+                      "radial-gradient(circle, transparent 60%, black 60%)",
+                  }}
+                />
+              </>
+            ) : (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
           </div>
         ) : (
           <FileDown className="h-4 w-4" />
         )}
       </Button>
-      
+
       {isGenerating && progress.phase && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap pointer-events-none z-10">
-          {progress.phase} {progress.total > 0 && `${Math.round(progressPercentage)}%`}
+          {progress.phase}{" "}
+          {progress.total > 0 && `${Math.round(progressPercentage)}%`}
         </div>
       )}
     </div>
