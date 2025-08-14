@@ -315,6 +315,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         canonicalTimePeriod.type // Use canonical type instead of raw timePeriod
       );
       
+      // DEBUG: Log CD_Avg metrics returned from optimizer
+      const cdAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'CD_Avg') || [];
+      const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+      const cdAvgCoreMetrics = cdAvgMetrics.filter((m: any) => coreMetrics.includes(m.metricName));
+      
+      logger.info(`🔍 DASHBOARD OPTIMIZER RESULT: CD_Avg data analysis`, {
+        totalMetrics: result.metrics?.length || 0,
+        cdAvgCount: cdAvgMetrics.length,
+        cdAvgCoreCount: cdAvgCoreMetrics.length,
+        cdAvgMetricNames: [...new Set(cdAvgMetrics.map((m: any) => m.metricName))],
+        cdAvgCorePeriods: cdAvgCoreMetrics.map((m: any) => ({ metric: m.metricName, period: m.timePeriod })),
+        requestedPeriod: periodsToQuery[0]
+      });
+      
       // Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {
         clientId,

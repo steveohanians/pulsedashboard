@@ -508,6 +508,8 @@ export default function Dashboard() {
       ? metrics.filter(m => m.timePeriod === targetPeriod)
       : metrics;
 
+
+
     // First, process raw metrics
     for (const metric of metricsToProcess) {
       // Normalize sourceType to handle different casings from backend
@@ -566,6 +568,8 @@ export default function Dashboard() {
         }
       }
     }
+
+
 
     return result;
   }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);

@@ -335,6 +335,7 @@ export async function getDashboardDataOptimized(
   industryVertical: string,
   timePeriod?: string
 ) {
+  console.log('🎯 getDashboardDataOptimized CALLED with periods:', periodsToQuery, 'timePeriod:', timePeriod);
   logger.info('🔴 DASHBOARD FUNCTION CALLED - CLIENT: ' + client.id);
   
   clearCache();
@@ -411,7 +412,10 @@ export async function getDashboardDataOptimized(
         return result;
       })),
       Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
-      Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
+      Promise.all(periodsToQuery.map(p => {
+        console.log(`🔍 OPTIMIZER: About to call getFilteredCdAvgMetrics with period: ${p}, filters: ${JSON.stringify(filters)}`);
+        return storage.getFilteredCdAvgMetrics(p, filters);
+      })),
     ]);
   }
   
