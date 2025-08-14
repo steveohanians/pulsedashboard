@@ -179,6 +179,7 @@ export default function PdfExportButton({
       const logo = new Image();
       logo.crossOrigin = 'anonymous';
       logo.onload = () => {
+        console.log('✅ Clear logo loaded successfully from:', logo.src);
         // Draw logo at appropriate size
         ctx.drawImage(logo, 40, 20, 60, 40);
         
@@ -279,10 +280,12 @@ export default function PdfExportButton({
           attempts++;
         };
         
-        logo.onerror = () => {
+        logo.onerror = (error) => {
+          console.warn(`❌ Logo failed to load from: ${logo.src}`, error);
           if (attempts < paths.length) {
             setTimeout(attemptLoad, 100);
           } else {
+            console.warn('All logo paths failed, using text fallback');
             fallbackToText();
           }
         };
@@ -356,14 +359,19 @@ export default function PdfExportButton({
               .forEach((n: Element) => n.parentNode?.removeChild(n));
             
             // Remove grey backgrounds - make everything outline only
+            let removedBgCount = 0;
             doc.querySelectorAll("*").forEach((el: Element) => {
               const element = el as HTMLElement;
               if (element.style) {
+                const originalBg = element.style.backgroundColor;
+                
                 // Remove all background colors but keep borders/outlines
                 if (element.style.backgroundColor && 
                     element.style.backgroundColor !== 'transparent' &&
                     element.style.backgroundColor !== 'white') {
                   element.style.backgroundColor = 'transparent';
+                  removedBgCount++;
+                  console.log(`🎨 Removed background from element with original bg: ${originalBg}`);
                 }
                 
                 // Target specific UI components that commonly have grey backgrounds
@@ -376,27 +384,26 @@ export default function PdfExportButton({
                                   classStr.includes('box') ||
                                   classStr.includes('panel');
                 
-                if (isMetricBox || element.tagName === 'svg' || element.tagName === 'DIV') {
+                if (isMetricBox) {
+                  console.log(`🎯 Found metric/card element with classes: ${classStr}`);
                   element.style.backgroundColor = 'transparent';
-                  // Also remove any background properties
                   element.style.background = 'transparent';
+                  removedBgCount++;
+                }
+                
+                if (element.tagName === 'DIV') {
+                  const computedStyle = getComputedStyle(element);
+                  const bgColor = computedStyle.backgroundColor;
+                  if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                    console.log(`🔍 DIV with computed bg: ${bgColor}, classes: ${classStr}`);
+                    element.style.backgroundColor = 'transparent';
+                    element.style.background = 'transparent';
+                    removedBgCount++;
+                  }
                 }
               }
-              
-              // Remove computed background colors by checking common grey colors
-              const computedStyle = getComputedStyle(element);
-              const bgColor = computedStyle.backgroundColor;
-              if (bgColor && (
-                bgColor.includes('rgb(243, 244, 246)') || // bg-gray-100
-                bgColor.includes('rgb(249, 250, 251)') || // bg-gray-50
-                bgColor.includes('rgb(229, 231, 235)') || // bg-gray-200
-                bgColor.includes('gray') ||
-                bgColor.includes('grey')
-              )) {
-                element.style.backgroundColor = 'transparent !important';
-                element.style.background = 'transparent !important';
-              }
             });
+            console.log(`🎨 Total backgrounds removed: ${removedBgCount}`);
             
             // Add crossOrigin/referrerpolicy to images in the clone
             doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
