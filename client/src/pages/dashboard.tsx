@@ -495,17 +495,15 @@ export default function Dashboard() {
   // REPLACE your existing groupedMetrics useMemo function with this:
 
   const groupedMetrics = useMemo(() => {
-    if (!dashboardData) return {};
-    
     return metricProcessingService.processMetricsForPeriod(
       metrics,
       averagedMetrics,
       {
         targetPeriod: timePeriod,
-        isTimeSeries: isTimeSeries
+        isTimeSeries: dashboardData?.isTimeSeries
       }
     );
-  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries, timePeriod]);
+  }, [metrics, averagedMetrics, timePeriod, dashboardData?.isTimeSeries]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
