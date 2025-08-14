@@ -72,7 +72,7 @@ import { metricProcessingService } from '@/services/metricProcessingService';
 import { trafficChannelService } from '@/services/trafficChannelService';
 import { deviceDistributionService } from '@/services/deviceDistributionService';
 import { dataOrchestrator } from '@/services/dataOrchestrator';
-import { DataSourceIndicator, useDataSourceInfo } from '@/components/DataSourceIndicator';
+
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -144,6 +144,7 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
+  const [dataBannerDismissed, setDataBannerDismissed] = useState(false);
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
@@ -1016,8 +1017,8 @@ export default function Dashboard() {
             className=""
           />
 
-          {/* Enhanced Data Quality Status Banner */}
-          {orchestratedData?.dataQuality && (
+          {/* Enhanced Data Quality Status Banner - Admin Only */}
+          {orchestratedData?.dataQuality && user?.role === 'Admin' && !dataBannerDismissed && (
             <div className={`mb-4 p-4 rounded-lg border ${
               orchestratedData.dataQuality.completeness === 1 
                 ? 'bg-green-50 border-green-200' 
@@ -1095,6 +1096,15 @@ export default function Dashboard() {
                     </ul>
                   )}
                 </div>
+                
+                {/* Dismiss button */}
+                <button
+                  onClick={() => setDataBannerDismissed(true)}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Dismiss data source status"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
           )}
@@ -1449,16 +1459,6 @@ export default function Dashboard() {
                         <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">
                           {metricName}
                         </CardTitle>
-                        
-                        {/* Data Source Indicator */}
-                        {orchestratedData && (
-                          <DataSourceIndicator 
-                            sources={useDataSourceInfo(metricName, orchestratedData)}
-                            compact={true}
-                            className="mb-3"
-                          />
-                        )}
-                        
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
