@@ -514,15 +514,6 @@ export default function Dashboard() {
     return dataOrchestrator.orchestrateData(dashboardData, timePeriod);
   }, [dashboardData, timePeriod]);
 
-  // Debug period metadata
-  if (orchestratedData) {
-    console.log('Period Debug:', {
-      ga4Period: orchestratedData.periodMetadata.ga4Period,
-      semrushPeriod: orchestratedData.periodMetadata.semrushPeriod,
-      displayPeriod: orchestratedData.periodMetadata.displayPeriod
-    });
-  }
-
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
     return trafficChannelService.processChannels(
