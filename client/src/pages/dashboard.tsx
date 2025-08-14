@@ -68,6 +68,7 @@ import {
   isPercentageMetric,
 } from "@/utils/chartUtils";
 import { debugLog } from '@/config/dataSourceConfig';
+import { metricProcessingService } from '@/services/metricProcessingService';
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -494,86 +495,17 @@ export default function Dashboard() {
   // REPLACE your existing groupedMetrics useMemo function with this:
 
   const groupedMetrics = useMemo(() => {
-    // Quick return for empty states
     if (!dashboardData) return {};
-
-    // ALWAYS calculate from raw metrics for consistency
-    // This ensures CD_Avg is processed the same way for all time periods
-    const result: Record<string, Record<string, number>> = {};
-    const counts: Record<string, Record<string, number>> = {};
-
-    // For single-period queries (like "Last Month"), filter to only the target period
-    // For time series queries, process all metrics
-    const targetPeriod = timePeriod === "Last Month" ? "2025-07" : null;
-    const metricsToProcess = targetPeriod && !isTimeSeries 
-      ? metrics.filter(m => m.timePeriod === targetPeriod)
-      : metrics;
-
-
-
-    // First, process raw metrics
-    for (const metric of metricsToProcess) {
-      // Normalize sourceType to handle different casings from backend
-      let normalizedSourceType = metric.sourceType;
-      if (normalizedSourceType.toLowerCase() === "cd_avg") {
-        normalizedSourceType = "CD_Avg";
+    
+    return metricProcessingService.processMetricsForPeriod(
+      metrics,
+      averagedMetrics,
+      {
+        targetPeriod: timePeriod,
+        isTimeSeries: isTimeSeries
       }
-
-      if (!result[metric.metricName]) {
-        result[metric.metricName] = {};
-        counts[metric.metricName] = {};
-      }
-      if (!result[metric.metricName][normalizedSourceType]) {
-        result[metric.metricName][normalizedSourceType] = 0;
-        counts[metric.metricName][normalizedSourceType] = 0;
-      }
-
-      let value = parseMetricValue(metric.value);
-
-      // Convert Session Duration from seconds to minutes for all source types
-      if (metric.metricName === "Session Duration" && value > 60) {
-        value = value / 60;
-      }
-
-      result[metric.metricName][normalizedSourceType] += value;
-      counts[metric.metricName][normalizedSourceType] += 1;
-    }
-
-    // Calculate averages from counts
-    for (const metricName in result) {
-      for (const sourceType in result[metricName]) {
-        if (counts[metricName][sourceType] > 0) {
-          result[metricName][sourceType] =
-            result[metricName][sourceType] / counts[metricName][sourceType];
-        }
-      }
-    }
-
-    // If we have averagedMetrics, merge them in (but don't replace our calculated CD_Avg)
-    if (
-      isTimeSeries &&
-      averagedMetrics &&
-      typeof averagedMetrics === "object"
-    ) {
-      for (const metricName in averagedMetrics) {
-        if (!result[metricName]) {
-          result[metricName] = {};
-        }
-        for (const sourceType in averagedMetrics[metricName]) {
-          // Only use averagedMetrics if we don't already have this value
-          // This preserves our calculated CD_Avg values
-          if (!result[metricName][sourceType]) {
-            result[metricName][sourceType] =
-              averagedMetrics[metricName][sourceType];
-          }
-        }
-      }
-    }
-
-
-
-    return result;
-  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries]);
+    );
+  }, [dashboardData?.metrics, dashboardData?.averagedMetrics, isTimeSeries, timePeriod]);
 
   // Process traffic channel data for stacked bar chart
   const processTrafficChannelData = () => {
