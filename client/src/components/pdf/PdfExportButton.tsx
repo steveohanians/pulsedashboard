@@ -367,14 +367,14 @@ export default function PdfExportButton({
                 }
                 
                 // Target specific UI components that commonly have grey backgrounds
-                const classes = element.className || '';
-                const isMetricBox = classes.includes('metric') || 
-                                  classes.includes('card') || 
-                                  classes.includes('bg-') ||
-                                  classes.includes('surface') ||
-                                  classes.includes('container') ||
-                                  classes.includes('box') ||
-                                  classes.includes('panel');
+                const classStr = element.className ? element.className.toString() : '';
+                const isMetricBox = classStr.includes('metric') || 
+                                  classStr.includes('card') || 
+                                  classStr.includes('bg-') ||
+                                  classStr.includes('surface') ||
+                                  classStr.includes('container') ||
+                                  classStr.includes('box') ||
+                                  classStr.includes('panel');
                 
                 if (isMetricBox || element.tagName === 'svg' || element.tagName === 'DIV') {
                   element.style.backgroundColor = 'transparent';
