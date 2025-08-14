@@ -271,49 +271,8 @@ export default function PdfExportButton({
         import("jspdf"),
       ]);
 
-      // Create a temporary container that includes both header and content for PDF
-      const headerElement = document.querySelector("header");
-      const dashboardContent = targetRef.current;
-      
+      const element = targetRef.current;
       console.info("Target element found, preparing for slice-based capture");
-      
-      // Create a temporary container for PDF that includes header + content
-      const tempContainer = document.createElement("div");
-      tempContainer.style.position = "absolute";
-      tempContainer.style.top = "-9999px";
-      tempContainer.style.left = "0";
-      tempContainer.style.width = "100%";
-      tempContainer.style.background = "#f8fafc";
-      tempContainer.style.minHeight = "100vh";
-      tempContainer.style.zIndex = "-1";
-      
-      // Clone and add header
-      if (headerElement) {
-        const headerClone = headerElement.cloneNode(true) as HTMLElement;
-        headerClone.style.position = "static";
-        headerClone.style.top = "0";
-        headerClone.style.zIndex = "1";
-        headerClone.style.background = "linear-gradient(to right, #ffffff, #ffffff, #f8fafc80)";
-        
-        // Hide elements that shouldn't appear in PDF
-        const elementsToHide = headerClone.querySelectorAll('.logout-button, button[class*="mobile"], button[class*="menu"], [data-pdf-hide="true"]');
-        elementsToHide.forEach(el => {
-          (el as HTMLElement).style.display = "none";
-        });
-        
-        tempContainer.appendChild(headerClone);
-      }
-      
-      // Clone and add dashboard content
-      if (dashboardContent) {
-        const contentClone = dashboardContent.cloneNode(true) as HTMLElement;
-        contentClone.style.marginTop = "0";
-        contentClone.style.paddingTop = "1rem";
-        tempContainer.appendChild(contentClone);
-      }
-      
-      document.body.appendChild(tempContainer);
-      const element = tempContainer;
 
       // Asset preflight loading for fonts/images (from working implementation notes)
       if (document.fonts?.ready) {
@@ -379,11 +338,6 @@ export default function PdfExportButton({
         (el as HTMLElement).style.animationPlayState = "";
       });
 
-      // Clean up the temporary container
-      if (tempContainer && tempContainer.parentNode) {
-        document.body.removeChild(tempContainer);
-      }
-
       // Generate filename
       const today = new Date();
       const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
@@ -418,12 +372,6 @@ export default function PdfExportButton({
     } finally {
       setIsGenerating(false);
       setProgress({ current: 0, total: 0, phase: "" });
-      
-      // Clean up temporary container if it exists
-      const existingTempContainer = document.querySelector('[style*="-9999px"]');
-      if (existingTempContainer && existingTempContainer.parentNode) {
-        existingTempContainer.parentNode.removeChild(existingTempContainer);
-      }
     }
   };
 
