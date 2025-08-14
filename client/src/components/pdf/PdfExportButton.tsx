@@ -153,53 +153,88 @@ export default function PdfExportButton({
     });
   };
 
-  // Create PDF header matching the screenshot
-  const createPdfHeader = (clientName: string): HTMLCanvasElement => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    
-    // Set canvas dimensions (A4 width in pixels at 96 DPI)
-    canvas.width = 794; // 210mm at 96 DPI
-    canvas.height = 80; // ~21mm at 96 DPI
-    
-    // Fill white background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw bottom border
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height - 1);
-    ctx.lineTo(canvas.width, canvas.height - 1);
-    ctx.stroke();
-    
-    // Draw Clear logo
-    ctx.fillStyle = '#1f2937';
-    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('clear.', 40, 40);
-    
-    // Draw main title
-    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Pulse Dashboard™', 130, 32);
-    
-    // Draw subtitle
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
-    
-    // Draw generated info on the right
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-      month: 'numeric', 
-      day: 'numeric', 
-      year: 'numeric' 
+  // Create PDF header with actual Clear logo
+  const createPdfHeader = (clientName: string): Promise<HTMLCanvasElement> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      
+      // Set canvas dimensions (A4 width in pixels at 96 DPI)
+      canvas.width = 794; // 210mm at 96 DPI
+      canvas.height = 80; // ~21mm at 96 DPI
+      
+      // Fill white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw bottom border
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height - 1);
+      ctx.lineTo(canvas.width, canvas.height - 1);
+      ctx.stroke();
+      
+      // Load and draw the actual Clear logo
+      const logo = new Image();
+      logo.crossOrigin = 'anonymous';
+      logo.onload = () => {
+        // Draw logo at appropriate size
+        ctx.drawImage(logo, 40, 20, 60, 40);
+        
+        // Draw main title
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText('Pulse Dashboard™', 130, 32);
+        
+        // Draw subtitle
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
+        
+        // Draw generated info on the right
+        const currentDate = new Date().toLocaleDateString('en-US', { 
+          month: 'numeric', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        ctx.textAlign = 'right';
+        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
+        ctx.fillText('Period: Last Month', canvas.width - 40, 50);
+        
+        resolve(canvas);
+      };
+      
+      logo.onerror = () => {
+        // Fallback to text logo if image fails
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText('clear.', 40, 40);
+        
+        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText('Pulse Dashboard™', 130, 32);
+        
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
+        
+        const currentDate = new Date().toLocaleDateString('en-US', { 
+          month: 'numeric', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        ctx.textAlign = 'right';
+        ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
+        ctx.fillText('Period: Last Month', canvas.width - 40, 50);
+        
+        resolve(canvas);
+      };
+      
+      // Try to load the Clear logo from assets
+      logo.src = '/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png';
     });
-    
-    ctx.textAlign = 'right';
-    ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
-    ctx.fillText('Period: Last Month', canvas.width - 40, 50);
-    
-    return canvas;
   };
 
   // Slice-based rendering (1400px chunks) to prevent memory crashes
@@ -216,7 +251,7 @@ export default function PdfExportButton({
     const canvases: HTMLCanvasElement[] = [];
     
     // Add header as first slice
-    const headerCanvas = createPdfHeader(clientName);
+    const headerCanvas = await createPdfHeader(clientName);
     canvases.push(headerCanvas);
 
     for (let i = 0; i < totalSlices; i++) {
@@ -262,6 +297,24 @@ export default function PdfExportButton({
                 'iframe,video,canvas,[data-pdf-hide="true"],[data-pdf-hide]',
               )
               .forEach((n: Element) => n.parentNode?.removeChild(n));
+            
+            // Remove grey backgrounds - make charts outline only
+            doc.querySelectorAll("*").forEach((el: Element) => {
+              const element = el as HTMLElement;
+              if (element.style) {
+                // Remove background colors but keep borders/outlines
+                if (element.style.backgroundColor) {
+                  element.style.backgroundColor = 'transparent';
+                }
+                // For chart containers, remove fill colors
+                if (element.classList.contains('recharts-surface') || 
+                    element.tagName === 'svg' || 
+                    element.classList.contains('chart-container')) {
+                  element.style.backgroundColor = 'transparent';
+                }
+              }
+            });
+            
             // Add crossOrigin/referrerpolicy to images in the clone
             doc.querySelectorAll("img").forEach((img: HTMLImageElement) => {
               if (!img.getAttribute("crossorigin"))
@@ -374,18 +427,37 @@ export default function PdfExportButton({
       setProgress({ current: slices.length, total: slices.length, phase: "Composing PDF" });
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Handle header and content positioning
+      let currentPage = 1;
+      let currentY = 0;
+      
       for (let idx = 0; idx < slices.length; idx++) {
         const canvas = slices[idx];
-        if (idx > 0) pdf.addPage();
         const imgData = canvas.toDataURL("image/png");
         const aspect = canvas.height / canvas.width;
+        
         let w = pdfWidth;
         let h = w * aspect;
         if (h > pdfHeight) {
           h = pdfHeight;
           w = h / aspect;
         }
-        pdf.addImage(imgData, "PNG", 0, 0, w, h);
+        
+        // For first slice (header), place at top
+        if (idx === 0) {
+          pdf.addImage(imgData, "PNG", 0, 0, w, h);
+          currentY = h;
+        } else {
+          // Check if content fits on current page
+          if (currentY + h > pdfHeight) {
+            // Start new page
+            pdf.addPage();
+            currentY = 0;
+          }
+          
+          pdf.addImage(imgData, "PNG", 0, currentY, w, h);
+          currentY += h;
+        }
       }
 
       // Restore animations
