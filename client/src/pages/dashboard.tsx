@@ -1075,6 +1075,7 @@ export default function Dashboard() {
             <PdfExportButton
               targetRef={dashboardRootRef}
               clientLabel={dashboardQuery.data?.client?.name || user?.clientId || undefined}
+              clientName={dashboardQuery.data?.client?.name || undefined}
               className="ml-1"
             />
             <Button

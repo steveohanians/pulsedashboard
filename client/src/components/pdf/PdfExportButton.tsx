@@ -6,6 +6,7 @@ type PdfExportButtonProps = {
   targetRef: React.RefObject<HTMLElement>;
   fileName?: string;
   clientLabel?: string;
+  clientName?: string;
   className?: string;
 };
 
@@ -13,6 +14,7 @@ export default function PdfExportButton({
   targetRef,
   fileName,
   clientLabel,
+  clientName = "Demo Company",
   className,
 }: PdfExportButtonProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -152,7 +154,7 @@ export default function PdfExportButton({
   };
 
   // Create PDF header matching the screenshot
-  const createPdfHeader = (): HTMLCanvasElement => {
+  const createPdfHeader = (clientName: string): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     
@@ -184,7 +186,7 @@ export default function PdfExportButton({
     // Draw subtitle
     ctx.fillStyle = '#6b7280';
     ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Analytics Report for Demo Company', 130, 50);
+    ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
     
     // Draw generated info on the right
     const currentDate = new Date().toLocaleDateString('en-US', { 
@@ -201,7 +203,7 @@ export default function PdfExportButton({
   };
 
   // Slice-based rendering (1400px chunks) to prevent memory crashes
-  const captureInSlices = async (element: HTMLElement, html2canvas: any) => {
+  const captureInSlices = async (element: HTMLElement, html2canvas: any, clientName: string) => {
     const SLICE_HEIGHT = 1400;
     const elementHeight = element.scrollHeight;
     const elementWidth = element.scrollWidth;
@@ -214,7 +216,7 @@ export default function PdfExportButton({
     const canvases: HTMLCanvasElement[] = [];
     
     // Add header as first slice
-    const headerCanvas = createPdfHeader();
+    const headerCanvas = createPdfHeader(clientName);
     canvases.push(headerCanvas);
 
     for (let i = 0; i < totalSlices; i++) {
@@ -357,7 +359,7 @@ export default function PdfExportButton({
       });
 
       console.info("Starting slice-based rendering via captureInSlices()");
-      const slices = await captureInSlices(element, html2canvas);
+      const slices = await captureInSlices(element, html2canvas, clientName);
       if (!slices || slices.length === 0) {
         throw new Error(
           "No slices captured (captureInSlices returned 0 canvases)",
