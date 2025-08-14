@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2 } from "lucide-react";
+import clearLogo from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 type PdfExportButtonProps = {
   targetRef: React.RefObject<HTMLElement>;
@@ -233,67 +234,8 @@ export default function PdfExportButton({
         resolve(canvas);
       };
       
-      // Try to load the Clear logo from assets - use the correct Replit path
-      const tryLoadLogo = () => {
-        console.log('🔄 Starting logo loading process...');
-        const paths = [
-          '/attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png',
-          'attached_assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png'
-        ];
-        
-        let attempts = 0;
-        const fallbackToText = () => {
-          // Final fallback - draw text logo
-          ctx.fillStyle = '#1f2937';
-          ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillText('clear.', 40, 40);
-          
-          ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillText('Pulse Dashboard™', 130, 32);
-          
-          ctx.fillStyle = '#6b7280';
-          ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillText(`Analytics Report for ${clientName}`, 130, 50);
-          
-          const currentDate = new Date().toLocaleDateString('en-US', { 
-            month: 'numeric', 
-            day: 'numeric', 
-            year: 'numeric' 
-          });
-          
-          ctx.textAlign = 'right';
-          ctx.fillText(`Generated: ${currentDate}`, canvas.width - 40, 32);
-          ctx.fillText('Period: Last Month', canvas.width - 40, 50);
-          
-          resolve(canvas);
-        };
-        
-        const attemptLoad = () => {
-          if (attempts >= paths.length) {
-            console.warn('Failed to load Clear logo from all paths, using fallback');
-            fallbackToText();
-            return;
-          }
-          
-          console.log(`Attempting to load logo from: ${paths[attempts]}`);
-          logo.src = paths[attempts];
-          attempts++;
-        };
-        
-        logo.onerror = (error) => {
-          console.warn(`❌ Logo failed to load from: ${logo.src}`, error);
-          if (attempts < paths.length) {
-            setTimeout(attemptLoad, 100);
-          } else {
-            console.warn('All logo paths failed, using text fallback');
-            fallbackToText();
-          }
-        };
-        
-        attemptLoad();
-      };
-      
-      tryLoadLogo();
+      // Simply load the imported Clear logo
+      logo.src = clearLogo;
     });
   };
 
