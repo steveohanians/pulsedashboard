@@ -70,6 +70,7 @@ import {
 import { debugLog } from '@/config/dataSourceConfig';
 import { metricProcessingService } from '@/services/metricProcessingService';
 import { trafficChannelService } from '@/services/trafficChannelService';
+import { deviceDistributionService } from '@/services/deviceDistributionService';
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -518,228 +519,13 @@ export default function Dashboard() {
     );
   };
 
-  // Process device distribution data for donut charts
+  // Process device distribution data for lollipop charts
   const processDeviceDistributionData = () => {
-    const deviceMetrics = metrics.filter(
-      (m) => m.metricName === "Device Distribution",
+    return deviceDistributionService.processDevices(
+      metrics,
+      competitors,
+      client
     );
-
-    // Comprehensive device debugging
-
-    // Debug competitor device metrics specifically
-    const competitorDeviceMetrics = deviceMetrics.filter(
-      (m) => m.sourceType === "Competitor",
-    );
-
-    if (competitorDeviceMetrics.length > 0) {
-    } else {
-    }
-
-    // Quick validation that GA4 device data is found
-    const clientDeviceMetrics = deviceMetrics.filter(
-      (m) => m.sourceType === "Client",
-    );
-    const ga4DeviceArrayMetric = clientDeviceMetrics.find((m) =>
-      Array.isArray(m.value),
-    );
-    if (ga4DeviceArrayMetric) {
-    }
-
-    const DEVICE_COLORS = {
-      Desktop: "#3b82f6",
-      Mobile: "#10b981",
-    };
-
-    const result = [];
-
-    // Helper function to aggregate device data from various formats
-    const aggregateDeviceData = (sourceMetrics: any[]) => {
-      const deviceSums = new Map();
-      const deviceCounts = new Map();
-
-      sourceMetrics.forEach((metric) => {
-        // Handle individual device records (competitors/averages format)
-        if (metric.channel) {
-          const deviceName = metric.channel;
-          const value = parseFloat(metric.value);
-
-          if (deviceSums.has(deviceName)) {
-            deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
-            deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
-          } else {
-            deviceSums.set(deviceName, value);
-            deviceCounts.set(deviceName, 1);
-          }
-        } else if (Array.isArray(metric.value)) {
-          // GA4 array format - already parsed by backend
-          metric.value.forEach((device: any) => {
-            const deviceName = device.device || device.name || device.category;
-            const value = parseFloat(
-              device.percentage || device.value || device.sessions,
-            );
-
-            if (deviceName && !isNaN(value)) {
-              if (deviceSums.has(deviceName)) {
-                deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
-                deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
-              } else {
-                deviceSums.set(deviceName, value);
-                deviceCounts.set(deviceName, 1);
-              }
-            }
-          });
-        } else if (typeof metric.value === "string") {
-          // GA4 JSON string format - handle escaped JSON
-          try {
-            // Handle multiple levels of JSON escaping from database
-            let jsonString = metric.value;
-
-            // Remove outer quotes if present
-            if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
-              jsonString = jsonString.slice(1, -1);
-            }
-
-            // Unescape JSON
-            jsonString = jsonString.replace(/\\"/g, '"');
-
-            debugLog('DEVICE', 'Parsing device JSON data');
-
-            const deviceData = JSON.parse(jsonString);
-            debugLog('DEVICE', 'Device JSON parsed successfully');
-
-            if (Array.isArray(deviceData)) {
-              deviceData.forEach((device: any) => {
-                const deviceName =
-                  device.device || device.name || device.category;
-                const value = parseFloat(
-                  device.percentage || device.value || device.sessions,
-                );
-
-                debugLog('DEVICE', 'Processing device item', { deviceName, value });
-
-                if (deviceName && !isNaN(value)) {
-                  if (deviceSums.has(deviceName)) {
-                    deviceSums.set(
-                      deviceName,
-                      deviceSums.get(deviceName) + value,
-                    );
-                    deviceCounts.set(
-                      deviceName,
-                      deviceCounts.get(deviceName) + 1,
-                    );
-                  } else {
-                    deviceSums.set(deviceName, value);
-                    deviceCounts.set(deviceName, 1);
-                  }
-                }
-              });
-            }
-          } catch (e) {
-            debugLog('ERROR', 'Invalid device JSON data', { error: e instanceof Error ? e.message : String(e) });
-          }
-        } else if (metric.channel && metric.value) {
-          // Handle individual device channel records (from backend processing)
-          const deviceName = metric.channel;
-          const value = parseFloat(metric.value);
-
-          debugLog('DEVICE', 'Processing individual device record', { deviceName, value });
-
-          if (deviceName && !isNaN(value)) {
-            if (deviceSums.has(deviceName)) {
-              deviceSums.set(deviceName, deviceSums.get(deviceName) + value);
-              deviceCounts.set(deviceName, deviceCounts.get(deviceName) + 1);
-            } else {
-              deviceSums.set(deviceName, value);
-              deviceCounts.set(deviceName, 1);
-            }
-          }
-        } else {
-          debugLog('WARNING', 'Unknown device format', { metricName: metric.metricName });
-        }
-      });
-
-      // Calculate averages from sums and counts
-      const deviceMap = new Map();
-      Array.from(deviceSums.entries()).forEach(([deviceName, sum]) => {
-        const count = deviceCounts.get(deviceName) || 1;
-        deviceMap.set(deviceName, sum / count);
-      });
-
-      // Convert to array format expected by chart with normalized device names
-      const devices = Array.from(deviceMap.entries()).map(([name, value]) => {
-        // Normalize device names to match chart expectations (capitalize first letter)
-        const normalizedName =
-          name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-        return {
-          name: normalizedName,
-          value: Math.round(value),
-          percentage: Math.round(value),
-          color:
-            DEVICE_COLORS[normalizedName as keyof typeof DEVICE_COLORS] ||
-            DEVICE_COLORS.Mobile,
-        };
-      });
-
-      // Ensure percentages add up to 100%
-      const total = devices.reduce((sum, device) => sum + device.value, 0);
-      if (total > 0) {
-        let runningTotal = 0;
-        devices.forEach((device, index) => {
-          if (index === devices.length - 1) {
-            // Last device gets the remainder
-            device.value = 100 - runningTotal;
-            device.percentage = 100 - runningTotal;
-          } else {
-            const normalizedValue = Math.round((device.value / total) * 100);
-            device.value = normalizedValue;
-            device.percentage = normalizedValue;
-            runningTotal += normalizedValue;
-          }
-        });
-      }
-
-      return devices;
-    };
-
-    // Client data
-    const clientDeviceData = deviceMetrics.filter(
-      (m) => m.sourceType === "Client",
-    );
-    if (clientDeviceData.length > 0) {
-      result.push({
-        sourceType: "Client",
-        label: client?.name || "Client",
-        devices: aggregateDeviceData(clientDeviceData),
-      });
-    }
-
-    // CD Average data
-    const cdDeviceData = deviceMetrics.filter((m) => m.sourceType === "CD_Avg");
-    if (cdDeviceData.length > 0) {
-      result.push({
-        sourceType: "CD_Avg",
-        label: "Clear Digital Client Avg",
-        devices: aggregateDeviceData(cdDeviceData),
-      });
-    }
-
-    // Industry Average data
-    const industryDeviceData = deviceMetrics.filter(
-      (m) => m.sourceType === "Industry_Avg",
-    );
-    if (industryDeviceData.length > 0) {
-      result.push({
-        sourceType: "Industry_Avg",
-        label: "Industry Avg",
-        devices: aggregateDeviceData(industryDeviceData),
-      });
-    }
-
-    // NO SYNTHETIC DATA FOR COMPETITORS - only use authentic database data
-    // Future competitor device data will come from actual data sources
-    // competitors.forEach(() => { /* Competitor device data generation removed to ensure data authenticity */ });
-
-    return result;
   };
 
   const metricNames = [
@@ -1734,19 +1520,10 @@ export default function Dashboard() {
                           />
                         ) : metricName === "Device Distribution" ? (
                           <LollipopChart
-                            data={(() => {
-                              const deviceData =
-                                processDeviceDistributionData();
-                              const clientData = deviceData.find(
-                                (d) => d.sourceType === "Client",
-                              );
-                              const result = { Desktop: 0, Mobile: 0 }; // Simplified 2-device model
-                              clientData?.devices.forEach((device) => {
-                                result[device.name as keyof typeof result] =
-                                  device.percentage;
-                              });
-                              return result;
-                            })()}
+                            data={deviceDistributionService.getSimplifiedDeviceData(
+                              processDeviceDistributionData(),
+                              "Client"
+                            )}
                             competitors={processDeviceDistribution(
                               competitors,
                               metrics,
@@ -1756,32 +1533,14 @@ export default function Dashboard() {
                               ?.replace("https://", "")
                               .replace("http://", "")}
                             clientName={dashboardData?.client?.name}
-                            industryAvg={(() => {
-                              const deviceData =
-                                processDeviceDistributionData();
-                              const industryData = deviceData.find(
-                                (d) => d.sourceType === "Industry_Avg",
-                              );
-                              const result = { Desktop: 45, Mobile: 55 }; // Simplified 2-device model
-                              industryData?.devices.forEach((device) => {
-                                result[device.name as keyof typeof result] =
-                                  device.percentage;
-                              });
-                              return result;
-                            })()}
-                            cdAvg={(() => {
-                              const deviceData =
-                                processDeviceDistributionData();
-                              const cdData = deviceData.find(
-                                (d) => d.sourceType === "CD_Avg",
-                              );
-                              const result = { Desktop: 50, Mobile: 50 }; // Simplified 2-device model
-                              cdData?.devices.forEach((device) => {
-                                result[device.name as keyof typeof result] =
-                                  device.percentage;
-                              });
-                              return result;
-                            })()}
+                            industryAvg={deviceDistributionService.getSimplifiedDeviceData(
+                              processDeviceDistributionData(),
+                              "Industry_Avg"
+                            )}
+                            cdAvg={deviceDistributionService.getSimplifiedDeviceData(
+                              processDeviceDistributionData(),
+                              "CD_Avg"
+                            )}
                           />
                         ) : metricName === "Session Duration" ? (
                           timePeriod === "Last Quarter" ? (
