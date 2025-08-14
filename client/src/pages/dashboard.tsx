@@ -72,6 +72,7 @@ import { metricProcessingService } from '@/services/metricProcessingService';
 import { trafficChannelService } from '@/services/trafficChannelService';
 import { deviceDistributionService } from '@/services/deviceDistributionService';
 import { dataOrchestrator } from '@/services/dataOrchestrator';
+import { DataSourceIndicator, useDataSourceInfo } from '@/components/DataSourceIndicator';
 import { safeParseJSON, cleanDomainName } from "@/utils/sharedUtilities";
 import {
   aggregateChannelData,
@@ -1382,6 +1383,16 @@ export default function Dashboard() {
                         <CardTitle className="text-lg lg:text-xl font-bold text-slate-900 tracking-tight mb-2">
                           {metricName}
                         </CardTitle>
+                        
+                        {/* Data Source Indicator */}
+                        {orchestratedData && (
+                          <DataSourceIndicator 
+                            sources={useDataSourceInfo(metricName, orchestratedData)}
+                            compact={true}
+                            className="mb-3"
+                          />
+                        )}
+                        
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
