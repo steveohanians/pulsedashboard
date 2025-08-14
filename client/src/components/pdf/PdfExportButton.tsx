@@ -395,11 +395,12 @@ export default function PdfExportButton({
           <div className="flex flex-col items-center gap-1">
             <div className="relative w-4 h-4">
               {progress.total > 0 ? (
-                <div className="w-4 h-4 rounded-full border-2 border-gray-300">
+                <div className="w-4 h-4 rounded-full border-2 border-gray-300 opacity-100">
                   <div 
-                    className="w-4 h-4 rounded-full border-2 border-black transition-all duration-300"
+                    className="w-4 h-4 rounded-full border-2 border-black transition-all duration-300 opacity-100"
                     style={{
-                      background: `conic-gradient(#000000 ${progressPercentage * 3.6}deg, transparent 0deg)`
+                      background: `conic-gradient(#000000 ${progressPercentage * 3.6}deg, transparent 0deg)`,
+                      opacity: 1
                     }}
                   />
                 </div>
