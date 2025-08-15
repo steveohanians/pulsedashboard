@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -214,6 +214,11 @@ export default function AdminPanel() {
   const [dataViewerOpen, setDataViewerOpen] = useState<boolean>(false);
   const [viewingCompanyData, setViewingCompanyData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // State for client data check dialog
+  const [showDataCheckDialog, setShowDataCheckDialog] = useState(false);
+  const [dataCheckResults, setDataCheckResults] = useState<any>(null);
+  const [isCheckingData, setIsCheckingData] = useState(false);
 
   // Query for fetching portfolio company data
   const companyDataQuery = useQuery({
@@ -1552,13 +1557,52 @@ export default function AdminPanel() {
               <TabsContent value="clients">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                   <h2 className="text-base sm:text-lg font-semibold text-slate-900">Client Management</h2>
-                  <Button onClick={() => {
-                    setEditingItem({ type: 'client' });
-                    setIsDialogOpen(true);
-                  }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Client
-                  </Button>
+                  <div className="flex gap-2">
+                    {/* Check Client Data Button */}
+                    <Button 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          setIsCheckingData(true);
+                          setShowDataCheckDialog(true);
+                          
+                          const response = await fetch('/api/debug/verify-client-isolation', {
+                            credentials: 'include'
+                          });
+                          const data = await response.json();
+                          
+                          // Store results for dialog display
+                          setDataCheckResults(data);
+                          
+                          // Also log to console for debugging
+                          console.log('Client Data Check Results:', data);
+                          
+                        } catch (error) {
+                          console.error('Failed to check client data:', error);
+                          toast({
+                            title: "Check Failed",
+                            description: "Could not retrieve client data.",
+                            variant: "destructive",
+                          });
+                          setShowDataCheckDialog(false);
+                        } finally {
+                          setIsCheckingData(false);
+                        }
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Check Client Data
+                    </Button>
+                    
+                    {/* Original Add Client Button */}
+                    <Button onClick={() => {
+                      setEditingItem({ type: 'client' });
+                      setIsDialogOpen(true);
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Client
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Loading State */}
@@ -3678,6 +3722,118 @@ export default function AdminPanel() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <p>No data available</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Data Check Results Dialog */}
+      <Dialog open={showDataCheckDialog} onOpenChange={setShowDataCheckDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Client Data Verification Report</DialogTitle>
+            <DialogDescription>
+              Data isolation and metrics summary for all clients
+            </DialogDescription>
+          </DialogHeader>
+          
+          {dataCheckResults && !isCheckingData && (
+            <div className="space-y-6">
+              {/* Summary Status */}
+              <div className={`p-4 rounded-lg border ${
+                dataCheckResults.isolation === 'VERIFIED ✅' 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {dataCheckResults.isolation === 'VERIFIED ✅' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-600" />
+                  )}
+                  <span className="font-semibold">
+                    Isolation Status: {dataCheckResults.isolation}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  Checked {dataCheckResults.clientCount} clients • Period: {dataCheckResults.period}
+                </p>
+              </div>
+              
+              {/* Client Data Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-sm font-semibold">Client Name</th>
+                      <th className="text-left px-4 py-3 text-sm font-semibold">GA4 Property</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Total Metrics</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Bounce Rate</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Session Duration</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Isolation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {dataCheckResults.results.map((client: any, index: number) => (
+                      <tr key={client.clientId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-4 py-3">
+                          <div>
+                            <div className="font-medium">{client.clientName}</div>
+                            <div className="text-xs text-gray-500 font-mono">{client.clientId}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {client.ga4PropertyId ? (
+                            <span className="text-sm font-mono bg-blue-100 px-2 py-1 rounded">
+                              {client.ga4PropertyId}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">Not configured</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-semibold ${
+                            client.metricsCount.clientSpecific > 0 ? 'text-green-600' : 'text-gray-400'
+                          }`}>
+                            {client.metricsCount.clientSpecific}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm">
+                            {client.metricsCount.byType.bounceRate || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm">
+                            {client.metricsCount.byType.sessionDuration || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {client.hasCorrectClientId ? (
+                            <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Footer Information */}
+              <div className="text-sm text-gray-600 space-y-1 border-t pt-4">
+                <p>• Client-specific metrics are isolated by clientId</p>
+                <p>• Each client can only see their own data when logged in</p>
+                <p>• Benchmark metrics (Industry_Avg, CD_Avg) are shared across all clients</p>
+              </div>
+            </div>
+          )}
+          
+          {isCheckingData && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Checking client data...</span>
             </div>
           )}
         </DialogContent>
