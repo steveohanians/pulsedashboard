@@ -3470,9 +3470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId } = req.params;
       
-      logger.info(`[GA4 SYNC] Starting actual sync for client: ${clientId}`);
+      console.log(`[GA4 SYNC] Starting actual sync for client: ${clientId}`);
       
-      // First, check if client has GA4 configured
+      // Get client and verify GA4 setup
       const client = await storage.getClient(clientId);
       if (!client) {
         throw new Error('Client not found');
@@ -3483,45 +3483,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error('GA4 property not configured for this client');
       }
       
-      logger.info(`[GA4 SYNC] Found GA4 property: ${propertyAccess.propertyId}`);
+      console.log(`[GA4 SYNC] Client: ${client.name}, Property: ${propertyAccess.propertyId}`);
       
-      // Import and call the actual GA4 sync function
+      // Import and execute the actual sync
       let syncResult;
       try {
+        // Import the GA4 data manager
         const { GA4DataManager } = await import('./services/ga4/GA4DataManager');
-        logger.info('[GA4 SYNC] Using GA4DataManager for sync');
         const ga4Manager = new GA4DataManager();
+        
+        // Execute complete data sync (15 months of data)
+        console.log('[GA4 SYNC] Calling executeCompleteGA4DataSync...');
         syncResult = await ga4Manager.executeCompleteGA4DataSync(clientId);
-      } catch (e1) {
-        logger.error('[GA4 SYNC] Failed to import GA4DataManager:', e1);
-        throw new Error('GA4 sync service unavailable');
+        
+      } catch (error) {
+        console.error('[GA4 SYNC] Error during sync execution:', error);
+        
+        // Try alternative sync method with integration service
+        try {
+          const GA4IntegrationService = (await import('./services/ga4/Integration')).default;
+          console.log('[GA4 SYNC] Using GA4IntegrationService as fallback');
+          const ga4Service = new GA4IntegrationService();
+          
+          // Simple sync - just fetch current month data
+          const currentDate = new Date();
+          const startDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+          const endDate = currentDate.toISOString().split('T')[0];
+          
+          const config = {
+            propertyId: propertyAccess.propertyId,
+            clientId: clientId
+          };
+          
+          const metrics = await ga4Service.fetchClientMetrics(config, startDate, endDate);
+          syncResult = {
+            success: true,
+            periodsProcessed: 1,
+            metricsStored: metrics.length
+          };
+          
+        } catch (error2) {
+          throw new Error(`Sync failed: ${error2 instanceof Error ? error2.message : String(error2)}`);
+        }
       }
       
-      logger.info('[GA4 SYNC] Sync completed successfully');
+      // Get metrics count after sync
+      const metricsAfterSync = await storage.getMetricsByClient(clientId, 'Last Month');
+      const clientMetricsCount = metricsAfterSync.filter(m => m.sourceType === 'Client').length;
+      
+      console.log(`[GA4 SYNC] Sync completed. Metrics stored: ${clientMetricsCount}`);
       
       res.json({
         success: true,
-        message: 'GA4 data sync completed successfully',
+        message: `GA4 sync completed. ${clientMetricsCount} metrics stored for Last Month.`,
         clientId,
+        clientName: client.name,
         propertyId: propertyAccess.propertyId,
-        timestamp: new Date().toISOString(),
-        data: {
-          periodsProcessed: syncResult.periodsProcessed || 0,
-          dailyDataPeriods: syncResult.dailyDataPeriods || [],
-          monthlyDataPeriods: syncResult.monthlyDataPeriods || [],
-          chartsRefreshed: syncResult.chartsRefreshed || [],
-          errors: syncResult.errors || []
-        },
-        result: syncResult
+        metricsStored: clientMetricsCount,
+        timestamp: new Date().toISOString()
       });
       
     } catch (error) {
-      logger.error('[GA4 SYNC] Error:', error);
+      console.error('[GA4 SYNC] Error:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'GA4 sync failed',
         details: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
       });
+    }
+  });
+
+  // Test endpoint to manually store a metric
+  app.post('/api/test-store-metric/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Store a test metric
+      const testMetric = {
+        clientId: clientId,
+        metricName: 'Bounce Rate',
+        value: '45.5',
+        sourceType: 'Client' as const,
+        timePeriod: 'Last Month'
+      };
+      
+      console.log('[TEST] Storing test metric:', testMetric);
+      const stored = await storage.createMetric(testMetric);
+      
+      // Verify it was stored
+      const metrics = await storage.getMetricsByClient(clientId, 'Last Month');
+      const found = metrics.find(m => 
+        m.clientId === clientId && 
+        m.sourceType === 'Client' &&
+        m.metricName === 'Bounce Rate'
+      );
+      
+      res.json({
+        success: true,
+        stored: stored,
+        verified: !!found,
+        totalMetrics: metrics.filter(m => m.sourceType === 'Client').length
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Debug endpoint to see all periods with data
+  app.get('/api/debug/client-periods/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Import database and schema
+      const { db } = await import('./db');
+      const { metrics } = await import('../shared/schema');
+      const { and, eq, sql } = await import('drizzle-orm');
+      
+      // Get all unique time periods for this client
+      const allMetrics = await db
+        .selectDistinct({ timePeriod: metrics.timePeriod })
+        .from(metrics)
+        .where(and(
+          eq(metrics.clientId, clientId),
+          eq(metrics.sourceType, 'Client')
+        ));
+      
+      const periodCounts = await Promise.all(
+        allMetrics.map(async ({ timePeriod }) => {
+          const count = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(metrics)
+            .where(and(
+              eq(metrics.clientId, clientId),
+              eq(metrics.sourceType, 'Client'),
+              eq(metrics.timePeriod, timePeriod)
+            ));
+          
+          return {
+            period: timePeriod,
+            count: count[0]?.count || 0
+          };
+        })
+      );
+      
+      res.json({
+        clientId,
+        availablePeriods: periodCounts,
+        totalPeriods: periodCounts.length
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 

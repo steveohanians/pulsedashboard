@@ -75,6 +75,7 @@ export const clients = pgTable("clients", {
   ga4PropertyId: text("ga4_property_id"),
   iconUrl: text("icon_url"), // Brandfetch icon URL
   active: boolean("active").default(true).notNull(),
+  lastGA4Sync: timestamp("last_ga4_sync"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // Index for client filtering
