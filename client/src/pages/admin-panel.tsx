@@ -215,12 +215,13 @@ export default function AdminPanel() {
     }
   }, [location]);
 
-  // Lazy-loaded queries - only fetch data for active tab
+  // Always-loaded queries for dropdowns and cross-tab functionality
   const { data: clients, isLoading: clientsLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.clients(),
-    enabled: user?.role === "Admin" && activeTab === "clients",
+    enabled: user?.role === "Admin", // Always load for admin - used in dropdowns
   });
 
+  // Tab-specific queries - only load when needed for performance
   const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.benchmarkCompanies(),
     enabled: user?.role === "Admin" && activeTab === "benchmark",
@@ -237,10 +238,10 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin" && activeTab === "cd-clients",
   });
 
-  // Query for filter options to populate dropdowns dynamically
+  // Query for filter options to populate dropdowns dynamically - always loaded
   const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<any[]>({
     queryKey: AdminQueryKeys.filterOptions(),
-    enabled: user?.role === "Admin" && activeTab === "filters",
+    enabled: user?.role === "Admin", // Always load for admin - used in dropdowns across tabs
   });
 
   // Query for metric prompts
