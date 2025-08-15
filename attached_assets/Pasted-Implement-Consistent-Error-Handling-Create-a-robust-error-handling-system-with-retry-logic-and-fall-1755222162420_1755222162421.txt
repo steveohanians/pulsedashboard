@@ -1,0 +1,323 @@
+Implement Consistent Error Handling
+
+Create a robust error handling system with retry logic and fallback UI.
+
+**Step 1: Create Error Handling Service**
+
+Create `/client/src/services/error/ErrorHandler.ts`:
+
+```typescript
+import { APP_CONFIG } from '@/config/app.config';
+import { toast } from '@/hooks/use-toast';
+
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public statusCode?: number,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
+export class NetworkError extends AppError {
+  constructor(message = 'Network error occurred', details?: any) {
+    super(message, 'NETWORK_ERROR', 0, details);
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message = 'Validation failed', details?: any) {
+    super(message, 'VALIDATION_ERROR', 400, details);
+  }
+}
+
+export class AuthError extends AppError {
+  constructor(message = 'Authentication failed', details?: any) {
+    super(message, 'AUTH_ERROR', 401, details);
+  }
+}
+
+class ErrorHandler {
+  private static instance: ErrorHandler;
+  private retryMap = new Map<string, number>();
+
+  static getInstance(): ErrorHandler {
+    if (!ErrorHandler.instance) {
+      ErrorHandler.instance = new ErrorHandler();
+    }
+    return ErrorHandler.instance;
+  }
+
+  async handleError(error: any, context?: string): Promise<void> {
+    console.error(`Error in ${context || 'unknown context'}:`, error);
+
+    // Determine error type and show appropriate message
+    if (error instanceof NetworkError || error.code === 'NETWORK_ERROR') {
+      toast({
+        title: 'Connection Error',
+        description: APP_CONFIG.messages.errors.network,
+        variant: 'destructive',
+        duration: APP_CONFIG.toast.error,
+      });
+    } else if (error instanceof ValidationError) {
+      toast({
+        title: 'Validation Error',
+        description: error.message || APP_CONFIG.messages.errors.validation,
+        variant: 'destructive',
+        duration: APP_CONFIG.toast.error,
+      });
+    } else if (error instanceof AuthError || error.statusCode === 401) {
+      toast({
+        title: 'Authorization Error',
+        description: APP_CONFIG.messages.errors.unauthorized,
+        variant: 'destructive',
+        duration: APP_CONFIG.toast.error,
+      });
+      // Optionally redirect to login
+      if (window.location.pathname !== '/login') {
+        setTimeout(() => window.location.href = '/login', 2000);
+      }
+    } else {
+      toast({
+        title: 'Error',
+        description: error.message || APP_CONFIG.messages.errors.generic,
+        variant: 'destructive',
+        duration: APP_CONFIG.toast.error,
+      });
+    }
+  }
+
+  async withRetry<T>(
+    fn: () => Promise<T>,
+    options: {
+      maxAttempts?: number;
+      delay?: number;
+      backoff?: boolean;
+      context?: string;
+    } = {}
+  ): Promise<T> {
+    const {
+      maxAttempts = APP_CONFIG.api.retryAttempts,
+      delay = APP_CONFIG.api.retryDelay,
+      backoff = true,
+      context = 'operation',
+    } = options;
+
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry on validation or auth errors
+        if (
+          error instanceof ValidationError ||
+          error instanceof AuthError ||
+          error.statusCode === 400 ||
+          error.statusCode === 401
+        ) {
+          throw error;
+        }
+
+        if (attempt < maxAttempts) {
+          const waitTime = backoff ? delay * Math.pow(2, attempt - 1) : delay;
+          console.log(`Retry ${attempt}/${maxAttempts} for ${context} in ${waitTime}ms`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  clearRetryCount(key: string): void {
+    this.retryMap.delete(key);
+  }
+}
+
+export const errorHandler = ErrorHandler.getInstance();
+Step 2: Create Error Boundary Component
+Create /client/src/components/ErrorBoundary.tsx:
+typescriptimport React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+    this.props.onError?.(error, errorInfo);
+  }
+
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  public render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Something went wrong
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                An unexpected error occurred. The issue has been logged and we'll look into it.
+              </p>
+              {this.state.error && (
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">Error details</summary>
+                  <pre className="mt-2 whitespace-pre-wrap break-words bg-muted p-2 rounded">
+                    {this.state.error.toString()}
+                  </pre>
+                </details>
+              )}
+              <Button onClick={this.handleReset} className="w-full">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reload Page
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+Step 3: Update BaseService with retry logic
+Update /client/src/services/api/base.service.ts:
+typescriptimport { apiRequest } from '@/lib/queryClient';
+import { errorHandler, NetworkError, ValidationError } from '@/services/error/ErrorHandler';
+
+export abstract class BaseService {
+  protected basePath: string;
+
+  constructor(basePath: string) {
+    this.basePath = basePath;
+  }
+
+  protected async request<T>(
+    method: string, 
+    path: string = '', 
+    data?: unknown,
+    options?: { retry?: boolean; context?: string }
+  ): Promise<T> {
+    const { retry = true, context = this.basePath } = options || {};
+
+    const makeRequest = async () => {
+      try {
+        const response = await apiRequest(method, `${this.basePath}${path}`, data);
+        return response as T;
+      } catch (error: any) {
+        // Transform to typed errors
+        if (error.message?.includes('Network') || error.code === 'ECONNREFUSED') {
+          throw new NetworkError(error.message, error);
+        }
+        if (error.statusCode === 400 || error.message?.includes('Validation')) {
+          throw new ValidationError(error.message, error);
+        }
+        throw error;
+      }
+    };
+
+    if (retry && method === 'GET') {
+      // Only retry GET requests
+      return errorHandler.withRetry(makeRequest, { context });
+    }
+
+    return makeRequest();
+  }
+
+  async getAll<T>(): Promise<T[]> {
+    return this.request<T[]>('GET', '', undefined, { retry: true });
+  }
+
+  async getById<T>(id: string): Promise<T> {
+    return this.request<T>('GET', `/${id}`, undefined, { retry: true });
+  }
+
+  async create<T>(data: Partial<T>): Promise<T> {
+    return this.request<T>('POST', '', data, { retry: false });
+  }
+
+  async update<T>(id: string, data: Partial<T>): Promise<T> {
+    return this.request<T>('PUT', `/${id}`, data, { retry: false });
+  }
+
+  async delete(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/${id}`, undefined, { retry: false });
+  }
+}
+Step 4: Wrap App with Error Boundary
+Update /client/src/App.tsx:
+typescriptimport { ErrorBoundary } from '@/components/ErrorBoundary';
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        {/* existing app content */}
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}
+Step 5: Add fallback states to admin panel
+In /client/src/pages/admin-panel.tsx, add error states for queries:
+typescript// Add after each useQuery that has isLoading
+if (usersLoading) return <div>Loading...</div>;
+if (usersError) return <div>Error loading users. Please refresh.</div>;
+
+// Or create a reusable component
+const QueryError = ({ message }: { message: string }) => (
+  <Card className="p-4">
+    <div className="text-center text-muted-foreground">
+      <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+      <p>{message}</p>
+      <Button onClick={() => window.location.reload()} className="mt-4">
+        Retry
+      </Button>
+    </div>
+  </Card>
+);
+This provides:
+
+Automatic retry for failed GET requests
+Consistent error messages
+Error boundaries to catch crashes
+Typed errors for better handling
+Fallback UI for better UX

@@ -14,7 +14,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import { useEffect } from "react";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "@/hooks/use-analytics";
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function Router() {
   // Track page views when routes change

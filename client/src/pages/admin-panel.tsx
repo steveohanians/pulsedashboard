@@ -25,6 +25,7 @@ import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
+import { QueryError } from '@/components/QueryError';
 import {
   clientService,
   userService,
@@ -236,37 +237,43 @@ export default function AdminPanel() {
   }, [location]);
 
   // Always-loaded queries for dropdowns and cross-tab functionality
-  const { data: clients, isLoading: clientsLoading } = useQuery<Client[]>({
+  const { data: clients, isLoading: clientsLoading, isError: clientsError, refetch: refetchClients } = useQuery<Client[]>({
     queryKey: AdminQueryKeys.clients(),
+    queryFn: () => clientService.getAll(),
     enabled: user?.role === "Admin", // Always load for admin - used in dropdowns
   });
 
   // Tab-specific queries - only load when needed for performance
-  const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<BenchmarkCompany[]>({
+  const { data: benchmarkCompanies, isLoading: benchmarkLoading, isError: benchmarkError, refetch: refetchBenchmark } = useQuery<BenchmarkCompany[]>({
     queryKey: AdminQueryKeys.benchmarkCompanies(),
+    queryFn: () => benchmarkService.getAll(),
     enabled: user?.role === "Admin" && activeTab === "benchmark",
   });
 
-  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
+  const { data: users, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: AdminQueryKeys.users(),
+    queryFn: () => userService.getAll(),
     enabled: user?.role === "Admin" && activeTab === "users",
   });
 
   // Query for CD portfolio companies (independent from clients)
-  const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<CDPortfolioCompany[]>({
+  const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading, isError: cdPortfolioError, refetch: refetchCdPortfolio } = useQuery<CDPortfolioCompany[]>({
     queryKey: AdminQueryKeys.cdPortfolio(),
+    queryFn: () => portfolioService.getAll(),
     enabled: user?.role === "Admin" && activeTab === "cd-clients",
   });
 
   // Query for filter options to populate dropdowns dynamically - always loaded
-  const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<FilterOption[]>({
+  const { data: filterOptions, isLoading: filterOptionsLoading, isError: filterOptionsError, refetch: refetchFilters } = useQuery<FilterOption[]>({
     queryKey: AdminQueryKeys.filterOptions(),
+    queryFn: () => filterService.getAll(),
     enabled: user?.role === "Admin", // Always load for admin - used in dropdowns across tabs
   });
 
   // Query for metric prompts
-  const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<MetricPrompt[]>({
+  const { data: metricPrompts, isLoading: metricPromptsLoading, isError: metricPromptsError, refetch: refetchMetricPrompts } = useQuery<MetricPrompt[]>({
     queryKey: AdminQueryKeys.metricPrompts(),
+    queryFn: () => metricService.getAllPrompts(),
     enabled: user?.role === "Admin" && activeTab === "prompts",
   });
 
@@ -456,7 +463,7 @@ export default function AdminPanel() {
 
   const createBenchmarkCompanyMutation = useMutation({
     mutationFn: async (data: CreateBenchmarkCompanyData) => {
-      return await benchmarkService.create<BenchmarkCompany>(data);
+      return await benchmarkService.create(data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -692,7 +699,7 @@ export default function AdminPanel() {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as "Admin" | "User",
-      clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
+      clientId: (formData.get("clientId") as string) === "none" ? undefined : formData.get("clientId") as string,
       status: status as "Active" | "Inactive",
     };
     
@@ -839,7 +846,7 @@ export default function AdminPanel() {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       role: formData.get("role") as "Admin" | "User",
-      clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
+      clientId: (formData.get("clientId") as string) === "none" ? undefined : formData.get("clientId") as string,
     };
     
     if (!data.name || !data.email) {
@@ -1174,6 +1181,11 @@ export default function AdminPanel() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading users...</span>
                   </div>
+                ) : usersError ? (
+                  <QueryError 
+                    message="Failed to load users. Please try again." 
+                    onRetry={refetchUsers}
+                  />
                 ) : (
                   <>
                     {/* Mobile Card Layout */}
@@ -1549,6 +1561,11 @@ export default function AdminPanel() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading clients...</span>
                   </div>
+                ) : clientsError ? (
+                  <QueryError 
+                    message="Failed to load clients. Please try again." 
+                    onRetry={refetchClients}
+                  />
                 ) : (
                   <>
                     {/* Mobile Card Layout */}
@@ -2107,6 +2124,11 @@ export default function AdminPanel() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading benchmark companies...</span>
                   </div>
+                ) : benchmarkError ? (
+                  <QueryError 
+                    message="Failed to load benchmark companies. Please try again." 
+                    onRetry={refetchBenchmark}
+                  />
                 ) : (
                   <>
                     {/* Mobile Card Layout */}
@@ -2591,6 +2613,11 @@ export default function AdminPanel() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="ml-2 text-sm text-slate-600">Loading portfolio companies...</span>
                   </div>
+                ) : cdPortfolioError ? (
+                  <QueryError 
+                    message="Failed to load portfolio companies. Please try again." 
+                    onRetry={refetchCdPortfolio}
+                  />
                 ) : (
                   <>
                     {/* Mobile Card Layout */}
