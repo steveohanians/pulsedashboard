@@ -238,20 +238,33 @@ export function ServiceAccountsTable() {
                   <TableCell>
                     <div className="flex space-x-1">
                       {account.serviceAccount.verified ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 w-8 p-0"
-                          onClick={() => testConnectionMutation.mutate(account.serviceAccount.id)}
-                          disabled={testConnectionMutation.isPending}
-                          title="Test OAuth Access"
-                        >
-                          {testConnectionMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3 w-3" />
-                          )}
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => testConnectionMutation.mutate(account.serviceAccount.id)}
+                            disabled={testConnectionMutation.isPending}
+                            title="Test OAuth Access"
+                          >
+                            {testConnectionMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2 text-xs"
+                            onClick={() => authorizeOAuthMutation.mutate(account.serviceAccount.id)}
+                            disabled={authorizeOAuthMutation.isPending}
+                            title="Re-authenticate Google Access"
+                          >
+                            <Key className="h-3 w-3 mr-1" />
+                            Re-auth
+                          </Button>
+                        </>
                       ) : (
                         <Button
                           size="sm"
