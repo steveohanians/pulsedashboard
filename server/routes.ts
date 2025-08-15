@@ -191,13 +191,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to verify client data isolation
   app.get('/api/debug/verify-client-isolation', requireAuth, async (req, res) => {
     try {
-      const period = 'Last Month';
+      // Convert "Last Month" to actual period format (e.g., "2025-07" for July 2025)
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const actualPeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+      
+      const period = 'Last Month'; // Display name
+      const queryPeriod = actualPeriod; // Actual period to query ("2025-07")
       
       // Get all clients
       const clients = await storage.getClients();
       
       const results = await Promise.all(clients.map(async (client) => {
-        const metrics = await storage.getMetricsByClient(client.id, period);
+        const metrics = await storage.getMetricsByClient(client.id, queryPeriod);
         const clientMetrics = metrics.filter(m => m.sourceType === 'Client' && m.clientId === client.id);
         
         return {
