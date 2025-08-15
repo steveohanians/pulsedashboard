@@ -3482,6 +3482,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to check metrics for a client - must come before other routes
+  app.get('/api/debug/client-metrics/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { period = 'Last Month' } = req.query;
+      
+      logger.info(`[DEBUG] Checking metrics for client: ${clientId}, period: ${period}`);
+      
+      // Get metrics for this specific client
+      const metrics = await storage.getMetricsByClient(clientId, period as string);
+      
+      // Count by source type
+      const counts = {
+        total: metrics.length,
+        client: metrics.filter(m => m.sourceType === 'Client').length,
+        competitor: metrics.filter(m => m.sourceType === 'Competitor').length,
+        industry: metrics.filter(m => m.sourceType === 'Industry_Avg').length,
+        cdAvg: metrics.filter(m => m.sourceType === 'CD_Avg').length,
+      };
+      
+      // Get unique metric names
+      const uniqueMetrics = [...new Set(metrics.filter(m => m.sourceType === 'Client').map(m => m.metricName))];
+      
+      // Sample metrics for inspection
+      const sampleMetrics = metrics.filter(m => m.sourceType === 'Client').slice(0, 5).map(m => ({
+        metricName: m.metricName,
+        value: m.value,
+        timePeriod: m.timePeriod,
+        createdAt: m.createdAt
+      }));
+      
+      res.json({
+        clientId,
+        period,
+        counts,
+        uniqueMetrics,
+        sampleMetrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('[DEBUG] Error checking client metrics:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/ga4-data", ga4StatusRouter);
