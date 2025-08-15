@@ -1755,7 +1755,7 @@ export default function AdminPanel() {
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={editingItem?.id ? handleSaveClient : handleCreateClient} className="space-y-4">
-                      <div className="space-y-4">
+                      <>
                       <div>
                         <Label htmlFor="name">Name *</Label>
                         <Input 
@@ -1779,7 +1779,7 @@ export default function AdminPanel() {
                       </div>
                       <GA4IntegrationPanel 
                         clientId={editingItem?.id || null}
-                        currentGA4PropertyId={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
+                        currentGA4PropertyId={editingItem?.ga4PropertyId && editingItem.ga4PropertyId.match(/^\d+$/) ? editingItem.ga4PropertyId : ""}
                         serviceAccounts={ga4ServiceAccounts || []}
                         onGA4PropertyUpdate={(propertyId) => {
                           // Update hidden form field for submission
@@ -1918,14 +1918,13 @@ export default function AdminPanel() {
                             </div>
                           )}
                         </div>
-                      )}
                       
                       {/* Hidden inputs for form submission */}
                       <input 
                         type="hidden" 
                         id={editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new'} 
                         name="gaPropertyId" 
-                        defaultValue={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} 
+                        defaultValue={editingItem?.ga4PropertyId && editingItem.ga4PropertyId.match(/^\d+$/) ? editingItem.ga4PropertyId : ""} 
                       />
                       <input 
                         type="hidden" 
@@ -2089,7 +2088,7 @@ export default function AdminPanel() {
                           placeholder="Select business size"
                         />
                       </div>
-                      </div>
+                      
                       <div className="flex justify-end space-x-2">
                         <Button 
                           type="button"
@@ -2111,6 +2110,7 @@ export default function AdminPanel() {
                           }
                         </Button>
                       </div>
+                      </>
                     </form>
                   </DialogContent>
                 </Dialog>
