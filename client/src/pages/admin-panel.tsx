@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1790,6 +1790,72 @@ export default function AdminPanel() {
                           }
                         }}
                       />
+                      
+                      {/* GA4 Data Sync Button - Only show if client has GA4 property configured */}
+                      {editingItem?.id && editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) && (
+                        <div className="space-y-3 border-t pt-4">
+                          <Label>GA4 Data Synchronization</Label>
+                          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-blue-900">Manual Data Sync</p>
+                              <p className="text-xs text-blue-700 mt-1">
+                                Fetch the latest 15 months of GA4 data for this client
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  setIsLoading(true);
+                                  toast({
+                                    title: "Starting GA4 sync...",
+                                    description: "This may take 30-60 seconds",
+                                    duration: 5000,
+                                  });
+                                  
+                                  // Call the GA4 sync endpoint
+                                  await clientService.triggerGA4Sync(editingItem.id);
+                                  
+                                  toast({
+                                    title: "GA4 Sync Complete",
+                                    description: "Successfully synced GA4 data",
+                                    duration: 5000,
+                                  });
+                                  
+                                  // Refresh the clients list to show updated data
+                                  queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
+                                } catch (error) {
+                                  toast({
+                                    title: "GA4 Sync Failed",
+                                    description: error instanceof Error ? error.message : "Failed to sync GA4 data",
+                                    variant: "destructive",
+                                    duration: 5000,
+                                  });
+                                } finally {
+                                  setIsLoading(false);
+                                }
+                              }}
+                              disabled={isLoading}
+                              className="bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Syncing...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Sync GA4 Data
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Hidden inputs for form submission */}
                       <input 
                         type="hidden" 
