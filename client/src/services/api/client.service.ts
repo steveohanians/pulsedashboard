@@ -1,6 +1,7 @@
 import { BaseService } from './base.service';
 import { eventBus } from '@/services/events/EventBus';
 import { cacheManager } from '../cache/CacheManager';
+import { apiRequest } from '@/lib/queryClient';
 
 /**
  * Client service
@@ -91,7 +92,8 @@ export class ClientService extends BaseService {
     eventBus.emit('ga4.sync.started', { clientId: id });
     
     try {
-      const result = await this.request('POST', `/api/admin/ga4/complete-data-sync/${id}`);
+      // Use apiRequest directly since this endpoint is not under the clients basePath
+      const result = await apiRequest('POST', `/api/admin/ga4/complete-data-sync/${id}`);
       cacheManager.invalidate('client', 'ga4');
       eventBus.emit('ga4.sync.completed', { clientId: id, result });
       return result;
