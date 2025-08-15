@@ -245,15 +245,14 @@ export function GA4IntegrationPanel({
                 }
               }
             }}
-            options={[
-              { value: "", label: "Select a service account" },
-              ...(serviceAccounts || [])
-                .filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)
-                .map(sa => ({
-                  value: sa.serviceAccount.id,
-                  label: `${sa.serviceAccount.name} (${sa.serviceAccount.serviceAccountEmail})`
-                }))
-            ]}
+            options={(serviceAccounts || [])
+              .filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)
+              .map(sa => ({
+                value: sa.serviceAccount.id,
+                label: `${sa.serviceAccount.name} (${sa.serviceAccount.serviceAccountEmail})`
+              }))
+            }
+            placeholder="Select a service account"
             disabled={!serviceAccounts || serviceAccounts.length === 0}
           />
           
