@@ -188,6 +188,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Endpoint to verify client data isolation
+  app.get('/api/debug/verify-client-isolation', requireAuth, async (req, res) => {
+    try {
+      const period = 'Last Month';
+      
+      // Get all clients
+      const clients = await storage.getClients();
+      
+      const results = await Promise.all(clients.map(async (client) => {
+        const metrics = await storage.getMetricsByClient(client.id, period);
+        const clientMetrics = metrics.filter(m => m.sourceType === 'Client' && m.clientId === client.id);
+        
+        return {
+          clientId: client.id,
+          clientName: client.name,
+          ga4PropertyId: client.ga4PropertyId,
+          metricsCount: {
+            total: metrics.length,
+            clientSpecific: clientMetrics.length,
+            byType: {
+              bounceRate: clientMetrics.filter(m => m.metricName === 'Bounce Rate').length,
+              sessionDuration: clientMetrics.filter(m => m.metricName === 'Session Duration').length,
+              pagesPerSession: clientMetrics.filter(m => m.metricName === 'Pages per Session').length,
+              sessionsPerUser: clientMetrics.filter(m => m.metricName === 'Sessions per User').length,
+            }
+          },
+          hasCorrectClientId: clientMetrics.every(m => m.clientId === client.id),
+          sampleMetric: clientMetrics[0] || null
+        };
+      }));
+      
+      res.json({
+        period,
+        clientCount: clients.length,
+        results,
+        isolation: results.every(r => r.hasCorrectClientId) ? 'VERIFIED ✅' : 'FAILED ❌'
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Configure multer for CSV file uploads
   const upload = multer({
     storage: multer.memoryStorage(),
