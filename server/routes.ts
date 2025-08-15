@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { db } from "./db";
-import { and, eq, not, like, desc } from "drizzle-orm";
+import { and, eq, not, like, desc, sql } from "drizzle-orm";
 import { metrics } from "@shared/schema";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { generatePDF } from "./pdf";
