@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Competitor service
@@ -17,7 +18,9 @@ export class CompetitorService extends BaseService {
     label?: string;
     clientId: string;
   }): Promise<any> {
-    return super.create(data);
+    const result = await super.create(data);
+    cacheManager.invalidate('competitor');
+    return result;
   }
 
   /**
@@ -28,6 +31,16 @@ export class CompetitorService extends BaseService {
     label?: string;
     status?: string;
   }): Promise<any> {
-    return super.update(id, data);
+    const result = await super.update(id, data);
+    cacheManager.invalidate('competitor');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('competitor');
   }
 }

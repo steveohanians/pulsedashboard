@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/queryClient';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Metric service
@@ -64,7 +65,9 @@ export class MetricService {
     promptTemplate: string;
     isActive?: boolean;
   }): Promise<any> {
-    return apiRequest('POST', '/api/admin/metric-prompts', data);
+    const result = await apiRequest('POST', '/api/admin/metric-prompts', data);
+    cacheManager.invalidate('metric');
+    return result;
   }
 
   /**
@@ -77,14 +80,17 @@ export class MetricService {
       isActive?: boolean;
     }
   ): Promise<any> {
-    return apiRequest('PUT', `/api/admin/metric-prompts/${metricName}`, data);
+    const result = await apiRequest('PUT', `/api/admin/metric-prompts/${metricName}`, data);
+    cacheManager.invalidate('metric');
+    return result;
   }
 
   /**
    * Delete metric prompt (admin)
    */
   async deletePrompt(metricName: string): Promise<void> {
-    return apiRequest('DELETE', `/api/admin/metric-prompts/${metricName}`);
+    await apiRequest('DELETE', `/api/admin/metric-prompts/${metricName}`);
+    cacheManager.invalidate('metric');
   }
 
   /**
@@ -101,7 +107,9 @@ export class MetricService {
    * Update global prompt template (admin)
    */
   async updateGlobalTemplate(template: string): Promise<{ message: string }> {
-    return apiRequest('PUT', '/api/admin/global-prompt-template', { template });
+    const result = await apiRequest('PUT', '/api/admin/global-prompt-template', { template });
+    cacheManager.invalidate('metric');
+    return result;
   }
 
   /**

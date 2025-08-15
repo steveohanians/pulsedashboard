@@ -59,3 +59,7 @@ export const services = {
 // Export types for TypeScript
 export type Services = typeof services;
 export type ServiceName = keyof Services;
+
+// Export cache manager
+export { cacheManager } from '../cache/CacheManager';
+export type { CacheEntity } from '../cache/CacheManager';

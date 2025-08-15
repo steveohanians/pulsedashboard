@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/queryClient';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Insight service
@@ -17,10 +18,12 @@ export class InsightService {
       context?: string;
     }
   ): Promise<{ insight: string; recommendations: string[]; message: string }> {
-    return apiRequest('POST', `/api/generate-metric-insight/${clientId}`, {
+    const result = await apiRequest('POST', `/api/generate-metric-insight/${clientId}`, {
       metricName,
       ...data
     });
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -35,7 +38,9 @@ export class InsightService {
       context?: string;
     }
   ): Promise<{ insight: string; recommendations: string[]; message: string }> {
-    return apiRequest('POST', `/api/generate-metric-insight-with-context/${clientId}`, data);
+    const result = await apiRequest('POST', `/api/generate-metric-insight-with-context/${clientId}`, data);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -52,7 +57,9 @@ export class InsightService {
     generated: number; 
     message: string; 
   }> {
-    return apiRequest('POST', `/api/generate-comprehensive-insights/${clientId}`, data);
+    const result = await apiRequest('POST', `/api/generate-comprehensive-insights/${clientId}`, data);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -105,7 +112,9 @@ export class InsightService {
    * Force regenerate insights
    */
   async forceRegenerate(clientId: string): Promise<{ message: string; version: number }> {
-    return apiRequest('POST', `/api/v2/ai-insights/${clientId}/regenerate`);
+    const result = await apiRequest('POST', `/api/v2/ai-insights/${clientId}/regenerate`);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -122,7 +131,9 @@ export class InsightService {
     const queryString = searchParams.toString();
     const url = `/api/ai-insights/${clientId}/${metricName}${queryString ? `?${queryString}` : ''}`;
     
-    return apiRequest('DELETE', url);
+    const result = await apiRequest('DELETE', url);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -132,7 +143,9 @@ export class InsightService {
     clientId: string,
     metricName: string
   ): Promise<{ ok: boolean; deleted: any }> {
-    return apiRequest('DELETE', `/api/v2/ai-insights/${clientId}/${metricName}`);
+    const result = await apiRequest('DELETE', `/api/v2/ai-insights/${clientId}/${metricName}`);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -153,7 +166,9 @@ export class InsightService {
     metricName: string,
     context: string
   ): Promise<{ message: string }> {
-    return apiRequest('POST', `/api/insight-context/${clientId}/${metricName}`, { context });
+    const result = await apiRequest('POST', `/api/insight-context/${clientId}/${metricName}`, { context });
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -163,7 +178,9 @@ export class InsightService {
     clientId: string,
     metricName: string
   ): Promise<{ ok: boolean }> {
-    return apiRequest('DELETE', `/api/insight-context/${clientId}/${metricName}`);
+    const result = await apiRequest('DELETE', `/api/insight-context/${clientId}/${metricName}`);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
@@ -194,13 +211,17 @@ export class InsightService {
       context?: string;
     } = {}
   ): Promise<{ message: string; generated: number }> {
-    return apiRequest('POST', `/api/generate-insights/${clientId}`, data);
+    const result = await apiRequest('POST', `/api/generate-insights/${clientId}`, data);
+    cacheManager.invalidate('insight');
+    return result;
   }
 
   /**
    * Clear all insights (debug)
    */
   async clearAll(): Promise<{ message: string; deleted: number }> {
-    return apiRequest('DELETE', '/api/debug/clear-all-insights');
+    const result = await apiRequest('DELETE', '/api/debug/clear-all-insights');
+    cacheManager.invalidate('insight');
+    return result;
   }
 }

@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/queryClient';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * GA4 service
@@ -9,21 +10,27 @@ export class GA4Service {
    * Execute complete GA4 data sync for client
    */
   async executeCompleteDataSync(clientId: string): Promise<{ message: string }> {
-    return apiRequest('POST', `/api/admin/ga4/complete-data-sync/${clientId}`);
+    const result = await apiRequest('POST', `/api/admin/ga4/complete-data-sync/${clientId}`);
+    cacheManager.invalidate('ga4');
+    return result;
   }
 
   /**
    * Populate historical GA4 data for client
    */
   async populateHistorical(clientId: string): Promise<{ message: string }> {
-    return apiRequest('POST', `/api/admin/ga4/populate-historical/${clientId}`);
+    const result = await apiRequest('POST', `/api/admin/ga4/populate-historical/${clientId}`);
+    cacheManager.invalidate('ga4');
+    return result;
   }
 
   /**
    * Refresh current daily GA4 data for client
    */
   async refreshCurrentDaily(clientId: string): Promise<{ message: string }> {
-    return apiRequest('POST', `/api/admin/ga4/refresh-current-daily/${clientId}`);
+    const result = await apiRequest('POST', `/api/admin/ga4/refresh-current-daily/${clientId}`);
+    cacheManager.invalidate('ga4');
+    return result;
   }
 
   /**
@@ -48,14 +55,17 @@ export class GA4Service {
    * Update GA4 service account status
    */
   async updateServiceAccount(id: string, data: { active: boolean }): Promise<any> {
-    return apiRequest('PUT', `/api/admin/ga4-service-accounts/${id}`, data);
+    const result = await apiRequest('PUT', `/api/admin/ga4-service-accounts/${id}`, data);
+    cacheManager.invalidate('ga4');
+    return result;
   }
 
   /**
    * Delete GA4 service account
    */
   async deleteServiceAccount(id: string): Promise<void> {
-    return apiRequest('DELETE', `/api/admin/ga4-service-accounts/${id}`);
+    await apiRequest('DELETE', `/api/admin/ga4-service-accounts/${id}`);
+    cacheManager.invalidate('ga4');
   }
 
   /**
@@ -73,7 +83,9 @@ export class GA4Service {
     propertyId: string;
     serviceAccountId: string;
   }): Promise<any> {
-    return apiRequest('POST', '/api/admin/ga4-property-access', data);
+    const result = await apiRequest('POST', '/api/admin/ga4-property-access', data);
+    cacheManager.invalidate('ga4');
+    return result;
   }
 
   /**

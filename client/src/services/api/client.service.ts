@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Client service
@@ -20,27 +21,60 @@ export class ClientService extends BaseService {
     ga4PropertyId?: string;
     enableGA4Sync?: boolean;
   }): Promise<any> {
-    return this.create(data);
+    const result = await this.create(data);
+    cacheManager.invalidate('client');
+    return result;
+  }
+
+  /**
+   * Create new item
+   */
+  async create<T = any>(data: any): Promise<T> {
+    const result = await super.create(data);
+    cacheManager.invalidate('client');
+    return result;
+  }
+
+  /**
+   * Update existing item
+   */
+  async update<T = any>(id: string, data: any): Promise<T> {
+    const result = await super.update(id, data);
+    cacheManager.invalidate('client');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('client');
   }
 
   /**
    * Fetch and set client icon/logo
    */
   async fetchIcon(id: string, domain?: string): Promise<{ iconUrl?: string; message: string }> {
-    return this.request('POST', `/${id}/fetch-icon`, { domain });
+    const result = await this.request('POST', `/${id}/fetch-icon`, { domain });
+    cacheManager.invalidate('client');
+    return result;
   }
 
   /**
    * Clear client icon/logo
    */
   async clearIcon(id: string): Promise<void> {
-    return this.request('DELETE', `/${id}/clear-icon`);
+    await this.request('DELETE', `/${id}/clear-icon`);
+    cacheManager.invalidate('client');
   }
 
   /**
    * Trigger complete GA4 data sync for client
    */
   async triggerGA4Sync(id: string): Promise<{ message: string }> {
-    return this.request('POST', `/api/admin/ga4/complete-data-sync/${id}`);
+    const result = await this.request('POST', `/api/admin/ga4/complete-data-sync/${id}`);
+    cacheManager.invalidate('client', 'ga4');
+    return result;
   }
 }

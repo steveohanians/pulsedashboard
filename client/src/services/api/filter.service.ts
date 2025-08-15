@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Filter service
@@ -17,7 +18,9 @@ export class FilterService extends BaseService {
     value: string;
     sortOrder?: number;
   }): Promise<any> {
-    return super.create(data);
+    const result = await super.create(data);
+    cacheManager.invalidate('filter');
+    return result;
   }
 
   /**
@@ -27,6 +30,16 @@ export class FilterService extends BaseService {
     value?: string;
     sortOrder?: number;
   }): Promise<any> {
-    return super.update(id, data);
+    const result = await super.update(id, data);
+    cacheManager.invalidate('filter');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('filter');
   }
 }

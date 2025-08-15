@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * User service
@@ -10,6 +11,32 @@ export class UserService extends BaseService {
   }
 
   /**
+   * Create new item
+   */
+  async create<T = any>(data: any): Promise<T> {
+    const result = await super.create(data);
+    cacheManager.invalidate('user');
+    return result;
+  }
+
+  /**
+   * Update existing item
+   */
+  async update<T = any>(id: string, data: any): Promise<T> {
+    const result = await super.update(id, data);
+    cacheManager.invalidate('user');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('user');
+  }
+
+  /**
    * Invite a new user
    */
   async invite(data: {
@@ -18,7 +45,9 @@ export class UserService extends BaseService {
     role?: 'Admin' | 'User';
     clientId?: string;
   }): Promise<{ message: string; user: any }> {
-    return this.request('POST', '/invite', data);
+    const result = await this.request('POST', '/invite', data);
+    cacheManager.invalidate('user');
+    return result;
   }
 
   /**
@@ -32,6 +61,8 @@ export class UserService extends BaseService {
    * Update user status (Active/Inactive)
    */
   async updateStatus(id: string, status: 'Active' | 'Inactive'): Promise<any> {
-    return this.update(id, { status });
+    const result = await this.update(id, { status });
+    cacheManager.invalidate('user');
+    return result;
   }
 }

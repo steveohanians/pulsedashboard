@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Portfolio service
@@ -18,7 +19,9 @@ export class PortfolioService extends BaseService {
     industryVertical: string;
     businessSize: string;
   }): Promise<any> {
-    return super.create(data);
+    const result = await super.create(data);
+    cacheManager.invalidate('portfolio');
+    return result;
   }
 
   /**
@@ -31,7 +34,17 @@ export class PortfolioService extends BaseService {
     businessSize?: string;
     status?: string;
   }): Promise<any> {
-    return super.update(id, data);
+    const result = await super.update(id, data);
+    cacheManager.invalidate('portfolio');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('portfolio');
   }
 
   /**
@@ -45,7 +58,9 @@ export class PortfolioService extends BaseService {
    * Resync SEMrush data for company
    */
   async resyncSemrush(id: string): Promise<{ message: string }> {
-    return this.request('POST', `/${id}/resync-semrush`);
+    const result = await this.request('POST', `/${id}/resync-semrush`);
+    cacheManager.invalidate('portfolio');
+    return result;
   }
 
   /**
@@ -59,13 +74,17 @@ export class PortfolioService extends BaseService {
    * Recalculate portfolio averages
    */
   async recalculateAverages(): Promise<{ message: string; updated: number }> {
-    return this.request('POST', '/recalculate-averages');
+    const result = await this.request('POST', '/recalculate-averages');
+    cacheManager.invalidate('portfolio');
+    return result;
   }
 
   /**
    * Fix portfolio averages (admin debug)
    */
   async fixPortfolioAverages(): Promise<{ message: string }> {
-    return this.request('POST', '/api/admin/fix-portfolio-averages');
+    const result = await this.request('POST', '/api/admin/fix-portfolio-averages');
+    cacheManager.invalidate('portfolio');
+    return result;
   }
 }

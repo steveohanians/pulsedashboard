@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { cacheManager } from '../cache/CacheManager';
 
 /**
  * Benchmark service
@@ -18,7 +19,9 @@ export class BenchmarkService extends BaseService {
     industryVertical: string;
     businessSize: string;
   }): Promise<any> {
-    return super.create(data);
+    const result = await super.create(data);
+    cacheManager.invalidate('benchmark');
+    return result;
   }
 
   /**
@@ -31,7 +34,17 @@ export class BenchmarkService extends BaseService {
     businessSize?: string;
     status?: string;
   }): Promise<any> {
-    return super.update(id, data);
+    const result = await super.update(id, data);
+    cacheManager.invalidate('benchmark');
+    return result;
+  }
+
+  /**
+   * Delete item
+   */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    cacheManager.invalidate('benchmark');
   }
 
   /**
@@ -60,13 +73,17 @@ export class BenchmarkService extends BaseService {
     const formData = new FormData();
     formData.append('csvFile', file);
     
-    return this.request('POST', '/csv-import', formData);
+    const result = await this.request('POST', '/csv-import', formData);
+    cacheManager.invalidate('benchmark');
+    return result;
   }
 
   /**
    * Resync competitor SEMrush data
    */
   async resyncCompetitorSemrush(id: string): Promise<{ message: string }> {
-    return this.request('POST', `/api/admin/competitors/${id}/resync-semrush`);
+    const result = await this.request('POST', `/api/admin/competitors/${id}/resync-semrush`);
+    cacheManager.invalidate('competitor');
+    return result;
   }
 }
