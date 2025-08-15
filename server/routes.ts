@@ -192,6 +192,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Debug endpoint to check Industry_Avg metrics
+  app.get('/api/debug/check-industry-avg', requireAuth, async (req, res) => {
+    try {
+      // Check if Industry_Avg metrics exist
+      const industryAvgMetrics = await storage.getMetricsBySourceType('Industry_Avg');
+      
+      // Group by time period to see what periods have data
+      const periodCounts = {};
+      industryAvgMetrics.forEach(metric => {
+        if (!periodCounts[metric.timePeriod]) {
+          periodCounts[metric.timePeriod] = {};
+        }
+        if (!periodCounts[metric.timePeriod][metric.metricName]) {
+          periodCounts[metric.timePeriod][metric.metricName] = 0;
+        }
+        periodCounts[metric.timePeriod][metric.metricName]++;
+      });
+      
+      // Check if Benchmark source metrics exist
+      const benchmarkMetrics = await storage.getMetricsBySourceType('Benchmark');
+      
+      res.json({
+        industryAvgCount: industryAvgMetrics.length,
+        benchmarkSourceCount: benchmarkMetrics.length,
+        periodBreakdown: periodCounts,
+        sampleIndustryAvg: industryAvgMetrics.slice(0, 5),
+        sampleBenchmark: benchmarkMetrics.slice(0, 5),
+        currentPeriod: 'Last Month',
+        hasIndustryAvgForLastMonth: industryAvgMetrics.some(m => m.timePeriod === 'Last Month'),
+        hasIndustryAvgFor2025_07: industryAvgMetrics.some(m => m.timePeriod === '2025-07')
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Endpoint to verify client data isolation
   app.get('/api/debug/verify-client-isolation', requireAuth, async (req, res) => {
     try {
