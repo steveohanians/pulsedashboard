@@ -183,10 +183,22 @@ export class GA4DataManager {
     chartsRefreshed: string[];
   }> {
     try {
+      console.log(`[GA4 SYNC] Starting sync for clientId: ${clientId}`);
       logger.info(`🚀 EXECUTING COMPLETE GA4 DATA SYNC for client ${clientId}`);
+      
+      // IMPORTANT: Validate client exists and get client details
+      const { storage } = await import('../../storage');
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        throw new Error(`Client not found: ${clientId}`);
+      }
+      
+      console.log(`[GA4 SYNC] Syncing data for client: ${client.name} (${clientId})`);
+      logger.info(`📋 Client validation successful: ${client.name} (${clientId})`);
       
       // Step 1: Clear all existing GA4 data (databases + JSON files)
       logger.info(`Step 1: Clearing all existing GA4 data for client ${clientId}`);
+      console.log(`[GA4 SYNC] Clearing existing data for client: ${clientId}`);
       await this.clearAllClientData(clientId);
       
       // Step 2: Execute 15-month smart fetch with force refresh

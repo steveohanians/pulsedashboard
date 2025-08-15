@@ -17,6 +17,8 @@ export class GA4StorageService {
    */
   async storeGA4Metrics(clientId: string, period: string, data: GA4MetricData): Promise<void> {
     try {
+      console.log(`[GA4 SYNC] Storing metrics for clientId: ${clientId}, period: ${period}`);
+      
       // Store main metrics
       await this.storeMainMetrics(clientId, period, data);
       
@@ -26,8 +28,10 @@ export class GA4StorageService {
       // Store device distribution data
       await this.storeDeviceDistribution(clientId, period, data.deviceDistribution);
 
+      console.log(`[GA4 SYNC] Successfully stored all metrics for clientId: ${clientId}, period: ${period}`);
       logger.info(`Stored GA4 metrics for client ${clientId}, period ${period}`);
     } catch (error) {
+      console.error(`[GA4 SYNC] Error storing metrics for clientId: ${clientId}, period: ${period}:`, error);
       logger.error(`Error storing GA4 metrics for ${clientId}, period ${period}:`, error);
       throw error;
     }
@@ -122,12 +126,14 @@ export class GA4StorageService {
 
     for (const metric of metrics) {
       let metricData: any = {
-        clientId,
+        clientId, // MUST use the passed clientId parameter
         metricName: metric.name,
         value: metric.value,
         sourceType: 'Client',
         timePeriod: period
       };
+      
+      console.log(`[GA4 SYNC] Creating metric: ${metric.name} for clientId: ${clientId}, value: ${metric.value}`);
 
       // Add canonical envelope transformation if feature is enabled
       if (enableCanonicalEnvelope) {
@@ -158,9 +164,11 @@ export class GA4StorageService {
    * Store traffic channel data
    */
   private async storeTrafficChannels(clientId: string, period: string, channels: GA4MetricData['trafficChannels']): Promise<void> {
+    console.log(`[GA4 SYNC] Storing traffic channels for clientId: ${clientId}, period: ${period}, channels: ${channels.length}`);
+    
     // Store as JSON array in value field
     await storage.createMetric({
-      clientId,
+      clientId, // MUST use the passed clientId parameter
       metricName: METRIC_NAMES.TRAFFIC_CHANNELS,
       value: JSON.stringify(channels),
       sourceType: 'Client',
@@ -172,9 +180,11 @@ export class GA4StorageService {
    * Store device distribution data
    */
   private async storeDeviceDistribution(clientId: string, period: string, devices: GA4MetricData['deviceDistribution']): Promise<void> {
+    console.log(`[GA4 SYNC] Storing device distribution for clientId: ${clientId}, period: ${period}, devices: ${devices.length}`);
+    
     // Store as JSON array in value field
     await storage.createMetric({
-      clientId,
+      clientId, // MUST use the passed clientId parameter
       metricName: METRIC_NAMES.DEVICE_DISTRIBUTION,
       value: JSON.stringify(devices),
       sourceType: 'Client',
