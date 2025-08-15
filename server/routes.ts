@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalMetrics: result.metrics?.length || 0,
         cdAvgCount: cdAvgMetrics.length,
         cdAvgCoreCount: cdAvgCoreMetrics.length,
-        cdAvgMetricNames: [...new Set(cdAvgMetrics.map((m: any) => m.metricName))],
+        cdAvgMetricNames: Array.from(new Set(cdAvgMetrics.map((m: any) => m.metricName))),
         cdAvgCorePeriods: cdAvgCoreMetrics.map((m: any) => ({ metric: m.metricName, period: m.timePeriod })),
         requestedPeriod: periodsToQuery[0]
       });
@@ -3422,6 +3422,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GA4 Integration Routes
+  // Direct GA4 sync endpoint - bypasses any routing issues
+  app.post('/api/ga4-sync/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      logger.info(`[GA4 SYNC] Starting sync for client: ${clientId}`);
+      
+      // Import and call the actual GA4 sync function
+      const { GA4DataManager } = await import('./services/ga4/GA4DataManager');
+      const ga4Manager = new GA4DataManager();
+      const result = await ga4Manager.executeCompleteGA4DataSync(clientId);
+      
+      res.json({
+        success: result.success,
+        message: result.summary,
+        timestamp: new Date().toISOString(),
+        data: {
+          periodsProcessed: result.periodsProcessed,
+          dailyDataPeriods: result.dailyDataPeriods,
+          monthlyDataPeriods: result.monthlyDataPeriods,
+          chartsRefreshed: result.chartsRefreshed,
+          errors: result.errors
+        }
+      });
+      
+    } catch (error) {
+      logger.error('[GA4 SYNC] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'GA4 sync failed'
+      });
+    }
+  });
+
   app.use("/api/ga4", ga4Routes);
   app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/ga4-data", ga4StatusRouter);

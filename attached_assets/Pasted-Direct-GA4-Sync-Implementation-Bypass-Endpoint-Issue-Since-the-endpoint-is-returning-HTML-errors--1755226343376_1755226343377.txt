@@ -1,0 +1,91 @@
+Direct GA4 Sync Implementation - Bypass Endpoint Issue
+
+Since the endpoint is returning HTML errors, let's create a working endpoint or call the function directly.
+
+**Step 1: Create a simple working endpoint**
+
+In `/server/routes.ts` (main routes file), add this directly:
+
+```typescript
+// Add this near the other API routes (around line 800-900)
+// Direct GA4 sync endpoint - bypasses any routing issues
+app.post('/api/ga4-sync/:clientId', requireAuth, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    
+    console.log(`[GA4 SYNC] Starting sync for client: ${clientId}`);
+    
+    // Just return success for now to test the endpoint
+    res.json({
+      success: true,
+      message: `GA4 sync started for client ${clientId}`,
+      timestamp: new Date().toISOString()
+    });
+    
+    // TODO: After confirming endpoint works, add actual sync:
+    // const { executeCompleteGA4DataSync } = await import('./services/ga4/GA4DataManager');
+    // const result = await executeCompleteGA4DataSync(clientId);
+    // res.json({ success: true, result });
+    
+  } catch (error) {
+    console.error('[GA4 SYNC] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'GA4 sync failed'
+    });
+  }
+});
+Step 2: Update the button to use the new endpoint
+In /client/src/pages/admin-panel.tsx, update the GA4 sync button:
+typescriptonClick={async () => {
+  try {
+    setIsLoading(true);
+    
+    // Use the new simplified endpoint
+    const endpoint = `/api/ga4-sync/${editingItem.id}`;
+    console.log('Calling GA4 sync at:', endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+    
+    // Check content type BEFORE trying to parse
+    const contentType = response.headers.get('content-type');
+    console.log('Response content-type:', contentType);
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error(`Server returned ${contentType} instead of JSON`);
+    }
+    
+    const result = await response.json();
+    console.log('GA4 sync result:', result);
+    
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'GA4 sync failed');
+    }
+    
+    toast({
+      title: "GA4 Sync Started",
+      description: result.message,
+      duration: 5000,
+    });
+    
+    // Refresh data
+    queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
+    
+  } catch (error) {
+    console.error('GA4 sync error:', error);
+    toast({
+      title: "GA4 Sync Failed",
+      description: error instanceof Error ? error.message : "Failed to sync GA4 data",
+      variant: "destructive",
+      duration: 5000,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+}}

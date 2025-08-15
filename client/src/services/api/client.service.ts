@@ -102,8 +102,8 @@ export class ClientService extends BaseService {
     eventBus.emit('ga4.sync.started', { clientId: id });
     
     try {
-      // Use apiRequest directly since this endpoint is not under the clients basePath
-      const result = await apiRequest('POST', `/api/admin/ga4/complete-data-sync/${id}`);
+      // Use the simplified direct endpoint
+      const result = await apiRequest('POST', `/api/ga4-sync/${id}`);
       cacheManager.invalidate('client', 'ga4');
       eventBus.emit('ga4.sync.completed', { clientId: id, result });
       return result;
