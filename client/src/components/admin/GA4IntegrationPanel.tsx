@@ -2,7 +2,7 @@ import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,21 +55,15 @@ export function GA4IntegrationPanel({
   const [selectedServiceAccount, setSelectedServiceAccount] = useState<string>("");
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
-  // Debug logging for service accounts
+  // Debug logging for service accounts (development only)
   useEffect(() => {
-    console.log('[GA4IntegrationPanel] Component received:', {
-      clientId,
-      serviceAccountsCount: serviceAccounts?.length,
-      serviceAccounts,
-      activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified) || [],
-      allServiceAccounts: serviceAccounts || []
-    });
-    logger.info("[GA4IntegrationPanel] Service accounts data:", {
-      serviceAccounts,
-      activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified) || [],
-      allServiceAccounts: serviceAccounts || []
-    });
-  }, [serviceAccounts, clientId]);
+    if (process.env.NODE_ENV === 'development') {
+      logger.info("[GA4IntegrationPanel] Service accounts data:", {
+        serviceAccountsCount: serviceAccounts?.length,
+        activeServiceAccountsCount: serviceAccounts?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)?.length || 0
+      });
+    }
+  }, [serviceAccounts]);
 
   // Fetch current property access for this client (single property per client)
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess | null>({
@@ -99,12 +93,11 @@ export function GA4IntegrationPanel({
         .then(res => res.json())
         .then(data => {
           if (data?.serviceAccountId) {
-            console.log('Setting service account from existing data:', data.serviceAccountId);
             setSelectedServiceAccount(data.serviceAccountId);
             onServiceAccountUpdate?.(data.serviceAccountId);
           }
         })
-        .catch(err => console.error('Error fetching property access:', err));
+        .catch(err => logger.warn('Error fetching property access:', err));
     }
   }, [clientId, onServiceAccountUpdate]);
 
@@ -231,13 +224,11 @@ export function GA4IntegrationPanel({
         </div>
 
         <div>
-          <Label htmlFor="ga4-service-account">Service Account</Label>
-          <select
-            id="ga4-service-account"
+          <Label htmlFor="serviceAccount">Service Account</Label>
+          <NativeSelect
             name="serviceAccountId"
             value={selectedServiceAccount || ""}
             onChange={async (e) => {
-              console.log('Service account selected:', e.target.value); // Debug log
               setSelectedServiceAccount(e.target.value);
               onServiceAccountUpdate?.(e.target.value);
               
@@ -254,18 +245,18 @@ export function GA4IntegrationPanel({
                 }
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1"
+            options={[
+              { value: "", label: "Select a service account" },
+              ...(serviceAccounts || [])
+                .filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)
+                .map(sa => ({
+                  value: sa.serviceAccount.id,
+                  label: `${sa.serviceAccount.name} (${sa.serviceAccount.serviceAccountEmail})`
+                }))
+            ]}
+            placeholder="Select a service account"
             disabled={!serviceAccounts || serviceAccounts.length === 0}
-          >
-            <option value="">Select a service account</option>
-            {serviceAccounts
-              ?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)
-              .map(sa => (
-                <option key={sa.serviceAccount.id} value={sa.serviceAccount.id}>
-                  {sa.serviceAccount.name} ({sa.serviceAccount.serviceAccountEmail})
-                </option>
-              ))}
-          </select>
+          />
           
           {activeServiceAccounts.length === 0 && serviceAccounts && serviceAccounts.length > 0 && (
             <p className="text-xs text-amber-600 mt-1">
