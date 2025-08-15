@@ -112,6 +112,42 @@ export class GA4StorageService {
   }
 
   /**
+   * Validate clientId and get client details for metric storage
+   */
+  private async validateClientForStorage(clientId: string): Promise<any> {
+    // Validate clientId
+    if (!clientId || clientId === 'undefined' || clientId === 'null') {
+      throw new Error('Invalid clientId for metric storage');
+    }
+    
+    // Double-check we're not using the wrong client
+    const { storage } = await import('../../storage');
+    const client = await storage.getClient(clientId);
+    if (!client) {
+      throw new Error(`Cannot store metrics - client ${clientId} not found`);
+    }
+    
+    return client;
+  }
+
+  /**
+   * Store GA4 metric with comprehensive validation
+   */
+  private async storeGA4Metric(clientId: string, metricData: any): Promise<void> {
+    const client = await this.validateClientForStorage(clientId);
+    
+    console.log(`[GA4] Storing metric for ${client.name} (${clientId}): ${metricData.metricName}`);
+    
+    // Store with explicit clientId
+    const { storage } = await import('../../storage');
+    await storage.createMetric({
+      ...metricData,
+      clientId: clientId, // Explicitly set
+      sourceType: 'Client'
+    });
+  }
+
+  /**
    * Store main metrics in database
    */
   private async storeMainMetrics(clientId: string, period: string, data: GA4MetricData): Promise<void> {
@@ -156,7 +192,8 @@ export class GA4StorageService {
         }
       }
 
-      await storage.createMetric(metricData);
+      // Use enhanced validation method
+      await this.storeGA4Metric(clientId, metricData);
     }
   }
 
@@ -166,12 +203,10 @@ export class GA4StorageService {
   private async storeTrafficChannels(clientId: string, period: string, channels: GA4MetricData['trafficChannels']): Promise<void> {
     console.log(`[GA4 SYNC] Storing traffic channels for clientId: ${clientId}, period: ${period}, channels: ${channels.length}`);
     
-    // Store as JSON array in value field
-    await storage.createMetric({
-      clientId, // MUST use the passed clientId parameter
+    // Use enhanced validation method
+    await this.storeGA4Metric(clientId, {
       metricName: METRIC_NAMES.TRAFFIC_CHANNELS,
       value: JSON.stringify(channels),
-      sourceType: 'Client',
       timePeriod: period
     });
   }
@@ -182,12 +217,10 @@ export class GA4StorageService {
   private async storeDeviceDistribution(clientId: string, period: string, devices: GA4MetricData['deviceDistribution']): Promise<void> {
     console.log(`[GA4 SYNC] Storing device distribution for clientId: ${clientId}, period: ${period}, devices: ${devices.length}`);
     
-    // Store as JSON array in value field
-    await storage.createMetric({
-      clientId, // MUST use the passed clientId parameter
+    // Use enhanced validation method
+    await this.storeGA4Metric(clientId, {
       metricName: METRIC_NAMES.DEVICE_DISTRIBUTION,
       value: JSON.stringify(devices),
-      sourceType: 'Client',
       timePeriod: period
     });
   }
