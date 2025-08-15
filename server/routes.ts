@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { createHash } from "crypto";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { db } from "./db";
+import { and, eq, not, like, desc } from "drizzle-orm";
+import { metrics } from "@shared/schema";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { generatePDF } from "./pdf";
 import { ga4DataService } from "./services/ga4/PulseDataService";
@@ -206,22 +209,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const metrics = await storage.getMetricsByClient(client.id, queryPeriod);
         const clientMetrics = metrics.filter(m => m.sourceType === 'Client' && m.clientId === client.id);
         
+        // Get the most recent period with data for this client
+        // For now, use the current query period if client has metrics
+        let latestDataPeriod = null;
+        if (clientMetrics.length > 0) {
+          latestDataPeriod = queryPeriod; // Use current period as latest if client has data
+        }
+        
+        // Debug logging for Demo Company
+        if (client.name === 'Demo Company') {
+          logger.info(`[DEBUG] Demo Company period logic: clientMetrics.length=${clientMetrics.length}, queryPeriod=${queryPeriod}, latestDataPeriod=${latestDataPeriod}`);
+        }
+        
         return {
           clientId: client.id,
           clientName: client.name,
           ga4PropertyId: client.ga4PropertyId,
+          latestDataPeriod: latestDataPeriod,
+          lastGA4Sync: client.lastGA4Sync,
           metricsCount: {
             total: metrics.length,
             clientSpecific: clientMetrics.length,
-            byType: {
-              bounceRate: clientMetrics.filter(m => m.metricName === 'Bounce Rate').length,
-              sessionDuration: clientMetrics.filter(m => m.metricName === 'Session Duration').length,
-              pagesPerSession: clientMetrics.filter(m => m.metricName === 'Pages per Session').length,
-              sessionsPerUser: clientMetrics.filter(m => m.metricName === 'Sessions per User').length,
-            }
           },
           hasCorrectClientId: clientMetrics.every(m => m.clientId === client.id),
-          sampleMetric: clientMetrics[0] || null
         };
       }));
       

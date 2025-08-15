@@ -3768,8 +3768,8 @@ export default function AdminPanel() {
                       <th className="text-left px-4 py-3 text-sm font-semibold">Client Name</th>
                       <th className="text-left px-4 py-3 text-sm font-semibold">GA4 Property</th>
                       <th className="text-center px-4 py-3 text-sm font-semibold">Total Metrics</th>
-                      <th className="text-center px-4 py-3 text-sm font-semibold">Bounce Rate</th>
-                      <th className="text-center px-4 py-3 text-sm font-semibold">Session Duration</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Latest Data Period</th>
+                      <th className="text-center px-4 py-3 text-sm font-semibold">Last GA4 Sync</th>
                       <th className="text-center px-4 py-3 text-sm font-semibold">Isolation</th>
                     </tr>
                   </thead>
@@ -3799,14 +3799,39 @@ export default function AdminPanel() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="text-sm">
-                            {client.metricsCount.byType.bounceRate || '-'}
-                          </span>
+                          {client.latestDataPeriod ? (
+                            <span className="text-sm font-medium">
+                              {(() => {
+                                // Parse the period to show as Month Year
+                                if (client.latestDataPeriod === 'Last Month') {
+                                  return 'Last Month';
+                                } else if (client.latestDataPeriod.includes('-')) {
+                                  // Format like "2025-07" to "July 2025"
+                                  const [year, month] = client.latestDataPeriod.split('-');
+                                  const date = new Date(parseInt(year), parseInt(month) - 1);
+                                  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                                }
+                                return client.latestDataPeriod;
+                              })()}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">No data</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="text-sm">
-                            {client.metricsCount.byType.sessionDuration || '-'}
-                          </span>
+                          {client.lastGA4Sync ? (
+                            <span className="text-sm">
+                              {new Date(client.lastGA4Sync).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">Never</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {client.hasCorrectClientId ? (
