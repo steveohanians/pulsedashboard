@@ -1971,13 +1971,32 @@ export class DatabaseStorage implements IStorage {
 
   // Clear ONLY CLIENT metrics for a specific client and time period (preserve benchmarks)
   async clearClientMetricsByPeriod(clientId: string, timePeriod: string): Promise<void> {
+    console.log(`[STORAGE] Clearing metrics for client ${clientId}, period ${timePeriod}`);
+    
+    // Get count of metrics to be deleted for logging
+    const metricsToDelete = await db.select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.clientId, clientId),
+          eq(metrics.timePeriod, timePeriod), 
+          eq(metrics.sourceType, 'Client')
+        )
+      );
+    
+    console.log(`[STORAGE] Found ${metricsToDelete.length} Client metrics to delete for ${clientId}, period ${timePeriod}`);
+    
+    // IMPORTANT: Only delete metrics for THIS specific client
     await db.delete(metrics).where(
       and(
-        eq(metrics.clientId, clientId),
+        eq(metrics.clientId, clientId), // MUST match exact clientId
         eq(metrics.timePeriod, timePeriod),
         eq(metrics.sourceType, 'Client')
       )
     );
+    
+    // Log what was deleted
+    console.log(`[STORAGE] Successfully cleared ${metricsToDelete.length} Client metrics for ${clientId}, period ${timePeriod}`);
     
     // Increment version after clearing metrics
     await this.incrementMetricVersion(clientId, timePeriod);
@@ -1985,12 +2004,29 @@ export class DatabaseStorage implements IStorage {
 
   // Clear ALL CLIENT metrics for a specific client (all periods, preserve benchmarks)
   async clearAllClientMetrics(clientId: string): Promise<void> {
+    console.log(`[STORAGE] Clearing ALL Client metrics for client ${clientId}`);
+    
+    // Get count of metrics to be deleted for logging
+    const metricsToDelete = await db.select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.clientId, clientId),
+          eq(metrics.sourceType, 'Client')
+        )
+      );
+    
+    console.log(`[STORAGE] Found ${metricsToDelete.length} total Client metrics to delete for ${clientId}`);
+    
+    // IMPORTANT: Only delete Client metrics for THIS specific client
     await db.delete(metrics).where(
       and(
-        eq(metrics.clientId, clientId),
+        eq(metrics.clientId, clientId), // MUST match exact clientId
         eq(metrics.sourceType, 'Client')
       )
     );
+    
+    console.log(`[STORAGE] Successfully cleared ALL ${metricsToDelete.length} Client metrics for ${clientId}`);
     
     // Increment version for all time periods for this client
     const existingVersions = await this.getMetricsByClient(clientId, '');
