@@ -2164,6 +2164,16 @@ export class DatabaseStorage implements IStorage {
         )
       );
   }
+
+  async getBenchmarkCompanyById(companyId: string): Promise<BenchmarkCompany | undefined> {
+    const results = await db
+      .select()
+      .from(benchmarkCompanies)
+      .where(eq(benchmarkCompanies.id, companyId))
+      .limit(1);
+    
+    return results[0];
+  }
 }
 
 export const storage = new DatabaseStorage();

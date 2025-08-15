@@ -11,6 +11,7 @@ import { generatePDF } from "./pdf";
 import { ga4DataService } from "./services/ga4/PulseDataService";
 import ga4StatusRouter from "./routes/ga4StatusRoute";
 import exportPdfRouter from "./routes/exportPdfRoute";
+import benchmarkAdminRouter from "./routes/benchmark-admin";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import { 
@@ -3832,6 +3833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/ga4-data", ga4StatusRouter);
   app.use("/api/admin/ga4", adminGA4Route);
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
+  app.use("/api/admin/benchmark", benchmarkAdminRouter);
 
   // Export routes - must come before generic cleanup route
   app.use("/api/export", exportPdfRouter);
