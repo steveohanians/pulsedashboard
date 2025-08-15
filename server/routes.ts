@@ -3543,9 +3543,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // IMPORTANT: Update the lastGA4Sync timestamp after successful sync
+      console.log(`[GA4 SYNC] Updating lastGA4Sync timestamp for client ${clientId}`);
+      await storage.updateClient(clientId, {
+        lastGA4Sync: new Date()
+      });
+      
       // Get metrics count after sync
       const metricsAfterSync = await storage.getMetricsByClient(clientId, 'Last Month');
       const clientMetricsCount = metricsAfterSync.filter(m => m.sourceType === 'Client').length;
+      
+      // Get the updated client to confirm timestamp was set
+      const updatedClient = await storage.getClient(clientId);
+      console.log(`[GA4 SYNC] Client lastGA4Sync updated to:`, updatedClient?.lastGA4Sync);
       
       console.log(`[GA4 SYNC] Sync completed. Metrics stored: ${clientMetricsCount}`);
       
@@ -3555,6 +3565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId,
         clientName: client.name,
         propertyId: propertyAccess.propertyId,
+        lastGA4Sync: updatedClient?.lastGA4Sync, // Include in response
         metricsStored: clientMetricsCount,
         timestamp: new Date().toISOString()
       });
@@ -3596,9 +3607,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           connectionTest = { 
             success: !!validAccess, 
             error: validAccess ? null : 'Unable to verify GA4 property access'
-          };
+          } as { success: boolean; error: string | null };
         } catch (error) {
-          connectionTest = { success: false, error: error instanceof Error ? error.message : String(error) };
+          connectionTest = { success: false, error: error instanceof Error ? error.message : String(error) } as { success: boolean; error: string | null };
         }
       }
       
@@ -3641,8 +3652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get first active service account
-      const serviceAccounts = await storage.getGA4ServiceAccounts();
-      const activeAccount = serviceAccounts.find(sa => sa.isActive);
+      const serviceAccounts = await storage.getGA4ServiceAccount();
+      const activeAccount = serviceAccounts?.find((sa: any) => sa.isActive);
       
       if (!activeAccount) {
         throw new Error('No active service account found');
