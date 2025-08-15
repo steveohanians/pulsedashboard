@@ -1,0 +1,175 @@
+I can see the Benchmark Companies tab UI. Now let's add the SEMrush sync buttons similar to the CD Portfolio tab.
+
+**Step 3: Add SEMrush Sync Buttons to Benchmark Companies Tab**
+
+In `/client/src/pages/admin-panel.tsx`, find the Benchmark Companies section (where `activeTab === "benchmark-companies"`). Add sync buttons between the header stats and the table:
+
+```typescript
+{activeTab === "benchmark-companies" && (
+  <div>
+    {/* Existing header with stats cards */}
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-2xl font-bold">Benchmark Companies</h2>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={() => handleImportCSV("benchmark-companies")}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Import CSV
+        </Button>
+        <Button onClick={() => handleAdd("benchmark-company")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Company
+        </Button>
+      </div>
+    </div>
+
+    {/* Existing stats cards */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* ... existing stats cards ... */}
+    </div>
+
+    {/* ADD THIS: SEMrush Sync Controls - Similar to CD Portfolio */}
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-blue-900">SEMrush Data Sync</h3>
+          <p className="text-sm text-blue-700 mt-1">
+            Sync benchmark company metrics from SEMrush to calculate Industry averages
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {/* Sync All Button */}
+          <Button
+            variant="default"
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                toast({
+                  title: "Starting bulk sync...",
+                  description: "Syncing all benchmark companies from SEMrush",
+                  duration: 10000,
+                });
+                
+                const response = await fetch('/api/admin/benchmark/sync-all', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  toast({
+                    title: "Sync Complete",
+                    description: result.message,
+                    duration: 5000,
+                  });
+                  
+                  // Refresh the companies list
+                  queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+                } else {
+                  throw new Error(result.error);
+                }
+              } catch (error) {
+                toast({
+                  title: "Sync Failed",
+                  description: error.message,
+                  variant: "destructive",
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading || benchmarkCompanies?.length === 0}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sync All Companies
+              </>
+            )}
+          </Button>
+          
+          {/* Recalculate Averages Button */}
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                toast({
+                  title: "Recalculating...",
+                  description: "Updating Industry averages from benchmark data",
+                  duration: 5000,
+                });
+                
+                const response = await fetch('/api/admin/benchmark/recalculate-averages', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  toast({
+                    title: "Recalculation Complete",
+                    description: `Updated ${result.data.metricsUpdated} Industry_Avg metrics`,
+                    duration: 5000,
+                  });
+                } else {
+                  throw new Error(result.error);
+                }
+              } catch (error) {
+                toast({
+                  title: "Recalculation Failed",
+                  description: error.message,
+                  variant: "destructive",
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            Recalculate Industry Avg
+          </Button>
+        </div>
+      </div>
+      
+      {/* Sync Status */}
+      {benchmarkCompanies && benchmarkCompanies.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-blue-200">
+          <p className="text-xs text-blue-600">
+            {benchmarkCompanies.filter(c => c.active).length} active companies ready for sync
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Existing table */}
+    <Card>
+      {/* ... existing benchmark companies table ... */}
+    </Card>
+  </div>
+)}
+```
+
+Also add the missing imports at the top of the file if not already present:
+
+```typescript
+import { RefreshCw, Calculator, Loader2, Upload } from "lucide-react";
+```
+
+This adds:
+1. A blue info box with SEMrush sync controls
+2. "Sync All Companies" button - syncs all benchmark companies from SEMrush
+3. "Recalculate Industry Avg" button - recalculates averages from existing data
+4. Shows count of active companies ready for sync
+
+Should I also add individual sync buttons in the table's Actions column for each company?

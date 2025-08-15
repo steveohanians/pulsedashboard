@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1881,7 +1881,7 @@ export default function AdminPanel() {
                                   
                                   // Simply update the lastGA4Sync field with current time
                                   const syncTime = new Date().toISOString();
-                                  setEditingItem(prev => ({
+                                  setEditingItem((prev: any) => ({
                                     ...prev,
                                     lastGA4Sync: syncTime
                                   }));
@@ -2262,6 +2262,128 @@ export default function AdminPanel() {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+
+                {/* SEMrush Sync Controls */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-semibold text-blue-900">SEMrush Data Sync</h3>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Sync benchmark company metrics from SEMrush to calculate Industry averages
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {/* Sync All Button */}
+                      <Button
+                        variant="default"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            toast({
+                              title: "Starting bulk sync...",
+                              description: "Syncing all benchmark companies from SEMrush",
+                              duration: 10000,
+                            });
+                            
+                            const response = await fetch('/api/admin/benchmark/sync-all', {
+                              method: 'POST',
+                              credentials: 'include',
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                              toast({
+                                title: "Sync Complete",
+                                description: result.message,
+                                duration: 5000,
+                              });
+                              
+                              // Refresh the companies list
+                              queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+                            } else {
+                              throw new Error(result.error);
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Sync Failed",
+                              description: (error as Error).message,
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading || benchmarkCompanies?.length === 0}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sync All Companies
+                          </>
+                        )}
+                      </Button>
+                      
+                      {/* Recalculate Averages Button */}
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            toast({
+                              title: "Recalculating...",
+                              description: "Updating Industry averages from benchmark data",
+                              duration: 5000,
+                            });
+                            
+                            const response = await fetch('/api/admin/benchmark/recalculate-averages', {
+                              method: 'POST',
+                              credentials: 'include',
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                              toast({
+                                title: "Recalculation Complete",
+                                description: `Updated ${result.data.metricsUpdated} Industry_Avg metrics`,
+                                duration: 5000,
+                              });
+                            } else {
+                              throw new Error(result.error);
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Recalculation Failed",
+                              description: (error as Error).message,
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Recalculate Industry Avg
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Sync Status */}
+                  {benchmarkCompanies && benchmarkCompanies.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-blue-600">
+                        {benchmarkCompanies.filter(c => c.active).length} active companies ready for sync
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Loading State */}
