@@ -182,51 +182,7 @@ export default function AdminPanel() {
   const queryClient = useQueryClient();
 
   // Event listeners for real-time updates (temporarily disabled for debugging)
-  /*
-  useEvent('portfolio.company.added', (payload) => {
-    toast({
-      title: "Company added - data syncing",
-      description: "SEMrush integration started. Charts will update automatically.",
-      duration: 4000,
-    });
-  });
-
-  useEvent('semrush.integration.completed', (payload) => {
-    toast({
-      title: "Portfolio Integration Complete",
-      description: "✅ Company added successfully! Dashboard data refreshed.",
-      duration: 10000,
-    });
-    
-    // Refresh data
-    cacheManager.invalidate('portfolio', 'dashboard');
-  });
-
-  useEvent('portfolio.averages.recalculated', (payload) => {
-    toast({
-      title: "Portfolio Averages Updated",
-      description: "Dashboard data has been refreshed with new averages.",
-    });
-  });
-
-  useEvent('ga4.sync.completed', (payload) => {
-    toast({
-      title: "GA4 Data Sync Complete",
-      description: `Successfully synced data for client ${payload.data.clientId}`,
-    });
-    
-    // Refresh dashboard
-    cacheManager.invalidate('dashboard');
-  });
-
-  useEvent('ga4.sync.failed', (payload) => {
-    toast({
-      title: "GA4 Sync Failed",
-      description: payload.data.error?.message || "Failed to sync GA4 data",
-      variant: "destructive",
-    });
-  });
-  */
+  // Note: Will re-enable after confirming admin panel loads successfully
   
   // Form refs for controlled form handling
   const clientFormRef = useRef<HTMLFormElement>(null);
