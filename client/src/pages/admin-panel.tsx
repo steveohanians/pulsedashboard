@@ -1755,7 +1755,6 @@ export default function AdminPanel() {
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={editingItem?.id ? handleSaveClient : handleCreateClient} className="space-y-4">
-                      <>
                       <div>
                         <Label htmlFor="name">Name *</Label>
                         <Input 
@@ -1779,7 +1778,7 @@ export default function AdminPanel() {
                       </div>
                       <GA4IntegrationPanel 
                         clientId={editingItem?.id || null}
-                        currentGA4PropertyId={editingItem?.ga4PropertyId && editingItem.ga4PropertyId.match(/^\d+$/) ? editingItem.ga4PropertyId : ""}
+                        currentGA4PropertyId={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
                         serviceAccounts={ga4ServiceAccounts || []}
                         onGA4PropertyUpdate={(propertyId) => {
                           // Update hidden form field for submission
@@ -1810,40 +1809,39 @@ export default function AdminPanel() {
                                 Fetch the latest 15 months of GA4 data for this client
                               </p>
                             </div>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    setIsLoading(true);
-                                    
-                                    // Show initial toast with longer duration
-                                    const loadingToast = toast({
-                                      title: "GA4 Sync Started",
-                                      description: "Fetching 15 months of historical data... This may take 30-60 seconds.",
-                                      duration: 60000, // Keep it open for 1 minute
-                                    });
-                                    
-                                    console.log('Starting GA4 sync for client:', editingItem.id);
-                                    
-                                    // Call the GA4 sync endpoint
-                                    const result = await clientService.triggerGA4Sync(editingItem.id);
-                                    
-                                    // Dismiss the loading toast
-                                    if (loadingToast.dismiss) {
-                                      loadingToast.dismiss();
-                                    }
-                                    
-                                    // Show success toast with property info
-                                    toast({
-                                      title: "✅ GA4 Sync Complete",
-                                      description: result.propertyId ? 
-                                        `Successfully synced data for property ${result.propertyId}` :
-                                        "Successfully synced GA4 data",
-                                      duration: 5000,
-                                    });
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  setIsLoading(true);
+                                  
+                                  // Show initial toast with longer duration
+                                  const loadingToast = toast({
+                                    title: "GA4 Sync Started",
+                                    description: "Fetching 15 months of historical data... This may take 30-60 seconds.",
+                                    duration: 60000, // Keep it open for 1 minute
+                                  });
+                                  
+                                  console.log('Starting GA4 sync for client:', editingItem.id);
+                                  
+                                  // Call the GA4 sync endpoint
+                                  const result = await clientService.triggerGA4Sync(editingItem.id);
+                                  
+                                  // Dismiss the loading toast
+                                  if (loadingToast.dismiss) {
+                                    loadingToast.dismiss();
+                                  }
+                                  
+                                  // Show success toast with property info
+                                  toast({
+                                    title: "✅ GA4 Sync Complete",
+                                    description: result.propertyId ? 
+                                      `Successfully synced data for property ${result.propertyId}` :
+                                      "Successfully synced GA4 data",
+                                    duration: 5000,
+                                  });
                                   
                                   // Refresh the clients list to show updated data
                                   queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
@@ -1875,37 +1873,7 @@ export default function AdminPanel() {
                                 </>
                               )}
                             </Button>
-                            
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs"
-                              onClick={async () => {
-                                const clientIds = ['demo-client-id', editingItem.id];
-                                
-                                console.log('🔍 CLIENT METRICS DEBUG - Checking data isolation...');
-                                
-                                for (const clientId of clientIds) {
-                                  try {
-                                    const response = await fetch(`/api/debug/client-metrics/${clientId}?period=2025-07`);
-                                    const data = await response.json();
-                                    console.log(`📊 Client ${clientId} metrics:`, data);
-                                  } catch (error) {
-                                    console.error(`❌ Error fetching metrics for ${clientId}:`, error);
-                                  }
-                                }
-                                
-                                toast({
-                                  title: "Debug Complete",
-                                  description: "Check console for client metrics comparison",
-                                  duration: 3000,
-                                });
-                              }}
-                            >
-                              Debug: Check Client Metrics
-                            </Button>
-                            </div>
+                          </div>
                           
                           {/* Last Sync Status */}
                           {editingItem?.id && editingItem?.ga4PropertyId && (
@@ -1918,13 +1886,14 @@ export default function AdminPanel() {
                             </div>
                           )}
                         </div>
+                      )}
                       
                       {/* Hidden inputs for form submission */}
                       <input 
                         type="hidden" 
                         id={editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new'} 
                         name="gaPropertyId" 
-                        defaultValue={editingItem?.ga4PropertyId && editingItem.ga4PropertyId.match(/^\d+$/) ? editingItem.ga4PropertyId : ""} 
+                        defaultValue={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""} 
                       />
                       <input 
                         type="hidden" 
@@ -2088,7 +2057,6 @@ export default function AdminPanel() {
                           placeholder="Select business size"
                         />
                       </div>
-                      
                       <div className="flex justify-end space-x-2">
                         <Button 
                           type="button"
@@ -2110,7 +2078,6 @@ export default function AdminPanel() {
                           }
                         </Button>
                       </div>
-                      </>
                     </form>
                   </DialogContent>
                 </Dialog>
