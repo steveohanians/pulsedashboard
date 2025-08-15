@@ -15,7 +15,7 @@ export class BenchmarkService extends BaseService {
    */
   async create(data: {
     name: string;
-    domain: string;
+    websiteUrl: string;
     industryVertical: string;
     businessSize: string;
   }): Promise<any> {
@@ -29,7 +29,7 @@ export class BenchmarkService extends BaseService {
    */
   async update(id: string, data: {
     name?: string;
-    domain?: string;
+    websiteUrl?: string;
     industryVertical?: string;
     businessSize?: string;
     status?: string;

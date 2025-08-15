@@ -2420,6 +2420,51 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <div className="flex space-x-1">
+                            {/* Sync Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                try {
+                                  toast({
+                                    title: "Syncing company...",
+                                    description: `Fetching SEMrush data for ${company.name}`,
+                                    duration: 5000,
+                                  });
+                                  
+                                  const response = await fetch(`/api/admin/benchmark/sync/${company.id}`, {
+                                    method: 'POST',
+                                    credentials: 'include',
+                                  });
+                                  
+                                  const result = await response.json();
+                                  
+                                  if (result.success) {
+                                    toast({
+                                      title: "Sync Complete",
+                                      description: `${company.name}: ${result.data.metricsStored} metrics stored`,
+                                      duration: 5000,
+                                    });
+                                    
+                                    // Refresh the companies list
+                                    queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+                                  } else {
+                                    throw new Error(result.error);
+                                  }
+                                } catch (error) {
+                                  toast({
+                                    title: "Sync Failed",
+                                    description: `Failed to sync ${company.name}: ${(error as Error).message}`,
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              title="Sync from SEMrush"
+                              className="h-8 w-8 p-0"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            
                             <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                               setIsDialogOpen(open);
                               if (!open) {
@@ -2605,6 +2650,51 @@ export default function AdminPanel() {
                             </TableCell>
                           <TableCell>
                             <div className="flex space-x-1">
+                              {/* Sync Button */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  try {
+                                    toast({
+                                      title: "Syncing company...",
+                                      description: `Fetching SEMrush data for ${company.name}`,
+                                      duration: 5000,
+                                    });
+                                    
+                                    const response = await fetch(`/api/admin/benchmark/sync/${company.id}`, {
+                                      method: 'POST',
+                                      credentials: 'include',
+                                    });
+                                    
+                                    const result = await response.json();
+                                    
+                                    if (result.success) {
+                                      toast({
+                                        title: "Sync Complete",
+                                        description: `${company.name}: ${result.data.metricsStored} metrics stored`,
+                                        duration: 5000,
+                                      });
+                                      
+                                      // Refresh the companies list
+                                      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+                                    } else {
+                                      throw new Error(result.error);
+                                    }
+                                  } catch (error) {
+                                    toast({
+                                      title: "Sync Failed",
+                                      description: `Failed to sync ${company.name}: ${(error as Error).message}`,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                title="Sync from SEMrush"
+                                className="h-8 w-8 p-0"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
@@ -2933,7 +3023,7 @@ export default function AdminPanel() {
                                   size="sm"
                                   className="h-8 w-8 p-0"
                                   onClick={() => {
-                                    setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
+                                    setEditingItem({ type: 'edit-cd-company', ...company });
                                     setEditingCdIndustryVertical(company.industryVertical);
                                     setIsDialogOpen(true);
                                   }}
@@ -3136,7 +3226,7 @@ export default function AdminPanel() {
                                 }}>
                                   <DialogTrigger asChild>
                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
-                                      setEditingItem({ type: 'edit-cd-company', id: company.id, ...company });
+                                      setEditingItem({ type: 'edit-cd-company', ...company });
                                       setEditingCdIndustryVertical(company.industryVertical); // Initialize industry state
                                       setIsDialogOpen(true);
                                     }}>
