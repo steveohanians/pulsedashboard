@@ -38,6 +38,21 @@ import {
   cacheManager
 } from '@/services/api';
 // import { useEvent, useEventEmitter } from '@/hooks/use-events';
+import type { 
+  Client, 
+  User, 
+  BenchmarkCompany, 
+  CDPortfolioCompany, 
+  FilterOption, 
+  MetricPrompt,
+  CreateClientData,
+  UpdateClientData,
+  CreateUserData,
+  UpdateUserData,
+  CreateBenchmarkCompanyData,
+  CreateCDPortfolioCompanyData,
+  CreateFilterOptionData
+} from '@/types/api.types';
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
@@ -220,44 +235,44 @@ export default function AdminPanel() {
   }, [location]);
 
   // Always-loaded queries for dropdowns and cross-tab functionality
-  const { data: clients, isLoading: clientsLoading } = useQuery<any[]>({
+  const { data: clients, isLoading: clientsLoading } = useQuery<Client[]>({
     queryKey: AdminQueryKeys.clients(),
     enabled: user?.role === "Admin", // Always load for admin - used in dropdowns
   });
 
   // Tab-specific queries - only load when needed for performance
-  const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<any[]>({
+  const { data: benchmarkCompanies, isLoading: benchmarkLoading } = useQuery<BenchmarkCompany[]>({
     queryKey: AdminQueryKeys.benchmarkCompanies(),
     enabled: user?.role === "Admin" && activeTab === "benchmark",
   });
 
-  const { data: users, isLoading: usersLoading } = useQuery<any[]>({
+  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: AdminQueryKeys.users(),
     enabled: user?.role === "Admin" && activeTab === "users",
   });
 
   // Query for CD portfolio companies (independent from clients)
-  const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<any[]>({
+  const { data: cdPortfolioCompanies, isLoading: cdPortfolioLoading } = useQuery<CDPortfolioCompany[]>({
     queryKey: AdminQueryKeys.cdPortfolio(),
     enabled: user?.role === "Admin" && activeTab === "cd-clients",
   });
 
   // Query for filter options to populate dropdowns dynamically - always loaded
-  const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<any[]>({
+  const { data: filterOptions, isLoading: filterOptionsLoading } = useQuery<FilterOption[]>({
     queryKey: AdminQueryKeys.filterOptions(),
     enabled: user?.role === "Admin", // Always load for admin - used in dropdowns across tabs
   });
 
   // Query for metric prompts
-  const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<any[]>({
+  const { data: metricPrompts, isLoading: metricPromptsLoading } = useQuery<MetricPrompt[]>({
     queryKey: AdminQueryKeys.metricPrompts(),
     enabled: user?.role === "Admin" && activeTab === "prompts",
   });
 
   // Mutations for client management
   const updateClientMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await clientService.update(id, data);
+    mutationFn: async ({ id, data }: { id: string; data: UpdateClientData }) => {
+      return await clientService.update<Client>(id, data);
     },
     onSuccess: (data) => {
       setIsDialogOpen(false);
@@ -298,7 +313,7 @@ export default function AdminPanel() {
 
   // Mutations for benchmark company management
   const updateCompanyMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Client> }) => {
       return await benchmarkService.update(id, data);
     },
     onSuccess: () => {
@@ -339,8 +354,8 @@ export default function AdminPanel() {
 
   // Mutations for user management
   const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await userService.update(id, data);
+    mutationFn: async ({ id, data }: { id: string; data: UpdateUserData }) => {
+      return await userService.update<User>(id, data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -418,8 +433,8 @@ export default function AdminPanel() {
 
   // Create mutations for adding new items
   const createClientMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await clientService.create(data);
+    mutationFn: async (data: CreateClientData) => {
+      return await clientService.create<Client>(data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -439,8 +454,8 @@ export default function AdminPanel() {
   });
 
   const createBenchmarkCompanyMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await benchmarkService.create(data);
+    mutationFn: async (data: CreateBenchmarkCompanyData) => {
+      return await benchmarkService.create<BenchmarkCompany>(data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -460,7 +475,7 @@ export default function AdminPanel() {
   });
 
   const inviteUserMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CreateUserData) => {
       return await userService.invite(data);
     },
     onSuccess: () => {
@@ -482,8 +497,8 @@ export default function AdminPanel() {
 
   // CD Portfolio Company mutations
   const createCdPortfolioCompanyMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await portfolioService.create(data);
+    mutationFn: async (data: CreateCDPortfolioCompanyData) => {
+      return await portfolioService.create<CDPortfolioCompany>(data);
     },
     onSuccess: (response) => {
       setIsDialogOpen(false);
@@ -519,8 +534,8 @@ export default function AdminPanel() {
   // Removed polling function - replaced with event-driven system
 
   const updateCdPortfolioCompanyMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await portfolioService.update(id, data);
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CDPortfolioCompany> }) => {
+      return await portfolioService.update<CDPortfolioCompany>(id, data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -563,7 +578,7 @@ export default function AdminPanel() {
 
   // Metric Prompts mutations
   const createMetricPromptMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Partial<MetricPrompt>) => {
       return await metricService.createPrompt(data);
     },
     onSuccess: () => {
@@ -584,7 +599,7 @@ export default function AdminPanel() {
   });
 
   const updateMetricPromptMutation = useMutation({
-    mutationFn: async ({ metricName, data }: { metricName: string; data: any }) => {
+    mutationFn: async ({ metricName, data }: { metricName: string; data: Partial<MetricPrompt> }) => {
       return await metricService.updatePrompt(metricName, data);
     },
     onSuccess: () => {
@@ -850,12 +865,12 @@ export default function AdminPanel() {
     setSortConfig({ key, direction });
   };
 
-  const sortedData = (data: any[] | undefined, _tab: string) => {
+  const sortedData = (data: (Client | User | BenchmarkCompany | CDPortfolioCompany | FilterOption)[] | undefined, _tab: string) => {
     if (!data || !sortConfig) return data || [];
     
     return [...data].sort((a, b) => {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
+      let aValue = (a as any)[sortConfig.key];
+      let bValue = (b as any)[sortConfig.key];
       
       // Handle null/undefined values - put them at the end
       if (aValue == null && bValue == null) return 0;
@@ -1124,7 +1139,7 @@ export default function AdminPanel() {
                             defaultValue="none"
                             options={[
                               { value: "none", label: "No Client (Admin Only)" },
-                              ...(clients?.map((client: any) => ({ value: client.id, label: client.name })) || [])
+                              ...(clients?.map((client: Client) => ({ value: client.id, label: client.name })) || [])
                             ]}
                             placeholder="Select a client"
                           />
@@ -1161,7 +1176,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(users, 'users')?.map((user: any) => (
+                      {sortedData(users, 'users')?.map((user: User) => (
                     <Card key={user.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1169,7 +1184,7 @@ export default function AdminPanel() {
                             <div className="font-medium text-sm">{user.name}</div>
                             <div className="text-xs text-gray-500">{user.email}</div>
                             <div className="text-xs text-gray-500">
-                              {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
+                              {clients?.find((c: Client) => c.id === user.clientId)?.name || "No Client"}
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                               <Badge 
@@ -1244,7 +1259,7 @@ export default function AdminPanel() {
                                       defaultValue={user.clientId || "none"}
                                       options={[
                                         { value: "none", label: "No Client (Admin Only)" },
-                                        ...(clients?.map((client: any) => ({ value: client.id, label: client.name })) || [])
+                                        ...(clients?.map((client: Client) => ({ value: client.id, label: client.name })) || [])
                                       ]}
                                       placeholder="Select a client"
                                     />
@@ -1332,19 +1347,19 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                      {sortedData(users, 'users')?.map((user: any) => (
+                      {sortedData(users, 'users')?.map((user: User) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium text-xs">
                             <div>
                               <div className="font-medium">{user.name}</div>
                               <div className="text-xs text-gray-500 lg:hidden">{user.email}</div>
                               <div className="text-xs text-gray-500 md:hidden">
-                                {clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}
+                                {clients?.find((c: Client) => c.id === user.clientId)?.name || "No Client"}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell text-xs">{user.email}</TableCell>
-                          <TableCell className="hidden md:table-cell text-xs">{clients?.find((c: any) => c.id === user.clientId)?.name || "No Client"}</TableCell>
+                          <TableCell className="hidden md:table-cell text-xs">{clients?.find((c: Client) => c.id === user.clientId)?.name || "No Client"}</TableCell>
                           <TableCell>
                             <Badge 
                               variant={user.role === "Admin" ? "default" : "outline"} 
@@ -1436,7 +1451,7 @@ export default function AdminPanel() {
                                         defaultValue={user.clientId || "none"}
                                         options={[
                                           { value: "none", label: "No Client (Admin Only)" },
-                                          ...(clients?.map((client: any) => ({ value: client.id, label: client.name })) || [])
+                                          ...(clients?.map((client: Client) => ({ value: client.id, label: client.name })) || [])
                                         ]}
                                         placeholder="Select a client"
                                       />
@@ -1536,7 +1551,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(clients, 'clients')?.map((client: any) => (
+                      {sortedData(clients, 'clients')?.map((client: Client) => (
                     <Card key={client.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1616,7 +1631,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(clients, 'clients')?.map((client: any) => (
+                        {sortedData(clients, 'clients')?.map((client: Client) => (
                           <TableRow key={client.id}>
                             <TableCell className="font-medium text-xs">
                               <div>
@@ -1816,7 +1831,7 @@ export default function AdminPanel() {
                                   await clientService.clearIcon(editingItem.id);
                                   
                                   // Update the editingItem to remove the icon immediately
-                                  setEditingItem((prev: any) => prev ? { ...prev, iconUrl: null } : prev);
+                                  setEditingItem((prev: Client | null) => prev ? { ...prev, iconUrl: null } : prev);
                                   toast({
                                     title: "Icon cleared successfully",
                                     description: "Client icon has been removed.",
@@ -1865,7 +1880,7 @@ export default function AdminPanel() {
                                   console.log('Icon fetch response:', response);
                                   
                                   if (response.iconUrl) {
-                                    setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
+                                    setEditingItem((prev: Client | null) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
                                     toast({
                                       title: "Icon fetched successfully",
                                       description: "Client icon has been updated.",
@@ -2094,7 +2109,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
+                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company: BenchmarkCompany) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2260,7 +2275,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(benchmarkCompanies, 'benchmark')?.map((company: any) => (
+                        {sortedData(benchmarkCompanies, 'benchmark')?.map((company: BenchmarkCompany) => (
                           <TableRow key={company.id}>
                             <TableCell className="font-medium text-xs">
                               <div>
@@ -2578,7 +2593,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
+                      {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: CDPortfolioCompany) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2777,7 +2792,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: any) => (
+                        {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: CDPortfolioCompany) => (
                           <TableRow key={company.id}>
                             <TableCell className="font-medium text-xs">
                               <div>
@@ -3291,7 +3306,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {metricPrompts.map((prompt: any) => (
+                        {metricPrompts.map((prompt: MetricPrompt) => (
                           <TableRow key={prompt.metricName}>
                             <TableCell className="font-medium text-xs">{prompt.metricName}</TableCell>
                             <TableCell className="max-w-xs truncate text-xs">{prompt.description || 'No description'}</TableCell>

@@ -14,35 +14,35 @@ export abstract class BaseService {
   /**
    * Make a request to the API
    */
-  protected request<T = any>(method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', path: string = '', data?: any): Promise<T> {
+  protected request<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', path: string = '', data?: unknown): Promise<T> {
     return apiRequest(method, `${this.basePath}${path}`, data);
   }
 
   /**
    * Get all items
    */
-  async getAll<T = any>(): Promise<T[]> {
+  async getAll<T>(): Promise<T[]> {
     return this.request<T[]>('GET');
   }
 
   /**
    * Get item by ID
    */
-  async getById<T = any>(id: string): Promise<T> {
+  async getById<T>(id: string): Promise<T> {
     return this.request<T>('GET', `/${id}`);
   }
 
   /**
    * Create new item
    */
-  async create<T = any>(data: any): Promise<T> {
+  async create<T>(data: unknown): Promise<T> {
     return this.request<T>('POST', '', data);
   }
 
   /**
    * Update existing item
    */
-  async update<T = any>(id: string, data: any): Promise<T> {
+  async update<T>(id: string, data: unknown): Promise<T> {
     return this.request<T>('PUT', `/${id}`, data);
   }
 
