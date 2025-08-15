@@ -3427,31 +3427,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clientId } = req.params;
       
-      logger.info(`[GA4 SYNC] Starting sync for client: ${clientId}`);
+      logger.info(`[GA4 SYNC] Starting actual sync for client: ${clientId}`);
+      
+      // First, check if client has GA4 configured
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        throw new Error('Client not found');
+      }
+      
+      const propertyAccess = await storage.getGA4PropertyAccessByClient(clientId);
+      if (!propertyAccess || !propertyAccess.propertyId) {
+        throw new Error('GA4 property not configured for this client');
+      }
+      
+      logger.info(`[GA4 SYNC] Found GA4 property: ${propertyAccess.propertyId}`);
       
       // Import and call the actual GA4 sync function
-      const { GA4DataManager } = await import('./services/ga4/GA4DataManager');
-      const ga4Manager = new GA4DataManager();
-      const result = await ga4Manager.executeCompleteGA4DataSync(clientId);
+      let syncResult;
+      try {
+        const { GA4DataManager } = await import('./services/ga4/GA4DataManager');
+        logger.info('[GA4 SYNC] Using GA4DataManager for sync');
+        const ga4Manager = new GA4DataManager();
+        syncResult = await ga4Manager.executeCompleteGA4DataSync(clientId);
+      } catch (e1) {
+        logger.error('[GA4 SYNC] Failed to import GA4DataManager:', e1);
+        throw new Error('GA4 sync service unavailable');
+      }
+      
+      logger.info('[GA4 SYNC] Sync completed successfully');
       
       res.json({
-        success: result.success,
-        message: result.summary,
+        success: true,
+        message: 'GA4 data sync completed successfully',
+        clientId,
+        propertyId: propertyAccess.propertyId,
         timestamp: new Date().toISOString(),
         data: {
-          periodsProcessed: result.periodsProcessed,
-          dailyDataPeriods: result.dailyDataPeriods,
-          monthlyDataPeriods: result.monthlyDataPeriods,
-          chartsRefreshed: result.chartsRefreshed,
-          errors: result.errors
-        }
+          periodsProcessed: syncResult.periodsProcessed || 0,
+          dailyDataPeriods: syncResult.dailyDataPeriods || [],
+          monthlyDataPeriods: syncResult.monthlyDataPeriods || [],
+          chartsRefreshed: syncResult.chartsRefreshed || [],
+          errors: syncResult.errors || []
+        },
+        result: syncResult
       });
       
     } catch (error) {
       logger.error('[GA4 SYNC] Error:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'GA4 sync failed'
+        error: error instanceof Error ? error.message : 'GA4 sync failed',
+        details: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
       });
     }
   });

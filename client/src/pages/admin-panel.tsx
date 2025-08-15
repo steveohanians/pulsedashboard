@@ -279,7 +279,7 @@ export default function AdminPanel() {
   // Query for metric prompts
   const { data: metricPrompts, isLoading: metricPromptsLoading, isError: metricPromptsError, refetch: refetchMetricPrompts } = useQuery<MetricPrompt[]>({
     queryKey: AdminQueryKeys.metricPrompts(),
-    queryFn: () => metricService.getAllPrompts(),
+    queryFn: () => metricService.getPrompts(),
     enabled: user?.role === "Admin" && activeTab === "prompts",
   });
 
@@ -1816,24 +1816,38 @@ export default function AdminPanel() {
                               onClick={async () => {
                                 try {
                                   setIsLoading(true);
-                                  toast({
-                                    title: "Starting GA4 sync...",
-                                    description: "This may take 30-60 seconds",
-                                    duration: 5000,
+                                  
+                                  // Show initial toast with longer duration
+                                  const loadingToast = toast({
+                                    title: "GA4 Sync Started",
+                                    description: "Fetching 15 months of historical data... This may take 30-60 seconds.",
+                                    duration: 60000, // Keep it open for 1 minute
                                   });
                                   
-                                  // Call the GA4 sync endpoint
-                                  await clientService.triggerGA4Sync(editingItem.id);
+                                  console.log('Starting GA4 sync for client:', editingItem.id);
                                   
+                                  // Call the GA4 sync endpoint
+                                  const result = await clientService.triggerGA4Sync(editingItem.id);
+                                  
+                                  // Dismiss the loading toast
+                                  if (loadingToast.dismiss) {
+                                    loadingToast.dismiss();
+                                  }
+                                  
+                                  // Show success toast with property info
                                   toast({
-                                    title: "GA4 Sync Complete",
-                                    description: "Successfully synced GA4 data",
+                                    title: "✅ GA4 Sync Complete",
+                                    description: result.propertyId ? 
+                                      `Successfully synced data for property ${result.propertyId}` :
+                                      "Successfully synced GA4 data",
                                     duration: 5000,
                                   });
                                   
                                   // Refresh the clients list to show updated data
                                   queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
+                                  
                                 } catch (error) {
+                                  console.error('GA4 sync error:', error);
                                   toast({
                                     title: "GA4 Sync Failed",
                                     description: error instanceof Error ? error.message : "Failed to sync GA4 data",
@@ -1860,6 +1874,17 @@ export default function AdminPanel() {
                               )}
                             </Button>
                           </div>
+                          
+                          {/* Last Sync Status */}
+                          {editingItem?.id && editingItem?.ga4PropertyId && (
+                            <div className="mt-3 pt-3 border-t border-blue-200 text-xs text-blue-700">
+                              <p><span className="font-medium">Property ID:</span> {editingItem.ga4PropertyId}</p>
+                              <p><span className="font-medium">Last sync:</span> {editingItem.lastGA4Sync ? 
+                                new Date(editingItem.lastGA4Sync).toLocaleString() : 
+                                'Never'
+                              }</p>
+                            </div>
+                          )}
                         </div>
                       )}
                       

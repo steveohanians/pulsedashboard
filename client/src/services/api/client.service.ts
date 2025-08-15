@@ -48,7 +48,7 @@ export class ClientService extends BaseService {
   async create<T = any>(data: any): Promise<T> {
     const result = await super.create(data);
     cacheManager.invalidate('client');
-    return result;
+    return result as T;
   }
 
   /**
@@ -57,7 +57,7 @@ export class ClientService extends BaseService {
   async update<T = any>(id: string, data: any): Promise<T> {
     const result = await super.update(id, data);
     cacheManager.invalidate('client');
-    return result;
+    return result as T;
   }
 
   /**
@@ -74,7 +74,7 @@ export class ClientService extends BaseService {
   async fetchIcon(id: string, domain?: string): Promise<{ iconUrl?: string; message: string }> {
     const result = await this.request('POST', `/${id}/fetch-icon`, { domain });
     cacheManager.invalidate('client');
-    return result;
+    return result as { iconUrl?: string; message: string };
   }
 
   /**
@@ -91,6 +91,9 @@ export class ClientService extends BaseService {
   async triggerGA4Sync(id: string): Promise<{ 
     success: boolean;
     message: string;
+    clientId?: string;
+    propertyId?: string;
+    timestamp?: string;
     data?: {
       periodsProcessed: number;
       dailyDataPeriods: string[];
