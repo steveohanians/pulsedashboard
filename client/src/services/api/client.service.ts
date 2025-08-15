@@ -88,7 +88,17 @@ export class ClientService extends BaseService {
   /**
    * Trigger complete GA4 data sync for client
    */
-  async triggerGA4Sync(id: string): Promise<{ message: string }> {
+  async triggerGA4Sync(id: string): Promise<{ 
+    success: boolean;
+    message: string;
+    data?: {
+      periodsProcessed: number;
+      dailyDataPeriods: string[];
+      monthlyDataPeriods: string[];
+      chartsRefreshed: string[];
+      errors: string[];
+    };
+  }> {
     eventBus.emit('ga4.sync.started', { clientId: id });
     
     try {
