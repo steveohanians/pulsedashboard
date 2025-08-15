@@ -3553,6 +3553,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug GA4 setup for a client
+  app.get('/api/debug/ga4-setup/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Get client
+      const client = await storage.getClient(clientId);
+      
+      // Get property access
+      const propertyAccess = await storage.getGA4PropertyAccessByClient(clientId);
+      
+      // Get service account if configured
+      let serviceAccount = null;
+      if (propertyAccess?.serviceAccountId) {
+        serviceAccount = await storage.getGA4ServiceAccount(propertyAccess.serviceAccountId);
+      }
+      
+      // Test GA4 connection using existing GA4AuthenticationService
+      let connectionTest = { success: false, error: null };
+      if (propertyAccess && serviceAccount) {
+        try {
+          const { GA4AuthenticationService } = await import('./services/ga4/GA4AuthenticationService');
+          const authService = new GA4AuthenticationService();
+          const validAccess = await authService.getPropertyAccess(clientId);
+          connectionTest = { 
+            success: !!validAccess, 
+            error: validAccess ? null : 'Unable to verify GA4 property access'
+          };
+        } catch (error) {
+          connectionTest = { success: false, error: error instanceof Error ? error.message : String(error) };
+        }
+      }
+      
+      res.json({
+        client: {
+          id: client?.id,
+          name: client?.name,
+          ga4PropertyId: client?.ga4PropertyId
+        },
+        propertyAccess: propertyAccess ? {
+          propertyId: propertyAccess.propertyId,
+          serviceAccountId: propertyAccess.serviceAccountId,
+          createdAt: propertyAccess.createdAt
+        } : null,
+        serviceAccount: serviceAccount ? {
+          id: serviceAccount.id,
+          email: serviceAccount.serviceAccountEmail,
+          isActive: serviceAccount.active,
+          hasCredentials: !!(serviceAccount.accessToken && serviceAccount.refreshToken),
+          verified: serviceAccount.verified
+        } : null,
+        connectionTest,
+        setupComplete: !!(propertyAccess && serviceAccount && serviceAccount.isActive)
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Fix GA4 property access - create or update property access record
+  app.post('/api/fix-ga4-access/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      // Get client
+      const client = await storage.getClient(clientId);
+      if (!client || !client.ga4PropertyId) {
+        throw new Error('Client has no GA4 property configured');
+      }
+      
+      // Get first active service account
+      const serviceAccounts = await storage.getGA4ServiceAccounts();
+      const activeAccount = serviceAccounts.find(sa => sa.isActive);
+      
+      if (!activeAccount) {
+        throw new Error('No active service account found');
+      }
+      
+      // Create or update property access
+      const propertyAccess = await storage.createGA4PropertyAccess({
+        clientId: clientId,
+        propertyId: client.ga4PropertyId,
+        serviceAccountId: activeAccount.id
+      });
+      
+      res.json({
+        success: true,
+        message: 'GA4 property access created/updated',
+        propertyAccess
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Debug raw service account data
+  app.get('/api/debug/raw-service-account/:serviceAccountId', requireAuth, async (req, res) => {
+    try {
+      const { serviceAccountId } = req.params;
+      const serviceAccount = await storage.getGA4ServiceAccount(serviceAccountId);
+      
+      res.json({
+        serviceAccount,
+        fieldTypes: serviceAccount ? Object.keys(serviceAccount).map(key => ({
+          field: key,
+          type: typeof serviceAccount[key],
+          hasValue: !!serviceAccount[key]
+        })) : null
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // Test endpoint to manually store a metric
   app.post('/api/test-store-metric/:clientId', requireAuth, async (req, res) => {
     try {
