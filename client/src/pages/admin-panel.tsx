@@ -1860,38 +1860,42 @@ export default function AdminPanel() {
                               onClick={async () => {
                                 try {
                                   setIsLoading(true);
-                                  
-                                  // Show initial toast with longer duration
-                                  const loadingToast = toast({
-                                    title: "GA4 Sync Started",
-                                    description: "Fetching 15 months of historical data... This may take 30-60 seconds.",
-                                    duration: 60000, // Keep it open for 1 minute
-                                  });
-                                  
-                                  console.log('Starting GA4 sync for client:', editingItem.id);
-                                  
-                                  // Call the GA4 sync endpoint
-                                  const result = await clientService.triggerGA4Sync(editingItem.id);
-                                  
-                                  // Dismiss the loading toast
-                                  if (loadingToast.dismiss) {
-                                    loadingToast.dismiss();
-                                  }
-                                  
-                                  // Show success toast with property info
                                   toast({
-                                    title: "✅ GA4 Sync Complete",
-                                    description: result.propertyId ? 
-                                      `Successfully synced data for property ${result.propertyId}` :
-                                      "Successfully synced GA4 data",
+                                    title: "Starting GA4 sync...",
+                                    description: "This may take 30-60 seconds",
                                     duration: 5000,
                                   });
                                   
-                                  // Refresh the clients list to show updated data
+                                  const endpoint = `/api/ga4-sync/${editingItem.id}`;
+                                  const response = await fetch(endpoint, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                  });
+                                  
+                                  const result = await response.json();
+                                  
+                                  if (!response.ok || !result.success) {
+                                    throw new Error(result.error || 'GA4 sync failed');
+                                  }
+                                  
+                                  // Simply update the lastGA4Sync field with current time
+                                  const syncTime = new Date().toISOString();
+                                  setEditingItem(prev => ({
+                                    ...prev,
+                                    lastGA4Sync: syncTime
+                                  }));
+                                  
+                                  toast({
+                                    title: "GA4 Sync Complete",
+                                    description: `Successfully synced GA4 data. ${result.metricsStored || 0} metrics stored.`,
+                                    duration: 5000,
+                                  });
+                                  
+                                  // Refresh the clients list in the background
                                   queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
                                   
                                 } catch (error) {
-                                  console.error('GA4 sync error:', error);
                                   toast({
                                     title: "GA4 Sync Failed",
                                     description: error instanceof Error ? error.message : "Failed to sync GA4 data",
