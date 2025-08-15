@@ -57,12 +57,19 @@ export function GA4IntegrationPanel({
 
   // Debug logging for service accounts
   useEffect(() => {
-    logger.info("[GA4IntegrationPanel] Service accounts data:", {
+    console.log('[GA4IntegrationPanel] Component received:', {
+      clientId,
+      serviceAccountsCount: serviceAccounts?.length,
       serviceAccounts,
-      activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [],
+      activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified) || [],
       allServiceAccounts: serviceAccounts || []
     });
-  }, [serviceAccounts]);
+    logger.info("[GA4IntegrationPanel] Service accounts data:", {
+      serviceAccounts,
+      activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified) || [],
+      allServiceAccounts: serviceAccounts || []
+    });
+  }, [serviceAccounts, clientId]);
 
   // Fetch current property access for this client (single property per client)
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess | null>({
@@ -83,6 +90,23 @@ export function GA4IntegrationPanel({
     // Reset service account selection to force re-population
     setSelectedServiceAccount("");
   }, [currentGA4PropertyId]);
+
+  // Initialize service account from existing property access if available
+  useEffect(() => {
+    if (clientId) {
+      // Fetch current property access to get the service account
+      fetch(`/api/admin/ga4-property-access/client/${clientId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data?.serviceAccountId) {
+            console.log('Setting service account from existing data:', data.serviceAccountId);
+            setSelectedServiceAccount(data.serviceAccountId);
+            onServiceAccountUpdate?.(data.serviceAccountId);
+          }
+        })
+        .catch(err => console.error('Error fetching property access:', err));
+    }
+  }, [clientId, onServiceAccountUpdate]);
 
   // Auto-populate property ID and service account from existing property access data
   useEffect(() => {
@@ -207,35 +231,42 @@ export function GA4IntegrationPanel({
         </div>
 
         <div>
-          <Label htmlFor="serviceAccount">Service Account</Label>
-          <Select value={selectedServiceAccount} onValueChange={async (value) => {
-            setSelectedServiceAccount(value);
-            onServiceAccountUpdate?.(value);
-            
-            // Auto-save service account changes if there's an existing access record
-            if (currentAccess && value !== currentAccess.serviceAccountId) {
-              try {
-                await apiRequest("PUT", `/api/admin/ga4-property-access/${currentAccess.id}`, {
-                  serviceAccountId: value
-                });
-                // Refresh property access data to show updated info
-                refetchPropertyAccess();
-              } catch (error) {
-                logger.warn("Failed to save service account change:", error);
+          <Label htmlFor="ga4-service-account">Service Account</Label>
+          <select
+            id="ga4-service-account"
+            name="serviceAccountId"
+            value={selectedServiceAccount || ""}
+            onChange={async (e) => {
+              console.log('Service account selected:', e.target.value); // Debug log
+              setSelectedServiceAccount(e.target.value);
+              onServiceAccountUpdate?.(e.target.value);
+              
+              // Auto-save service account changes if there's an existing access record
+              if (currentAccess && e.target.value !== currentAccess.serviceAccountId) {
+                try {
+                  await apiRequest("PUT", `/api/admin/ga4-property-access/${currentAccess.id}`, {
+                    serviceAccountId: e.target.value
+                  });
+                  // Refresh property access data to show updated info
+                  refetchPropertyAccess();
+                } catch (error) {
+                  logger.warn("Failed to save service account change:", error);
+                }
               }
-            }
-          }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a service account" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeServiceAccounts.map((account) => (
-                <SelectItem key={account.serviceAccount.id} value={account.serviceAccount.id}>
-                  {account.serviceAccount.name} ({account.serviceAccount.serviceAccountEmail})
-                </SelectItem>
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1"
+            disabled={!serviceAccounts || serviceAccounts.length === 0}
+          >
+            <option value="">Select a service account</option>
+            {serviceAccounts
+              ?.filter(sa => sa.serviceAccount?.active && sa.serviceAccount?.verified)
+              .map(sa => (
+                <option key={sa.serviceAccount.id} value={sa.serviceAccount.id}>
+                  {sa.serviceAccount.name} ({sa.serviceAccount.serviceAccountEmail})
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+          </select>
+          
           {activeServiceAccounts.length === 0 && serviceAccounts && serviceAccounts.length > 0 && (
             <p className="text-xs text-amber-600 mt-1">
               No active/verified service accounts found. Available accounts: {serviceAccounts.length} (check GA4 Accounts tab to verify accounts)
