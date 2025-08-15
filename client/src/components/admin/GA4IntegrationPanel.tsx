@@ -254,7 +254,6 @@ export function GA4IntegrationPanel({
                   label: `${sa.serviceAccount.name} (${sa.serviceAccount.serviceAccountEmail})`
                 }))
             ]}
-            placeholder="Select a service account"
             disabled={!serviceAccounts || serviceAccounts.length === 0}
           />
           
