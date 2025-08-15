@@ -1,0 +1,112 @@
+Looking at my /server/routes.ts file, create a complete service layer for the frontend at /client/src/services/api/
+
+**Requirements:**
+1. Create services that mirror ALL endpoints in routes.ts
+2. Keep my existing folder structure and naming conventions
+3. DO NOT modify routes.ts or any existing files
+4. DO NOT create duplicate API calls - wrap the existing apiRequest from /client/src/lib/queryClient.ts
+
+**Create this exact structure:**
+/client/src/services/api/
+├── base.service.ts         # Base class with common CRUD
+├── client.service.ts        # Endpoints: /api/admin/clients/*
+├── user.service.ts          # Endpoints: /api/admin/users/*
+├── competitor.service.ts    # Endpoints: /api/competitors/*
+├── benchmark.service.ts     # Endpoints: /api/admin/benchmark-companies/*
+├── portfolio.service.ts     # Endpoints: /api/admin/cd-portfolio/*
+├── filter.service.ts        # Endpoints: /api/admin/filter-options/*
+├── ga4.service.ts          # Endpoints: /api/admin/ga4/, /api/ga4/
+├── insight.service.ts       # Endpoints: /api/ai-insights/, /api/insights/
+├── metric.service.ts        # Endpoints: /api/metrics/*
+├── auth.service.ts          # Endpoints: /api/login, /api/logout, /api/reset-password
+├── dashboard.service.ts     # Endpoints: /api/dashboard/*, /api/filters
+└── index.ts                 # Export all services as singletons
+
+**Base Service Template:**
+```typescript
+// base.service.ts
+import { apiRequest } from '@/lib/queryClient';
+
+export abstract class BaseService {
+  protected basePath: string;
+
+  constructor(basePath: string) {
+    this.basePath = basePath;
+  }
+
+  protected request<T = any>(method: string, path: string = '', data?: any): Promise<T> {
+    return apiRequest(method, `${this.basePath}${path}`, data);
+  }
+
+  async getAll<T = any>(): Promise<T[]> {
+    return this.request<T[]>('GET');
+  }
+
+  async getById<T = any>(id: string): Promise<T> {
+    return this.request<T>('GET', `/${id}`);
+  }
+
+  async create<T = any>(data: any): Promise<T> {
+    return this.request<T>('POST', '', data);
+  }
+
+  async update<T = any>(id: string, data: any): Promise<T> {
+    return this.request<T>('PUT', `/${id}`, data);
+  }
+
+  async delete(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/${id}`);
+  }
+}
+For each service, extract from routes.ts:
+
+Find all app.get/post/put/delete calls for that path
+Create a method for each endpoint
+Add the special business logic I can see in routes.ts
+
+Special methods to include:
+ClientService:
+
+createWithGA4Setup() - creates client and optionally triggers GA4 sync
+fetchIcon(id, domain) - POST /api/admin/clients/:id/fetch-icon
+clearIcon(id) - DELETE /api/admin/clients/:id/clear-icon
+triggerGA4Sync(id) - NEW: calls executeCompleteGA4DataSync
+
+GA4Service:
+
+executeCompleteDataSync(clientId) - POST /api/admin/ga4/complete-data-sync/:clientId
+populateHistorical(clientId) - POST /api/admin/ga4/populate-historical/:clientId
+refreshCurrentDaily(clientId) - POST /api/admin/ga4/refresh-current-daily/:clientId
+validateAccess(clientId) - GET /api/admin/ga4/validate-access/:clientId
+
+PortfolioService:
+
+recalculateAverages() - POST /api/admin/cd-portfolio/recalculate-averages
+resyncSemrush(id) - POST /api/admin/cd-portfolio/:id/resync-semrush
+getCompanyData(id) - GET /api/admin/cd-portfolio/:id/data
+
+InsightService:
+
+generateForMetric(clientId, metricName, data) - POST /api/generate-metric-insight/:clientId
+deleteInsightAndContext(clientId, metricName, period) - DELETE /api/ai-insights/:clientId/:metricName
+getWithContext(clientId, period) - GET /api/ai-insights/:clientId
+
+UserService:
+
+invite(data) - POST /api/admin/users/invite
+sendPasswordReset(id) - POST /api/admin/users/:id/send-password-reset
+
+Export pattern in index.ts:
+typescript// Singleton instances
+export const clientService = new ClientService();
+export const userService = new UserService();
+// ... etc
+
+// Also export classes for testing
+export { ClientService, UserService, ... };
+Use my existing types from:
+
+/shared/schema.ts
+/client/src/lib/adminQueryKeys.ts
+
+Do NOT generate mock data or example usage. Just create the service classes.
