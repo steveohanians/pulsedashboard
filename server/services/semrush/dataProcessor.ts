@@ -568,7 +568,24 @@ export class SemrushDataProcessor {
             channel: null
           });
         } else {
-          logger.warn(`🧮 No values found for ${metricName} in ${period}`);
+          // 🔧 FALLBACK: Use most recent available data for missing periods
+          const fallbackAverage = this.findMostRecentAverage(allCompanyMetrics, metricName, period, periods);
+          if (fallbackAverage !== null) {
+            logger.info(`🧮 USING FALLBACK: ${metricName} = ${fallbackAverage} (most recent data) for ${period}`);
+            avgMetrics.push({
+              clientId: null,
+              competitorId: null,
+              cdPortfolioCompanyId: null,
+              benchmarkCompanyId: null,
+              metricName,
+              value: { value: fallbackAverage, source: 'industry_average_fallback' },
+              sourceType: 'Industry_Avg',
+              timePeriod: period,
+              channel: null
+            });
+          } else {
+            logger.warn(`🧮 No values found for ${metricName} in ${period} and no fallback available`);
+          }
         }
       }
 
@@ -600,6 +617,43 @@ export class SemrushDataProcessor {
       trafficChannelMetrics: avgTrafficChannels,
       deviceDistributionMetrics: avgDeviceDistribution
     };
+  }
+
+  /**
+   * Find the most recent industry average for a metric when current period data is missing
+   */
+  private findMostRecentAverage(
+    allCompanyMetrics: Map<string, ProcessedMetricData>,
+    metricName: string,
+    currentPeriod: string,
+    allPeriods: string[]
+  ): number | null {
+    // Sort periods in descending order to find most recent
+    const sortedPeriods = [...allPeriods].sort().reverse();
+    const currentIndex = sortedPeriods.indexOf(currentPeriod);
+    
+    // Look for data in previous periods
+    for (let i = currentIndex + 1; i < sortedPeriods.length; i++) {
+      const checkPeriod = sortedPeriods[i];
+      const values: number[] = [];
+      
+      for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+        const metric = data.metrics.find((m: InsertMetric) => 
+          m.metricName === metricName && m.timePeriod === checkPeriod
+        );
+        if (metric && metric.value && typeof metric.value === 'object' && 'value' in metric.value) {
+          values.push(metric.value.value as number);
+        }
+      }
+      
+      if (values.length > 0) {
+        const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+        logger.info(`🔄 Found fallback average for ${metricName}: ${average} from period ${checkPeriod}`);
+        return average;
+      }
+    }
+    
+    return null;
   }
 
   /**
