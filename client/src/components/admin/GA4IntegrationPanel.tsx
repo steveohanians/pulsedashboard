@@ -14,6 +14,7 @@ import { logger } from "@/utils/logger";
 interface GA4IntegrationPanelProps {
   clientId: string | null;
   currentGA4PropertyId: string;
+  serviceAccounts?: ServiceAccount[];
   onGA4PropertyUpdate: (propertyId: string) => void;
   onServiceAccountUpdate?: (serviceAccountId: string) => void;
 }
@@ -43,26 +44,25 @@ interface PropertyAccess {
   errorMessage?: string;
 }
 
-export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4PropertyUpdate, onServiceAccountUpdate }: GA4IntegrationPanelProps) {
+export function GA4IntegrationPanel({ 
+  clientId, 
+  currentGA4PropertyId, 
+  serviceAccounts = [],
+  onGA4PropertyUpdate, 
+  onServiceAccountUpdate 
+}: GA4IntegrationPanelProps) {
   const [propertyId, setPropertyId] = useState(currentGA4PropertyId);
   const [selectedServiceAccount, setSelectedServiceAccount] = useState<string>("");
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-
-  // Fetch available service accounts
-  const { data: serviceAccounts, error: serviceAccountsError, isLoading: serviceAccountsLoading } = useQuery<ServiceAccount[]>({
-    queryKey: AdminQueryKeys.ga4ServiceAccounts(),
-  });
 
   // Debug logging for service accounts
   useEffect(() => {
     logger.info("[GA4IntegrationPanel] Service accounts data:", {
       serviceAccounts,
-      serviceAccountsError,
-      serviceAccountsLoading,
       activeServiceAccounts: serviceAccounts?.filter(sa => sa.serviceAccount.active && sa.serviceAccount.verified) || [],
       allServiceAccounts: serviceAccounts || []
     });
-  }, [serviceAccounts, serviceAccountsError, serviceAccountsLoading]);
+  }, [serviceAccounts]);
 
   // Fetch current property access for this client (single property per client)
   const { data: propertyAccess, refetch: refetchPropertyAccess } = useQuery<PropertyAccess | null>({
@@ -236,22 +236,12 @@ export function GA4IntegrationPanel({ clientId, currentGA4PropertyId, onGA4Prope
               ))}
             </SelectContent>
           </Select>
-          {serviceAccountsLoading && (
-            <p className="text-xs text-blue-600 mt-1">
-              Loading service accounts...
-            </p>
-          )}
-          {!serviceAccountsLoading && serviceAccountsError && (
-            <p className="text-xs text-red-600 mt-1">
-              Error loading service accounts: {serviceAccountsError instanceof Error ? serviceAccountsError.message : 'Unknown error'}
-            </p>
-          )}
-          {!serviceAccountsLoading && !serviceAccountsError && activeServiceAccounts.length === 0 && serviceAccounts && serviceAccounts.length > 0 && (
+          {activeServiceAccounts.length === 0 && serviceAccounts && serviceAccounts.length > 0 && (
             <p className="text-xs text-amber-600 mt-1">
               No active/verified service accounts found. Available accounts: {serviceAccounts.length} (check GA4 Accounts tab to verify accounts)
             </p>
           )}
-          {!serviceAccountsLoading && !serviceAccountsError && activeServiceAccounts.length === 0 && (!serviceAccounts || serviceAccounts.length === 0) && (
+          {activeServiceAccounts.length === 0 && (!serviceAccounts || serviceAccounts.length === 0) && (
             <p className="text-xs text-amber-600 mt-1">
               No service accounts available. Add one in the GA4 Accounts tab.
             </p>

@@ -243,6 +243,12 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin", // Always load for admin - used in dropdowns
   });
 
+  // Query for GA4 service accounts (needed for client edit dropdown)
+  const { data: ga4ServiceAccounts, isLoading: ga4ServiceAccountsLoading } = useQuery<any[]>({
+    queryKey: AdminQueryKeys.ga4ServiceAccounts(),
+    enabled: user?.role === "Admin", // Always load for admin, not just on specific tab
+  });
+
   // Tab-specific queries - only load when needed for performance
   const { data: benchmarkCompanies, isLoading: benchmarkLoading, isError: benchmarkError, refetch: refetchBenchmark } = useQuery<BenchmarkCompany[]>({
     queryKey: AdminQueryKeys.benchmarkCompanies(),
@@ -1773,6 +1779,7 @@ export default function AdminPanel() {
                       <GA4IntegrationPanel 
                         clientId={editingItem?.id || null}
                         currentGA4PropertyId={editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) ? editingItem.ga4PropertyId : ""}
+                        serviceAccounts={ga4ServiceAccounts || []}
                         onGA4PropertyUpdate={(propertyId) => {
                           // Update hidden form field for submission
                           const hiddenInputId = editingItem?.id ? `hidden-gaPropertyId-${editingItem.id}` : 'hidden-gaPropertyId-new';
