@@ -1956,14 +1956,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMetricsByCompanyId(companyId: string): Promise<Metric[]> {
-    // Get metrics for a specific CD Portfolio company using the cd_portfolio_company_id field
+    // Try to get metrics for benchmark company first
+    const benchmarkMetrics = await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, 'Benchmark'),
+          eq(metrics.benchmarkCompanyId, companyId)
+        )
+      )
+      .orderBy(metrics.timePeriod, metrics.metricName);
+
+    if (benchmarkMetrics.length > 0) {
+      return benchmarkMetrics;
+    }
+
+    // Fall back to CD Portfolio company metrics
     return await db
       .select()
       .from(metrics)
       .where(
         and(
           eq(metrics.sourceType, 'CD_Portfolio'),
-          eq(metrics.cdPortfolioCompanyId, companyId) // Filter by specific company ID
+          eq(metrics.cdPortfolioCompanyId, companyId)
         )
       )
       .orderBy(metrics.timePeriod, metrics.metricName);

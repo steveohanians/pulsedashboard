@@ -470,6 +470,336 @@ export class SemrushDataProcessor {
       }
     }
   }
+
+  /**
+   * Convert SEMrush data to our database metric format for benchmark companies
+   */
+  public processBenchmarkCompanyData(
+    companyId: string, 
+    historicalData: Map<string, SemrushMetricData>
+  ): ProcessedMetricData {
+    logger.info('Processing SEMrush data for Benchmark company', { 
+      companyId, 
+      periodsCount: historicalData.size 
+    });
+
+    const metrics: InsertMetric[] = [];
+    const trafficChannelMetrics: InsertMetric[] = [];
+    const deviceDistributionMetrics: InsertMetric[] = [];
+
+    for (const [period, data] of Array.from(historicalData.entries())) {
+      // Process main metrics for benchmark company
+      this.processBenchmarkMainMetrics(companyId, period, data, metrics);
+      
+      // Process traffic channels for benchmark company
+      this.processBenchmarkTrafficChannels(companyId, period, data.trafficChannels, trafficChannelMetrics);
+      
+      // Process device distribution for benchmark company
+      this.processBenchmarkDeviceDistribution(companyId, period, data.deviceDistribution, deviceDistributionMetrics);
+    }
+
+    logger.info('Completed SEMrush benchmark data processing', {
+      companyId,
+      mainMetrics: metrics.length,
+      trafficChannelMetrics: trafficChannelMetrics.length,
+      deviceDistributionMetrics: deviceDistributionMetrics.length
+    });
+
+    return {
+      metrics,
+      trafficChannelMetrics,
+      deviceDistributionMetrics
+    };
+  }
+
+  /**
+   * Calculate Industry averages from all benchmark companies
+   */
+  public calculateIndustryAverages(
+    allCompanyMetrics: Map<string, ProcessedMetricData>,
+    periods: string[]
+  ): ProcessedMetricData {
+    logger.info('Calculating Industry averages', { 
+      companiesCount: allCompanyMetrics.size,
+      periodsCount: periods.length 
+    });
+
+    const avgMetrics: InsertMetric[] = [];
+    const avgTrafficChannels: InsertMetric[] = [];
+    const avgDeviceDistribution: InsertMetric[] = [];
+
+    const metricNames = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+
+    for (const period of periods) {
+      // Calculate main metric averages
+      for (const metricName of metricNames) {
+        const values: number[] = [];
+        
+        logger.info(`🧮 Calculating industry average for ${metricName} in ${period}`, {
+          companiesCount: allCompanyMetrics.size,
+          companyIds: Array.from(allCompanyMetrics.keys())
+        });
+        
+        for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+          const metric = data.metrics.find((m: InsertMetric) => 
+            m.metricName === metricName && m.timePeriod === period
+          );
+          if (metric && metric.value && typeof metric.value === 'object' && 'value' in metric.value) {
+            const value = metric.value.value as number;
+            values.push(value);
+            logger.info(`🧮 Found ${metricName} value: ${value} for benchmark company ${companyId}`);
+          } else {
+            logger.warn(`🧮 No ${metricName} value found for benchmark company ${companyId} in ${period}`);
+          }
+        }
+
+        if (values.length > 0) {
+          const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+          logger.info(`🧮 CALCULATED INDUSTRY AVERAGE: ${metricName} = ${average} from values [${values.join(', ')}]`);
+          avgMetrics.push({
+            clientId: null,
+            competitorId: null,
+            cdPortfolioCompanyId: null,
+            benchmarkCompanyId: null,
+            metricName,
+            value: { value: average, source: 'industry_average' },
+            sourceType: 'Industry_Avg',
+            timePeriod: period,
+            channel: null
+          });
+        } else {
+          logger.warn(`🧮 No values found for ${metricName} in ${period}`);
+        }
+      }
+
+      // Calculate traffic channel averages
+      this.calculateIndustryChannelAverages(
+        allCompanyMetrics,
+        period,
+        'Traffic Channels',
+        avgTrafficChannels
+      );
+
+      // Calculate device distribution averages
+      this.calculateIndustryChannelAverages(
+        allCompanyMetrics,
+        period,
+        'Device Distribution',
+        avgDeviceDistribution
+      );
+    }
+
+    logger.info('Completed Industry averages calculation', {
+      avgMetrics: avgMetrics.length,
+      avgTrafficChannels: avgTrafficChannels.length,
+      avgDeviceDistribution: avgDeviceDistribution.length
+    });
+
+    return {
+      metrics: avgMetrics,
+      trafficChannelMetrics: avgTrafficChannels,
+      deviceDistributionMetrics: avgDeviceDistribution
+    };
+  }
+
+  /**
+   * Process main analytics metrics for benchmark companies
+   */
+  private processBenchmarkMainMetrics(
+    companyId: string,
+    period: string,
+    data: SemrushMetricData,
+    metrics: InsertMetric[]
+  ): void {
+    const mainMetrics = [
+      { name: 'Bounce Rate', value: data.bounceRate },
+      { name: 'Session Duration', value: data.sessionDuration },
+      { name: 'Pages per Session', value: data.pagesPerSession },
+      { name: 'Sessions per User', value: data.sessionsPerUser }
+    ];
+
+    for (const metric of mainMetrics) {
+      if (metric.value > 0) { // Only store non-zero values
+        metrics.push({
+          clientId: null,
+          competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: companyId,
+          metricName: metric.name,
+          value: { value: metric.value, source: 'semrush' },
+          sourceType: 'Benchmark',
+          timePeriod: period,
+          channel: null
+        });
+      }
+    }
+  }
+
+  /**
+   * Process traffic channels for benchmark companies
+   */
+  private processBenchmarkTrafficChannels(
+    companyId: string,
+    period: string,
+    trafficChannels: Record<string, any>,
+    trafficChannelMetrics: InsertMetric[]
+  ): void {
+    for (const [channel, data] of Object.entries(trafficChannels)) {
+      if (data && typeof data === 'object' && 'percentage' in data) {
+        trafficChannelMetrics.push({
+          clientId: null,
+          competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: companyId,
+          metricName: 'Traffic Channels',
+          value: {
+            percentage: data.percentage,
+            sessions: data.sessions || 0,
+            source: 'semrush'
+          },
+          sourceType: 'Benchmark',
+          timePeriod: period,
+          channel
+        });
+      }
+    }
+  }
+
+  /**
+   * Process device distribution for benchmark companies
+   */
+  private processBenchmarkDeviceDistribution(
+    companyId: string,
+    period: string,
+    deviceDistribution: Record<string, any>,
+    deviceDistributionMetrics: InsertMetric[]
+  ): void {
+    for (const [device, data] of Object.entries(deviceDistribution)) {
+      if (data && typeof data === 'object' && 'percentage' in data) {
+        deviceDistributionMetrics.push({
+          clientId: null,
+          competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: companyId,
+          metricName: 'Device Distribution',
+          value: {
+            percentage: data.percentage,
+            sessions: data.sessions || 0,
+            source: 'semrush'
+          },
+          sourceType: 'Benchmark',
+          timePeriod: period,
+          channel: device
+        });
+      }
+    }
+  }
+
+  /**
+   * Calculate industry channel-based averages (traffic channels, device distribution)
+   */
+  private calculateIndustryChannelAverages(
+    allCompanyMetrics: Map<string, ProcessedMetricData>,
+    period: string,
+    metricName: string,
+    targetArray: InsertMetric[]
+  ): void {
+    const channelData = new Map<string, { percentages: number[], sessions: number[] }>();
+
+    // First, try to collect data for the exact requested period
+    let foundDataForPeriod = false;
+    for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+      const relevantMetrics = metricName === 'Traffic Channels' 
+        ? data.trafficChannelMetrics 
+        : data.deviceDistributionMetrics;
+
+      for (const metric of relevantMetrics) {
+        if (metric.timePeriod === period && metric.channel) {
+          foundDataForPeriod = true;
+          if (!channelData.has(metric.channel)) {
+            channelData.set(metric.channel, { percentages: [], sessions: [] });
+          }
+          
+          const channelInfo = channelData.get(metric.channel)!;
+          if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
+            channelInfo.percentages.push(metric.value.percentage as number);
+            channelInfo.sessions.push((metric.value.sessions as number) || 0);
+          }
+        }
+      }
+    }
+
+    // If no data found for exact period, use most recent available data
+    if (!foundDataForPeriod) {
+      logger.info(`No Benchmark ${metricName} data for ${period}, finding most recent data`);
+      
+      // Find the most recent time period with data
+      const availablePeriods = new Set<string>();
+      for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+        const relevantMetrics = metricName === 'Traffic Channels' 
+          ? data.trafficChannelMetrics 
+          : data.deviceDistributionMetrics;
+        
+        for (const metric of relevantMetrics) {
+          if (metric.channel && metric.timePeriod) {
+            availablePeriods.add(metric.timePeriod);
+          }
+        }
+      }
+
+      if (availablePeriods.size > 0) {
+        // Sort periods and get the most recent one
+        const sortedPeriods = Array.from(availablePeriods).sort().reverse();
+        const mostRecentPeriod = sortedPeriods[0];
+        logger.info(`Using most recent Benchmark ${metricName} data from ${mostRecentPeriod} for ${period}`);
+
+        // Collect data from the most recent period
+        for (const [companyId, data] of Array.from(allCompanyMetrics.entries())) {
+          const relevantMetrics = metricName === 'Traffic Channels' 
+            ? data.trafficChannelMetrics 
+            : data.deviceDistributionMetrics;
+
+          for (const metric of relevantMetrics) {
+            if (metric.timePeriod === mostRecentPeriod && metric.channel) {
+              if (!channelData.has(metric.channel)) {
+                channelData.set(metric.channel, { percentages: [], sessions: [] });
+              }
+              
+              const channelInfo = channelData.get(metric.channel)!;
+              if (metric.value && typeof metric.value === 'object' && 'percentage' in metric.value) {
+                channelInfo.percentages.push(metric.value.percentage as number);
+                channelInfo.sessions.push((metric.value.sessions as number) || 0);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Calculate averages for each channel
+    for (const [channel, data] of Array.from(channelData.entries())) {
+      if (data.percentages.length > 0) {
+        const avgPercentage = data.percentages.reduce((sum: number, val: number) => sum + val, 0) / data.percentages.length;
+        const avgSessions = data.sessions.reduce((sum: number, val: number) => sum + val, 0) / data.sessions.length;
+
+        targetArray.push({
+          clientId: null,
+          competitorId: null,
+          cdPortfolioCompanyId: null,
+          benchmarkCompanyId: null,
+          metricName,
+          value: {
+            percentage: avgPercentage,
+            sessions: avgSessions,
+            source: 'industry_average'
+          },
+          sourceType: 'Industry_Avg',
+          timePeriod: period,
+          channel
+        });
+      }
+    }
+  }
 }
 
 export const semrushDataProcessor = new SemrushDataProcessor();
