@@ -53,6 +53,7 @@ import type {
   CreateCDPortfolioCompanyData,
   CreateFilterOptionData
 } from '@/types/api.types';
+import { APP_CONFIG, getConfig } from '@/config/app.config';
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
@@ -434,7 +435,7 @@ export default function AdminPanel() {
   // Create mutations for adding new items
   const createClientMutation = useMutation({
     mutationFn: async (data: CreateClientData) => {
-      return await clientService.create<Client>(data);
+      return await clientService.create(data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -498,7 +499,7 @@ export default function AdminPanel() {
   // CD Portfolio Company mutations
   const createCdPortfolioCompanyMutation = useMutation({
     mutationFn: async (data: CreateCDPortfolioCompanyData) => {
-      return await portfolioService.create<CDPortfolioCompany>(data);
+      return await portfolioService.create(data);
     },
     onSuccess: (response) => {
       setIsDialogOpen(false);
@@ -508,7 +509,7 @@ export default function AdminPanel() {
       toast({
         title: "Company added - data syncing",
         description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
-        duration: 4000,
+        duration: APP_CONFIG.toast.success,
       });
       
       // Show detailed integration status after a brief delay
@@ -516,7 +517,7 @@ export default function AdminPanel() {
         toast({
           title: "📊 Data sync in progress",
           description: "Fetching 15 months of historical data. Dashboard will refresh when complete.",
-          duration: 8000,
+          duration: APP_CONFIG.polling.semrushIntegration,
         });
       }, 2000);
       
@@ -535,7 +536,7 @@ export default function AdminPanel() {
 
   const updateCdPortfolioCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CDPortfolioCompany> }) => {
-      return await portfolioService.update<CDPortfolioCompany>(id, data);
+      return await portfolioService.update(id, data);
     },
     onSuccess: () => {
       setIsDialogOpen(false);
@@ -563,7 +564,7 @@ export default function AdminPanel() {
       toast({
         title: "Company removed from portfolio",
         description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically. Navigate to dashboard to see updated numbers.",
-        duration: 10000,
+        duration: APP_CONFIG.toast.important,
       });
     },
     onError: (error: Error) => {
@@ -578,7 +579,7 @@ export default function AdminPanel() {
 
   // Metric Prompts mutations
   const createMetricPromptMutation = useMutation({
-    mutationFn: async (data: Partial<MetricPrompt>) => {
+    mutationFn: async (data: { metricName: string; promptTemplate: string; isActive?: boolean }) => {
       return await metricService.createPrompt(data);
     },
     onSuccess: () => {
@@ -690,7 +691,7 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
-      role: formData.get("role") as string,
+      role: formData.get("role") as "Admin" | "User",
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
       status: status as "Active" | "Inactive",
     };
@@ -790,9 +791,10 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       websiteUrl: formData.get("websiteUrl") as string,
+      domain: new URL(formData.get("websiteUrl") as string).hostname,
       industryVertical: formData.get("industryVertical") as string,
       businessSize: formData.get("businessSize") as string,
-      description: formData.get("description") as string || null,
+      description: formData.get("description") as string || undefined,
     };
     
     if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
@@ -815,7 +817,7 @@ export default function AdminPanel() {
       websiteUrl: formData.get("website") as string,
       industryVertical: editingCdIndustryVertical || formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
-      description: formData.get("description") as string || null,
+      description: formData.get("description") as string || undefined,
     };
     
     if (!data.name || !data.websiteUrl) {
@@ -836,7 +838,7 @@ export default function AdminPanel() {
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
-      role: formData.get("role") as string,
+      role: formData.get("role") as "Admin" | "User",
       clientId: (formData.get("clientId") as string) === "none" ? null : formData.get("clientId") as string,
     };
     
@@ -865,7 +867,7 @@ export default function AdminPanel() {
     setSortConfig({ key, direction });
   };
 
-  const sortedData = (data: (Client | User | BenchmarkCompany | CDPortfolioCompany | FilterOption)[] | undefined, _tab: string) => {
+  const sortedData = <T extends Record<string, any>>(data: T[] | undefined, _tab: string): T[] => {
     if (!data || !sortConfig) return data || [];
     
     return [...data].sort((a, b) => {
@@ -1176,7 +1178,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(users, 'users')?.map((user: User) => (
+                      {sortedData(users, 'users')?.map((user) => (
                     <Card key={user.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1347,7 +1349,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                      {sortedData(users, 'users')?.map((user: User) => (
+                      {sortedData(users, 'users')?.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium text-xs">
                             <div>
@@ -1551,7 +1553,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(clients, 'clients')?.map((client: Client) => (
+                      {sortedData(clients, 'clients')?.map((client) => (
                     <Card key={client.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -1631,7 +1633,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(clients, 'clients')?.map((client: Client) => (
+                        {sortedData(clients, 'clients')?.map((client) => (
                           <TableRow key={client.id}>
                             <TableCell className="font-medium text-xs">
                               <div>
@@ -2109,7 +2111,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company: BenchmarkCompany) => (
+                      {sortedData(benchmarkCompanies, 'benchmark')?.map((company) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2275,7 +2277,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(benchmarkCompanies, 'benchmark')?.map((company: BenchmarkCompany) => (
+                        {sortedData(benchmarkCompanies, 'benchmark')?.map((company) => (
                           <TableRow key={company.id}>
                             <TableCell className="font-medium text-xs">
                               <div>
@@ -2593,7 +2595,7 @@ export default function AdminPanel() {
                   <>
                     {/* Mobile Card Layout */}
                     <div className="block sm:hidden space-y-3">
-                      {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: CDPortfolioCompany) => (
+                      {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company) => (
                     <Card key={company.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -2792,7 +2794,7 @@ export default function AdminPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company: CDPortfolioCompany) => (
+                        {sortedData(cdPortfolioCompanies, 'cd-portfolio')?.map((company) => (
                           <TableRow key={company.id}>
                             <TableCell className="font-medium text-xs">
                               <div>

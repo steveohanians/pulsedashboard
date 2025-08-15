@@ -26,11 +26,13 @@ export interface EventPayload<T = any> {
 
 type EventHandler<T = any> = (payload: EventPayload<T>) => void;
 
+import { APP_CONFIG } from '@/config/app.config';
+
 class EventBus {
   private static instance: EventBus;
   private handlers = new Map<EventType, Set<EventHandler>>();
   private eventHistory: EventPayload[] = [];
-  private maxHistorySize = 100;
+  private maxHistorySize = APP_CONFIG.defaults.maxHistorySize;
 
   private constructor() {
     // Set up WebSocket or SSE connection for server events
@@ -143,7 +145,7 @@ class EventBus {
   }
 
   private async pollForServerEvents(): Promise<void> {
-    // Poll for server events every 5 seconds
+    // Poll for server events using config value
     setInterval(async () => {
       try {
         const response = await fetch('/api/events/poll', {
@@ -163,7 +165,7 @@ class EventBus {
       } catch (error) {
         // Silent fail for polling
       }
-    }, 5000);
+    }, APP_CONFIG.polling.eventPoll);
   }
 }
 

@@ -1,0 +1,201 @@
+Phase 6: Extract Hardcoded Values to Central Configuration
+
+Create a centralized configuration to replace all hardcoded values scattered throughout the code.
+
+**Step 1: Create app configuration file**
+
+Create `/client/src/config/app.config.ts`:
+
+```typescript
+export const APP_CONFIG = {
+  // API Configuration
+  api: {
+    baseUrl: import.meta.env.VITE_API_URL || '',
+    timeout: 30000,
+    retryAttempts: 3,
+    retryDelay: 1000,
+  },
+
+  // Polling & Timing
+  polling: {
+    semrushIntegration: 8000, // 8 seconds
+    ga4Sync: 5000, // 5 seconds
+    maxPollDuration: 5 * 60 * 1000, // 5 minutes
+    dashboardRefresh: 30000, // 30 seconds
+  },
+
+  // Toast Durations
+  toast: {
+    default: 3000,
+    success: 4000,
+    error: 5000,
+    important: 10000,
+  },
+
+  // Feature Flags
+  features: {
+    enableGA4AutoSync: false, // Set to true when ready
+    enableWebSocket: false,
+    enableAdvancedFilters: true,
+    enableBulkOperations: false,
+    maxCSVImportRows: 1000,
+  },
+
+  // Default Values
+  defaults: {
+    clientId: 'demo-client-id',
+    companyName: 'Demo Company',
+    timePeriod: 'Last Month',
+    pageSize: 25,
+    maxHistorySize: 100,
+  },
+
+  // Cache Configuration
+  cache: {
+    ttl: 5 * 60 * 1000, // 5 minutes
+    maxSize: 50,
+    staleWhileRevalidate: true,
+  },
+
+  // UI Configuration
+  ui: {
+    mobileBreakpoint: 768,
+    tabletBreakpoint: 1024,
+    animationDuration: 200,
+    debounceDelay: 300,
+  },
+
+  // Validation
+  validation: {
+    minPasswordLength: 8,
+    maxNameLength: 100,
+    maxUrlLength: 255,
+    ga4PropertyPattern: /^\d+$/,
+  },
+
+  // SEMrush Integration
+  semrush: {
+    historicalMonths: 15,
+    metricsToFetch: [
+      'Organic Traffic',
+      'Paid Traffic', 
+      'Organic Keywords',
+      'Paid Keywords',
+      'Backlinks',
+      'Traffic Cost'
+    ],
+  },
+
+  // Admin Panel
+  admin: {
+    tabs: [
+      { value: 'users', label: 'User Management' },
+      { value: 'clients', label: 'Client Management' },
+      { value: 'cd-clients', label: 'CD Portfolio' },
+      { value: 'benchmark', label: 'Benchmark Companies' },
+      { value: 'filters', label: 'Filter Management' },
+      { value: 'ga4-accounts', label: 'GA4 Accounts' },
+      { value: 'prompts', label: 'AI Prompts' },
+    ],
+  },
+
+  // Messages
+  messages: {
+    errors: {
+      generic: 'An error occurred. Please try again.',
+      network: 'Network error. Please check your connection.',
+      unauthorized: 'You are not authorized to perform this action.',
+      validation: 'Please check your input and try again.',
+    },
+    success: {
+      saved: 'Changes saved successfully.',
+      deleted: 'Item deleted successfully.',
+      created: 'Item created successfully.',
+    },
+  },
+} as const;
+
+// Type-safe config getter
+export function getConfig<T extends keyof typeof APP_CONFIG>(
+  key: T
+): typeof APP_CONFIG[T] {
+  return APP_CONFIG[key];
+}
+Step 2: Update admin-panel.tsx to use config
+In /client/src/pages/admin-panel.tsx:
+
+Add import:
+
+typescriptimport { APP_CONFIG, getConfig } from '@/config/app.config';
+
+Replace hardcoded values:
+
+Find and replace:
+
+8000 (polling interval) → APP_CONFIG.polling.semrushIntegration
+5 * 60 * 1000 → APP_CONFIG.polling.maxPollDuration
+duration: 4000 → duration: APP_CONFIG.toast.success
+duration: 10000 → duration: APP_CONFIG.toast.important
+'demo-client-id' → APP_CONFIG.defaults.clientId
+'Last Month' → APP_CONFIG.defaults.timePeriod
+
+Step 3: Update EventBus to use config
+In /client/src/services/events/EventBus.ts:
+
+Add import:
+
+typescriptimport { APP_CONFIG } from '@/config/app.config';
+
+Replace hardcoded values:
+
+
+maxHistorySize = 100 → maxHistorySize = APP_CONFIG.defaults.maxHistorySize
+timeout = 60000 → timeout = APP_CONFIG.api.timeout * 2
+5000 (polling interval) → APP_CONFIG.polling.ga4Sync
+
+Step 4: Update services to use config
+In /client/src/services/api/portfolio.service.ts:
+Replace in the toast messages:
+typescript// Old
+toast({ description: "...", duration: 4000 });
+
+// New
+toast({ description: "...", duration: APP_CONFIG.toast.success });
+Step 5: Create environment config helper
+Create /client/src/config/env.config.ts:
+typescript// Environment-specific configuration
+export const ENV_CONFIG = {
+  isDevelopment: import.meta.env.DEV,
+  isProduction: import.meta.env.PROD,
+  apiUrl: import.meta.env.VITE_API_URL || '',
+  appUrl: import.meta.env.VITE_APP_URL || window.location.origin,
+  sentryDsn: import.meta.env.VITE_SENTRY_DSN,
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  brandfetchApiKey: import.meta.env.VITE_BRANDFETCH_API_KEY,
+  debug: import.meta.env.VITE_DEBUG === 'true',
+} as const;
+
+// Logger that respects debug mode
+export const logger = {
+  debug: (...args: any[]) => {
+    if (ENV_CONFIG.debug) console.debug(...args);
+  },
+  info: (...args: any[]) => console.info(...args),
+  warn: (...args: any[]) => console.warn(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+Step 6: Quick verification
+bash# Count remaining hardcoded numbers that might be config values
+grep -E "duration: [0-9]|setTimeout\([^,]+, [0-9]|setInterval\([^,]+, [0-9]" /client/src/pages/admin-panel.tsx
+
+# Check for hardcoded demo-client-id
+grep -c "demo-client-id" /client/src/pages/admin-panel.tsx
+
+# Find any remaining hardcoded strings that look like config
+grep -E "'[A-Z][a-z]+ [A-Z][a-z]+'" /client/src/pages/admin-panel.tsx | head -5
+This centralizes all configuration making it easy to:
+
+Change values in one place
+Have different configs for dev/staging/prod
+Enable/disable features with flags
+Maintain consistency across the app
