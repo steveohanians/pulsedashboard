@@ -1,4 +1,5 @@
 import { BaseService } from './base.service';
+import { eventBus } from '@/services/events/EventBus';
 import { cacheManager } from '../cache/CacheManager';
 
 /**
@@ -21,9 +22,23 @@ export class ClientService extends BaseService {
     ga4PropertyId?: string;
     enableGA4Sync?: boolean;
   }): Promise<any> {
-    const result = await this.create(data);
-    cacheManager.invalidate('client');
-    return result;
+    const client = await this.create(data);
+    
+    eventBus.emit('client.created', { clientId: client.id, hasGA4: !!data.ga4PropertyId });
+    
+    if (data.ga4PropertyId) {
+      eventBus.emit('client.ga4.connected', { 
+        clientId: client.id, 
+        propertyId: data.ga4PropertyId 
+      });
+      
+      // Auto-trigger sync if requested
+      if (data.enableGA4Sync) {
+        this.triggerGA4Sync(client.id);
+      }
+    }
+    
+    return client;
   }
 
   /**
@@ -73,8 +88,16 @@ export class ClientService extends BaseService {
    * Trigger complete GA4 data sync for client
    */
   async triggerGA4Sync(id: string): Promise<{ message: string }> {
-    const result = await this.request('POST', `/api/admin/ga4/complete-data-sync/${id}`);
-    cacheManager.invalidate('client', 'ga4');
-    return result;
+    eventBus.emit('ga4.sync.started', { clientId: id });
+    
+    try {
+      const result = await this.request('POST', `/api/admin/ga4/complete-data-sync/${id}`);
+      cacheManager.invalidate('client', 'ga4');
+      eventBus.emit('ga4.sync.completed', { clientId: id, result });
+      return result;
+    } catch (error) {
+      eventBus.emit('ga4.sync.failed', { clientId: id, error });
+      throw error;
+    }
   }
 }

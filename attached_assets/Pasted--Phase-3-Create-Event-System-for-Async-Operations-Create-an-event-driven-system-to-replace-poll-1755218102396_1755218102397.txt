@@ -1,0 +1,333 @@
+### Phase 3: Create Event System for Async Operations
+
+Create an event-driven system to replace polling and handle background operations.
+
+**Step 1: Create the EventBus system**
+
+Create file: `/client/src/services/events/EventBus.ts`
+
+```typescript
+export type EventType = 
+  | 'ga4.sync.started'
+  | 'ga4.sync.completed'
+  | 'ga4.sync.failed'
+  | 'ga4.sync.progress'
+  | 'semrush.integration.started'
+  | 'semrush.integration.completed'
+  | 'semrush.integration.failed'
+  | 'portfolio.company.added'
+  | 'portfolio.company.deleted'
+  | 'portfolio.averages.recalculating'
+  | 'portfolio.averages.recalculated'
+  | 'benchmark.company.added'
+  | 'client.created'
+  | 'client.ga4.connected';
+
+export interface EventPayload<T = any> {
+  type: EventType;
+  data: T;
+  timestamp: number;
+  clientId?: string;
+  correlationId?: string;
+  progress?: number;
+  message?: string;
+}
+
+type EventHandler<T = any> = (payload: EventPayload<T>) => void;
+
+class EventBus {
+  private static instance: EventBus;
+  private handlers = new Map<EventType, Set<EventHandler>>();
+  private eventHistory: EventPayload[] = [];
+  private maxHistorySize = 100;
+
+  private constructor() {
+    // Set up WebSocket or SSE connection for server events
+    this.setupServerConnection();
+  }
+
+  static getInstance(): EventBus {
+    if (!EventBus.instance) {
+      EventBus.instance = new EventBus();
+    }
+    return EventBus.instance;
+  }
+
+  // Subscribe to events
+  on(event: EventType, handler: EventHandler): () => void {
+    if (!this.handlers.has(event)) {
+      this.handlers.set(event, new Set());
+    }
+    this.handlers.get(event)!.add(handler);
+
+    // Return unsubscribe function
+    return () => {
+      this.handlers.get(event)?.delete(handler);
+    };
+  }
+
+  // Subscribe to event once
+  once(event: EventType, handler: EventHandler): void {
+    const wrappedHandler = (payload: EventPayload) => {
+      handler(payload);
+      this.off(event, wrappedHandler);
+    };
+    this.on(event, wrappedHandler);
+  }
+
+  // Unsubscribe from events
+  off(event: EventType, handler?: EventHandler): void {
+    if (!handler) {
+      this.handlers.delete(event);
+    } else {
+      this.handlers.get(event)?.delete(handler);
+    }
+  }
+
+  // Emit events
+  emit(event: EventType, data: any, options?: Partial<EventPayload>): void {
+    const payload: EventPayload = {
+      type: event,
+      data,
+      timestamp: Date.now(),
+      ...options
+    };
+
+    // Add to history
+    this.addToHistory(payload);
+
+    // Call handlers
+    const handlers = this.handlers.get(event);
+    if (handlers) {
+      handlers.forEach(handler => {
+        try {
+          handler(payload);
+        } catch (error) {
+          console.error(`Error in event handler for ${event}:`, error);
+        }
+      });
+    }
+
+    // Log for debugging
+    console.debug('Event emitted:', event, payload);
+  }
+
+  // Wait for event with timeout
+  async waitFor(event: EventType, timeout = 60000): Promise<EventPayload> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.off(event, handler);
+        reject(new Error(`Timeout waiting for event: ${event}`));
+      }, timeout);
+
+      const handler = (payload: EventPayload) => {
+        clearTimeout(timer);
+        resolve(payload);
+      };
+
+      this.once(event, handler);
+    });
+  }
+
+  // Get event history
+  getHistory(event?: EventType): EventPayload[] {
+    if (event) {
+      return this.eventHistory.filter(e => e.type === event);
+    }
+    return [...this.eventHistory];
+  }
+
+  private addToHistory(payload: EventPayload): void {
+    this.eventHistory.push(payload);
+    if (this.eventHistory.length > this.maxHistorySize) {
+      this.eventHistory.shift();
+    }
+  }
+
+  // Set up server-sent events or WebSocket
+  private setupServerConnection(): void {
+    // For now, use polling as fallback
+    // TODO: Implement WebSocket or SSE
+    this.pollForServerEvents();
+  }
+
+  private async pollForServerEvents(): Promise<void> {
+    // Poll for server events every 5 seconds
+    setInterval(async () => {
+      try {
+        const response = await fetch('/api/events/poll', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const events = await response.json();
+          events.forEach((serverEvent: any) => {
+            this.emit(serverEvent.type, serverEvent.data, {
+              clientId: serverEvent.clientId,
+              correlationId: serverEvent.correlationId
+            });
+          });
+        }
+      } catch (error) {
+        // Silent fail for polling
+      }
+    }, 5000);
+  }
+}
+
+export const eventBus = EventBus.getInstance();
+Step 2: Create React Hook for Event Bus
+Create file: /client/src/hooks/use-events.ts
+typescriptimport { useEffect, useCallback } from 'react';
+import { eventBus, EventType, EventPayload } from '@/services/events/EventBus';
+
+export function useEvent(
+  event: EventType,
+  handler: (payload: EventPayload) => void,
+  deps: any[] = []
+): void {
+  const memoizedHandler = useCallback(handler, deps);
+
+  useEffect(() => {
+    const unsubscribe = eventBus.on(event, memoizedHandler);
+    return unsubscribe;
+  }, [event, memoizedHandler]);
+}
+
+export function useEventEmitter() {
+  return useCallback((event: EventType, data: any, options?: any) => {
+    eventBus.emit(event, data, options);
+  }, []);
+}
+Step 3: Update services to emit events
+Update /client/src/services/api/client.service.ts:
+Add at the top:
+typescriptimport { eventBus } from '@/services/events/EventBus';
+Update methods:
+typescriptasync createWithGA4Setup(data: any): Promise<any> {
+  const client = await this.create(data);
+  
+  eventBus.emit('client.created', { clientId: client.id, hasGA4: !!data.ga4PropertyId });
+  
+  if (data.ga4PropertyId && data.serviceAccountId) {
+    eventBus.emit('client.ga4.connected', { 
+      clientId: client.id, 
+      propertyId: data.ga4PropertyId 
+    });
+    
+    // Auto-trigger sync if requested
+    if (data.autoSyncGA4) {
+      this.triggerGA4Sync(client.id);
+    }
+  }
+  
+  return client;
+}
+
+async triggerGA4Sync(clientId: string): Promise<void> {
+  eventBus.emit('ga4.sync.started', { clientId });
+  
+  try {
+    const result = await this.request('POST', `/${clientId}/sync-ga4`);
+    eventBus.emit('ga4.sync.completed', { clientId, result });
+  } catch (error) {
+    eventBus.emit('ga4.sync.failed', { clientId, error });
+    throw error;
+  }
+}
+Update /client/src/services/api/portfolio.service.ts:
+Add at the top:
+typescriptimport { eventBus } from '@/services/events/EventBus';
+Update methods:
+typescriptasync create(data: any): Promise<any> {
+  eventBus.emit('semrush.integration.started', { companyName: data.name });
+  
+  const result = await super.create(data);
+  
+  eventBus.emit('portfolio.company.added', { 
+    companyId: result.id, 
+    companyName: result.name 
+  });
+  
+  return result;
+}
+
+async delete(id: string): Promise<void> {
+  await super.delete(id);
+  
+  eventBus.emit('portfolio.company.deleted', { companyId: id });
+  eventBus.emit('portfolio.averages.recalculating', {});
+}
+
+async recalculateAverages(): Promise<any> {
+  eventBus.emit('portfolio.averages.recalculating', {});
+  
+  const result = await this.request('POST', '/recalculate-averages');
+  
+  eventBus.emit('portfolio.averages.recalculated', { result });
+  
+  return result;
+}
+Step 4: Replace polling in admin-panel.tsx
+In /client/src/pages/admin-panel.tsx:
+Add imports at the top:
+typescriptimport { useEvent, useEventEmitter } from '@/hooks/use-events';
+Replace the startPollingForIntegrationCompletion function (around line 550) with event-based approach:
+typescript// Remove the entire startPollingForIntegrationCompletion function
+
+// In the component body, add event listeners:
+useEvent('portfolio.company.added', (payload) => {
+  toast({
+    title: "Company added - data syncing",
+    description: "SEMrush integration started. Charts will update automatically.",
+    duration: 4000,
+  });
+});
+
+useEvent('semrush.integration.completed', (payload) => {
+  toast({
+    title: "Portfolio Integration Complete",
+    description: "✅ Company added successfully! Dashboard data refreshed.",
+    duration: 10000,
+  });
+  
+  // Refresh data
+  cacheManager.invalidate('portfolio', 'dashboard');
+});
+
+useEvent('portfolio.averages.recalculated', (payload) => {
+  toast({
+    title: "Portfolio Averages Updated",
+    description: "Dashboard data has been refreshed with new averages.",
+  });
+});
+
+useEvent('ga4.sync.completed', (payload) => {
+  toast({
+    title: "GA4 Data Sync Complete",
+    description: `Successfully synced data for client ${payload.data.clientId}`,
+  });
+  
+  // Refresh dashboard
+  cacheManager.invalidate('dashboard');
+});
+
+useEvent('ga4.sync.failed', (payload) => {
+  toast({
+    title: "GA4 Sync Failed",
+    description: payload.data.error?.message || "Failed to sync GA4 data",
+    variant: "destructive",
+  });
+});
+Update the createCdPortfolioCompanyMutation onSuccess (around line 520):
+typescriptonSuccess: (response) => {
+  setIsDialogOpen(false);
+  setEditingItem(null);
+  // No need for polling or manual toast - events handle it
+},
+Step 5: Export from services/api/index.ts
+Add to /client/src/services/api/index.ts:
+typescript// Export event system
+export { eventBus } from '../events/EventBus';
+export type { EventType, EventPayload } from '../events/EventBus';

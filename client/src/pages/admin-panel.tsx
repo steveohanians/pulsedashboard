@@ -37,6 +37,7 @@ import {
   ga4Service,
   cacheManager
 } from '@/services/api';
+// import { useEvent, useEventEmitter } from '@/hooks/use-events';
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
@@ -179,6 +180,53 @@ export default function AdminPanel() {
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Event listeners for real-time updates (temporarily disabled for debugging)
+  /*
+  useEvent('portfolio.company.added', (payload) => {
+    toast({
+      title: "Company added - data syncing",
+      description: "SEMrush integration started. Charts will update automatically.",
+      duration: 4000,
+    });
+  });
+
+  useEvent('semrush.integration.completed', (payload) => {
+    toast({
+      title: "Portfolio Integration Complete",
+      description: "✅ Company added successfully! Dashboard data refreshed.",
+      duration: 10000,
+    });
+    
+    // Refresh data
+    cacheManager.invalidate('portfolio', 'dashboard');
+  });
+
+  useEvent('portfolio.averages.recalculated', (payload) => {
+    toast({
+      title: "Portfolio Averages Updated",
+      description: "Dashboard data has been refreshed with new averages.",
+    });
+  });
+
+  useEvent('ga4.sync.completed', (payload) => {
+    toast({
+      title: "GA4 Data Sync Complete",
+      description: `Successfully synced data for client ${payload.data.clientId}`,
+    });
+    
+    // Refresh dashboard
+    cacheManager.invalidate('dashboard');
+  });
+
+  useEvent('ga4.sync.failed', (payload) => {
+    toast({
+      title: "GA4 Sync Failed",
+      description: payload.data.error?.message || "Failed to sync GA4 data",
+      variant: "destructive",
+    });
+  });
+  */
   
   // Form refs for controlled form handling
   const clientFormRef = useRef<HTMLFormElement>(null);
@@ -199,7 +247,7 @@ export default function AdminPanel() {
     queryKey: AdminQueryKeys.cdPortfolioData(viewingCompanyData?.id || ''),
     queryFn: async () => {
       if (!viewingCompanyData?.id) return null;
-      return await portfolioService.getData(viewingCompanyData.id);
+      return await portfolioService.getCompanyData(viewingCompanyData.id);
     },
     enabled: !!viewingCompanyData?.id && dataViewerOpen
   });
@@ -501,8 +549,7 @@ export default function AdminPanel() {
         });
       }, 2000);
       
-      // Start polling for completion status instead of hardcoded timeout
-      startPollingForIntegrationCompletion(response.id);
+      // Event system will handle completion notifications automatically
     },
     onError: (error: Error) => {
       toast({
@@ -513,69 +560,7 @@ export default function AdminPanel() {
     },
   });
 
-  // Function to poll for SEMrush integration completion
-  const startPollingForIntegrationCompletion = (companyId: string) => {
-    const startTime = Date.now();
-    const maxPollTime = 5 * 60 * 1000; // 5 minutes max polling
-    let lastPortfolioCount = 0;
-    
-    const pollInterval = setInterval(async () => {
-      try {
-        // Check if more than 5 minutes have passed
-        if (Date.now() - startTime > maxPollTime) {
-          clearInterval(pollInterval);
-          toast({
-            title: "SEMrush Data Integration",
-            description: "⏰ Integration is taking longer than expected. Portfolio averages will update automatically when complete.",
-            duration: 10000,
-          });
-          return;
-        }
-
-        // Check if portfolio averages have been updated (indicating completion)
-        const dashboardResponse = await fetch('/api/dashboard/demo-client-id?timePeriod=Last%20Month');
-        if (dashboardResponse.ok) {
-          const dashboardData = await dashboardResponse.json();
-          
-          // Check if we have CD_Avg data in the response (indicating portfolio averages exist)
-          const hasPortfolioData = dashboardData.metrics?.some((metric: any) => 
-            metric.sourceType === 'CD_Avg' && metric.value > 0
-          ) || dashboardData.timeSeriesData && Object.values(dashboardData.timeSeriesData).some((periodData: any) =>
-            Array.isArray(periodData) && periodData.some((metric: any) => 
-              metric.sourceType === 'CD_Avg' && metric.value > 0
-            )
-          );
-
-          // Also check if portfolio company count has increased (more robust detection)
-          const portfolioResponse = await fetch('/api/admin/cd-portfolio');
-          let portfolioIncreased = false;
-          if (portfolioResponse.ok) {
-            const portfolioData = await portfolioResponse.json();
-            const currentCount = portfolioData.length || 0;
-            portfolioIncreased = currentCount > lastPortfolioCount;
-            lastPortfolioCount = Math.max(lastPortfolioCount, currentCount);
-          }
-
-          if (hasPortfolioData && portfolioIncreased) {
-            clearInterval(pollInterval);
-            
-            // Cache will be automatically invalidated by portfolio service
-            
-            console.log("🔄 Cache invalidated after portfolio integration completion");
-            
-            toast({
-              title: "Portfolio Integration Complete", 
-              description: "✅ Company added successfully! Portfolio averages updated and dashboard data refreshed. Navigate to dashboard to see changes.",
-              duration: 10000,
-            });
-          }
-        }
-      } catch (error) {
-        // Continue polling on error, don't break the process
-        console.warn('Integration completion check failed:', error);
-      }
-    }, 8000); // Check every 8 seconds for faster feedback
-  };
+  // Removed polling function - replaced with event-driven system
 
   const updateCdPortfolioCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -3082,7 +3067,10 @@ export default function AdminPanel() {
                         }
                         
                         try {
-                          await filterService.create({ category, value });
+                          await filterService.create({ 
+                            type: category === 'businessSizes' ? 'business_size' : 'industry_vertical',
+                            value 
+                          });
 
                           toast({
                             title: "Filter option added",

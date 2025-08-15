@@ -1,5 +1,6 @@
 import { BaseService } from './base.service';
 import { cacheManager } from '../cache/CacheManager';
+import { eventBus } from '@/services/events/EventBus';
 
 /**
  * Portfolio service
@@ -19,8 +20,16 @@ export class PortfolioService extends BaseService {
     industryVertical: string;
     businessSize: string;
   }): Promise<any> {
+    eventBus.emit('semrush.integration.started', { companyName: data.name });
+    
     const result = await super.create(data);
     cacheManager.invalidate('portfolio');
+    
+    eventBus.emit('portfolio.company.added', { 
+      companyId: result.id, 
+      companyName: result.name 
+    });
+    
     return result;
   }
 
@@ -45,6 +54,9 @@ export class PortfolioService extends BaseService {
   async delete(id: string): Promise<void> {
     await super.delete(id);
     cacheManager.invalidate('portfolio');
+    
+    eventBus.emit('portfolio.company.deleted', { companyId: id });
+    eventBus.emit('portfolio.averages.recalculating', {});
   }
 
   /**
@@ -64,20 +76,26 @@ export class PortfolioService extends BaseService {
   }
 
   /**
+   * Recalculate portfolio averages
+   */
+  async recalculateAverages(): Promise<any> {
+    eventBus.emit('portfolio.averages.recalculating', {});
+    
+    const result = await this.request('POST', '/recalculate-averages');
+    
+    eventBus.emit('portfolio.averages.recalculated', { result });
+    
+    return result;
+  }
+
+  /**
    * Test SEMrush connection for company
    */
   async testSemrush(id: string): Promise<{ success: boolean; message: string }> {
     return this.request('POST', `/${id}/test-semrush`);
   }
 
-  /**
-   * Recalculate portfolio averages
-   */
-  async recalculateAverages(): Promise<{ message: string; updated: number }> {
-    const result = await this.request('POST', '/recalculate-averages');
-    cacheManager.invalidate('portfolio');
-    return result;
-  }
+
 
   /**
    * Fix portfolio averages (admin debug)

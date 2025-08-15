@@ -63,3 +63,7 @@ export type ServiceName = keyof Services;
 // Export cache manager
 export { cacheManager } from '../cache/CacheManager';
 export type { CacheEntity } from '../cache/CacheManager';
+
+// Export event system
+export { eventBus } from '../events/EventBus';
+export type { EventType, EventPayload } from '../events/EventBus';
