@@ -1,0 +1,275 @@
+### Migrate admin-panel.tsx to Use Service Layer
+
+Update /client/src/pages/admin-panel.tsx to use the new service layer instead of direct API calls.
+
+**Step 1: Add imports at the top of admin-panel.tsx** (after existing imports):
+```typescript
+import {
+  clientService,
+  userService,
+  benchmarkService,
+  portfolioService,
+  filterService,
+  competitorService,
+  insightService,
+  metricService,
+  ga4Service,
+  cacheManager
+} from '@/services/api';
+Step 2: Replace ALL mutations - here are the exact replacements:
+CLIENTS:
+typescript// DELETE CLIENT - Line ~287
+const deleteClientMutation = useMutation({
+  mutationFn: async (id: string) => {
+    await clientService.delete(id);
+    return id;
+  },
+  onSuccess: (deletedId) => {
+    toast({ title: "Client deleted", description: "Client has been permanently deleted from the database." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to delete client", description: error.message, variant: "destructive" });
+  },
+});
+
+// UPDATE CLIENT - Line ~252
+const updateClientMutation = useMutation({
+  mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    return await clientService.update(id, data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "Client updated", description: "Client information has been successfully updated." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to update client", description: error.message, variant: "destructive" });
+  },
+});
+
+// CREATE CLIENT - Line ~470
+const createClientMutation = useMutation({
+  mutationFn: async (data: any) => {
+    return await clientService.create(data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "Client created", description: "New client has been successfully created." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to create client", description: error.message, variant: "destructive" });
+  },
+});
+USERS:
+typescript// DELETE USER - Line ~383
+const deleteUserMutation = useMutation({
+  mutationFn: async (id: string) => {
+    await userService.delete(id);
+  },
+  onSuccess: () => {
+    toast({ title: "User deleted", description: "User has been successfully deleted." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to delete user", description: error.message, variant: "destructive" });
+  },
+});
+
+// UPDATE USER - Line ~357
+const updateUserMutation = useMutation({
+  mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    return await userService.update(id, data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "User updated", description: "User information has been successfully updated." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to update user", description: error.message, variant: "destructive" });
+  },
+});
+
+// INVITE USER - Line ~541
+const inviteUserMutation = useMutation({
+  mutationFn: async (data: any) => {
+    return await userService.invite(data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "User invited", description: "User invitation has been sent successfully." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to invite user", description: error.message, variant: "destructive" });
+  },
+});
+
+// PASSWORD RESET - Line ~402
+const sendPasswordResetMutation = useMutation({
+  mutationFn: async (userId: string) => {
+    return await userService.sendPasswordReset(userId);
+  },
+  onSuccess: () => {
+    toast({ title: "Password reset sent", description: "Password reset email has been sent to the user." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to send password reset", description: error.message, variant: "destructive" });
+  },
+});
+BENCHMARK COMPANIES:
+typescript// DELETE BENCHMARK - Line ~340
+const deleteCompanyMutation = useMutation({
+  mutationFn: async (id: string) => {
+    await benchmarkService.delete(id);
+  },
+  onSuccess: () => {
+    toast({ title: "Company deleted", description: "Benchmark company has been successfully deleted." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to delete company", description: error.message, variant: "destructive" });
+  },
+});
+
+// UPDATE BENCHMARK - Line ~314
+const updateCompanyMutation = useMutation({
+  mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    return await benchmarkService.update(id, data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "Company updated", description: "Benchmark company has been successfully updated." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to update company", description: error.message, variant: "destructive" });
+  },
+});
+
+// CREATE BENCHMARK - Line ~490
+const createBenchmarkCompanyMutation = useMutation({
+  mutationFn: async (data: any) => {
+    return await benchmarkService.create(data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "Company added", description: "New benchmark company has been successfully added." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to add company", description: error.message, variant: "destructive" });
+  },
+});
+CD PORTFOLIO:
+typescript// DELETE PORTFOLIO - Line ~610
+const deleteCdPortfolioCompanyMutation = useMutation({
+  mutationFn: async (id: string) => {
+    await portfolioService.delete(id);
+  },
+  onSuccess: () => {
+    setDeletingCompanyId(null);
+    toast({
+      title: "Company removed from portfolio",
+      description: "Portfolio averages recalculated and dashboard data refreshed automatically.",
+      duration: 10000,
+    });
+  },
+  onError: (error: Error) => {
+    setDeletingCompanyId(null);
+    toast({ title: "Failed to remove company", description: error.message, variant: "destructive" });
+  },
+});
+
+// UPDATE PORTFOLIO - Line ~584
+const updateCdPortfolioCompanyMutation = useMutation({
+  mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    return await portfolioService.update(id, data);
+  },
+  onSuccess: () => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({ title: "Portfolio company updated", description: "Portfolio company information has been successfully updated." });
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to update company", description: error.message, variant: "destructive" });
+  },
+});
+
+// CREATE PORTFOLIO - Line ~516
+const createCdPortfolioCompanyMutation = useMutation({
+  mutationFn: async (data: any) => {
+    return await portfolioService.create(data);
+  },
+  onSuccess: (response) => {
+    setIsDialogOpen(false);
+    setEditingItem(null);
+    toast({
+      title: "Company added - data syncing",
+      description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
+      duration: 4000,
+    });
+    startPollingForIntegrationCompletion(response.id);
+  },
+  onError: (error: Error) => {
+    toast({ title: "Failed to add company", description: error.message, variant: "destructive" });
+  },
+});
+FILTER OPTIONS (in dialogs):
+Replace around line ~1930 and other filter-related operations:
+typescript// In BusinessSizeEditDialog
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  const formData = new FormData(e.target as HTMLFormElement);
+  const value = formData.get('value') as string;
+  
+  try {
+    await filterService.update(option.id, { value });
+    toast({ title: "Business size updated", description: `Updated to "${value}".` });
+    setIsOpen(false);
+  } catch (error) {
+    toast({ title: "Error", description: "Failed to update business size.", variant: "destructive" });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+CLIENT ICON OPERATIONS (around line ~1930):
+typescript// FETCH ICON
+onClick={async () => {
+  try {
+    setIsLoading(true);
+    const websiteUrl = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value;
+    const domain = new URL(websiteUrl).hostname.replace('www.', '');
+    const response = await clientService.fetchIcon(editingItem.id, domain);
+    
+    if (response.iconUrl) {
+      setEditingItem((prev: any) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
+      toast({ title: "Icon fetched successfully" });
+    }
+  } catch (error) {
+    toast({ title: "Failed to fetch icon", variant: "destructive" });
+  } finally {
+    setIsLoading(false);
+  }
+}}
+
+// CLEAR ICON
+onClick={async () => {
+  try {
+    setIsLoading(true);
+    await clientService.clearIcon(editingItem.id);
+    setEditingItem((prev: any) => prev ? { ...prev, iconUrl: null } : prev);
+    toast({ title: "Icon cleared successfully" });
+  } catch (error) {
+    toast({ title: "Failed to clear icon", variant: "destructive" });
+  } finally {
+    setIsLoading(false);
+  }
+}}
+Step 3: Remove ALL queryClient.invalidateQueries() calls
+Delete every line that contains queryClient.invalidateQueries - the services handle this automatically now.
+Step 4: Remove the import for apiRequest
+Remove this line from imports:
+typescriptimport { apiRequest } from "@/lib/queryClient";
+Step 5: Keep queryClient import but only for useQuery
+Keep this import as it's still needed for React Query hooks:

@@ -16,7 +16,6 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 import { CSVImportModal } from "@/components/csv-import-modal";
@@ -26,6 +25,18 @@ import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
+import {
+  clientService,
+  userService,
+  benchmarkService,
+  portfolioService,
+  filterService,
+  competitorService,
+  insightService,
+  metricService,
+  ga4Service,
+  cacheManager
+} from '@/services/api';
 
 // Dialog component for editing business size with controlled state
 function BusinessSizeEditDialog({ option }: { option: { id: string; value: string; label: string } }) {
@@ -42,17 +53,11 @@ function BusinessSizeEditDialog({ option }: { option: { id: string; value: strin
     const value = formData.get('value') as string;
     
     try {
-      await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+      await filterService.update(option.id, { value });
       toast({
         title: "Business size updated",
         description: `Updated to "${value}".`,
       });
-      // Invalidate all related queries since cascading update affects multiple data sources
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/filters'] }); // Dashboard filters
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -113,17 +118,11 @@ function IndustryVerticalEditDialog({ option }: { option: { id: string; value: s
     const value = formData.get('value') as string;
     
     try {
-      await apiRequest('PUT', `/api/admin/filter-options/${option.id}`, { value });
+      await filterService.update(option.id, { value });
       toast({
         title: "Industry vertical updated",
         description: `Updated to "${value}".`,
       });
-      // Invalidate all related queries since cascading update affects multiple data sources
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/benchmark-companies'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/cd-portfolio'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/filters'] }); // Dashboard filters
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -200,7 +199,7 @@ export default function AdminPanel() {
     queryKey: AdminQueryKeys.cdPortfolioData(viewingCompanyData?.id || ''),
     queryFn: async () => {
       if (!viewingCompanyData?.id) return null;
-      return await apiRequest('GET', `/api/admin/cd-portfolio/${viewingCompanyData.id}/data`);
+      return await portfolioService.getData(viewingCompanyData.id);
     },
     enabled: !!viewingCompanyData?.id && dataViewerOpen
   });
@@ -253,20 +252,9 @@ export default function AdminPanel() {
   // Mutations for client management
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-
-      try {
-        const result = await apiRequest("PUT", `/api/admin/clients/${id}`, data);
-
-        return result;
-      } catch (error) {
-        console.error("API request error:", error);
-        throw error;
-      }
+      return await clientService.update(id, data);
     },
     onSuccess: (data) => {
-
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.ga4PropertyAccess() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -275,7 +263,6 @@ export default function AdminPanel() {
       });
     },
     onError: (error: Error) => {
-      console.error("Update client mutation error:", error);
       toast({
         title: "Failed to update client",
         description: error.message || "An unknown error occurred",
@@ -286,24 +273,16 @@ export default function AdminPanel() {
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
-
-      await apiRequest("DELETE", `/api/admin/clients/${id}`);
-      return id; // Return the deleted ID
+      await clientService.delete(id);
+      return id;
     },
     onSuccess: (deletedId) => {
-
-      
-      // Since the client is now actually deleted from the database,
-      // we can safely invalidate the cache to get fresh data
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
-      
       toast({
         title: "Client deleted",
         description: "Client has been permanently deleted from the database.",
       });
     },
     onError: (error: Error) => {
-      console.error("Delete client error:", error);
       toast({
         title: "Failed to delete client",
         description: error.message,
@@ -315,10 +294,9 @@ export default function AdminPanel() {
   // Mutations for benchmark company management
   const updateCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest("PUT", `/api/admin/benchmark-companies/${id}`, data);
+      return await benchmarkService.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -337,10 +315,9 @@ export default function AdminPanel() {
 
   const deleteCompanyMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/benchmark-companies/${id}`);
+      await benchmarkService.delete(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       toast({
         title: "Company deleted",
         description: "Benchmark company has been successfully deleted.",
@@ -358,10 +335,9 @@ export default function AdminPanel() {
   // Mutations for user management
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest("PUT", `/api/admin/users/${id}`, data);
+      return await userService.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -380,10 +356,9 @@ export default function AdminPanel() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/users/${id}`);
+      await userService.delete(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       toast({
         title: "User deleted",
         description: "User has been successfully deleted.",
@@ -400,12 +375,7 @@ export default function AdminPanel() {
 
   const sendPasswordResetMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const res = await apiRequest("POST", `/api/admin/users/${userId}/send-password-reset`);
-      const result = await res.json();
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Password reset response:", result);
-      }
-      return result;
+      return await userService.sendPasswordReset(userId);
     },
     onSuccess: () => {
       toast({
@@ -424,10 +394,9 @@ export default function AdminPanel() {
 
   const toggleUserActiveMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: "Active" | "Inactive" }) => {
-      return await apiRequest("PUT", `/api/admin/users/${userId}`, { status });
+      return await userService.update(userId, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       toast({
         title: "User status updated",
         description: "User access has been successfully updated.",
@@ -445,10 +414,9 @@ export default function AdminPanel() {
   // Create mutations for adding new items
   const createClientMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/clients", data);
+      return await clientService.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -467,10 +435,9 @@ export default function AdminPanel() {
 
   const createBenchmarkCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/benchmark-companies", data);
+      return await benchmarkService.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -489,10 +456,9 @@ export default function AdminPanel() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/users/invite", data);
+      return await userService.invite(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.users() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -512,10 +478,9 @@ export default function AdminPanel() {
   // CD Portfolio Company mutations
   const createCdPortfolioCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/cd-portfolio", data);
+      return await portfolioService.create(data);
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
       setIsDialogOpen(false);
       setEditingItem(null);
       
@@ -593,12 +558,7 @@ export default function AdminPanel() {
           if (hasPortfolioData && portfolioIncreased) {
             clearInterval(pollInterval);
             
-            // Comprehensive cache invalidation for seamless refresh
-            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
-            
-            // Targeted cache invalidation for better performance
-            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allDashboards() });
-            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allFilters() });
+            // Cache will be automatically invalidated by portfolio service
             
             console.log("🔄 Cache invalidated after portfolio integration completion");
             
@@ -618,10 +578,9 @@ export default function AdminPanel() {
 
   const updateCdPortfolioCompanyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest("PUT", `/api/admin/cd-portfolio/${id}`, data);
+      return await portfolioService.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -640,19 +599,10 @@ export default function AdminPanel() {
 
   const deleteCdPortfolioCompanyMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/cd-portfolio/${id}`);
+      await portfolioService.delete(id);
     },
     onSuccess: () => {
-      // Targeted cache invalidation for faster performance
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.cdPortfolio() });
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allDashboards() });
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.allFilters() });
-      
-      console.log("🔄 Cache invalidated after portfolio company deletion");
-      
-      // Reset deleting state to close modal
       setDeletingCompanyId(null);
-      
       toast({
         title: "Company removed from portfolio",
         description: "✅ Portfolio averages recalculated and dashboard data refreshed automatically. Navigate to dashboard to see updated numbers.",
@@ -660,9 +610,7 @@ export default function AdminPanel() {
       });
     },
     onError: (error: Error) => {
-      // Reset deleting state on error
       setDeletingCompanyId(null);
-      
       toast({
         title: "Failed to remove company",
         description: error.message,
@@ -674,11 +622,9 @@ export default function AdminPanel() {
   // Metric Prompts mutations
   const createMetricPromptMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/admin/metric-prompts", data);
-      return res.json();
+      return await metricService.createPrompt(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.metricPrompts() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -697,11 +643,9 @@ export default function AdminPanel() {
 
   const updateMetricPromptMutation = useMutation({
     mutationFn: async ({ metricName, data }: { metricName: string; data: any }) => {
-      const res = await apiRequest("PUT", `/api/admin/metric-prompts/${metricName}`, data);
-      return res.json();
+      return await metricService.updatePrompt(metricName, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.metricPrompts() });
       setIsDialogOpen(false);
       setEditingItem(null);
       toast({
@@ -1927,7 +1871,7 @@ export default function AdminPanel() {
                                 
                                 try {
                                   setIsLoading(true);
-                                  const response = await apiRequest('DELETE', `/api/admin/clients/${editingItem.id}/clear-icon`);
+                                  await clientService.clearIcon(editingItem.id);
                                   
                                   // Update the editingItem to remove the icon immediately
                                   setEditingItem((prev: any) => prev ? { ...prev, iconUrl: null } : prev);
@@ -1935,9 +1879,6 @@ export default function AdminPanel() {
                                     title: "Icon cleared successfully",
                                     description: "Client icon has been removed.",
                                   });
-                                  
-                                  // Refresh the clients list
-                                  queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
                                 } catch (error) {
                                   toast({
                                     title: "Failed to clear icon",
@@ -1977,7 +1918,7 @@ export default function AdminPanel() {
                                   
                                   const domain = new URL(websiteUrl).hostname.replace('www.', '');
                                   console.log('Processing URL:', websiteUrl, '→ Domain:', domain);
-                                  const response = await apiRequest('POST', `/api/admin/clients/${editingItem.id}/fetch-icon`, { domain });
+                                  const response = await clientService.fetchIcon(editingItem.id, domain);
                                   
                                   console.log('Icon fetch response:', response);
                                   
@@ -1987,7 +1928,6 @@ export default function AdminPanel() {
                                       title: "Icon fetched successfully",
                                       description: "Client icon has been updated.",
                                     });
-                                    queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
                                   } else {
                                     throw new Error("No icon found");
                                   }
@@ -3141,17 +3081,7 @@ export default function AdminPanel() {
                         }
                         
                         try {
-                          const response = await fetch('/api/admin/filter-options', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ category, value }),
-                          });
-
-                          if (!response.ok) {
-                            throw new Error('Failed to create filter option');
-                          }
+                          await filterService.create({ category, value });
 
                           toast({
                             title: "Filter option added",
@@ -3159,10 +3089,6 @@ export default function AdminPanel() {
                           });
                           setIsDialogOpen(false);
                           setEditingItem(null);
-                          
-                          // Refresh filter options data and dashboard filters
-                          queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
-                          queryClient.invalidateQueries({ queryKey: ['/api/filters'] });
                         } catch (error) {
                           toast({
                             title: "Error",
@@ -3240,14 +3166,11 @@ export default function AdminPanel() {
                                     size="sm"
                                     onClick={async () => {
                                       try {
-                                        await fetch(`/api/admin/filter-options/${option.id}`, {
-                                          method: 'DELETE',
-                                        });
+                                        await filterService.delete(option.id);
                                         toast({
                                           title: "Filter option deleted",
                                           description: `Removed "${option.value}" from business sizes.`,
                                         });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
                                       } catch (error) {
                                         toast({
                                           title: "Error",
@@ -3289,14 +3212,11 @@ export default function AdminPanel() {
                                     size="sm"
                                     onClick={async () => {
                                       try {
-                                        await fetch(`/api/admin/filter-options/${option.id}`, {
-                                          method: 'DELETE',
-                                        });
+                                        await filterService.delete(option.id);
                                         toast({
                                           title: "Filter option deleted",
                                           description: `Removed "${option.value}" from industry verticals.`,
                                         });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/filter-options'] });
                                       } catch (error) {
                                         toast({
                                           title: "Error",
@@ -3552,7 +3472,7 @@ export default function AdminPanel() {
           open={isCSVImportOpen}
           onOpenChange={setIsCSVImportOpen}
           onImportComplete={() => {
-            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+            // Cache invalidation handled automatically by service layer
           }}
         />
         </div>
