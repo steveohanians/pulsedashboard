@@ -1,0 +1,68 @@
+Please analyze and fix the Industry_Avg charting issues in our dashboard. Industry_Avg data is not displaying correctly on charts while CD_Avg works fine.
+
+ISSUES TO FIX:
+
+1. DATA STRUCTURE ISSUE in /server/storage.ts:
+   - In getFilteredIndustryMetrics() function (lines 651-746)
+   - Traffic Channels generation is being SKIPPED (line 717: "continue;")
+   - This causes Traffic Channels chart to have no Industry_Avg data
+   - CD_Avg works because it doesn't skip and has proper fallback data
+
+2. SCALING INCONSISTENCIES between Industry_Avg and CD_Avg:
+   - Percentages: Sometimes 0-1 scale (0.45) vs 0-100 scale (45)
+   - Session Duration: Sometimes minutes vs seconds
+   - Value wrapping: JSON objects {"value": X} vs raw values
+   - Device Distribution: Inconsistent percentage formats
+
+REQUIRED FIXES:
+
+1. In /server/storage.ts - getFilteredIndustryMetrics():
+   - REMOVE the skip for Traffic Channels generation (line 717)
+   - Generate Traffic Channels data similar to how other metrics are generated
+   - Ensure consistent value format: use 0-100 for percentages, seconds for duration
+
+2. In /server/services/semrush/dataProcessor.ts:
+   - Ensure calculateIndustryAverages() outputs consistent scaling:
+     * Bounce Rate: 0-100 scale (45 for 45%)
+     * Session Duration: always in seconds (180 for 3 minutes)
+     * Traffic Channels percentages: 0-100 scale
+     * Device Distribution percentages: 0-100 scale
+   - Match the exact format that CD_Avg uses
+
+3. In chart components (/client/src/components/charts/):
+   - Add normalization functions to handle both formats during transition
+   - Ensure stacked-bar-chart.tsx handles Industry_Avg Traffic Channels
+   - Ensure lollipop-chart.tsx handles Industry_Avg Device Distribution
+
+4. Create consistency check function to verify:
+   - All Industry_Avg metrics match CD_Avg format
+   - All percentages are 0-100 scale
+   - All durations are in seconds
+   - Traffic Channels have complete channel arrays
+
+TEST CRITERIA:
+- Industry_Avg should display on ALL charts just like CD_Avg does
+- Traffic Channels stacked bar chart shows Industry_Avg data
+- Device Distribution lollipop chart shows Industry_Avg data
+- No scaling issues (values should be similar magnitude to CD_Avg)
+- Time series charts show proper Industry_Avg trends
+
+SPECIFIC CODE SECTIONS TO MODIFY:
+
+1. /server/storage.ts lines 715-720:
+   Replace:
+   ```javascript
+   if (config.name === 'Traffic Channels') {
+     continue; // Skip traffic channels
+   }
+With proper Traffic Channels generation using the same approach as other metrics.
+
+Ensure all stored values use consistent format:
+
+Percentages: Always store as 0-100 (e.g., 45.5 not 0.455)
+Duration: Always store in seconds (e.g., 180 not 3)
+Use same JSON structure as CD_Avg for complex values
+
+
+
+Please make these fixes and verify that Industry_Avg data displays correctly on all dashboard charts.
