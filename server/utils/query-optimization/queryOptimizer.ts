@@ -751,16 +751,6 @@ export async function getDashboardDataOptimized(
     rawMetricsCount: deviceDistributionMetrics.length
   });
 
-  // Extract Industry_Avg data for easy frontend access
-  const industryAvgMetrics = processedData.filter(m => m.sourceType === 'Industry_Avg');
-  
-  // Debug logging to verify Industry_Avg extraction
-  logger.info('🏭 INDUSTRY_AVG EXTRACTION DEBUG', {
-    totalProcessedData: processedData.length,
-    industryAvgCount: industryAvgMetrics.length,
-    industryAvgMetrics: industryAvgMetrics.slice(0, 5).map(m => ({ metricName: m.metricName, value: m.value, timePeriod: m.timePeriod }))
-  });
-  
   const result = {
     client,
     competitors,
@@ -768,7 +758,6 @@ export async function getDashboardDataOptimized(
     trafficChannelMetrics, // Add separate traffic channel data for stacked bar chart
     deviceDistributionMetrics, // Add separate device distribution data for donut chart
     deviceDistribution, // Add processed device distribution for frontend charts
-    industryAvg: industryAvgMetrics, // ✅ Add Industry_Avg data as separate field for charts
     // For multi-period queries OR "Last Month" (daily data), structure as time series
     ...(shouldCreateTimeSeriesData ? {
       isTimeSeries: true,
