@@ -93,7 +93,7 @@ function processTimeSeriesForBar(
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
     
-    // Convert Session Duration from seconds to minutes for client and CD avg data
+    // Convert Session Duration from seconds to minutes and Rate metrics from decimal to percentage
     let clientValue = clientMetric ? parseMetricValue(clientMetric.value) : 0;
     let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : 0;
     let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : 0;
@@ -102,6 +102,10 @@ function processTimeSeriesForBar(
       clientValue = clientValue / 60;
       industryValue = industryValue / 60;
       cdValue = cdValue / 60;
+    } else if (metricName?.includes('Rate')) {
+      // Convert from decimal to percentage for Rate metrics
+      industryValue = industryValue * 100;
+      cdValue = cdValue * 100;
     }
     
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;

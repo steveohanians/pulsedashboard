@@ -197,15 +197,23 @@ function generateAreaData(
           const clientMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'Client');
           const cdAvgMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'CD_Avg');
           
+          // Convert values and apply percentage conversion for Rate metrics
+          let clientValue = Number(clientMetric?.value) || 0;
+          let cdAvgValue = Number(cdAvgMetric?.value) || 0;
+          
+          if (metricName?.includes('Rate')) {
+            cdAvgValue = cdAvgValue * 100; // Convert to percentage
+          }
+          
           // Create authentic data point
           const point: AreaDataPoint = {
             date: `Period ${index + 1}`,
-            client: Number(clientMetric?.value) || 0,
+            client: clientValue,
             industryAvg: 0, // No synthetic data for industry
-            cdAvg: Number(cdAvgMetric?.value) || 0,
-            [clientKey]: Number(clientMetric?.value) || 0,
+            cdAvg: cdAvgValue,
+            [clientKey]: clientValue,
             'Industry Avg': 0,
-            'Clear Digital Clients Avg': Number(cdAvgMetric?.value) || 0,
+            'Clear Digital Clients Avg': cdAvgValue,
           };
           
           // Add competitor data
@@ -227,9 +235,14 @@ function generateAreaData(
     
     // Fallback: Generate temporal variations for each data source (only if no authentic data)
     const safeMetricName = metricName || 'Unknown Metric';
+    
+    // Apply percentage conversion for Rate metrics before generating variations
+    const processedIndustryAvg = metricName?.includes('Rate') ? industryAvg * 100 : industryAvg;
+    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    
     const clientVariations = generateTemporalVariationSync(clientData, dates, safeMetricName, `client-${safeMetricName}`);
-    const industryVariations = generateTemporalVariationSync(industryAvg, dates, safeMetricName, `industry-${safeMetricName}`);
-    const cdVariations = generateTemporalVariationSync(cdAvg, dates, safeMetricName, `cd-${safeMetricName}`);
+    const industryVariations = generateTemporalVariationSync(processedIndustryAvg, dates, safeMetricName, `industry-${safeMetricName}`);
+    const cdVariations = generateTemporalVariationSync(processedCdAvg, dates, safeMetricName, `cd-${safeMetricName}`);
     
     // Generate competitor variations
     const competitorVariations = competitors.map((competitor, index) => 
@@ -255,16 +268,19 @@ function generateAreaData(
       data.push(point);
     });
   } else {
-    // For other time periods, use static values (existing behavior)
+    // For other time periods, use static values with proper percentage conversion for Rate metrics
+    const processedIndustryAvg = metricName?.includes('Rate') ? industryAvg * 100 : industryAvg;
+    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    
     dates.forEach((date, index) => {
       const point: AreaDataPoint = {
         date,
         client: Math.round(clientData * 100) / 100,
-        industryAvg: Math.round(industryAvg * 100) / 100,
-        cdAvg: Math.round(cdAvg * 100) / 100,
+        industryAvg: Math.round(processedIndustryAvg * 100) / 100,
+        cdAvg: Math.round(processedCdAvg * 100) / 100,
         [clientKey]: Math.round(clientData * 100) / 100,
-        'Industry Avg': Math.round(industryAvg * 100) / 100,
-        'Clear Digital Clients Avg': Math.round(cdAvg * 100) / 100,
+        'Industry Avg': Math.round(processedIndustryAvg * 100) / 100,
+        'Clear Digital Clients Avg': Math.round(processedCdAvg * 100) / 100,
       };
 
       // Add competitor data with actual values

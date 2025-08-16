@@ -196,15 +196,16 @@ function generateRealTimeSeriesData(
     const avgCD = cdMetrics.length > 0 ? 
       cdMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / cdMetrics.length : (cdAvg || 0);
     
-    // Convert CD_Avg from decimal to percentage for Rate metrics
+    // Convert both CD_Avg and Industry_Avg from decimal to percentage for Rate metrics
     const processedAvgCD = metricName?.includes('Rate') ? avgCD * 100 : avgCD;
+    const processedAvgIndustry = metricName?.includes('Rate') ? avgIndustry * 100 : avgIndustry;
     
 
     
 
     
     dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
-    dataPoint['Industry Avg'] = Math.round(avgIndustry * 10) / 10;
+    dataPoint['Industry Avg'] = Math.round(processedAvgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(processedAvgCD * 10) / 10;
     
     // Add actual competitor data for each period
