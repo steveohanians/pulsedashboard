@@ -98,17 +98,7 @@ function processTimeSeriesForBar(
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
     
-    // 🔍 DEBUG: Log Industry_Avg search in processTimeSeriesForBar
-    console.error(`🔍 PROCESSTIMESERIESFORBAR SEARCH FOR ${metricName}:`, {
-      period,
-      periodDataLength: periodData.length,
-      searchingFor: { sourceType: 'Industry_Avg', metricName },
-      availableSourceTypes: [...new Set(periodData.map(m => m.sourceType))],
-      availableMetricNames: [...new Set(periodData.map(m => m.metricName))],
-      industryMetricFound: !!industryMetric,
-      industryMetricValue: industryMetric?.value,
-      allIndustryAvgMetrics: periodData.filter(m => m.sourceType === 'Industry_Avg')
-    });
+
     
     // Convert Session Duration from seconds to minutes and Rate metrics from decimal to percentage
     // Use fallback values when data is missing from timeSeriesData
@@ -116,41 +106,20 @@ function processTimeSeriesForBar(
     let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : (fallbackValues?.industryAvg || 0);
     let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : (fallbackValues?.cdAvg || 0);
     
-    // 🔍 DEBUG: Log values before and after conversion for Industry Average
-    console.error(`🔍 FALLBACK VALUES DEBUG FOR ${metricName}:`, {
-      period,
-      fallbackValues,
-      industryMetricFound: !!industryMetric,
-      rawIndustryValue: industryValue,
-      isSessionDuration: metricName === 'Session Duration'
-    });
-    
     if (metricName === 'Session Duration') {
-      clientValue = clientValue / 60;
-      industryValue = industryValue / 60;
-      cdValue = cdValue / 60;
+      // Only convert from seconds to minutes if data comes from timeSeriesData (not fallback values)
+      if (clientMetric) clientValue = clientValue / 60;
+      if (industryMetric) industryValue = industryValue / 60; 
+      if (cdMetric) cdValue = cdValue / 60;
+      // Fallback values are already in minutes, so no conversion needed
     } else if (metricName?.includes('Rate')) {
       // Convert from decimal to percentage for Rate metrics
       industryValue = industryValue * 100;
       cdValue = cdValue * 100;
     }
     
-    const finalIndustryValue = Math.round(industryValue * 10) / 10;
-    
-    // 🔍 DEBUG: Log final calculated values
-    console.error(`🔍 FINAL VALUES DEBUG FOR ${metricName}:`, {
-      period,
-      processedIndustryValue: industryValue,
-      finalIndustryValue,
-      calculationSteps: {
-        step1_multiply: industryValue * 10,
-        step2_round: Math.round(industryValue * 10),
-        step3_divide: Math.round(industryValue * 10) / 10
-      }
-    });
-    
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
-    dataPoint['Industry Avg'] = finalIndustryValue;
+    dataPoint['Industry Avg'] = Math.round(industryValue * 10) / 10;
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
     dataPoint[`${companyName} Clients Avg`] = Math.round(cdValue * 10) / 10;
     
@@ -210,15 +179,7 @@ function processTimeSeriesForBar(
  */
 function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string, metricName?: string): Array<Record<string, unknown>> {
 
-  // 🔍 DEBUG: Log generateBarData inputs to trace Industry_Avg conversion issue
-  console.error(`🔍 GENERATEBARDATA INPUTS FOR ${metricName}:`, {
-    timePeriod,
-    clientData,
-    industryAvg,
-    cdAvg,
-    industryAvgType: typeof industryAvg,
-    hasValidIndustryAvg: industryAvg !== undefined && industryAvg !== null && industryAvg > 0
-  });
+
   
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const data: Array<Record<string, unknown>> = [];
@@ -339,24 +300,7 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
       const point: Record<string, unknown> = {
         period,
         [clientKey]: Math.round((clientVariations[index] ?? processedClientData) * 10) / 10,
-        'Industry Avg': (() => {
-          const variationValue = industryVariations[index];
-          const fallbackValue = processedIndustryAvg;
-          const finalValue = variationValue ?? fallbackValue;
-          const roundedValue = Math.round(finalValue * 10) / 10;
-          
-          console.error(`🔍 INDUSTRY AVG CALCULATION FOR ${metricName}:`, {
-            index,
-            variationValue,
-            fallbackValue,
-            finalValue,
-            roundedValue,
-            industryVariationsLength: industryVariations.length,
-            originalIndustryAvg: industryAvg
-          });
-          
-          return roundedValue;
-        })(),
+        'Industry Avg': Math.round((industryVariations[index] ?? processedIndustryAvg) * 10) / 10,
         [`${companyName} Clients Avg`]: Math.round((cdVariations[index] ?? processedCdAvg) * 10) / 10,
       };
 
@@ -502,15 +446,7 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
       requiredKeys
     });
 
-    // 🚨 DEBUG: Log final chart data structure for Industry Average
-    console.error(`🚨 FINAL CHART DATA FOR ${metricName}:`, {
-      rawDataLength: rawData.length,
-      normalizedLength: normalized.length,
-      samplePoint: normalized[0],
-      industryAvgInSample: normalized[0]?.['Industry Avg'],
-      allKeysInSample: Object.keys(normalized[0] || {}),
-      requiredKeys
-    });
+
     
     return normalized;
   }, [rawData, clientKey, metricName]);
