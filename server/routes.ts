@@ -482,6 +482,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug what dashboard query actually returns for Last Month
+  app.get('/api/debug/dashboard-query/:clientId', requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { getDashboardDataOptimized } = await import('./utils/query-optimization/queryOptimizer');
+      
+      // Get client
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+      
+      // Query for Last Month (2025-07)
+      const periodsToQuery = ['2025-07'];
+      
+      // Call the same function dashboard uses
+      const result = await getDashboardDataOptimized(
+        client,
+        periodsToQuery,
+        'All',
+        'All', 
+        'last_month'
+      );
+      
+      // Extract Industry_Avg metrics
+      const industryAvgMetrics = result.metrics?.filter((m: any) => 
+        m.sourceType === 'Industry_Avg'
+      ) || [];
+      
+      // Extract CD_Avg metrics for comparison
+      const cdAvgMetrics = result.metrics?.filter((m: any) => 
+        m.sourceType === 'CD_Avg'
+      ) || [];
+      
+      // Check Traffic Channels specifically
+      const trafficChannels = result.metrics?.filter((m: any) => 
+        m.metricName === 'Traffic Channels'
+      ) || [];
+      
+      // Group by metric name
+      const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+      const industryByMetric: any = {};
+      const cdByMetric: any = {};
+      
+      coreMetrics.forEach(metric => {
+        industryByMetric[metric] = industryAvgMetrics.find((m: any) => m.metricName === metric);
+        cdByMetric[metric] = cdAvgMetrics.find((m: any) => m.metricName === metric);
+      });
+      
+      res.json({
+        query_params: {
+          clientId,
+          periods: periodsToQuery,
+          timePeriod: 'last_month'
+        },
+        total_metrics_returned: result.metrics?.length || 0,
+        industry_avg: {
+          total_found: industryAvgMetrics.length,
+          by_metric: industryByMetric,
+          raw_metrics: industryAvgMetrics.slice(0, 5)
+        },
+        cd_avg: {
+          total_found: cdAvgMetrics.length,
+          by_metric: cdByMetric,
+          raw_metrics: cdAvgMetrics.slice(0, 5)
+        },
+        traffic_channels: {
+          total_found: trafficChannels.length,
+          channel_names: trafficChannels.map((tc: any) => ({
+            sourceType: tc.sourceType,
+            channel: tc.channel,
+            value: tc.value
+          })).slice(0, 10)
+        },
+        diagnosis: {
+          industry_avg_missing: coreMetrics.filter(m => !industryByMetric[m]),
+          cd_avg_missing: coreMetrics.filter(m => !cdByMetric[m]),
+          likely_issue: industryAvgMetrics.length === 0 ? 
+            'getDashboardDataOptimized is not returning Industry_Avg data' :
+            'Data is being returned but not displayed in charts'
+        }
+      });
+      
+    } catch (error) {
+      console.error('Dashboard query debug error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Debug failed'
+      });
+    }
+  });
+
   // Configure multer for CSV file uploads
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -611,8 +702,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // DEBUG: Log CD_Avg metrics returned from optimizer
       const cdAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'CD_Avg') || [];
+      const industryAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'Industry_Avg') || [];
       const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
       const cdAvgCoreMetrics = cdAvgMetrics.filter((m: any) => coreMetrics.includes(m.metricName));
+      const industryAvgCoreMetrics = industryAvgMetrics.filter((m: any) => coreMetrics.includes(m.metricName));
       
       logger.info(`🔍 DASHBOARD OPTIMIZER RESULT: CD_Avg data analysis`, {
         totalMetrics: result.metrics?.length || 0,
@@ -623,6 +716,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestedPeriod: periodsToQuery[0]
       });
       
+      logger.info(`🔍 DASHBOARD OPTIMIZER RESULT: Industry_Avg data analysis`, {
+        industryAvgCount: industryAvgMetrics.length,
+        industryAvgCoreCount: industryAvgCoreMetrics.length,
+        industryAvgMetricNames: Array.from(new Set(industryAvgMetrics.map((m: any) => m.metricName))),
+        industryAvgCorePeriods: industryAvgCoreMetrics.map((m: any) => ({ metric: m.metricName, period: m.timePeriod })),
+        requestedPeriod: periodsToQuery[0]
+      });
+      
       // Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {
         clientId,
@@ -630,9 +731,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metrics: result.metrics
       }, 2); // Medium priority
 
+      // Create grouped metrics for frontend consumption
+      const groupedMetrics: Record<string, any> = {};
+      industryAvgCoreMetrics.forEach((metric: any) => {
+        groupedMetrics[metric.metricName] = metric.value;
+      });
+
       // Create typed dashboard result
       const dashboardResult: DashboardResult = {
         ...result,
+        industry_avg: groupedMetrics,
         timestamp: Date.now(),
         dataFreshness: 'live'
       };

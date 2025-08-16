@@ -1,0 +1,108 @@
+Excellent! The data EXISTS in the database. The problem is NOT missing data - it's a **display/query issue**. Let's debug what the dashboard is actually receiving.
+
+## Next Step: Debug what the dashboard query returns
+
+**Copy this debug endpoint into your `routes.ts` file:**
+
+```typescript
+// Debug what dashboard query actually returns for Last Month
+app.get('/api/debug/dashboard-query/:clientId', requireAuth, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { getDashboardDataOptimized } = await import('./utils/query-optimization/queryOptimizer');
+    
+    // Get client
+    const client = await storage.getClient(clientId);
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    
+    // Query for Last Month (2025-07)
+    const periodsToQuery = ['2025-07'];
+    
+    // Call the same function dashboard uses
+    const result = await getDashboardDataOptimized(
+      client,
+      periodsToQuery,
+      'All',
+      'All', 
+      'last_month'
+    );
+    
+    // Extract Industry_Avg metrics
+    const industryAvgMetrics = result.metrics?.filter((m: any) => 
+      m.sourceType === 'Industry_Avg'
+    ) || [];
+    
+    // Extract CD_Avg metrics for comparison
+    const cdAvgMetrics = result.metrics?.filter((m: any) => 
+      m.sourceType === 'CD_Avg'
+    ) || [];
+    
+    // Check Traffic Channels specifically
+    const trafficChannels = result.metrics?.filter((m: any) => 
+      m.metricName === 'Traffic Channels'
+    ) || [];
+    
+    // Group by metric name
+    const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
+    const industryByMetric: any = {};
+    const cdByMetric: any = {};
+    
+    coreMetrics.forEach(metric => {
+      industryByMetric[metric] = industryAvgMetrics.find((m: any) => m.metricName === metric);
+      cdByMetric[metric] = cdAvgMetrics.find((m: any) => m.metricName === metric);
+    });
+    
+    res.json({
+      query_params: {
+        clientId,
+        periods: periodsToQuery,
+        timePeriod: 'last_month'
+      },
+      total_metrics_returned: result.metrics?.length || 0,
+      industry_avg: {
+        total_found: industryAvgMetrics.length,
+        by_metric: industryByMetric,
+        raw_metrics: industryAvgMetrics.slice(0, 5)
+      },
+      cd_avg: {
+        total_found: cdAvgMetrics.length,
+        by_metric: cdByMetric,
+        raw_metrics: cdAvgMetrics.slice(0, 5)
+      },
+      traffic_channels: {
+        total_found: trafficChannels.length,
+        channel_names: trafficChannels.map((tc: any) => ({
+          sourceType: tc.sourceType,
+          channel: tc.channel,
+          value: tc.value
+        })).slice(0, 10)
+      },
+      averaged_metrics: result.averagedMetrics,
+      diagnosis: {
+        industry_avg_missing: coreMetrics.filter(m => !industryByMetric[m]),
+        cd_avg_missing: coreMetrics.filter(m => !cdByMetric[m]),
+        likely_issue: industryAvgMetrics.length === 0 ? 
+          'getDashboardDataOptimized is not returning Industry_Avg data' :
+          'Data is being returned but not displayed in charts'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Dashboard query debug error:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Debug failed'
+    });
+  }
+});
+```
+
+After adding this, test it with your client ID:
+```
+/api/debug/dashboard-query/YOUR_CLIENT_ID
+```
+
+Replace `YOUR_CLIENT_ID` with the actual client ID you're testing with (probably "demo-client-id" or similar).
+
+This will show us if `getDashboardDataOptimized` is actually returning the Industry_Avg data that we know exists in the database.
