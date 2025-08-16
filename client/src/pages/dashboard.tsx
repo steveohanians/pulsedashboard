@@ -1765,10 +1765,20 @@ export default function Dashboard() {
                               />
                           )
                         ) : (
-                          <MetricsChart
-                            metricName={metricName}
-                            data={metricData}
-                          />
+                          <>
+                            {console.error(`🚨 PASSING TO ${metricName} CHART:`, {
+                              dataKeys: Object.keys(metricData || {}),
+                              hasIndustry_Avg: 'Industry_Avg' in (metricData || {}),
+                              hasCD_Avg: 'CD_Avg' in (metricData || {}),
+                              Industry_Avg_value: metricData?.Industry_Avg,
+                              CD_Avg_value: metricData?.CD_Avg,
+                              fullData: JSON.stringify(metricData)
+                            })}
+                            <MetricsChart
+                              metricName={metricName}
+                              data={metricData}
+                            />
+                          </>
                         )}
                       </div>
                     </div>
