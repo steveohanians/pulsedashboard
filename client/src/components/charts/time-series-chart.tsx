@@ -94,7 +94,7 @@ function generateTimeSeriesData(
   
   // Only use authentic time-series data - no fallback generation
   if (timeSeriesData && periods && periods.length > 0) {
-    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
+    return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg, industryAvg);
   }
   
   // Data validation improved for proper number handling
@@ -105,7 +105,7 @@ function generateTimeSeriesData(
     // Check if we have time series data for the last month - this would be daily data
     if (timeSeriesData && periods && periods.length === 1) {
       // Use the existing time series generation but for daily data
-      return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg);
+      return generateRealTimeSeriesData(timeSeriesData, periods, competitors, clientUrl, metricName, cdAvg, industryAvg);
     }
     
     // Fallback to single data point for Last Month using dynamic period
@@ -158,7 +158,8 @@ function generateRealTimeSeriesData(
   competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
   metricName?: string,
-  cdAvg?: number
+  cdAvg?: number,
+  industryAvg?: number
 ): Array<Record<string, unknown>> {
   
   const data: Array<Record<string, unknown>> = [];
@@ -185,11 +186,13 @@ function generateRealTimeSeriesData(
     const clientMetrics = relevantData.filter(m => m.sourceType === 'Client');
     const industryMetrics = relevantData.filter(m => m.sourceType === 'Industry_Avg');
     
-    // Calculate averages for each source type
+    // Calculate averages for each source type - use fallback values when timeSeriesData is missing
     const avgClient = clientMetrics.length > 0 ? 
       clientMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / clientMetrics.length : 0;
     const avgIndustry = industryMetrics.length > 0 ? 
-      industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : 0;
+      industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : (industryAvg || 0);
+    
+
     
     // Check if we have CD_Avg metrics in the time series data for this period
     const cdMetrics = relevantData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');
@@ -199,6 +202,8 @@ function generateRealTimeSeriesData(
     // Convert both CD_Avg and Industry_Avg from decimal to percentage for Rate metrics
     const processedAvgCD = metricName?.includes('Rate') ? avgCD * 100 : avgCD;
     const processedAvgIndustry = metricName?.includes('Rate') ? avgIndustry * 100 : avgIndustry;
+    
+
     
 
     

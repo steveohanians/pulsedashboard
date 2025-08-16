@@ -106,6 +106,8 @@ function processTimeSeriesForBar(
     let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : (fallbackValues?.industryAvg || 0);
     let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : (fallbackValues?.cdAvg || 0);
     
+
+    
     if (metricName === 'Session Duration') {
       // Only convert from seconds to minutes if data comes from timeSeriesData (not fallback values)
       if (clientMetric) clientValue = clientValue / 60;
@@ -114,12 +116,15 @@ function processTimeSeriesForBar(
       // Fallback values are already in minutes, so no conversion needed
     } else if (metricName?.includes('Rate')) {
       // Convert from decimal to percentage for Rate metrics
-      industryValue = industryValue * 100;
-      cdValue = cdValue * 100;
+      // Only convert if coming from timeSeriesData (not fallback values which may already be percentages)
+      if (industryMetric) industryValue = industryValue * 100;
+      if (cdMetric) cdValue = cdValue * 100;
     }
     
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
     dataPoint['Industry Avg'] = Math.round(industryValue * 10) / 10;
+    
+
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
     dataPoint[`${companyName} Clients Avg`] = Math.round(cdValue * 10) / 10;
     
@@ -499,14 +504,7 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
       visible[comp.label] = !hiddenBars.has(comp.label);
     });
 
-    // 🔥 DEBUG: Log visibility state for Industry Avg
-    console.error(`🔥 VISIBILITY CHECK FOR ${metricName}:`, {
-      'Industry Avg visible': visible['Industry Avg'],
-      'hiddenBars has Industry Avg': hiddenBars.has('Industry Avg'),
-      'hiddenBars size': hiddenBars.size,
-      'all visible bars': visible,
-      industryAvgColor: colors['Industry Avg']
-    });
+
     
     return visible;
   }, [clientKey, companyName, competitorKey, hiddenBars, metricName, colors]);
