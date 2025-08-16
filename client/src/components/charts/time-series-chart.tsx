@@ -124,7 +124,7 @@ function generateTimeSeriesData(
     const result = [{
       date: currentMonth,
       [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
-      'Industry Avg': 0, // No synthetic data
+      'Industry_Avg': 0, // No synthetic data
       'Clear Digital Clients Avg': Number(processedCdAvg).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       ...competitors.reduce((acc, comp) => {
         // Use actual competitor values - they're already properly converted
@@ -205,7 +205,7 @@ function generateRealTimeSeriesData(
 
     
     dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
-    dataPoint['Industry Avg'] = Math.round(processedAvgIndustry * 10) / 10;
+    dataPoint['Industry_Avg'] = Math.round(processedAvgIndustry * 10) / 10;
     dataPoint['Clear Digital Clients Avg'] = Math.round(processedAvgCD * 10) / 10;
     
     // Add actual competitor data for each period
@@ -313,7 +313,7 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   // Normalize chart data for null-safe rendering
   const data = useMemo(() => {
     const clientKey = clientUrl || 'Client';
-    const requiredKeys = [clientKey, 'Industry Avg', 'Clear Digital Clients Avg'];
+    const requiredKeys = [clientKey, 'Industry_Avg', 'Clear Digital Clients Avg'];
     
     return normalizeChartData(rawData, {
       gapOnNull: true,  // Allow gaps in line charts
@@ -336,7 +336,7 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   const allValues: number[] = [];
   data.forEach(point => {
     const clientValue = safeNumericValue(point[clientKey], 0);
-    const industryValue = safeNumericValue(point['Industry Avg'], 0);
+    const industryValue = safeNumericValue(point['Industry_Avg'], 0);
     const cdValue = safeNumericValue(point['Clear Digital Clients Avg'], 0);
     
     if (clientValue !== null) allValues.push(clientValue);
@@ -367,7 +367,7 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
   const visibleLines = useMemo<Record<string, boolean>>(() => {
     const visible: Record<string, boolean> = {
       [clientKey]: !hiddenLines.has(clientKey),
-      'Industry Avg': !hiddenLines.has('Industry Avg'),
+      'Industry_Avg': !hiddenLines.has('Industry_Avg'),
       'Clear Digital Clients Avg': !hiddenLines.has('Clear Digital Clients Avg'),
     };
     competitors.forEach(comp => {
@@ -503,10 +503,10 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
             )}
             
             {/* Industry Average bar */}
-            {visibleLines['Industry Avg'] && (
+            {visibleLines['Industry_Avg'] && (
               <Bar 
-                dataKey="Industry Avg" 
-                fill={colors['Industry Avg']}
+                dataKey="Industry_Avg" 
+                fill={colors['Industry_Avg']}
                 fillOpacity={0.7}
                 animationDuration={isInitialRender ? 800 : 0}
               />
@@ -619,15 +619,15 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
             )}
             
             {/* Industry Average line */}
-            {visibleLines['Industry Avg'] && (
+            {visibleLines['Industry_Avg'] && (
               <Line 
                 type="monotone" 
-                dataKey="Industry Avg" 
-                stroke={colors['Industry Avg']}
+                dataKey="Industry_Avg" 
+                stroke={colors['Industry_Avg']}
                 strokeWidth={2}
                 dot={(props: any) => {
                   const { cx, cy, key, ...restProps } = props;
-                  return <DiamondDot key={key} cx={cx} cy={cy} fill={colors['Industry Avg']} stroke={colors['Industry Avg']} strokeWidth={1} />;
+                  return <DiamondDot key={key} cx={cx} cy={cy} fill={colors['Industry_Avg']} stroke={colors['Industry_Avg']} strokeWidth={1} />;
                 }}
                 strokeDasharray="5 5"
                 animationDuration={isInitialRender ? 800 : 0}
@@ -700,17 +700,17 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
         <label className="flex items-center cursor-pointer text-xs">
           <input
             type="checkbox"
-            checked={visibleLines['Industry Avg']}
-            onChange={() => toggleLine('Industry Avg')}
+            checked={visibleLines['Industry_Avg']}
+            onChange={() => toggleLine('Industry_Avg')}
             className="sr-only"
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleLines['Industry Avg'] ? 'border-gray-400' : 'border-gray-300'
+              visibleLines['Industry_Avg'] ? 'border-gray-400' : 'border-gray-300'
             }`}
-            style={{ backgroundColor: visibleLines['Industry Avg'] ? colors['Industry Avg'] : 'transparent' }}
+            style={{ backgroundColor: visibleLines['Industry_Avg'] ? colors['Industry_Avg'] : 'transparent' }}
           >
-            {visibleLines['Industry Avg'] && (
+            {visibleLines['Industry_Avg'] && (
               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
