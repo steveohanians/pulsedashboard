@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps } from '@/utils/chartUtils';
+import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps, shouldConvertToPercentage } from '@/utils/chartUtils';
 
 interface MetricsChartProps {
   metricName: string;
@@ -32,12 +32,24 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }
 
-  // Process bar chart data points with null-safe handling
-  const rawDataPoints = Object.entries(data).map(([key, value]) => ({
-    name: key,
-    value: safeNumericValue(value, 0),
-    fill: getMetricsColors()[key] || getMetricsColors()['Default']
-  }));
+  // Process bar chart data points with null-safe handling and percentage conversion
+  const rawDataPoints = Object.entries(data).map(([key, value]) => {
+    let processedValue = safeNumericValue(value, 0) ?? 0;
+    
+    // Apply percentage conversion for Rate metrics (e.g., Bounce Rate)
+    // Convert Industry_Avg and CD_Avg from decimal to percentage
+    if (shouldConvertToPercentage(metricName)) {
+      if (key === 'Industry Avg' || key === 'CD_Avg' || key.includes('Avg')) {
+        processedValue = processedValue * 100;
+      }
+    }
+    
+    return {
+      name: key,
+      value: processedValue,
+      fill: getMetricsColors()[key] || getMetricsColors()['Default']
+    };
+  });
 
   // Normalize chart data
   const chartDataPoints = normalizeChartData(rawDataPoints, {
