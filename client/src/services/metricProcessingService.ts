@@ -102,7 +102,8 @@ export class MetricProcessingService {
     }
 
     // If we have averagedMetrics, merge them in (but don't replace our calculated CD_Avg)
-    if (isTimeSeries && averagedMetrics && typeof averagedMetrics === 'object') {
+    // FIXED: Remove isTimeSeries condition to include Industry_Avg data for all dashboard queries
+    if (averagedMetrics && typeof averagedMetrics === 'object') {
       for (const metricName in averagedMetrics) {
         if (!result[metricName]) {
           result[metricName] = {};

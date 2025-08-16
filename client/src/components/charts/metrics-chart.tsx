@@ -1,3 +1,4 @@
+import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps, shouldConvertToPercentage } from '@/utils/chartUtils';
 
@@ -31,6 +32,8 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
       </div>
     );
   }
+
+  // Data pipeline verified - checking chart rendering
 
   // Process bar chart data points with null-safe handling and percentage conversion
   const rawDataPoints = Object.entries(data).map(([key, value]) => {

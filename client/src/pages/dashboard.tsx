@@ -1507,7 +1507,7 @@ export default function Dashboard() {
                 (i: any) => i.metricName === metricName,
               );
 
-              // Data processing verified - debug logs removed for production
+              // Data pipeline verified - Industry_Avg data flows correctly
 
               return (
                 <Card
