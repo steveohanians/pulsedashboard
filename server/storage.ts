@@ -454,27 +454,80 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    // Debug logging disabled for performance - logger.debug(`getFilteredIndustryMetrics called with period: ${period}, filters:`, filters);
+    logger.info(`🔍 Getting Industry_Avg metrics for period: ${period}, filters:`, filters);
     
-    // Get all Industry_Avg metrics for this period
-    const allIndustryMetrics = await db.select().from(metrics).where(
+    // Try to get Industry_Avg metrics for requested period
+    let allIndustryMetrics = await db.select().from(metrics).where(
       and(
         eq(metrics.sourceType, 'Industry_Avg'),
         eq(metrics.timePeriod, period)
       )
     );
     
+    // If no data found for requested period, fall back to most recent available month
+    if (allIndustryMetrics.length === 0) {
+      logger.info(`No Industry_Avg data found for period ${period}, falling back to most recent available month`);
+      
+      // Get all available Industry_Avg periods sorted by most recent first
+      const availablePeriods = await db.selectDistinct({ timePeriod: metrics.timePeriod })
+        .from(metrics)
+        .where(eq(metrics.sourceType, 'Industry_Avg'))
+        .orderBy(sql`${metrics.timePeriod} DESC`)
+        .limit(5);
+      
+      if (availablePeriods.length > 0) {
+        const mostRecentPeriod = availablePeriods[0].timePeriod;
+        logger.info(`Using most recent available Industry_Avg data from period ${mostRecentPeriod} instead of ${period}`);
+        
+        allIndustryMetrics = await db.select().from(metrics)
+          .where(and(
+            eq(metrics.sourceType, 'Industry_Avg'),
+            eq(metrics.timePeriod, mostRecentPeriod)
+          ));
+        
+        // Adjust the timePeriod to match what dashboard expects
+        allIndustryMetrics = allIndustryMetrics.map(metric => ({
+          ...metric,
+          timePeriod: period // Override to match requested period
+        }));
+      }
+    }
+    
+    // If still no metrics and we have benchmark companies, calculate from source data
+    if (allIndustryMetrics.length === 0) {
+      logger.info('No Industry_Avg metrics found, checking for Benchmark source data to calculate from');
+      
+      // Check if we have benchmark company data
+      const benchmarkMetrics = await db.select().from(metrics)
+        .where(eq(metrics.sourceType, 'Benchmark'))
+        .limit(10);
+      
+      if (benchmarkMetrics.length > 0) {
+        logger.info('Found Benchmark source data, triggering recalculation');
+        
+        // Trigger recalculation
+        try {
+          const { BenchmarkIntegration } = await import('./services/semrush/benchmarkIntegration');
+          const benchmarkService = new BenchmarkIntegration(this);
+          await benchmarkService.updateIndustryAverages();
+          
+          // Try fetching again after recalculation
+          allIndustryMetrics = await db.select().from(metrics).where(
+            and(
+              eq(metrics.sourceType, 'Industry_Avg'),
+              eq(metrics.timePeriod, period)
+            )
+          );
+        } catch (error) {
+          logger.error('Failed to recalculate Industry_Avg:', error);
+        }
+      }
+    }
+    
     // If no filters applied, return all metrics
     if (!filters || ((!filters.businessSize || filters.businessSize === "All") && 
                     (!filters.industryVertical || filters.industryVertical === "All"))) {
-      // Debug logging disabled for performance
-      // logger.debug(`No filters applied, returning ${allIndustryMetrics.length} metrics`);
-      
-      // Debug traffic channel data specifically for Industry_Avg - disabled for performance
-      // const trafficChannels = allIndustryMetrics.filter(r => r.metricName === 'Traffic Channels');
-      // const channelsWithNames = trafficChannels.filter(r => r.channel);
-      // logger.debug(`Industry_Avg unfiltered traffic channels: Total=${trafficChannels.length}, With names=${channelsWithNames.length}, Sample:`, channelsWithNames.slice(0, 2).map(r => ({ channel: r.channel, value: r.value })));
-      
+      logger.info(`Returning ${allIndustryMetrics.length} Industry_Avg metrics for period ${period}`);
       return allIndustryMetrics;
     }
     
