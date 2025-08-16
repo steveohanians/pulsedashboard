@@ -1,0 +1,49 @@
+the backend now returns industry_avg data, but the charts still don't display it because they're looking for Industry_Avg in the metrics array, not in a separate industry_avg field.
+The Real Fix: Include Industry_Avg in the metrics array
+Copy this fix into your routes.ts file - REPLACE the dashboard endpoint section:
+typescript// In the dashboard endpoint, find where it processes metrics
+// Look for the section that handles "const result = await getDashboardDataOptimized"
+// Make sure Industry_Avg metrics are included in the metrics array
+
+// Find this section in your dashboard endpoint and REPLACE/UPDATE it:
+const result = await getDashboardDataOptimized(
+  client,
+  periodsToQuery,
+  businessSize as string,
+  industryVertical as string,
+  canonicalTimePeriod.type
+);
+
+// ADD THIS RIGHT AFTER to ensure Industry_Avg is in metrics array:
+// Check if Industry_Avg metrics are missing and add them
+if (result.metrics) {
+  // Log what we have
+  const hasIndustryAvg = result.metrics.some((m: any) => m.sourceType === 'Industry_Avg');
+  
+  if (!hasIndustryAvg) {
+    // Fetch Industry_Avg metrics directly
+    const industryAvgMetrics = await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, 'Industry_Avg'),
+          inArray(metrics.timePeriod, periodsToQuery)
+        )
+      );
+    
+    // Add them to the result.metrics array
+    if (industryAvgMetrics.length > 0) {
+      logger.info(`Adding ${industryAvgMetrics.length} Industry_Avg metrics to response`);
+      result.metrics = [...result.metrics, ...industryAvgMetrics];
+    }
+  }
+}
+
+// The rest of your dashboard endpoint continues as normal...
+This ensures Industry_Avg data is in the metrics array where the charts expect it, not in a separate field.
+Important: Make sure to add the necessary imports at the top of the dashboard endpoint if not already there:
+typescriptconst { db } = await import('./db');
+const { metrics } = await import('@shared/schema');
+const { eq, and, inArray } = await import('drizzle-orm');
+After adding this, the charts should find Industry_Avg data in the metrics array where they expect it.

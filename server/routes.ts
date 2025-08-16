@@ -699,6 +699,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         industryVertical as string,
         canonicalTimePeriod.type // Use canonical type instead of raw timePeriod
       );
+
+      // ADD MISSING INDUSTRY_AVG TO METRICS ARRAY: Check if Industry_Avg metrics are missing and add them
+      if (result.metrics) {
+        // Log what we have
+        const hasIndustryAvg = result.metrics.some((m: any) => m.sourceType === 'Industry_Avg');
+        
+        if (!hasIndustryAvg) {
+          // Import required modules for direct DB query
+          const { db } = await import('./db');
+          const { metrics } = await import('@shared/schema');
+          const { eq, and, inArray } = await import('drizzle-orm');
+          
+          // Fetch Industry_Avg metrics directly
+          const industryAvgMetrics = await db
+            .select()
+            .from(metrics)
+            .where(
+              and(
+                eq(metrics.sourceType, 'Industry_Avg'),
+                inArray(metrics.timePeriod, periodsToQuery)
+              )
+            );
+          
+          // Add them to the result.metrics array
+          if (industryAvgMetrics.length > 0) {
+            logger.info(`Adding ${industryAvgMetrics.length} Industry_Avg metrics to response`);
+            result.metrics = [...result.metrics, ...industryAvgMetrics];
+          }
+        }
+      }
       
       // DEBUG: Log CD_Avg metrics returned from optimizer
       const cdAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'CD_Avg') || [];
@@ -731,16 +761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metrics: result.metrics
       }, 2); // Medium priority
 
-      // Create grouped metrics for frontend consumption
-      const groupedMetrics: Record<string, any> = {};
-      industryAvgCoreMetrics.forEach((metric: any) => {
-        groupedMetrics[metric.metricName] = metric.value;
-      });
-
       // Create typed dashboard result
       const dashboardResult: DashboardResult = {
         ...result,
-        industry_avg: groupedMetrics,
         timestamp: Date.now(),
         dataFreshness: 'live'
       };
