@@ -567,34 +567,7 @@ export default function Dashboard() {
     );
   }, [metrics, averagedMetrics, timePeriod, dashboardData?.isTimeSeries]);
 
-  // Frontend debug logging for Industry_Avg analysis
-  useEffect(() => {
-    if (metrics && metrics.length > 0) {
-      const industryAvgMetrics = metrics.filter(m => m.sourceType === 'Industry_Avg');
-      const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
-      
-      // Use console.error so it shows in server logs too
-      console.error('🔍 FRONTEND DEBUG - Industry_Avg Analysis:');
-      console.error('Total metrics:', metrics.length);
-      console.error('Industry_Avg metrics found:', industryAvgMetrics.length);
-      
-      coreMetrics.forEach(metricName => {
-        const metricData = groupedMetrics[metricName] || {};
-        const industryMetric = industryAvgMetrics.find(m => m.metricName === metricName);
-        
-        console.error(`📊 ${metricName}:`, JSON.stringify({
-          'In_groupedMetrics': metricData.Industry_Avg,
-          'Raw_Industry_Avg': industryMetric?.value,
-          'Has_CD_Avg': metricData.CD_Avg,
-          'Has_Client': metricData.Client
-        }));
-      });
-      
-      const periods = Array.from(new Set(metrics.map((m: any) => m.timePeriod)));
-      console.error('🗓️ Time periods in data:', periods);
-      console.error('📍 Current timePeriod filter:', timePeriod);
-    }
-  }, [metrics, groupedMetrics, timePeriod]);
+
 
   // Orchestrated data processing with quality assessment
   const orchestratedData = useMemo(() => {
