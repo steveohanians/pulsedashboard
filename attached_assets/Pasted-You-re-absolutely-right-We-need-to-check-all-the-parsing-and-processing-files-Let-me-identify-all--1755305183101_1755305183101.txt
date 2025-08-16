@@ -1,0 +1,119 @@
+You’re absolutely right! We need to check all the parsing and processing files. Let me identify all the differences between CD_Avg and Industry_Avg handling:
+
+**Files to Check and Update:**
+
+**1. `/server/services/semrush/dataProcessor.js`**
+
+We added `processBenchmarkCompanyData` and `calculateIndustryAverages` but need to verify they match the CD Portfolio pattern:
+
+```javascript
+// Check if these methods exist and work like their CD counterparts:
+
+// This should exist (parallel to processCompanyData)
+processBenchmarkCompanyData(companyId, historicalData) {
+  // Should return metrics with sourceType: 'Benchmark'
+  // Same structure as processCompanyData but with benchmarkCompanyId instead of cdPortfolioCompanyId
+}
+
+// This should exist (parallel to calculatePortfolioAverages)
+calculateIndustryAverages(allCompanyMetrics, periods) {
+  // Should return metrics with sourceType: 'Industry_Avg'
+  // Same averaging logic as calculatePortfolioAverages
+}
+```
+
+**2. `/client/src/services/metricProcessingService.ts`**
+
+Check if it handles Industry_Avg:
+
+```typescript
+// In processMetricsForPeriod method, make sure it includes:
+const grouped = {
+  'Client': [],
+  'Industry_Avg': [],  // THIS MUST BE INCLUDED
+  'CD_Avg': [],
+  'Competitor': [],
+  'Benchmark': []  // And raw benchmark data if needed
+};
+```
+
+**3. `/client/src/utils/chartUtils.ts` or `/client/src/utils/chartDataProcessor.ts`**
+
+Check if Industry_Avg is handled in chart data processing:
+
+```typescript
+// Make sure Industry_Avg is included in source type handling
+if (metric.sourceType === 'Industry_Avg') {
+  // Process Industry_Avg metrics for charts
+}
+```
+
+**4. `/server/routes.ts` - Dashboard Route**
+
+The dashboard route must fetch Industry_Avg:
+
+```typescript
+// In the dashboard route (around line 800-900)
+const industryMetrics = await storage.getFilteredIndustryMetrics(timePeriod, filters);
+
+// Make sure it's included in allMetrics
+const allMetrics = [
+  ...clientMetrics,
+  ...industryMetrics,  // MUST be here
+  ...cdAvgMetrics,
+  ...competitorMetrics
+];
+```
+
+**5. `/client/src/pages/dashboard.tsx`**
+
+Check if charts are configured to display Industry_Avg:
+
+```typescript
+// In groupedMetrics processing
+const metricData = {
+  Client: clientValue,
+  Industry_Avg: industryValue,  // Must extract this
+  CD_Avg: cdValue,
+  // ...
+};
+
+// In chart components
+<TimeSeriesChart
+  industryAvg={metricData.Industry_Avg || 0}  // Must pass this prop
+  // ...
+/>
+```
+
+**6. Chart Components** (e.g., `/client/src/components/charts/time-series-chart.tsx`)
+
+Make sure they accept and display Industry_Avg:
+
+```typescript
+interface ChartProps {
+  industryAvg?: number;  // Should have this prop
+  // ...
+}
+
+// In the chart data series
+const series = [
+  { name: "Your Site", data: [clientData] },
+  { name: "Industry Avg", data: [industryAvg] },  // Should display this
+  { name: "CD Avg", data: [cdAvg] },
+  // ...
+];
+```
+
+**The main issues are likely:**
+
+1. `getFilteredIndustryMetrics` doesn’t exist in storage.ts (we just fixed this)
+1. `dataProcessor.js` might not have the Industry_Avg calculation methods
+1. The dashboard route might not be calling `getFilteredIndustryMetrics`
+1. The frontend might not be processing Industry_Avg in `metricProcessingService`
+
+Can you check if `/server/services/semrush/dataProcessor.js` has both:
+
+- `processBenchmarkCompanyData` method
+- `calculateIndustryAverages` method
+
+These are critical for the benchmark system to work.​​​​​​​​​​​​​​​​
