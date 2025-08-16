@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps, shouldConvertToPercentage } from '@/utils/chartUtils';
 
 interface MetricsChartProps {
@@ -33,37 +33,33 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
     );
   }
 
-  // Data pipeline verified - checking chart rendering
-
-  // Process bar chart data points with null-safe handling and percentage conversion
-  const rawDataPoints = Object.entries(data).map(([key, value]) => {
-    let processedValue = safeNumericValue(value, 0) ?? 0;
+  const chartData = React.useMemo(() => {
+    // Create a single data point with all metrics as properties
+    const dataPoint: any = { name: metricName || 'Metrics' };
     
-    // Apply percentage conversion for Rate metrics (e.g., Bounce Rate)
-    // Convert Industry_Avg and CD_Avg from decimal to percentage
-    if (shouldConvertToPercentage(metricName)) {
-      if (key === 'Industry_Avg' || key === 'CD_Avg' || key.includes('Avg')) {
-        processedValue = processedValue * 100;
+    Object.entries(data || {}).forEach(([key, value]) => {
+      if (key !== 'Client') {
+        let finalValue = value || 0;
+        
+        // Apply percentage conversion for rate metrics
+        if (shouldConvertToPercentage(metricName)) {
+          if (key === 'Industry_Avg' || key === 'CD_Avg' || key.includes('Avg')) {
+            finalValue = finalValue * 100;
+          }
+        }
+        
+        // Add each metric as a property of the single data point
+        dataPoint[key] = finalValue;
       }
-    }
+    });
     
-    return {
-      name: key,
-      value: processedValue,
-      fill: getMetricsColors()[key] || getMetricsColors()['Default']
-    };
-  });
-
-  // Normalize chart data
-  const chartDataPoints = normalizeChartData(rawDataPoints, {
-    gapOnNull: false,
-    defaultValue: 0,
-    requiredKeys: ['name', 'value', 'fill']
-  });
+    // Return array with single data point containing all metrics
+    return [dataPoint];
+  }, [data, metricName]);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartDataPoints} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
         <XAxis 
           dataKey="name" 
@@ -77,7 +73,6 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
           tickMargin={10}
         />
         <Tooltip 
-          {...safeTooltipProps(chartDataPoints)}
           contentStyle={{
             backgroundColor: 'hsl(var(--popover))',
             border: '1px solid hsl(var(--border))',
@@ -85,7 +80,20 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
             fontSize: '12px'
           }}
         />
-        <Bar dataKey="value" />
+        <Legend />
+        
+        {/* Create a Bar for each average type */}
+        <Bar dataKey="Industry_Avg" fill="#8b5cf6" name="Industry Avg" />
+        <Bar dataKey="CD_Avg" fill="#3b82f6" name="CD Avg" />
+        <Bar dataKey="Competitor_Avg" fill="#ef4444" name="Competitor Avg" />
+        
+        {/* Add bars for any competitor names dynamically */}
+        {Object.keys(data || {})
+          .filter(key => key !== 'Client' && !key.includes('Avg'))
+          .map(key => (
+            <Bar key={key} dataKey={key} fill="#94a3b8" name={key} />
+          ))
+        }
       </BarChart>
     </ResponsiveContainer>
   );
