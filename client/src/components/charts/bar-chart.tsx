@@ -73,7 +73,12 @@ function processTimeSeriesForBar(
   periods: string[],
   competitors: Array<{ id: string; label: string; value: number }>,
   clientUrl?: string,
-  metricName?: string
+  metricName?: string,
+  fallbackValues?: {
+    clientData: number;
+    industryAvg: number;
+    cdAvg: number;
+  }
 ): Array<Record<string, unknown>> {
   const data: Array<Record<string, unknown>> = [];
   
@@ -93,10 +98,32 @@ function processTimeSeriesForBar(
     const industryMetric = periodData.find(m => m.sourceType === 'Industry_Avg' && m.metricName === metricName);
     const cdMetric = periodData.find(m => m.sourceType === 'CD_Avg' && m.metricName === metricName);
     
+    // 🔍 DEBUG: Log Industry_Avg search in processTimeSeriesForBar
+    console.error(`🔍 PROCESSTIMESERIESFORBAR SEARCH FOR ${metricName}:`, {
+      period,
+      periodDataLength: periodData.length,
+      searchingFor: { sourceType: 'Industry_Avg', metricName },
+      availableSourceTypes: [...new Set(periodData.map(m => m.sourceType))],
+      availableMetricNames: [...new Set(periodData.map(m => m.metricName))],
+      industryMetricFound: !!industryMetric,
+      industryMetricValue: industryMetric?.value,
+      allIndustryAvgMetrics: periodData.filter(m => m.sourceType === 'Industry_Avg')
+    });
+    
     // Convert Session Duration from seconds to minutes and Rate metrics from decimal to percentage
-    let clientValue = clientMetric ? parseMetricValue(clientMetric.value) : 0;
-    let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : 0;
-    let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : 0;
+    // Use fallback values when data is missing from timeSeriesData
+    let clientValue = clientMetric ? parseMetricValue(clientMetric.value) : (fallbackValues?.clientData || 0);
+    let industryValue = industryMetric ? parseMetricValue(industryMetric.value) : (fallbackValues?.industryAvg || 0);
+    let cdValue = cdMetric ? parseMetricValue(cdMetric.value) : (fallbackValues?.cdAvg || 0);
+    
+    // 🔍 DEBUG: Log values before and after conversion for Industry Average
+    console.error(`🔍 FALLBACK VALUES DEBUG FOR ${metricName}:`, {
+      period,
+      fallbackValues,
+      industryMetricFound: !!industryMetric,
+      rawIndustryValue: industryValue,
+      isSessionDuration: metricName === 'Session Duration'
+    });
     
     if (metricName === 'Session Duration') {
       clientValue = clientValue / 60;
@@ -108,8 +135,22 @@ function processTimeSeriesForBar(
       cdValue = cdValue * 100;
     }
     
+    const finalIndustryValue = Math.round(industryValue * 10) / 10;
+    
+    // 🔍 DEBUG: Log final calculated values
+    console.error(`🔍 FINAL VALUES DEBUG FOR ${metricName}:`, {
+      period,
+      processedIndustryValue: industryValue,
+      finalIndustryValue,
+      calculationSteps: {
+        step1_multiply: industryValue * 10,
+        step2_round: Math.round(industryValue * 10),
+        step3_divide: Math.round(industryValue * 10) / 10
+      }
+    });
+    
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
-    dataPoint['Industry Avg'] = Math.round(industryValue * 10) / 10;
+    dataPoint['Industry Avg'] = finalIndustryValue;
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
     dataPoint[`${companyName} Clients Avg`] = Math.round(cdValue * 10) / 10;
     
@@ -169,6 +210,15 @@ function processTimeSeriesForBar(
  */
 function generateBarData(timePeriod: string, clientData: number, industryAvg: number, cdAvg: number, competitors: Array<{ id: string; label: string; value: number }>, clientUrl?: string, metricName?: string): Array<Record<string, unknown>> {
 
+  // 🔍 DEBUG: Log generateBarData inputs to trace Industry_Avg conversion issue
+  console.error(`🔍 GENERATEBARDATA INPUTS FOR ${metricName}:`, {
+    timePeriod,
+    clientData,
+    industryAvg,
+    cdAvg,
+    industryAvgType: typeof industryAvg,
+    hasValidIndustryAvg: industryAvg !== undefined && industryAvg !== null && industryAvg > 0
+  });
   
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
   const data: Array<Record<string, unknown>> = [];
@@ -288,14 +338,31 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
     dates.forEach((period, index) => {
       const point: Record<string, unknown> = {
         period,
-        [clientKey]: Math.round(clientVariations[index] * 10) / 10,
-        'Industry Avg': Math.round(industryVariations[index] * 10) / 10,
-        [`${companyName} Clients Avg`]: Math.round(cdVariations[index] * 10) / 10,
+        [clientKey]: Math.round((clientVariations[index] ?? processedClientData) * 10) / 10,
+        'Industry Avg': (() => {
+          const variationValue = industryVariations[index];
+          const fallbackValue = processedIndustryAvg;
+          const finalValue = variationValue ?? fallbackValue;
+          const roundedValue = Math.round(finalValue * 10) / 10;
+          
+          console.error(`🔍 INDUSTRY AVG CALCULATION FOR ${metricName}:`, {
+            index,
+            variationValue,
+            fallbackValue,
+            finalValue,
+            roundedValue,
+            industryVariationsLength: industryVariations.length,
+            originalIndustryAvg: industryAvg
+          });
+          
+          return roundedValue;
+        })(),
+        [`${companyName} Clients Avg`]: Math.round((cdVariations[index] ?? processedCdAvg) * 10) / 10,
       };
 
       // Add competitor data with temporal variations (already converted by processCompanyMetrics)
       competitors.forEach((competitor, compIndex) => {
-        const value = competitorVariations[compIndex][index];
+        const value = competitorVariations[compIndex][index] ?? competitor.value;
         point[competitor.label] = Math.round(value * 10) / 10;
       });
 
@@ -380,6 +447,15 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
  */
 export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
+
+  // 🎯 DEBUG: Log what MetricBarChart receives for Industry Average
+  console.error(`🎯 METRICBARCHART RECEIVED ${metricName}:`, {
+    industryAvg,
+    cdAvg,
+    clientData,
+    industryAvgType: typeof industryAvg,
+    hasIndustryAvg: industryAvg !== undefined && industryAvg !== null && industryAvg !== 0
+  });
   
 
 
@@ -405,7 +481,11 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
   // Use real time-series data if available, otherwise generate fallback data
   const rawData = useMemo(() => {
     if (timeSeriesData && periods && periods.length > 1) {
-      return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName);
+      return processTimeSeriesForBar(timeSeriesData, periods, competitors, clientUrl, metricName, {
+        clientData,
+        industryAvg,
+        cdAvg
+      });
     } else {
       return generateBarData(timePeriod, clientData, industryAvg, cdAvg, competitors, clientUrl, metricName);
     }
@@ -416,12 +496,24 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
     const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
     const requiredKeys = [clientKey, 'Industry Avg', `${companyName} Clients Avg`];
     
-    return normalizeChartData(rawData, {
+    const normalized = normalizeChartData(rawData, {
       gapOnNull: false,  // Bar charts default to 0
       defaultValue: 0,
       requiredKeys
     });
-  }, [rawData, clientKey]);
+
+    // 🚨 DEBUG: Log final chart data structure for Industry Average
+    console.error(`🚨 FINAL CHART DATA FOR ${metricName}:`, {
+      rawDataLength: rawData.length,
+      normalizedLength: normalized.length,
+      samplePoint: normalized[0],
+      industryAvgInSample: normalized[0]?.['Industry Avg'],
+      allKeysInSample: Object.keys(normalized[0] || {}),
+      requiredKeys
+    });
+    
+    return normalized;
+  }, [rawData, clientKey, metricName]);
 
   // Use unified color system for consistent colors across charts
   const companyName = import.meta.env.VITE_COMPANY_NAME || "Clear Digital";
@@ -470,8 +562,18 @@ export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg
     competitors.forEach(comp => {
       visible[comp.label] = !hiddenBars.has(comp.label);
     });
+
+    // 🔥 DEBUG: Log visibility state for Industry Avg
+    console.error(`🔥 VISIBILITY CHECK FOR ${metricName}:`, {
+      'Industry Avg visible': visible['Industry Avg'],
+      'hiddenBars has Industry Avg': hiddenBars.has('Industry Avg'),
+      'hiddenBars size': hiddenBars.size,
+      'all visible bars': visible,
+      industryAvgColor: colors['Industry Avg']
+    });
+    
     return visible;
-  }, [clientKey, companyName, competitorKey, hiddenBars]);
+  }, [clientKey, companyName, competitorKey, hiddenBars, metricName, colors]);
 
   // Track if this is the initial render to allow animation only once
   const [isInitialRender, setIsInitialRender] = useState(true);
