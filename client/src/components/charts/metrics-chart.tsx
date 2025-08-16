@@ -39,7 +39,7 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
     // Apply percentage conversion for Rate metrics (e.g., Bounce Rate)
     // Convert Industry_Avg and CD_Avg from decimal to percentage
     if (shouldConvertToPercentage(metricName)) {
-      if (key === 'Industry Avg' || key === 'CD_Avg' || key.includes('Avg')) {
+      if (key === 'Industry_Avg' || key === 'CD_Avg' || key.includes('Avg')) {
         processedValue = processedValue * 100;
       }
     }

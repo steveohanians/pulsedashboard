@@ -590,7 +590,7 @@ export default function Dashboard() {
         }));
       });
       
-      const periods = [...new Set(metrics.map(m => m.timePeriod))];
+      const periods = Array.from(new Set(metrics.map((m: any) => m.timePeriod)));
       console.error('🗓️ Time periods in data:', periods);
       console.error('📍 Current timePeriod filter:', timePeriod);
     }
@@ -1764,32 +1764,32 @@ export default function Dashboard() {
                             />
                           ) : (
                             <MetricBarChart
-                              metricName={metricName}
-                              timePeriod={timePeriod}
-                              clientData={metricData.Client || 0}
-                              industryAvg={metricData.Industry_Avg || 0}
-                              cdAvg={metricData.CD_Avg || 0}
-                              clientUrl={dashboardData?.client?.websiteUrl
-                                ?.replace("https://", "")
-                                .replace("http://", "")}
-                              competitors={processCompanyMetrics(
-                                competitors,
-                                metrics,
-                                {
-                                  metricName,
-                                  displayMode: "individual",
-                                  sourceType: "Competitor",
-                                  fallbackValue: getDefaultMetricValue(
+                                metricName={metricName}
+                                timePeriod={timePeriod}
+                                clientData={metricData.Client || 0}
+                                industryAvg={metricData.Industry_Avg || 0}
+                                cdAvg={metricData.CD_Avg || 0}
+                                clientUrl={dashboardData?.client?.websiteUrl
+                                  ?.replace("https://", "")
+                                  .replace("http://", "")}
+                                competitors={processCompanyMetrics(
+                                  competitors,
+                                  metrics,
+                                  {
                                     metricName,
-                                    "Competitor",
-                                  ),
-                                  convertToPercentage:
-                                    shouldConvertToPercentage(metricName),
-                                  convertToMinutes:
-                                    shouldConvertToMinutes(metricName),
-                                },
-                              )}
-                            />
+                                    displayMode: "individual",
+                                    sourceType: "Competitor",
+                                    fallbackValue: getDefaultMetricValue(
+                                      metricName,
+                                      "Competitor",
+                                    ),
+                                    convertToPercentage:
+                                      shouldConvertToPercentage(metricName),
+                                    convertToMinutes:
+                                      shouldConvertToMinutes(metricName),
+                                  },
+                                )}
+                              />
                           )
                         ) : (
                           <MetricsChart
