@@ -306,27 +306,175 @@ export class UnifiedDataService {
     const deviceMetrics = metrics.filter(m => m.metricName === "Device Distribution");
     const result: any[] = [];
 
-    // Process each source type with proper period alignment
-    const sources = [
-      { type: "Client", label: client?.name || "Client", period: periods.client },
-      { type: "CD_Avg", label: "Clear Digital Client Avg", period: periods.cdPortfolio },
-      { type: "Industry_Avg", label: "Industry Avg", period: periods.industryBenchmark }
-    ];
+    debugLog('UNIFIED', 'Processing device distribution', {
+      totalDeviceMetrics: deviceMetrics.length,
+      competitors: competitors.length,
+      sourceTypes: Array.from(new Set(deviceMetrics.map(m => m.sourceType)))
+    });
 
-    sources.forEach(source => {
-      const devices = this.aggregateDevicesBySource(
-        deviceMetrics.filter(m => m.sourceType === source.type)
+    // Process Client data (GA4 - uses client period)
+    const clientDevices = this.aggregateDevicesBySource(
+      deviceMetrics.filter(m => m.sourceType === "Client")
+    );
+    if (clientDevices.length > 0) {
+      result.push({
+        sourceType: "Client",
+        label: client?.name || "Client",
+        devices: clientDevices
+      });
+    }
+
+    // Process CD Average (SEMrush - uses cdPortfolio period)
+    const cdDevices = this.aggregateDevicesBySource(
+      deviceMetrics.filter(m => m.sourceType === "CD_Avg" || m.sourceType === "cd_avg")
+    );
+    if (cdDevices.length > 0) {
+      result.push({
+        sourceType: "CD_Avg",
+        label: "Clear Digital Client Avg",
+        devices: cdDevices
+      });
+    }
+
+    // Process Industry Average (SEMrush - uses industryBenchmark period)
+    const industryDevices = this.aggregateDevicesBySource(
+      deviceMetrics.filter(m => m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry")
+    );
+    if (industryDevices.length > 0) {
+      result.push({
+        sourceType: "Industry_Avg",
+        label: "Industry Avg",
+        devices: industryDevices
+      });
+    } else {
+      // If no Industry_Avg data, check if we have it in averagedMetrics format
+      const industryMetric = metrics.find(m => 
+        m.metricName === "Device Distribution" && 
+        (m.sourceType === "Industry_Avg" || m.sourceType === "Industry")
       );
-      if (devices.length > 0) {
+      if (industryMetric) {
+        const devices = this.parseDeviceValue(industryMetric.value);
+        if (devices.length > 0) {
+          result.push({
+            sourceType: "Industry_Avg",
+            label: "Industry Avg",
+            devices: devices
+          });
+        }
+      }
+    }
+
+    // Process each Competitor individually
+    competitors.forEach(competitor => {
+      const competitorDevices = this.aggregateDevicesBySource(
+        deviceMetrics.filter(m => 
+          m.sourceType === "Competitor" && 
+          m.competitorId === competitor.id
+        )
+      );
+      
+      if (competitorDevices.length > 0) {
         result.push({
-          sourceType: source.type,
-          label: source.label,
-          devices: devices
+          sourceType: `Competitor_${competitor.id}`,
+          label: this.cleanDomainName(competitor.domain),
+          devices: competitorDevices
         });
+      } else {
+        // Try to find competitor data in different format
+        const competitorMetric = metrics.find(m => 
+          m.metricName === "Device Distribution" && 
+          m.sourceType === "Competitor" && 
+          m.competitorId === competitor.id
+        );
+        
+        if (competitorMetric) {
+          const devices = this.parseDeviceValue(competitorMetric.value);
+          if (devices.length > 0) {
+            result.push({
+              sourceType: `Competitor_${competitor.id}`,
+              label: this.cleanDomainName(competitor.domain),
+              devices: devices
+            });
+          }
+        }
       }
     });
 
+    debugLog('UNIFIED', 'Device distribution processed', {
+      resultCount: result.length,
+      sources: result.map(r => ({ source: r.sourceType, deviceCount: r.devices.length }))
+    });
+
     return result;
+  }
+
+  /**
+   * Helper: Parse device value from various formats
+   */
+  private parseDeviceValue(value: any): any[] {
+    const devices: any[] = [];
+    
+    if (Array.isArray(value)) {
+      // Already an array
+      value.forEach(item => {
+        const deviceName = item.device || item.name || item.category;
+        const deviceValue = parseFloat(item.percentage || item.value || 0);
+        if (deviceName && !isNaN(deviceValue)) {
+          devices.push({
+            name: deviceName,
+            value: deviceValue,
+            percentage: deviceValue,
+            color: this.getDeviceColor(deviceName)
+          });
+        }
+      });
+    } else if (typeof value === 'string') {
+      try {
+        // Try to parse as JSON
+        let jsonString = value;
+        
+        // Remove outer quotes if present
+        if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
+          jsonString = jsonString.slice(1, -1);
+        }
+        
+        // Unescape JSON
+        jsonString = jsonString.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        
+        const parsed = JSON.parse(jsonString);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(item => {
+            const deviceName = item.device || item.name || item.category;
+            const deviceValue = parseFloat(item.percentage || item.value || 0);
+            if (deviceName && !isNaN(deviceValue)) {
+              devices.push({
+                name: deviceName,
+                value: deviceValue,
+                percentage: deviceValue,
+                color: this.getDeviceColor(deviceName)
+              });
+            }
+          });
+        }
+      } catch (e) {
+        debugLog('UNIFIED', 'Failed to parse device JSON', { error: e, value: value?.substring?.(0, 100) });
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Handle object format { Desktop: 60, Mobile: 40 }
+      Object.keys(value).forEach(deviceName => {
+        const deviceValue = parseFloat(value[deviceName]);
+        if (!isNaN(deviceValue)) {
+          devices.push({
+            name: deviceName,
+            value: deviceValue,
+            percentage: deviceValue,
+            color: this.getDeviceColor(deviceName)
+          });
+        }
+      });
+    }
+    
+    return devices;
   }
 
   /**
@@ -387,59 +535,71 @@ export class UnifiedDataService {
   }
 
   /**
-   * Helper: Aggregate device data
+   * Helper: Aggregate device data (UPDATED)
    */
   private aggregateDevicesBySource(metrics: DashboardMetric[]): any[] {
     const deviceMap = new Map<string, number>();
     const deviceCounts = new Map<string, number>();
 
+    debugLog('UNIFIED', 'Aggregating devices from metrics', { 
+      count: metrics.length,
+      sample: metrics[0]
+    });
+
     metrics.forEach(metric => {
-      // Similar logic to traffic channels but for devices
-      let deviceData: any[] = [];
+      const devices = this.parseDeviceValue(metric.value);
       
-      if (metric.channel) {
-        deviceData = [{ device: metric.channel, value: metric.value }];
-      } else if (Array.isArray(metric.value)) {
-        deviceData = metric.value;
-      } else if (typeof metric.value === 'string') {
-        try {
-          const parsed = JSON.parse(metric.value);
-          if (Array.isArray(parsed)) deviceData = parsed;
-        } catch (e) {
-          // Not JSON, skip
+      // Also check if metric has channel field being used for device name
+      if (metric.channel && !devices.length) {
+        const deviceName = metric.channel;
+        const value = parseFloat(String(metric.value));
+        if (!isNaN(value)) {
+          devices.push({
+            name: deviceName,
+            value: value,
+            percentage: value,
+            color: this.getDeviceColor(deviceName)
+          });
         }
       }
-
-      deviceData.forEach((item: any) => {
-        const deviceName = item.device || item.name || item.category;
-        const value = parseFloat(item.percentage || item.value || 0);
-        
-        if (deviceName && !isNaN(value)) {
-          deviceMap.set(
-            deviceName,
-            (deviceMap.get(deviceName) || 0) + value
-          );
-          deviceCounts.set(
-            deviceName,
-            (deviceCounts.get(deviceName) || 0) + 1
-          );
+      
+      devices.forEach(device => {
+        if (deviceMap.has(device.name)) {
+          deviceMap.set(device.name, deviceMap.get(device.name)! + device.value);
+          deviceCounts.set(device.name, deviceCounts.get(device.name)! + 1);
+        } else {
+          deviceMap.set(device.name, device.value);
+          deviceCounts.set(device.name, 1);
         }
       });
     });
 
     // Calculate averages
-    const devices: any[] = [];
+    const result: any[] = [];
     deviceMap.forEach((sum, name) => {
       const count = deviceCounts.get(name) || 1;
-      devices.push({
+      const avgValue = sum / count;
+      result.push({
         name,
-        value: Math.round((sum / count) * 10) / 10,
-        percentage: Math.round((sum / count) * 10) / 10,
+        value: Math.round(avgValue * 10) / 10,
+        percentage: Math.round(avgValue * 10) / 10,
         color: this.getDeviceColor(name)
       });
     });
 
-    return devices;
+    // Ensure percentages add up to 100
+    if (result.length > 0) {
+      const total = result.reduce((sum, d) => sum + d.value, 0);
+      if (total > 0 && Math.abs(total - 100) > 1) {
+        // Normalize to 100%
+        result.forEach(device => {
+          device.value = Math.round((device.value / total) * 1000) / 10;
+          device.percentage = device.value;
+        });
+      }
+    }
+
+    return result;
   }
 
   /**
