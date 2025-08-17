@@ -129,6 +129,18 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     return `${preloadedInsight.contextText || ''}:${preloadedInsight.insightText || ''}:${preloadedInsight.status || ''}:${preloadedInsight.hasContext || false}`;
   }, [preloadedInsight]);
 
+  // Clear insight state when clientId changes to prevent cross-client contamination
+  useEffect(() => {
+    setInsight(null);
+    setForcedEmpty(false);
+    setDisplayedContext("");
+    setDisplayedInsight("");
+    setDisplayedRecommendation("");
+    deletedRef.current = null;
+    suppressHydrationRef.current = false;
+    deleteConfirmRef.current = false;
+  }, [clientId]);
+
   // Preload (props) when allowed
   useEffect(() => {
     if (suppressHydrationRef.current || forcedEmpty) return;
