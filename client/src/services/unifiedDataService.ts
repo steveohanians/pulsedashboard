@@ -439,109 +439,122 @@ export class UnifiedDataService {
       debugLog('UNIFIED', 'No authentic Industry_Avg device data found - maintaining data integrity');
     }
 
-    // Process each Competitor individually - comprehensive data checking (authentic data only)
-    competitors.forEach(competitor => {
-      let competitorProcessed = false;
+    // Process Competitors - FIND THE REAL DATA (SEMrush source like CD_Avg and Industry_Avg)
+    competitors.forEach((competitor) => {
+      let devices: any[] = [];
+      let dataFound = false;
       
-      debugLog('UNIFIED', `Checking competitor ${competitor.id} device data`, {
+      debugLog('UNIFIED', `Comprehensive competitor device data search for ${competitor.domain}`, {
         competitorId: competitor.id,
         domain: competitor.domain,
-        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
-        competitorMetricsDetail: deviceMetrics.filter(m => m.competitorId === competitor.id)
-          .map(m => ({ sourceType: m.sourceType, value: m.value, channel: m.channel })),
-        hasAveragedCompetitorData: averagedMetrics && 
-          Object.keys(averagedMetrics).some(key => 
-            averagedMetrics[key] && 
-            (averagedMetrics[key][`Competitor_${competitor.id}`] || 
-             averagedMetrics[key][competitor.id] || 
-             averagedMetrics[key][competitor.domain])
-          )
+        totalDeviceMetrics: deviceMetrics.length,
+        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length
       });
       
-      // Approach 1: Regular metrics with competitorId
-      if (!competitorProcessed) {
+      // Check 1: Look in metrics with competitorId
+      if (!dataFound) {
         const competitorMetrics = deviceMetrics.filter(m => 
           m.sourceType === "Competitor" && 
           m.competitorId === competitor.id
         );
         
         if (competitorMetrics.length > 0) {
-          const competitorDevices = this.aggregateDevicesBySource(competitorMetrics);
-          if (competitorDevices.length > 0) {
-            result.push({
-              sourceType: `Competitor_${competitor.id}`,
-              label: this.cleanDomainName(competitor.domain),
-              devices: competitorDevices
-            });
-            competitorProcessed = true;
+          devices = this.aggregateDevicesBySource(competitorMetrics);
+          if (devices.length > 0) {
+            dataFound = true;
+            debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} in metrics`, { devices });
           }
         }
       }
       
-      // Approach 2: Check averagedMetrics for competitor data
-      if (!competitorProcessed && averagedMetrics) {
-        const possibleKeys = ["Device Distribution", "DeviceDistribution", "device_distribution"];
-        for (const key of possibleKeys) {
-          if (averagedMetrics[key]) {
-            const competitorKey = `Competitor_${competitor.id}`;
-            const competitorData = averagedMetrics[key][competitorKey] || 
-                                  averagedMetrics[key][competitor.id] || 
-                                  averagedMetrics[key][competitor.domain];
+      // Check 2: Look for metrics with channel field containing numeric device types (like Industry_Avg)
+      if (!dataFound) {
+        const numericDeviceMetrics = metrics.filter(m => 
+          m.metricName === "Device Distribution" &&
+          m.sourceType === "Competitor" &&
+          m.competitorId === competitor.id &&
+          m.channel !== undefined
+        );
+        
+        if (numericDeviceMetrics.length > 0) {
+          const deviceMap = new Map<string, number>();
+          
+          numericDeviceMetrics.forEach(metric => {
+            // Convert numeric channel to device name (same as Industry_Avg)
+            let deviceName = metric.channel;
+            if (deviceName === '0') deviceName = 'Desktop';
+            else if (deviceName === '1') deviceName = 'Mobile';
+            else if (deviceName === '2') deviceName = 'Tablet';
             
-            if (competitorData) {
-              debugLog('UNIFIED', `Found competitor data in averagedMetrics`, { 
-                competitorId: competitor.id, 
-                key, 
-                data: competitorData 
-              });
-              
-              let devices: any[] = [];
-              if (typeof competitorData === 'object' && competitorData.Desktop !== undefined) {
-                devices = [
-                  { name: 'Desktop', value: competitorData.Desktop, percentage: competitorData.Desktop, color: this.getDeviceColor('Desktop') },
-                  { name: 'Mobile', value: competitorData.Mobile, percentage: competitorData.Mobile, color: this.getDeviceColor('Mobile') }
-                ];
-              } else {
-                devices = this.parseDeviceValue(competitorData);
-              }
-              
-              if (devices.length > 0) {
-                result.push({
-                  sourceType: `Competitor_${competitor.id}`,
-                  label: this.cleanDomainName(competitor.domain),
-                  devices: devices
-                });
-                competitorProcessed = true;
-                break;
-              }
+            const value = parseFloat(String(metric.value));
+            
+            if (deviceName && !isNaN(value)) {
+              deviceMap.set(deviceName, (deviceMap.get(deviceName) || 0) + value);
+            }
+          });
+          
+          deviceMap.forEach((value, name) => {
+            devices.push({
+              name,
+              value: Math.round(value * 10) / 10,
+              percentage: Math.round(value * 10) / 10,
+              color: this.getDeviceColor(name)
+            });
+          });
+          
+          if (devices.length > 0) {
+            dataFound = true;
+            debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} using numeric channels`, { devices });
+          }
+        }
+      }
+      
+      // Check 3: Look in averagedMetrics if available
+      if (!dataFound && averagedMetrics) {
+        const possibleKeys = [
+          `Competitor_${competitor.id}`,
+          `competitor_${competitor.id}`,
+          competitor.domain,
+          competitor.id
+        ];
+        
+        for (const key of possibleKeys) {
+          if (averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"][key]) {
+            const competitorData = averagedMetrics["Device Distribution"][key];
+            devices = this.parseDeviceValue(competitorData);
+            if (devices.length > 0) {
+              dataFound = true;
+              debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} in averagedMetrics`, { key, devices });
+              break;
             }
           }
         }
       }
       
-      // Approach 3: Single metric check
-      if (!competitorProcessed) {
-        const competitorMetric = metrics.find(m => 
-          m.metricName === "Device Distribution" && 
-          m.sourceType === "Competitor" && 
-          m.competitorId === competitor.id
-        );
-        
-        if (competitorMetric) {
-          const devices = this.parseDeviceValue(competitorMetric.value);
-          if (devices.length > 0) {
-            result.push({
-              sourceType: `Competitor_${competitor.id}`,
-              label: this.cleanDomainName(competitor.domain),
-              devices: devices
-            });
-            competitorProcessed = true;
-          }
+      // Only add to result if we found real data
+      if (dataFound && devices.length > 0) {
+        // Normalize percentages to ensure they add to 100
+        const total = devices.reduce((sum, d) => sum + d.value, 0);
+        if (total > 0 && Math.abs(total - 100) > 1) {
+          devices.forEach(device => {
+            device.value = Math.round((device.value / total) * 1000) / 10;
+            device.percentage = device.value;
+          });
         }
-      }
-      
-      if (!competitorProcessed) {
-        debugLog('UNIFIED', `No authentic device data found for competitor ${competitor.id} - maintaining data integrity`);
+        
+        result.push({
+          sourceType: `Competitor_${competitor.id}`,
+          label: this.cleanDomainName(competitor.domain),
+          devices: devices
+        });
+      } else {
+        // Log that we couldn't find data - this helps debugging
+        debugLog('UNIFIED', `WARNING: No device data found for competitor ${competitor.domain}`, {
+          competitorId: competitor.id,
+          checkedMetricsCount: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
+          availableSourceTypes: Array.from(new Set(deviceMetrics.map(m => m.sourceType))),
+          availableCompetitorIds: Array.from(new Set(deviceMetrics.filter(m => m.sourceType === "Competitor").map(m => m.competitorId)))
+        });
       }
     });
 
