@@ -389,8 +389,14 @@ export default function Dashboard() {
             {user && (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Avatar className="h-8 w-8">
+                  {client?.websiteUrl && (
+                    <AvatarImage 
+                      src={`https://img.logo.dev/${client.websiteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
+                      alt={client?.name || "Client"}
+                    />
+                  )}
                   <AvatarFallback className="text-xs font-semibold">
-                    {(user.name || user.email || "User").substring(0, 2).toUpperCase()}
+                    {(client?.name || "CL").substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
