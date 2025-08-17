@@ -202,7 +202,7 @@ export function ViewAsSelector({
         <Button
           size="sm"
           onClick={handleViewAs}
-          disabled={loading || !selectedUserId || selectedUserId === currentUserId}
+          disabled={loading || !selectedUserId || (selectedUserId === currentUserId && !isViewingAs)}
           className="bg-amber-600 hover:bg-amber-700 text-white"
         >
           <Eye className="h-3 w-3 mr-1" />
@@ -221,12 +221,6 @@ export function ViewAsSelector({
           </Button>
         )}
       </div>
-      
-      {isViewingAs && (
-        <div className="mt-2 text-xs text-amber-700">
-          Currently viewing dashboard as: <strong>{users.find(u => u.id === selectedUserId)?.name}</strong>
-        </div>
-      )}
     </div>
   );
 }
