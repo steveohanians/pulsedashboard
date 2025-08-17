@@ -454,7 +454,7 @@ export class DatabaseStorage implements IStorage {
     period: string, 
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
-    logger.info(`🔍 Getting Industry_Avg metrics for period: ${period}, filters:`, filters);
+    // Industry metrics logging removed for cleaner console
     
     // Try to get Industry_Avg metrics for requested period
     let allIndustryMetrics = await db.select().from(metrics).where(
@@ -670,7 +670,7 @@ export class DatabaseStorage implements IStorage {
     filters?: { businessSize?: string; industryVertical?: string }
   ): Promise<Metric[]> {
 
-    logger.info(`🔍 FUNCTION CALL: getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)}`);
+    // Function call logging removed for cleaner console
     
     // Debug logging disabled for performance
     // logger.debug(`getFilteredCdAvgMetrics called with period: ${period}, filters: ${JSON.stringify(filters)} - BUT CD_Avg should NEVER be filtered`);
@@ -913,10 +913,7 @@ export class DatabaseStorage implements IStorage {
     
     // FINAL FALLBACK: If no CD_Avg data exists for core metrics, generate baseline values or use fallback data
     // This ensures CD_Avg data is always available for essential charts
-    logger.info(`🔍 BASELINE CHECK for period ${period}: Checking if baseline generation needed`, {
-      existingMetricsCount: allMetrics.length,
-      existingMetricNames: allMetrics.map(m => m.metricName)
-    });
+    // Baseline check logging removed for cleaner console
     
     const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
     const existingMetricNames = allMetrics.map(m => m.metricName);
@@ -1177,7 +1174,7 @@ export class DatabaseStorage implements IStorage {
 
   // Optimized competitor metrics query using explicit SELECT for performance
   async getMetricsByCompetitors(clientId: string, timePeriod: string): Promise<Metric[]> {
-    console.error(`🚨 COMPETITOR FETCH: ${clientId}, ${timePeriod}`);
+    // Competitor fetch logging removed for cleaner console
     
     try {
       // Get competitors for this client
@@ -1185,11 +1182,11 @@ export class DatabaseStorage implements IStorage {
       const competitorIds = clientCompetitors.map(c => c.id);
       
       if (competitorIds.length === 0) {
-        console.error(`🚨 NO COMPETITORS FOUND for client ${clientId}`);
+        // No competitors found logging removed for cleaner console
         return [];
       }
       
-      console.error(`🚨 FOUND ${competitorIds.length} COMPETITORS: [${competitorIds.join(',')}]`);
+      // Competitor count logging removed for cleaner console
       
       // Try exact period first, then fallback to most recent
       let targetPeriod = timePeriod;
@@ -1224,7 +1221,7 @@ export class DatabaseStorage implements IStorage {
           
         if (recentPeriods.length > 0) {
           targetPeriod = recentPeriods[0].timePeriod;
-          console.error(`🚨 FALLBACK: Using period ${targetPeriod} instead of ${timePeriod}`);
+          // Period fallback logging removed for cleaner console
           
           rawMetrics = await db.select({
             id: metrics.id,
@@ -1248,7 +1245,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      console.error(`🚨 RAW METRICS: Found ${rawMetrics.length} metrics for period ${targetPeriod}`);
+      // Raw metrics count logging removed for cleaner console
       
       // Fix JSONB values: Drizzle returns null for JSONB, need to handle this
       const processedMetrics = rawMetrics.map(metric => {
@@ -1256,8 +1253,7 @@ export class DatabaseStorage implements IStorage {
         
         // If Drizzle returned null but we know there's JSONB data, query directly
         if (processedValue === null) {
-          console.error(`🚨 NULL VALUE DETECTED for ${metric.metricName}, using raw SQL`);
-          // This will be handled by the raw SQL fallback below
+          // Null value detection logging removed for cleaner console
         }
         
         return {
@@ -1266,26 +1262,14 @@ export class DatabaseStorage implements IStorage {
         };
       });
       
-      // Debug all processed metrics first
-      console.error(`🔍 CHECKING ${processedMetrics.length} PROCESSED METRICS FOR NULL VALUES`);
-      processedMetrics.forEach((m, i) => {
-        if (i < 3 || m.value === null) { // Show first 3 + any null values
-          console.error(`🔍 METRIC ${i + 1}:`, {
-            name: m.metricName,
-            channel: m.channel,
-            value: m.value,
-            valueType: typeof m.value,
-            isNull: m.value === null
-          });
-        }
-      });
+      // Metrics null value checking logs removed for cleaner console
       
       // For any null values, use direct SQL to get correct JSONB data
       const nullValueMetrics = processedMetrics.filter(m => m.value === null);
-      console.error(`🚨 FOUND ${nullValueMetrics.length} NULL VALUES out of ${processedMetrics.length} total metrics`);
+      // Null value count logging removed for cleaner console
       
       if (nullValueMetrics.length > 0) {
-        console.error(`🚨 FIXING ${nullValueMetrics.length} NULL VALUES with direct SQL`);
+        // Null value fixing logs removed for cleaner console
         
         const pg = require('pg');
         const pool = new pg.Pool({
@@ -1301,17 +1285,7 @@ export class DatabaseStorage implements IStorage {
         `;
         
         const sqlResult = await pool.query(sqlQuery, [clientId, targetPeriod]);
-        console.error(`🚨 SQL RESCUE: Retrieved ${sqlResult.rows.length} total competitor metrics`);
-        
-        if (sqlResult.rows.length > 0) {
-          console.error(`🚨 SQL SAMPLE:`, {
-            id: sqlResult.rows[0].id,
-            metric: sqlResult.rows[0].metric_name,
-            channel: sqlResult.rows[0].channel,
-            value: sqlResult.rows[0].value,
-            valueType: typeof sqlResult.rows[0].value
-          });
-        }
+        // SQL rescue logging removed for cleaner console
         
         // Create map of all SQL results
         const sqlMap = new Map(sqlResult.rows.map((row: any) => [row.id, row.value]));
@@ -1321,7 +1295,7 @@ export class DatabaseStorage implements IStorage {
           if (sqlMap.has(metric.id)) {
             const sqlValue = sqlMap.get(metric.id);
             if (sqlValue !== metric.value) {
-              console.error(`🚨 UPDATING: ${metric.metricName} from ${metric.value} to`, sqlValue);
+              // SQL value updating logs removed for cleaner console
               metric.value = sqlValue;
             }
           }
@@ -1330,11 +1304,11 @@ export class DatabaseStorage implements IStorage {
         await pool.end();
       }
       
-      console.error(`🚨 FINAL: Returning ${processedMetrics.length} competitor metrics`);
+      // Final competitor metrics return logging removed for cleaner console
       return processedMetrics;
       
     } catch (error) {
-      console.error(`🚨 ERROR in getMetricsByCompetitors:`, error);
+      // Competitor metrics error logging removed for cleaner console
       return [];
     }
   }

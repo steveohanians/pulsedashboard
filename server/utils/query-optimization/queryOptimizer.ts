@@ -335,11 +335,9 @@ export async function getDashboardDataOptimized(
   industryVertical: string,
   timePeriod?: string
 ) {
-  console.log('🎯 getDashboardDataOptimized CALLED with periods:', periodsToQuery, 'timePeriod:', timePeriod);
-  logger.info('🔴 DASHBOARD FUNCTION CALLED - CLIENT: ' + client.id);
+  // Dashboard function debug logs removed for cleaner console
   
   clearCache();
-  logger.info('🚛 QUERY CACHE CLEARED - Forcing fresh CD_Avg traffic channel processing');
 
   const cacheKey = `dashboard-${client.id}-${periodsToQuery.join(',')}-${businessSize}-${industryVertical}`;
   // TEMPORARILY DISABLED: const cached = getCachedData(cacheKey);
@@ -405,17 +403,9 @@ export async function getDashboardDataOptimized(
     dataPromise = Promise.all([
       Promise.all(periodsToQuery.map(p => storage.getMetricsByClient(client.id, p))),
       storage.getCompetitorsByClient(client.id),
-      Promise.all(periodsToQuery.map(async p => {
-        console.error(`🚨 CALLING getMetricsByCompetitors for period: ${p}`);
-        const result = await storage.getMetricsByCompetitors(client.id, p);
-        console.error(`🚨 getMetricsByCompetitors returned: ${result.length} metrics for period ${p}`);
-        return result;
-      })),
+      Promise.all(periodsToQuery.map(p => storage.getMetricsByCompetitors(client.id, p))),
       Promise.all(periodsToQuery.map(p => storage.getFilteredIndustryMetrics(p, filters))),
-      Promise.all(periodsToQuery.map(p => {
-        console.log(`🔍 OPTIMIZER: About to call getFilteredCdAvgMetrics with period: ${p}, filters: ${JSON.stringify(filters)}`);
-        return storage.getFilteredCdAvgMetrics(p, filters);
-      })),
+      Promise.all(periodsToQuery.map(p => storage.getFilteredCdAvgMetrics(p, filters))),
     ]);
   }
   
@@ -493,14 +483,14 @@ export async function getDashboardDataOptimized(
   const shouldCreateTimeSeriesData = periodsToQuery.length > 1 || isLastMonth;
   let timeSeriesData = shouldCreateTimeSeriesData ? groupMetricsByPeriod(processedData) : undefined;
   
-  logger.info(`🔍 TIME SERIES LOGIC: timePeriod="${timePeriod}", isLastMonth=${isLastMonth}, shouldCreateTimeSeriesData=${shouldCreateTimeSeriesData}, periodsCount=${periodsToQuery.length}`);
+  // Time series logic logging removed for cleaner console
   
   if (isLastMonth && shouldCreateTimeSeriesData) {
     try {
       const lastMonthPeriod = periodsToQuery[0]; // Should be 2025-07
       
       // FIRST: Try to actively fetch daily GA4 data for Last Month grouping
-      logger.info(`🔍 LAST MONTH LOGIC: Actively fetching daily GA4 data for ${lastMonthPeriod}`);
+      // Last month logic logging removed for cleaner console
       
       let dailyDataForGrouping = null;
       try {
@@ -508,7 +498,7 @@ export async function getDashboardDataOptimized(
         const freshDailyMetrics = await storage.getMetricsForTimePeriodPattern(client.id, dailyPattern);
         
         if (freshDailyMetrics.length > 0) {
-          logger.info(`📊 DAILY GA4 FETCH SUCCESS: Found ${freshDailyMetrics.length} daily metrics for grouping`);
+          // Daily GA4 fetch success logging removed for cleaner console
           dailyDataForGrouping = freshDailyMetrics;
         } else {
           logger.warn(`⚠️ DAILY GA4 FETCH: No daily metrics found for pattern ${dailyPattern}`);
@@ -521,7 +511,7 @@ export async function getDashboardDataOptimized(
       if (!dailyDataForGrouping) {
         const cachedDailyData = getCachedData(`daily-metrics-${client.id}-${lastMonthPeriod}`);
         if (cachedDailyData && Array.isArray(cachedDailyData) && cachedDailyData.length > 0) {
-          logger.info(`📦 FALLBACK: Using ${cachedDailyData.length} cached daily metrics for grouping`);
+          // Cached daily metrics fallback logging removed for cleaner console
           dailyDataForGrouping = cachedDailyData;
         }
       }
@@ -531,12 +521,7 @@ export async function getDashboardDataOptimized(
         const simpleMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
         const dailySimpleMetrics = dailyDataForGrouping.filter(m => simpleMetrics.includes(m.metricName));
         
-        logger.info(`📊 DAILY DATA BREAKDOWN: Total: ${dailyDataForGrouping.length}, Simple metrics: ${dailySimpleMetrics.length}`);
-        
-        simpleMetrics.forEach(metricName => {
-          const count = dailySimpleMetrics.filter(m => m.metricName === metricName).length;
-          logger.info(`  - ${metricName}: ${count} daily records`);
-        });
+        // Daily data breakdown logging removed for cleaner console
         
         const dailyByDate: Record<string, any[]> = {};
         dailyDataForGrouping.forEach(metric => {
@@ -774,13 +759,7 @@ function processMetricsData(
         if (m.metricName === 'Traffic Channels' || m.metricName === 'Device Distribution') {
           const percentageResult = parseMetricPercentage(m.value);
           finalValue = percentageResult ? percentageResult.percentage : 0;
-          console.log('🔍 PARSE SUCCESS - Device Distribution:', {
-            metricName: m.metricName,
-            sourceType: m.sourceType,
-            channel: m.channel,
-            rawValue: m.value,
-            parsedPercentage: finalValue
-          });
+          // Parse success logs removed for cleaner console
         } else {
           finalValue = parseMetricValue(m.value);
         }
@@ -887,18 +866,7 @@ function processMetricsData(
         // Regular metric - handle JSON-wrapped values from competitor data
         let finalValue = parseMetricValue(m.value);
         
-        // Debug competitor metrics specifically
-        if (m.sourceType === 'Competitor') {
-          console.log('🔍 COMPETITOR METRIC DEBUG IN PROCESSING:', {
-            metricName: m.metricName,
-            sourceType: m.sourceType,
-            rawValue: m.value,
-            valueType: typeof m.value,
-            valueString: typeof m.value === 'string' ? m.value.substring(0, 100) : 'not-string',
-            parsedValue: finalValue,
-            competitorId: m.competitorId || m.competitor_id
-          });
-        }
+        // Competitor metric debug logs removed for cleaner console
         
         result.push({
           metricName: m.metricName,
@@ -916,30 +884,9 @@ function processMetricsData(
   
 
   
-  const cdAvgRaw = allFilteredCdAvgMetrics.filter(m => m.metricName === 'Traffic Channels');
-  logger.debug('CD_AVG RAW BEFORE PROCESSING:', {
-    count: cdAvgRaw.length,
-    samples: cdAvgRaw.slice(0, 2).map(m => ({
-      value: m.value,
-      type: typeof m.value,
-      channel: m.channel,
-      valuePreview: typeof m.value === 'string' ? m.value.substring(0, 50) : m.value
-    }))
-  });
+  // CD_Avg raw processing debug logs removed for cleaner console
 
-  console.error('🚨 COMPETITOR METRICS PIPELINE DEBUG:', {
-    rawCompetitorCount: allCompetitorMetrics.length,
-    periodsQueried: periodsToQuery,
-    competitorSample: allCompetitorMetrics.slice(0, 3).map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      valueType: typeof m.value,
-      valueIsNull: m.value === null,
-      hasValueProp: m.value && typeof m.value === 'object' && 'value' in m.value,
-      competitorId: m.competitorId || m.competitor_id,
-      timePeriod: m.timePeriod
-    }))
-  });
+  // Competitor metrics pipeline debug logs removed for cleaner console
   
   const processedData = [
     ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
@@ -948,17 +895,7 @@ function processMetricsData(
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))
   ];
   
-  const processedCompetitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
-  console.log('🔍 COMPETITOR METRICS DEBUG AFTER PROCESSING:', {
-    count: processedCompetitorMetrics.length,
-    sampleValues: processedCompetitorMetrics.slice(0, 3).map(m => ({
-      metricName: m.metricName,
-      value: m.value,
-      valueType: typeof m.value,
-      competitorId: m.competitorId,
-      timePeriod: m.timePeriod
-    }))
-  });
+  // Competitor metrics debug after processing logs removed for cleaner console
   
   return processedData;
 }
