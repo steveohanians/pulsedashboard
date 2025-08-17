@@ -153,6 +153,11 @@ class EventBus {
           credentials: 'include'
         });
         
+        if (response.status === 429) {
+          console.warn('EventBus: Rate limited. Backing off...');
+          return; // Skip this poll cycle
+        }
+        
         if (response.ok) {
           const events = await response.json();
           events.forEach((serverEvent: any) => {
@@ -164,6 +169,7 @@ class EventBus {
         }
       } catch (error) {
         // Silent fail for polling
+        console.debug('EventBus poll error:', error);
       }
     }, APP_CONFIG.polling.eventPoll);
   }

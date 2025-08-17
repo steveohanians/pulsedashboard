@@ -13,7 +13,7 @@ export const APP_CONFIG = {
     ga4Sync: 5000, // 5 seconds
     maxPollDuration: 5 * 60 * 1000, // 5 minutes
     dashboardRefresh: 30000, // 30 seconds
-    eventPoll: 500, // 500ms for event polling
+    eventPoll: 30000, // 30 seconds for event polling (was 500ms - too aggressive!)
   },
 
   // Toast Durations

@@ -1,0 +1,145 @@
+That's a rate limiting issue with the EventBus polling system. The 429 error means it's hitting the server too frequently. Let's fix this first before adding new features.
+
+# Step 22 (Urgent Fix): Stop the EventBus Polling Spam
+
+**INSTRUCTION FOR REPLIT:**
+The EventBus is polling too aggressively and getting rate limited. Let's fix this immediately.
+
+**MODIFY `/client/src/services/events/EventBus.ts` - INCREASE POLL INTERVAL AND ADD BACKOFF:**
+
+Find the polling configuration (around line 20-30) and update:
+
+```typescript
+export class EventBus {
+  private static instance: EventBus;
+  private eventTarget: EventTarget;
+  private pollInterval: number = 30000; // INCREASE from whatever it is to 30 seconds
+  private pollTimer: NodeJS.Timeout | null = null;
+  private isPolling: boolean = false;
+  private retryCount: number = 0;
+  private maxRetries: number = 3;
+  private backoffMultiplier: number = 2;
+
+  private constructor() {
+    this.eventTarget = new EventTarget();
+    // Start polling only if not in development
+    if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+      this.startPolling();
+    }
+  }
+
+  private async pollEvents(): Promise<void> {
+    if (this.isPolling) return;
+    
+    try {
+      this.isPolling = true;
+      const response = await fetch('/api/events/poll', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.status === 429) {
+        // Rate limited - implement exponential backoff
+        this.retryCount++;
+        if (this.retryCount <= this.maxRetries) {
+          const backoffDelay = this.pollInterval * Math.pow(this.backoffMultiplier, this.retryCount);
+          console.warn(`Rate limited. Backing off for ${backoffDelay / 1000} seconds`);
+          
+          // Stop current polling
+          this.stopPolling();
+          
+          // Resume after backoff
+          setTimeout(() => {
+            this.retryCount = 0;
+            this.startPolling();
+          }, backoffDelay);
+        } else {
+          console.error('Max retries reached. Stopping event polling.');
+          this.stopPolling();
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Poll failed: ${response.status}`);
+      }
+
+      // Reset retry count on success
+      this.retryCount = 0;
+
+      const events = await response.json();
+      if (events && Array.isArray(events.events)) {
+        events.events.forEach((event: any) => {
+          this.emit(event.type, event.data);
+        });
+      }
+    } catch (error) {
+      console.error('Event polling error:', error);
+      // Stop polling on persistent errors
+      if (this.retryCount > this.maxRetries) {
+        this.stopPolling();
+      }
+    } finally {
+      this.isPolling = false;
+    }
+  }
+
+  private startPolling(): void {
+    if (this.pollTimer) return;
+    
+    // Don't poll in development
+    if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
+      return;
+    }
+    
+    this.pollTimer = setInterval(() => {
+      this.pollEvents();
+    }, this.pollInterval);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  // Add method to completely disable polling (for debugging)
+  public disablePolling(): void {
+    this.stopPolling();
+    console.log('Event polling disabled');
+  }
+
+  // ... rest of the class
+```
+
+**ALTERNATIVELY, IF YOU DON'T NEED EVENT POLLING, JUST DISABLE IT:**
+
+Find where EventBus starts polling and comment it out:
+
+```typescript
+  private constructor() {
+    this.eventTarget = new EventTarget();
+    // DISABLED: Event polling causing rate limit issues
+    // this.startPolling();
+  }
+```
+
+**OR EVEN SIMPLER - JUST INCREASE THE INTERVAL:**
+
+Find this line:
+```typescript
+  private pollInterval: number = 5000; // or whatever it currently is
+```
+
+Change to:
+```typescript
+  private pollInterval: number = 60000; // Poll every 60 seconds instead
+```
+
+**After making this fix:**
+1. Refresh the page
+2. Check console - the 429 errors should stop
+3. Tell me if the errors stopped
+
+This needs to be fixed before we continue, as it's spamming the server and could affect performance.
