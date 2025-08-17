@@ -65,17 +65,20 @@ export function useDashboardData({
   // Compute effective time period for custom date ranges
   const effectiveTimePeriod = timePeriod;
 
+  // Use the provided clientId or fallback to user's clientId
+  const effectiveClientId = clientId || user?.clientId || '';
+
   // Main dashboard data query
   const dashboardQuery = useQuery<any>({
     queryKey: QueryKeys.dashboard(
-      user?.clientId || '',
+      effectiveClientId,
       effectiveTimePeriod
     ),
     queryFn: async () => {
       try {
         const result = await apiRequest(
           'GET',
-          `/api/dashboard/${clientId || user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
+          `/api/dashboard/${effectiveClientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
         // DEBUG: Log what we actually receive
@@ -151,14 +154,14 @@ export function useDashboardData({
   // AI Insights query
   const insightsQuery = useQuery({
     queryKey: QueryKeys.aiInsights(
-      user?.clientId || '',
+      effectiveClientId,
       effectiveTimePeriod
     ),
     queryFn: async () => {
       try {
         const result = await apiRequest(
           'GET',
-          `/api/ai-insights/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}`
+          `/api/ai-insights/${effectiveClientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}`
         );
         return result;
       } catch (error) {
@@ -168,7 +171,7 @@ export function useDashboardData({
         throw error;
       }
     },
-    enabled: !!user?.clientId,
+    enabled: !!effectiveClientId,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
@@ -190,10 +193,10 @@ export function useDashboardData({
     onSuccess: () => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({
-        queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod)
+        queryKey: QueryKeys.dashboard(effectiveClientId, effectiveTimePeriod)
       });
       queryClient.invalidateQueries({
-        queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod)
+        queryKey: QueryKeys.aiInsights(effectiveClientId, effectiveTimePeriod)
       });
       
       // Refetch data
@@ -247,13 +250,13 @@ export function useDashboardData({
       
       // Invalidate queries
       queryClient.invalidateQueries({
-        queryKey: QueryKeys.dashboard(user?.clientId || '', effectiveTimePeriod)
+        queryKey: QueryKeys.dashboard(effectiveClientId, effectiveTimePeriod)
       });
       queryClient.invalidateQueries({
-        queryKey: QueryKeys.aiInsights(user?.clientId || '', effectiveTimePeriod)
+        queryKey: QueryKeys.aiInsights(effectiveClientId, effectiveTimePeriod)
       });
       queryClient.invalidateQueries({
-        queryKey: QueryKeys.metricInsights(user?.clientId || '')
+        queryKey: QueryKeys.metricInsights(effectiveClientId)
       });
       
       // Refetch

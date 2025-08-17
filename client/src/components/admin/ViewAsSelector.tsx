@@ -84,19 +84,18 @@ export function ViewAsSelector({
       const data = await response.json();
       if (data.success) {
         const selectedUser = users.find(u => u.id === selectedUserId);
-        onViewAs(data.clientId, data.userName);
+        
+        // Update local state first
         setIsViewingAs(true);
+        
+        // Call the parent callback to update dashboard context
+        onViewAs(data.clientId, data.userName);
         
         toast({
           title: 'View switched',
           description: `Now viewing as ${selectedUser?.name}`,
           duration: 3000
         });
-        
-        // Force page reload to ensure fresh data
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       }
     } catch (error) {
       console.error('Failed to switch view:', error);
@@ -125,8 +124,11 @@ export function ViewAsSelector({
       
       const data = await response.json();
       if (data.success) {
+        // Update local state first
         setSelectedUserId(currentUserId);
         setIsViewingAs(false);
+        
+        // Call the parent callback to reset dashboard context
         onReset();
         
         toast({
@@ -134,11 +136,6 @@ export function ViewAsSelector({
           description: 'Returned to your own view',
           duration: 3000
         });
-        
-        // Force page reload to ensure fresh data
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       }
     } catch (error) {
       console.error('Failed to reset view:', error);
