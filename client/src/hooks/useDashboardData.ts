@@ -81,9 +81,7 @@ export function useDashboardData({
           `/api/dashboard/${effectiveClientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
-        // DEBUG: Log what we actually receive
-        console.log('📦 DASHBOARD API RESPONSE KEYS:', Object.keys(result));
-        console.log('📦 METRICS COUNT:', result.metrics?.length || 0);
+        // Debug logging removed for cleaner console
         
         // Check for different possible company data structures
         const possibleCompanyKeys = [
@@ -95,27 +93,7 @@ export function useDashboardData({
           'industryBenchmarkCompanies'
         ];
         
-        possibleCompanyKeys.forEach(key => {
-          if (result[key]) {
-            console.log(`📦 Found ${key}:`, result[key].length, 'companies');
-          }
-        });
-        
-        // Check if CD_Avg and Industry_Avg exist in metrics
-        const cdAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'CD_Avg') || [];
-        const industryAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'Industry_Avg') || [];
-        
-        console.log('📦 CD_Avg metrics found:', cdAvgMetrics.length);
-        console.log('📦 Industry_Avg metrics found:', industryAvgMetrics.length);
-        
-        // Check for averaged metrics
-        if (result.averagedMetrics) {
-          console.log('📦 AveragedMetrics structure:', Object.keys(result.averagedMetrics));
-          Object.keys(result.averagedMetrics).forEach(metricName => {
-            const sources = Object.keys(result.averagedMetrics[metricName]);
-            console.log(`  - ${metricName}:`, sources);
-          });
-        }
+        // Company data structure and metrics verification - debug logs removed for cleaner console
         
         // TEMPORARY: Expose whatever company data we find
         if (typeof window !== 'undefined') {

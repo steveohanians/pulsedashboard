@@ -48,16 +48,13 @@ export function ViewAsSelector({
     try {
       setLoading(true);
       const usersData = await userService.getAll<UserOption>();
-      console.log('ViewAsSelector users data:', usersData);
-      console.log('ViewAsSelector users count:', usersData.length);
-      console.log('Current user ID:', currentUserId);
-      console.log('View as user ID:', viewAsUserId);
+      // ViewAsSelector debug logs removed for cleaner console
       setUsers(usersData);
       // Set the currently viewed user as selected, or default to current user
       const selectedUser = viewAsUserId || currentUserId;
       setSelectedUserId(selectedUser);
       setIsViewingAs(!!viewAsUserId);
-      console.log('ViewAsSelector selectedUserId set to:', selectedUser);
+      // Debug log removed
     } catch (error) {
       console.error('Failed to fetch users:', error);
       toast({
@@ -82,7 +79,7 @@ export function ViewAsSelector({
 
     try {
       setLoading(true);
-      console.log('Switching to view as user:', selectedUserId);
+      // Debug log removed
       const response = await fetch(`/api/admin/view-as/${selectedUserId}`, {
         credentials: 'include'
       });
@@ -161,13 +158,7 @@ export function ViewAsSelector({
 
   if (!isAdmin) return null;
 
-  console.log('ViewAsSelector render:', { 
-    usersCount: users.length, 
-    selectedUserId, 
-    currentUserId, 
-    loading,
-    isViewingAs 
-  });
+  // ViewAsSelector rendering - debug logs removed for cleaner console
 
   return (
     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -181,7 +172,7 @@ export function ViewAsSelector({
           value={selectedUserId}
           onChange={(e) => {
             const value = e.target.value;
-            console.log('User selected in dropdown:', value, 'current users:', users.length);
+            // User selected in dropdown - debug log removed
             setSelectedUserId(value);
             // Note: Only update selection, don't auto-trigger view change
           }}

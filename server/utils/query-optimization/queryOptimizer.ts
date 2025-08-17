@@ -714,7 +714,7 @@ export async function getDashboardDataOptimized(
         const parsed = JSON.parse(metric.value);
         value = Number(parsed.percentage) || 0;
       } catch (error) {
-        console.log('🔍 DEVICE JSON PARSE ERROR:', error, 'Raw value:', metric.value);
+        // Device JSON parse error - debug log removed for cleaner console
         value = null;
       }
     } else if (metric.valuePreview !== undefined) {
@@ -723,19 +723,7 @@ export async function getDashboardDataOptimized(
       value = parseFloat(String(metric.value).replace('%', ''));
     }
     
-    // Debug each metric to understand the structure
-    console.log('Device metric debug:', {
-      sourceType: metric.sourceType,
-      deviceType: deviceType,
-      valuePreview: metric.valuePreview,
-      rawValue: metric.value,
-      valueType: typeof metric.value,
-      timePeriod: metric.timePeriod,
-      parsedValue: value,
-      hasValueProperty: 'value' in metric,
-      allMetricKeys: Object.keys(metric),
-      isJSON: metric.sourceType === 'CD_Avg' && typeof metric.value === 'string' && metric.value.includes('{')
-    });
+    // Device metric structure debugging - logs removed for cleaner console
     
     if (metric.sourceType === 'Client' && deviceType && value !== null && !isNaN(value)) {
       deviceDistribution.client[deviceType] = value;

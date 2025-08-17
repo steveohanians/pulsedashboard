@@ -174,43 +174,7 @@ export class UnifiedDataService {
     timePeriod: string
   ): ProcessedMetrics {
     
-    // SIMPLE VERIFICATION: Check what averages we're getting
-    console.log('🔍 AVERAGE VERIFICATION:');
-    
-    // Check CD_Avg values
-    const cdAvgMetrics = metrics.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'cd_avg');
-    console.log('  CD_Avg metrics count:', cdAvgMetrics.length);
-    if (cdAvgMetrics.length > 0) {
-      // Group by metric name and show values
-      const cdByMetric: Record<string, number[]> = {};
-      cdAvgMetrics.forEach(m => {
-        if (!cdByMetric[m.metricName]) cdByMetric[m.metricName] = [];
-        cdByMetric[m.metricName].push(parseFloat(String(m.value)));
-      });
-      Object.keys(cdByMetric).forEach(metric => {
-        console.log(`  CD_Avg ${metric}:`, cdByMetric[metric]);
-      });
-    }
-    
-    // Check Industry_Avg values  
-    const industryAvgMetrics = metrics.filter(m => m.sourceType === 'Industry_Avg' || m.sourceType === 'industry_avg');
-    console.log('  Industry_Avg metrics count:', industryAvgMetrics.length);
-    if (industryAvgMetrics.length > 0) {
-      // Group by metric name and show values
-      const indByMetric: Record<string, number[]> = {};
-      industryAvgMetrics.forEach(m => {
-        if (!indByMetric[m.metricName]) indByMetric[m.metricName] = [];
-        indByMetric[m.metricName].push(parseFloat(String(m.value)));
-      });
-      Object.keys(indByMetric).forEach(metric => {
-        console.log(`  Industry_Avg ${metric}:`, indByMetric[metric]);
-      });
-    }
-    
-    // Check if we have pre-calculated averages
-    if (averagedMetrics) {
-      console.log('  Pre-calculated averages available:', Object.keys(averagedMetrics));
-    }
+    // Average verification logs removed for cleaner console
     
     const result: ProcessedMetrics = {};
     const counts: Record<string, Record<string, number>> = {};
@@ -225,36 +189,7 @@ export class UnifiedDataService {
     // For CD_Avg and Industry_Avg, we only need one value per metric since they're pre-calculated
     const metricsToProcess = this.deduplicateMetrics(filteredMetrics);
 
-    // VERIFICATION AFTER DEDUPLICATION: Check what averages we're getting
-    console.log('🔍 POST-DEDUPLICATION VERIFICATION:');
-    
-    // Check CD_Avg values AFTER deduplication
-    const cdAvgAfter = metricsToProcess.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'cd_avg');
-    console.log('  CD_Avg metrics count (after dedup):', cdAvgAfter.length);
-    if (cdAvgAfter.length > 0) {
-      const cdByMetricAfter: Record<string, number[]> = {};
-      cdAvgAfter.forEach(m => {
-        if (!cdByMetricAfter[m.metricName]) cdByMetricAfter[m.metricName] = [];
-        cdByMetricAfter[m.metricName].push(parseFloat(String(m.value)));
-      });
-      Object.keys(cdByMetricAfter).forEach(metric => {
-        console.log(`  CD_Avg ${metric} (deduplicated):`, cdByMetricAfter[metric]);
-      });
-    }
-    
-    // Check Industry_Avg values AFTER deduplication
-    const industryAvgAfter = metricsToProcess.filter(m => m.sourceType === 'Industry_Avg' || m.sourceType === 'industry_avg');
-    console.log('  Industry_Avg metrics count (after dedup):', industryAvgAfter.length);
-    if (industryAvgAfter.length > 0) {
-      const indByMetricAfter: Record<string, number[]> = {};
-      industryAvgAfter.forEach(m => {
-        if (!indByMetricAfter[m.metricName]) indByMetricAfter[m.metricName] = [];
-        indByMetricAfter[m.metricName].push(parseFloat(String(m.value)));
-      });
-      Object.keys(indByMetricAfter).forEach(metric => {
-        console.log(`  Industry_Avg ${metric} (deduplicated):`, indByMetricAfter[metric]);
-      });
-    }
+    // Post-deduplication verification logs removed for cleaner console
 
     // Process raw metrics with standardized averaging
     for (const metric of metricsToProcess) {
@@ -343,12 +278,7 @@ export class UnifiedDataService {
       }
     }
 
-    // Debug logging to verify deduplication works
-    console.log('🔧 DEDUPLICATION RESULT:', {
-      original: metrics.length,
-      unique: unique.length,
-      removed: metrics.length - unique.length
-    });
+    // Deduplication logging removed for cleaner console
 
     debugLog('UNIFIED', 'Deduplicated metrics', {
       original: metrics.length,
