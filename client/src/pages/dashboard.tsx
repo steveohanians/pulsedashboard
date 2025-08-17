@@ -198,7 +198,7 @@ export default function Dashboard() {
     }
     
     const result: any = { Desktop: 0, Mobile: 0 };
-    sourceData.devices.forEach((device: any) => {
+    sourceData.devices.forEach((device: { name: string; percentage?: number; value?: number }) => {
       if (device.name === 'Desktop' || device.name === 'Mobile') {
         result[device.name] = device.percentage || device.value || 0;
       }
@@ -831,16 +831,86 @@ export default function Dashboard() {
                             competitors={getCompetitorChartData(metricName)}
                           />
                         )}
-                        {metricName === "Device Distribution" && (
-                          <LollipopChart
-                            data={getDeviceData("Client")}
-                            competitors={getCompetitorDeviceData()}
-                            clientUrl={client?.websiteUrl}
-                            clientName={client?.name}
-                            industryAvg={getDeviceData("Industry_Avg")}
-                            cdAvg={getDeviceData("CD_Avg")}
-                          />
-                        )}
+                        {metricName === "Device Distribution" && (() => {
+                          // Get fresh data right when we need it
+                          const currentDeviceData = processedData?.deviceDistribution || [];
+                          
+                          // Extract REAL data for each source - NO FALLBACKS
+                          const clientData = (() => {
+                            const data = currentDeviceData.find(d => d.sourceType === "Client");
+                            if (!data || !data.devices || data.devices.length === 0) return null;
+                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            if (!desktop && !mobile) return null;
+                            return {
+                              Desktop: desktop?.percentage || desktop?.value || 0,
+                              Mobile: mobile?.percentage || mobile?.value || 0
+                            };
+                          })();
+                          
+                          const industryData = (() => {
+                            const data = currentDeviceData.find(d => d.sourceType === "Industry_Avg");
+                            if (!data || !data.devices || data.devices.length === 0) return null;
+                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            if (!desktop && !mobile) return null;
+                            return {
+                              Desktop: desktop?.percentage || desktop?.value || 0,
+                              Mobile: mobile?.percentage || mobile?.value || 0
+                            };
+                          })();
+                          
+                          const cdData = (() => {
+                            const data = currentDeviceData.find(d => d.sourceType === "CD_Avg");
+                            if (!data || !data.devices || data.devices.length === 0) return null;
+                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            if (!desktop && !mobile) return null;
+                            return {
+                              Desktop: desktop?.percentage || desktop?.value || 0,
+                              Mobile: mobile?.percentage || mobile?.value || 0
+                            };
+                          })();
+                          
+                          // Get REAL competitor data only
+                          const competitorData = competitors.map((competitor: any) => {
+                            const data = currentDeviceData.find(d => d.sourceType === `Competitor_${competitor.id}`);
+                            if (!data || !data.devices || data.devices.length === 0) return null;
+                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            // Include even if only desktop or only mobile (that might be real data)
+                            if (!desktop && !mobile) return null;
+                            return {
+                              id: competitor.id,
+                              label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
+                              Desktop: desktop?.percentage || desktop?.value || 0,
+                              Mobile: mobile?.percentage || mobile?.value || 0
+                            };
+                          }).filter(Boolean); // Remove nulls
+                          
+                          // Only render chart if we have client data at minimum
+                          if (!clientData) {
+                            return (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="text-center text-slate-500">
+                                  <div className="mb-2">📊</div>
+                                  <div className="text-sm">No device distribution data available</div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <LollipopChart
+                              data={clientData}
+                              competitors={competitorData}
+                              clientUrl={client?.websiteUrl}
+                              clientName={client?.name}
+                              industryAvg={industryData}
+                              cdAvg={cdData}
+                            />
+                          );
+                        })()}
                       </div>
                     </div>
 
