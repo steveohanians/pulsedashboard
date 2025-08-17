@@ -76,10 +76,47 @@ export function useDashboardData({
           `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
-        // TEMPORARY: Expose company data for verification
+        // DEBUG: Log what we actually receive
+        console.log('📦 DASHBOARD API RESPONSE KEYS:', Object.keys(result));
+        console.log('📦 METRICS COUNT:', result.metrics?.length || 0);
+        
+        // Check for different possible company data structures
+        const possibleCompanyKeys = [
+          'cdPortfolioCompanies',
+          'cd_portfolio_companies',
+          'portfolioCompanies',
+          'benchmarkCompanies',
+          'benchmark_companies',
+          'industryBenchmarkCompanies'
+        ];
+        
+        possibleCompanyKeys.forEach(key => {
+          if (result[key]) {
+            console.log(`📦 Found ${key}:`, result[key].length, 'companies');
+          }
+        });
+        
+        // Check if CD_Avg and Industry_Avg exist in metrics
+        const cdAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'CD_Avg') || [];
+        const industryAvgMetrics = result.metrics?.filter((m: any) => m.sourceType === 'Industry_Avg') || [];
+        
+        console.log('📦 CD_Avg metrics found:', cdAvgMetrics.length);
+        console.log('📦 Industry_Avg metrics found:', industryAvgMetrics.length);
+        
+        // Check for averaged metrics
+        if (result.averagedMetrics) {
+          console.log('📦 AveragedMetrics structure:', Object.keys(result.averagedMetrics));
+          Object.keys(result.averagedMetrics).forEach(metricName => {
+            const sources = Object.keys(result.averagedMetrics[metricName]);
+            console.log(`  - ${metricName}:`, sources);
+          });
+        }
+        
+        // TEMPORARY: Expose whatever company data we find
         if (typeof window !== 'undefined') {
-          (window as any).__cdPortfolioCompanies = result.cdPortfolioCompanies || [];
-          (window as any).__benchmarkCompanies = result.benchmarkCompanies || [];
+          (window as any).__dashboardResult = result;
+          (window as any).__cdPortfolioCompanies = result.cdPortfolioCompanies || result.cd_portfolio_companies || [];
+          (window as any).__benchmarkCompanies = result.benchmarkCompanies || result.benchmark_companies || [];
         }
         
         return result;

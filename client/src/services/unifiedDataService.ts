@@ -174,18 +174,42 @@ export class UnifiedDataService {
     timePeriod: string
   ): ProcessedMetrics {
     
-    // TEMPORARY: Verify averaging logic
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      // Check if we have CD Portfolio companies
-      const cdPortfolioCompanies = (window as any).__cdPortfolioCompanies || [];
-      const benchmarkCompanies = (window as any).__benchmarkCompanies || [];
-      
-      if (cdPortfolioCompanies.length > 0) {
-        verifyAverages(metrics, cdPortfolioCompanies, 'CD_Portfolio');
-      }
-      if (benchmarkCompanies.length > 0) {
-        verifyAverages(metrics, benchmarkCompanies, 'Benchmark');
-      }
+    // SIMPLE VERIFICATION: Check what averages we're getting
+    console.log('🔍 AVERAGE VERIFICATION:');
+    
+    // Check CD_Avg values
+    const cdAvgMetrics = metrics.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'cd_avg');
+    console.log('  CD_Avg metrics count:', cdAvgMetrics.length);
+    if (cdAvgMetrics.length > 0) {
+      // Group by metric name and show values
+      const cdByMetric: Record<string, number[]> = {};
+      cdAvgMetrics.forEach(m => {
+        if (!cdByMetric[m.metricName]) cdByMetric[m.metricName] = [];
+        cdByMetric[m.metricName].push(parseFloat(String(m.value)));
+      });
+      Object.keys(cdByMetric).forEach(metric => {
+        console.log(`  CD_Avg ${metric}:`, cdByMetric[metric]);
+      });
+    }
+    
+    // Check Industry_Avg values  
+    const industryAvgMetrics = metrics.filter(m => m.sourceType === 'Industry_Avg' || m.sourceType === 'industry_avg');
+    console.log('  Industry_Avg metrics count:', industryAvgMetrics.length);
+    if (industryAvgMetrics.length > 0) {
+      // Group by metric name and show values
+      const indByMetric: Record<string, number[]> = {};
+      industryAvgMetrics.forEach(m => {
+        if (!indByMetric[m.metricName]) indByMetric[m.metricName] = [];
+        indByMetric[m.metricName].push(parseFloat(String(m.value)));
+      });
+      Object.keys(indByMetric).forEach(metric => {
+        console.log(`  Industry_Avg ${metric}:`, indByMetric[metric]);
+      });
+    }
+    
+    // Check if we have pre-calculated averages
+    if (averagedMetrics) {
+      console.log('  Pre-calculated averages available:', Object.keys(averagedMetrics));
     }
     
     const result: ProcessedMetrics = {};
