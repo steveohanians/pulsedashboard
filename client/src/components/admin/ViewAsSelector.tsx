@@ -72,6 +72,7 @@ export function ViewAsSelector({
 
     try {
       setLoading(true);
+      console.log('Switching to view as user:', selectedUserId);
       const response = await fetch(`/api/admin/view-as/${selectedUserId}`, {
         credentials: 'include'
       });
@@ -91,6 +92,11 @@ export function ViewAsSelector({
           description: `Now viewing as ${selectedUser?.name}`,
           duration: 3000
         });
+        
+        // Force page reload to ensure fresh data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       }
     } catch (error) {
       console.error('Failed to switch view:', error);
@@ -104,16 +110,46 @@ export function ViewAsSelector({
     }
   };
 
-  const handleReset = () => {
-    setSelectedUserId(currentUserId);
-    setIsViewingAs(false);
-    onReset();
-    
-    toast({
-      title: 'View reset',
-      description: 'Returned to your own view',
-      duration: 3000
-    });
+  const handleReset = async () => {
+    try {
+      setLoading(true);
+      console.log('Returning to own view:', currentUserId);
+      
+      const response = await fetch(`/api/admin/view-as/${currentUserId}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to reset view');
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setSelectedUserId(currentUserId);
+        setIsViewingAs(false);
+        onReset();
+        
+        toast({
+          title: 'View reset',
+          description: 'Returned to your own view',
+          duration: 3000
+        });
+        
+        // Force page reload to ensure fresh data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Failed to reset view:', error);
+      toast({
+        title: 'Failed to reset view',
+        description: 'Could not return to your own view',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isAdmin) return null;
@@ -138,50 +174,9 @@ export function ViewAsSelector({
           value={selectedUserId}
           onChange={(e) => {
             const value = e.target.value;
-            console.log('Native select onChange triggered:', value, 'current users:', users.length);
+            console.log('User selected in dropdown:', value, 'current users:', users.length);
             setSelectedUserId(value);
-            // Auto-trigger view change when different user is selected
-            if (value && value !== currentUserId) {
-              setTimeout(() => {
-                // Use the new value directly since state might not be updated yet
-                const targetUserId = value;
-                const handleAutoViewAs = async () => {
-                  try {
-                    setLoading(true);
-                    const response = await fetch(`/api/admin/view-as/${targetUserId}`, {
-                      credentials: 'include'
-                    });
-                    
-                    if (!response.ok) {
-                      throw new Error('Failed to switch view');
-                    }
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                      const selectedUser = users.find(u => u.id === targetUserId);
-                      onViewAs(data.clientId, data.userName);
-                      setIsViewingAs(true);
-                      
-                      toast({
-                        title: 'View switched',
-                        description: `Now viewing as ${selectedUser?.name}`,
-                        duration: 3000
-                      });
-                    }
-                  } catch (error) {
-                    console.error('Failed to switch view:', error);
-                    toast({
-                      title: 'Failed to switch view',
-                      description: 'Could not switch to selected user view',
-                      variant: 'destructive'
-                    });
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                handleAutoViewAs();
-              }, 100);
-            }
+            // Note: Only update selection, don't auto-trigger view change
           }}
           disabled={loading}
           className="flex-1 max-w-sm text-sm border border-gray-300 rounded px-3 py-2"
