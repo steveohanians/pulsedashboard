@@ -872,9 +872,9 @@ export default function Dashboard() {
                             };
                           })();
                           
-                          // Get REAL competitor data only
+                          // Get REAL competitor data only - transform to LollipopChart format
                           const competitorData = competitors.map((competitor: any) => {
-                            const data = currentDeviceData.find(d => d.sourceType === `Competitor_${competitor.id}`);
+                            const data = currentDeviceData.find((d: any) => d.sourceType === `Competitor_${competitor.id}`);
                             if (!data || !data.devices || data.devices.length === 0) return null;
                             const desktop = data.devices.find((d: any) => d.name === 'Desktop');
                             const mobile = data.devices.find((d: any) => d.name === 'Mobile');
@@ -883,8 +883,10 @@ export default function Dashboard() {
                             return {
                               id: competitor.id,
                               label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
-                              Desktop: desktop?.percentage || desktop?.value || 0,
-                              Mobile: mobile?.percentage || mobile?.value || 0
+                              value: {
+                                Desktop: desktop?.percentage || desktop?.value || 0,
+                                Mobile: mobile?.percentage || mobile?.value || 0
+                              }
                             };
                           }).filter(Boolean); // Remove nulls
                           
@@ -906,8 +908,8 @@ export default function Dashboard() {
                               competitors={competitorData}
                               clientUrl={client?.websiteUrl}
                               clientName={client?.name}
-                              industryAvg={industryData}
-                              cdAvg={cdData}
+                              industryAvg={industryData || { Desktop: 0, Mobile: 0 }}
+                              cdAvg={cdData || { Desktop: 0, Mobile: 0 }}
                             />
                           );
                         })()}
