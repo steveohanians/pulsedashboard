@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -177,7 +177,7 @@ export function ViewAsSelector({
           <span className="text-sm font-medium">Admin View As:</span>
         </div>
         
-        <select
+        <NativeSelect
           value={selectedUserId}
           onChange={(e) => {
             const value = e.target.value;
@@ -186,18 +186,13 @@ export function ViewAsSelector({
             // Note: Only update selection, don't auto-trigger view change
           }}
           disabled={loading}
-          className="flex-1 max-w-sm text-sm border border-gray-300 rounded px-3 py-2"
-        >
-          {users.length === 0 ? (
-            <option value="" disabled>Loading users...</option>
-          ) : (
-            users.map(user => (
-              <option key={user.id} value={user.id}>
-                {user.label}
-              </option>
-            ))
-          )}
-        </select>
+          className="flex-1 max-w-sm"
+          options={users.map(user => ({
+            value: user.id,
+            label: user.label
+          }))}
+          placeholder={users.length === 0 ? "Loading users..." : "Select user"}
+        />
         
         <Button
           size="sm"
