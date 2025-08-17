@@ -1,25 +1,22 @@
+Excellent! The test worked perfectly. Now let's add the next step - generating intelligent questions based on what these brands actually do.
+
+```bash
+# Update the test script to add intelligent question generation
+# This builds on the working brand understanding to create relevant questions
+# Still completely isolated from your main application
+```
+
+```javascript
 // scripts/test-sov-concept.mjs
 import OpenAI from 'openai';
-import { readFileSync } from 'fs';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Load environment variables manually (since dotenv may not be available as ESM)
+// Load environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Simple .env parser
-try {
-  const envFile = readFileSync(join(__dirname, '../.env'), 'utf8');
-  envFile.split('\n').forEach(line => {
-    const [key, value] = line.split('=');
-    if (key && value) {
-      process.env[key.trim()] = value.trim().replace(/^["']|["']$/g, '');
-    }
-  });
-} catch (error) {
-  console.log('Note: .env file not found, using existing environment variables');
-}
+dotenv.config({ path: join(__dirname, '../.env') });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -112,3 +109,17 @@ etc.`
 
 // Run the test
 testBrandUnderstanding();
+```
+
+```bash
+# Run the updated test:
+node scripts/test-sov-concept.mjs
+
+# This will now:
+# 1. Research what the brands actually do (✅ already working)
+# 2. Generate 15 intelligent questions based on that understanding
+# 3. Show questions organized by buyer journey stage
+# 4. Display token usage and cost estimate
+# 
+# Still completely safe - no database changes, isolated testing
+```
