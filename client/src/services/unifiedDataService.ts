@@ -217,9 +217,44 @@ export class UnifiedDataService {
 
     // Filter metrics based on time period if needed
     const singlePeriodTarget = timePeriod === "Last Month" ? periods.client : null;
-    const metricsToProcess = singlePeriodTarget 
+    const filteredMetrics = singlePeriodTarget 
       ? metrics.filter(m => !m.timePeriod || m.timePeriod === singlePeriodTarget)
       : metrics;
+    
+    // De-duplicate metrics before processing
+    // For CD_Avg and Industry_Avg, we only need one value per metric since they're pre-calculated
+    const metricsToProcess = this.deduplicateMetrics(filteredMetrics);
+
+    // VERIFICATION AFTER DEDUPLICATION: Check what averages we're getting
+    console.log('🔍 POST-DEDUPLICATION VERIFICATION:');
+    
+    // Check CD_Avg values AFTER deduplication
+    const cdAvgAfter = metricsToProcess.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'cd_avg');
+    console.log('  CD_Avg metrics count (after dedup):', cdAvgAfter.length);
+    if (cdAvgAfter.length > 0) {
+      const cdByMetricAfter: Record<string, number[]> = {};
+      cdAvgAfter.forEach(m => {
+        if (!cdByMetricAfter[m.metricName]) cdByMetricAfter[m.metricName] = [];
+        cdByMetricAfter[m.metricName].push(parseFloat(String(m.value)));
+      });
+      Object.keys(cdByMetricAfter).forEach(metric => {
+        console.log(`  CD_Avg ${metric} (deduplicated):`, cdByMetricAfter[metric]);
+      });
+    }
+    
+    // Check Industry_Avg values AFTER deduplication
+    const industryAvgAfter = metricsToProcess.filter(m => m.sourceType === 'Industry_Avg' || m.sourceType === 'industry_avg');
+    console.log('  Industry_Avg metrics count (after dedup):', industryAvgAfter.length);
+    if (industryAvgAfter.length > 0) {
+      const indByMetricAfter: Record<string, number[]> = {};
+      industryAvgAfter.forEach(m => {
+        if (!indByMetricAfter[m.metricName]) indByMetricAfter[m.metricName] = [];
+        indByMetricAfter[m.metricName].push(parseFloat(String(m.value)));
+      });
+      Object.keys(indByMetricAfter).forEach(metric => {
+        console.log(`  Industry_Avg ${metric} (deduplicated):`, indByMetricAfter[metric]);
+      });
+    }
 
     // Process raw metrics with standardized averaging
     for (const metric of metricsToProcess) {
@@ -246,12 +281,15 @@ export class UnifiedDataService {
       counts[metricName][sourceType] += 1;
     }
 
-    // Calculate averages - SAME LOGIC for CD Portfolio and Industry Benchmark
+    // Calculate averages from counts (but not for pre-calculated averages)
     for (const metricName in result) {
       for (const sourceType in result[metricName]) {
-        if (counts[metricName][sourceType] > 0) {
-          result[metricName][sourceType] = 
-            result[metricName][sourceType] / counts[metricName][sourceType];
+        // Don't re-average CD_Avg and Industry_Avg - they're already averaged
+        if (sourceType !== 'CD_Avg' && sourceType !== 'Industry_Avg') {
+          if (counts[metricName][sourceType] > 1) {
+            result[metricName][sourceType] =
+              result[metricName][sourceType] / counts[metricName][sourceType];
+          }
         }
       }
     }
@@ -277,6 +315,48 @@ export class UnifiedDataService {
     });
 
     return result;
+  }
+
+  /**
+   * De-duplicate metrics - for pre-calculated averages, we only need one value
+   */
+  private deduplicateMetrics(metrics: DashboardMetric[]): DashboardMetric[] {
+    const seen = new Set<string>();
+    const unique: DashboardMetric[] = [];
+
+    for (const metric of metrics) {
+      const sourceType = this.normalizeSourceType(metric.sourceType);
+      
+      // For CD_Avg and Industry_Avg, create a unique key without channel/competitorId
+      // since these are pre-calculated averages that don't vary by channel
+      let key: string;
+      if (sourceType === 'CD_Avg' || sourceType === 'Industry_Avg') {
+        key = `${metric.metricName}-${sourceType}-${metric.timePeriod || ''}`;
+      } else {
+        // For other sources, include all identifying information
+        key = `${metric.metricName}-${sourceType}-${metric.channel || ''}-${metric.competitorId || ''}-${metric.timePeriod || ''}`;
+      }
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(metric);
+      }
+    }
+
+    // Debug logging to verify deduplication works
+    console.log('🔧 DEDUPLICATION RESULT:', {
+      original: metrics.length,
+      unique: unique.length,
+      removed: metrics.length - unique.length
+    });
+
+    debugLog('UNIFIED', 'Deduplicated metrics', {
+      original: metrics.length,
+      unique: unique.length,
+      removed: metrics.length - unique.length
+    });
+
+    return unique;
   }
 
   /**
