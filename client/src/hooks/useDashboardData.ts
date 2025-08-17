@@ -11,6 +11,7 @@ import { unifiedDataService } from '@/services/unifiedDataService';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { APIError } from '@/lib/queryClient';
+import { debugDeviceDistribution } from '@/utils/debugDeviceData';
 
 interface DashboardHookOptions {
   timePeriod: string;
@@ -74,6 +75,12 @@ export function useDashboardData({
           'GET',
           `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
+        
+        // TEMPORARY DEBUG - Remove after investigation
+        if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+          debugDeviceDistribution(result);
+        }
+        
         return result;
       } catch (error) {
         if (error instanceof APIError) {
