@@ -551,7 +551,7 @@ export async function getDashboardDataOptimized(
         const daysInMonth = sortedDays.length;
         const groupSize = Math.ceil(daysInMonth / 5); // Target 5 groups as per requirements
         
-        logger.info(`📅 GROUPING STRATEGY: ${daysInMonth} days → 5 groups of ~${groupSize} days each`);
+        // Grouping strategy logs removed for cleaner console
         
         const groupedPeriods: Record<string, any[]> = {};
         
@@ -572,7 +572,7 @@ export async function getDashboardDataOptimized(
           const periodKey = `${lastMonthPeriod}-group-${i + 1}`;
           groupedPeriods[periodKey] = [];
           
-          logger.info(`📊 GROUP ${i + 1}: ${firstDate} to ${lastDate} (${daysInGroup.length} days)`);
+          // Group information logs removed for cleaner console
           
           const allMetricsInGroup: Record<string, number[]> = {};
           
@@ -585,9 +585,7 @@ export async function getDashboardDataOptimized(
               const parsedValue = parseMetricValue(metric.value);
               if (parsedValue !== null) {
                 allMetricsInGroup[metricKey].push(parsedValue);
-                if (metric.metricName === 'Session Duration') {
-                  logger.debug(`Session Duration daily value added: ${parsedValue} from ${dayKey}`);
-                }
+                // Session Duration daily value logs removed for cleaner console
               }
             });
           });
