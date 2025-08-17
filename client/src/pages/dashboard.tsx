@@ -193,18 +193,50 @@ export default function Dashboard() {
   // Get device data for specific source
   const getDeviceData = (sourceType: string) => {
     const sourceData = deviceDistributionData.find(d => d.sourceType === sourceType);
-    if (!sourceData || !sourceData.devices) {
+    if (!sourceData || !sourceData.devices || sourceData.devices.length === 0) {
       return { Desktop: 55, Mobile: 45 }; // Default fallback
     }
     
     const result: any = { Desktop: 0, Mobile: 0 };
     sourceData.devices.forEach((device: any) => {
       if (device.name === 'Desktop' || device.name === 'Mobile') {
-        result[device.name] = device.percentage || device.value;
+        result[device.name] = device.percentage || device.value || 0;
       }
     });
     
+    // Ensure we have valid percentages
+    if (result.Desktop === 0 && result.Mobile === 0) {
+      return { Desktop: 55, Mobile: 45 }; // Default if no valid data
+    }
+    
     return result;
+  };
+
+  // Get competitor device data
+  const getCompetitorDeviceData = () => {
+    return competitors.map((competitor: any) => {
+      // Find device data for this competitor
+      const competitorDeviceData = deviceDistributionData.find(
+        d => d.sourceType === `Competitor_${competitor.id}`
+      );
+      
+      let desktop = 55, mobile = 45; // defaults
+      
+      if (competitorDeviceData && competitorDeviceData.devices) {
+        const desktopDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Desktop');
+        const mobileDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Mobile');
+        
+        if (desktopDevice) desktop = desktopDevice.percentage || desktopDevice.value || 55;
+        if (mobileDevice) mobile = mobileDevice.percentage || mobileDevice.value || 45;
+      }
+      
+      return {
+        id: competitor.id,
+        label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
+        Desktop: desktop,
+        Mobile: mobile,
+      };
+    });
   };
 
   const metricNames = [
@@ -299,11 +331,61 @@ export default function Dashboard() {
   if (isLoading || isRefreshing) {
     return (
       <div className="min-h-screen bg-slate-50">
-        {/* Loading skeleton - keep existing skeleton code */}
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600">Loading dashboard data...</p>
+        {/* Header Skeleton */}
+        <div className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="h-8 w-24 sm:h-10 sm:w-32 bg-slate-200 rounded animate-pulse"></div>
+              <div className="hidden sm:block">
+                <div className="h-4 w-32 sm:h-5 sm:w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
+                <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="h-8 w-8 bg-slate-200 rounded animate-pulse lg:hidden"></div>
+              <div className="h-8 w-16 sm:w-20 bg-slate-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex">
+          {/* Desktop Navigation Skeleton */}
+          <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4 hidden lg:block">
+            <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-8 bg-slate-200 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
+            {/* Filter section skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                  <div className="h-4 w-24 sm:h-5 sm:w-32 bg-slate-200 rounded animate-pulse mb-3 sm:mb-4"></div>
+                  <div className="h-8 sm:h-10 bg-slate-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Metric Cards Skeleton */}
+            <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm">
+                  <div className="h-5 w-32 sm:h-6 sm:w-48 bg-slate-200 rounded animate-pulse mb-4 sm:mb-6"></div>
+                  <div className="h-48 sm:h-56 lg:h-64 bg-slate-200 rounded-lg animate-pulse mb-4 sm:mb-6"></div>
+                  <div className="bg-slate-100 rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-slate-200 rounded animate-pulse"></div>
+                      <div className="h-3 w-3/4 bg-slate-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -563,6 +645,49 @@ export default function Dashboard() {
                     .map((period) => ({ value: period, label: period }))}
                   placeholder="Select time period"
                 />
+                {/* Display time period details below dropdown */}
+                {(() => {
+                  let displayText = "";
+                  if (timePeriod === "Custom Date Range" && customDateRange) {
+                    displayText = customDateRange;
+                  } else if (timePeriod === "Last Month" && periods) {
+                    // Use the actual period from the unified service
+                    const ga4Date = new Date(periods.client + '-01');
+                    displayText = ga4Date.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    });
+                  } else if (timePeriod === "Last Quarter") {
+                    // Show the last 3 months
+                    if (periods) {
+                      const endDate = new Date(periods.client + '-01');
+                      const startDate = new Date(endDate);
+                      startDate.setMonth(startDate.getMonth() - 2);
+                      displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+                    }
+                  } else if (timePeriod === "Last Year" && periods) {
+                    const endDate = new Date(periods.client + '-01');
+                    const startDate = new Date(endDate);
+                    startDate.setFullYear(startDate.getFullYear() - 1);
+                    displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+                  }
+
+                  return displayText ? (
+                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                      <p className="text-xs font-medium text-slate-600">
+                        Selected Period:
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800 leading-tight">
+                        {displayText}
+                      </p>
+                      {periods && periods.client !== periods.competitors && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          Note: Competitor data is from {new Date(periods.competitors + '-01').toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                        </p>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
               </CardContent>
             </Card>
 
@@ -701,12 +826,7 @@ export default function Dashboard() {
                         {metricName === "Device Distribution" && (
                           <LollipopChart
                             data={getDeviceData("Client")}
-                            competitors={competitors.map((c: any) => ({
-                              id: c.id,
-                              label: c.domain.replace(/^https?:\/\//, ""),
-                              Desktop: 55,
-                              Mobile: 45,
-                            }))}
+                            competitors={getCompetitorDeviceData()}
                             clientUrl={client?.websiteUrl}
                             clientName={client?.name}
                             industryAvg={getDeviceData("Industry_Avg")}
