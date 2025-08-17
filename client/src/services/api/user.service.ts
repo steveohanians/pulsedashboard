@@ -11,10 +11,18 @@ export class UserService extends BaseService {
   }
 
   /**
+   * Get all users - extract users array from wrapped response
+   */
+  async getAll<T>(): Promise<T[]> {
+    const response = await this.request<{ success: boolean; users: T[] }>('GET', '', undefined, { retry: true });
+    return response.users;
+  }
+
+  /**
    * Create new item
    */
   async create<T = any>(data: any): Promise<T> {
-    const result = await super.create(data);
+    const result = await super.create<T>(data);
     cacheManager.invalidate('user');
     return result;
   }
@@ -23,7 +31,7 @@ export class UserService extends BaseService {
    * Update existing item
    */
   async update<T = any>(id: string, data: any): Promise<T> {
-    const result = await super.update(id, data);
+    const result = await super.update<T>(id, data);
     cacheManager.invalidate('user');
     return result;
   }
@@ -45,7 +53,7 @@ export class UserService extends BaseService {
     role?: 'Admin' | 'User';
     clientId?: string;
   }): Promise<{ message: string; user: any }> {
-    const result = await this.request('POST', '/invite', data);
+    const result = await this.request<{ message: string; user: any }>('POST', '/invite', data);
     cacheManager.invalidate('user');
     return result;
   }

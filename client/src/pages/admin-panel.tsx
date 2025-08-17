@@ -886,19 +886,14 @@ export default function AdminPanel() {
   };
 
   const sortedData = <T extends Record<string, any>>(data: T[] | undefined, _tab: string): T[] => {
-    console.log('sortedData called with:', { data, dataType: typeof data, isArray: Array.isArray(data), sortConfig, tab: _tab });
-    
     if (!data || !Array.isArray(data)) {
-      console.log('Returning empty array - data is falsy or not array');
       return [];
     }
     
     if (!sortConfig) {
-      console.log('No sort config, returning data as is');
       return data;
     }
     
-    console.log('Sorting data with config:', sortConfig);
     return [...data].sort((a, b) => {
       let aValue = (a as any)[sortConfig.key];
       let bValue = (b as any)[sortConfig.key];
