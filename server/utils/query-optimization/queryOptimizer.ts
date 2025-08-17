@@ -744,12 +744,7 @@ export async function getDashboardDataOptimized(
     }
   });
 
-  // Debug logging for device distribution structure
-  console.log('🔍 DEVICE DEBUG - Processed deviceDistribution:', {
-    client: deviceDistribution.client,
-    cdAvg: deviceDistribution.cdAvg,
-    rawMetricsCount: deviceDistributionMetrics.length
-  });
+
 
   const result = {
     client,
