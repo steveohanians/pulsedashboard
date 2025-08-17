@@ -1,25 +1,22 @@
+Perfect! GPT-4o is clearly the way to go. Now let's take the next step - actually querying these questions to see what AI platforms say about the brands.
+
+```bash
+# Add the next phase: Query AI with the generated questions
+# This tests getting actual responses that we'll analyze for brand mentions
+# Still isolated testing, no database changes
+```
+
+```javascript
 // scripts/test-sov-concept.mjs
 import OpenAI from 'openai';
-import { readFileSync } from 'fs';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Load environment variables manually (since dotenv may not be available as ESM)
+// Load environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Simple .env parser
-try {
-  const envFile = readFileSync(join(__dirname, '../.env'), 'utf8');
-  envFile.split('\n').forEach(line => {
-    const [key, value] = line.split('=');
-    if (key && value) {
-      process.env[key.trim()] = value.trim().replace(/^["']|["']$/g, '');
-    }
-  });
-} catch (error) {
-  console.log('Note: .env file not found, using existing environment variables');
-}
+dotenv.config({ path: join(__dirname, '../.env') });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -162,3 +159,18 @@ Output as a simple numbered list.`
 
 // Run the test
 testBrandUnderstanding();
+```
+
+```bash
+# Run the full pipeline test:
+node scripts/test-sov-concept.mjs
+
+# This now tests the complete flow:
+# 1. Understand brands (✅ working)
+# 2. Generate questions (✅ working) 
+# 3. Query AI with questions (NEW)
+# 4. Detect brand mentions in responses (NEW)
+# 5. Calculate Share of Voice percentages (NEW)
+#
+# Still completely safe - just testing the concept
+```
