@@ -1,0 +1,65 @@
+Let me trace through the changes I recommended to find where the avatar logic was removed.
+
+Looking back at my recommendations:
+
+## Step 3: Where I Removed Avatar Logic
+
+In **Step 3**, when I created the simplified dashboard.tsx, I removed a large section of code and replaced it with a simplified version. 
+
+**ORIGINAL CODE HAD** (around line 700-900):
+- A section that rendered each metric value with avatars
+- Logic to show Brandfetch logos for competitors and clients
+- Fallback to initials when logos weren't available
+
+**MY SIMPLIFIED VERSION** removed this entirely and just showed:
+```typescript
+{competitor.label}
+```
+
+Instead of:
+```typescript
+<div className="flex items-center gap-2">
+  <Avatar className="h-6 w-6">
+    <AvatarImage src={`https://img.logo.dev/${competitor.domain}?token=${BRANDFETCH_TOKEN}`} />
+    <AvatarFallback>{getInitials(competitor.label)}</AvatarFallback>
+  </Avatar>
+  <span>{competitor.label}</span>
+</div>
+```
+
+## The Fix: Restore Avatar Display
+
+**INSTRUCTION FOR REPLIT:**
+Find where competitor and client names are displayed in the metric cards and restore the avatar logic.
+
+**MODIFY `/client/src/pages/dashboard.tsx`:**
+
+**FIND** where we display competitor values (should be around line 700-800 in the metric card rendering):
+```typescript
+{competitor.label}
+```
+
+**REPLACE WITH:**
+```typescript
+<div className="flex items-center gap-2">
+  <Avatar className="h-6 w-6">
+    <AvatarImage 
+      src={`https://img.logo.dev/${competitor.domain || competitor.label}?token=${process.env.NEXT_PUBLIC_BRANDFETCH_TOKEN || 'pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW'}`} 
+      alt={competitor.label}
+    />
+    <AvatarFallback className="text-xs">
+      {competitor.label.substring(0, 2).toUpperCase()}
+    </AvatarFallback>
+  </Avatar>
+  <span className="text-sm">{competitor.label}</span>
+</div>
+```
+
+**ALSO ADD THE AVATAR IMPORTS** at the top if they're missing:
+```typescript
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+```
+
+**SIMILARLY, for the client display**, find where it shows the client name and add the avatar back.
+
+This restores the exact functionality - Brandfetch logos with initial fallbacks.

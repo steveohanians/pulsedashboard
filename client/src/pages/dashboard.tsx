@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
@@ -362,11 +363,20 @@ export default function Dashboard() {
               <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
                 Pulse Dashboard™
               </h1>
-              <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
-                {client?.name || "Loading..."}
-                {client?.websiteUrl && (
-                  <>
-                    <span className="hidden sm:inline"> | </span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-600 mt-0.5">
+                {client?.websiteUrl ? (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar className="h-5 w-5 flex-shrink-0">
+                      <AvatarImage 
+                        src={`https://img.logo.dev/${client.websiteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
+                        alt={client?.name || "Client"}
+                      />
+                      <AvatarFallback className="text-xs">
+                        {(client?.name || "CL").substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{client?.name || "Loading..."}</span>
+                    <span className="hidden sm:inline flex-shrink-0"> | </span>
                     <a
                       href={client.websiteUrl}
                       target="_blank"
@@ -378,7 +388,9 @@ export default function Dashboard() {
                       </span>
                       <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                     </a>
-                  </>
+                  </div>
+                ) : (
+                  <span className="truncate">{client?.name || "Loading..."}</span>
                 )}
               </div>
             </div>
@@ -679,9 +691,20 @@ export default function Dashboard() {
                         key={competitor.id}
                         className="flex items-center justify-between h-10 px-3 rounded-lg border bg-slate-50 border-slate-200"
                       >
-                        <span className="text-sm truncate flex-1 mr-2">
-                          {competitor.domain.replace(/^https?:\/\//, "")}
-                        </span>
+                        <div className="flex items-center gap-2 flex-1 mr-2">
+                          <Avatar className="h-6 w-6 flex-shrink-0">
+                            <AvatarImage 
+                              src={`https://img.logo.dev/${competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
+                              alt={competitor.domain.replace(/^https?:\/\//, "")}
+                            />
+                            <AvatarFallback className="text-xs">
+                              {competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, "").substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate">
+                            {competitor.domain.replace(/^https?:\/\//, "")}
+                          </span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
