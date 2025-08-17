@@ -363,20 +363,11 @@ export default function Dashboard() {
               <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
                 Pulse Dashboard™
               </h1>
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-600 mt-0.5">
-                {client?.websiteUrl ? (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Avatar className="h-5 w-5 flex-shrink-0">
-                      <AvatarImage 
-                        src={`https://img.logo.dev/${client.websiteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
-                        alt={client?.name || "Client"}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {(client?.name || "CL").substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="truncate">{client?.name || "Loading..."}</span>
-                    <span className="hidden sm:inline flex-shrink-0"> | </span>
+              <div className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
+                {client?.name || "Loading..."}
+                {client?.websiteUrl && (
+                  <>
+                    <span className="hidden sm:inline"> | </span>
                     <a
                       href={client.websiteUrl}
                       target="_blank"
@@ -388,14 +379,26 @@ export default function Dashboard() {
                       </span>
                       <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                     </a>
-                  </div>
-                ) : (
-                  <span className="truncate">{client?.name || "Loading..."}</span>
+                  </>
                 )}
               </div>
             </div>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
+            {/* User Avatar and Name */}
+            {user && (
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs font-semibold">
+                    {(user.name || user.email || "User").substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
+                  {user.name || user.email}
+                </span>
+              </div>
+            )}
+            
             {user?.role === "Admin" && (
               <Button
                 variant="outline"
@@ -691,20 +694,9 @@ export default function Dashboard() {
                         key={competitor.id}
                         className="flex items-center justify-between h-10 px-3 rounded-lg border bg-slate-50 border-slate-200"
                       >
-                        <div className="flex items-center gap-2 flex-1 mr-2">
-                          <Avatar className="h-6 w-6 flex-shrink-0">
-                            <AvatarImage 
-                              src={`https://img.logo.dev/${competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
-                              alt={competitor.domain.replace(/^https?:\/\//, "")}
-                            />
-                            <AvatarFallback className="text-xs">
-                              {competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, "").substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm truncate">
-                            {competitor.domain.replace(/^https?:\/\//, "")}
-                          </span>
-                        </div>
+                        <span className="text-sm truncate flex-1 mr-2">
+                          {competitor.domain.replace(/^https?:\/\//, "")}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
