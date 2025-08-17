@@ -1,0 +1,60 @@
+Step 11: Ensure Competitors Are Passed to LollipopChart
+INSTRUCTION FOR REPLIT:
+Let's make sure the dashboard is correctly passing ALL competitors (including those with 100% Desktop) to the LollipopChart.
+MODIFY /client/src/pages/dashboard.tsx - UPDATE THE getCompetitorDeviceData FUNCTION:
+FIND THIS FUNCTION (around line 300-330):
+typescript  // Get competitor device data - ONLY RETURN REAL DATA
+  const getCompetitorDeviceData = () => {
+REPLACE THE ENTIRE FUNCTION WITH:
+typescript  // Get competitor device data - include ALL competitors with data
+  const getCompetitorDeviceData = () => {
+    const competitorsWithData: any[] = [];
+    
+    competitors.forEach((competitor: any) => {
+      // Find device data for this competitor
+      const competitorDeviceData = deviceDistributionData.find(
+        d => d.sourceType === `Competitor_${competitor.id}`
+      );
+      
+      if (competitorDeviceData && competitorDeviceData.devices && competitorDeviceData.devices.length > 0) {
+        const desktopDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Desktop');
+        const mobileDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Mobile');
+        
+        // Include competitor even if they only have Desktop or only Mobile
+        const desktop = desktopDevice ? (desktopDevice.percentage || desktopDevice.value || 0) : 0;
+        const mobile = mobileDevice ? (mobileDevice.percentage || mobileDevice.value || 0) : 0;
+        
+        competitorsWithData.push({
+          id: competitor.id,
+          label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
+          Desktop: desktop,
+          Mobile: mobile,
+        });
+        
+        console.log(`✅ Including competitor in chart: ${competitor.domain}`, { desktop, mobile });
+      } else {
+        console.log(`❌ No device data for competitor: ${competitor.domain}`);
+      }
+    });
+    
+    console.log('📊 Final competitors for LollipopChart:', competitorsWithData);
+    return competitorsWithData;
+  };
+This ensures:
+
+ALL competitors with ANY device data are included
+Handles Desktop-only sites (Mobile = 0)
+Handles Mobile-only sites (Desktop = 0)
+Logs what's being passed to the chart for debugging
+
+Now the flow should be:
+
+✅ UnifiedService finds and processes all competitor device data
+✅ Dashboard extracts and formats it correctly
+✅ LollipopChart receives and displays all competitors
+
+After this change, you should see all 3 competitors in the LollipopChart:
+
+baunfire.com (100% Desktop)
+adidas.com (31.5% Desktop, 68.5% Mobile)
+liquidagency.com (100% Desktop)

@@ -212,31 +212,39 @@ export default function Dashboard() {
     return result;
   };
 
-  // Get competitor device data
+  // Get competitor device data - include ALL competitors with data
   const getCompetitorDeviceData = () => {
-    return competitors.map((competitor: any) => {
+    const competitorsWithData: any[] = [];
+    
+    competitors.forEach((competitor: any) => {
       // Find device data for this competitor
       const competitorDeviceData = deviceDistributionData.find(
         d => d.sourceType === `Competitor_${competitor.id}`
       );
       
-      let desktop = 55, mobile = 45; // defaults
-      
-      if (competitorDeviceData && competitorDeviceData.devices) {
+      if (competitorDeviceData && competitorDeviceData.devices && competitorDeviceData.devices.length > 0) {
         const desktopDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Desktop');
         const mobileDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Mobile');
         
-        if (desktopDevice) desktop = desktopDevice.percentage || desktopDevice.value || 55;
-        if (mobileDevice) mobile = mobileDevice.percentage || mobileDevice.value || 45;
+        // Include competitor even if they only have Desktop or only Mobile
+        const desktop = desktopDevice ? (desktopDevice.percentage || desktopDevice.value || 0) : 0;
+        const mobile = mobileDevice ? (mobileDevice.percentage || mobileDevice.value || 0) : 0;
+        
+        competitorsWithData.push({
+          id: competitor.id,
+          label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
+          Desktop: desktop,
+          Mobile: mobile,
+        });
+        
+        console.log(`✅ Including competitor in chart: ${competitor.domain}`, { desktop, mobile });
+      } else {
+        console.log(`❌ No device data for competitor: ${competitor.domain}`);
       }
-      
-      return {
-        id: competitor.id,
-        label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
-        Desktop: desktop,
-        Mobile: mobile,
-      };
     });
+    
+    console.log('📊 Final competitors for LollipopChart:', competitorsWithData);
+    return competitorsWithData;
   };
 
   const metricNames = [

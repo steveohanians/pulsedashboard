@@ -537,36 +537,46 @@ export class UnifiedDataService {
         }
       }
       
-      // Ensure we have both Desktop and Mobile
+      // Process whatever device data we have
       if (dataFound && devices.length > 0) {
-        // Check if we're missing Mobile or Desktop
         const hasDesktop = devices.find(d => d.name === 'Desktop');
         const hasMobile = devices.find(d => d.name === 'Mobile');
         
-        // If we only have Desktop at 100%, something's wrong - likely missing Mobile data
+        // If we only have Desktop, add Mobile as 0
         if (hasDesktop && !hasMobile) {
-          // This shouldn't happen with real data, log warning
-          debugLog('UNIFIED', `WARNING: Competitor ${competitor.domain} only has Desktop data`, { devices });
-          // Don't add incomplete data
-          dataFound = false;
-        } else if (!hasDesktop && hasMobile) {
-          // This shouldn't happen either
-          debugLog('UNIFIED', `WARNING: Competitor ${competitor.domain} only has Mobile data`, { devices });
-          dataFound = false;
-        } else if (hasDesktop && hasMobile) {
-          // Normalize percentages to ensure they sum to 100
-          const total = hasDesktop.value + hasMobile.value;
-          if (total > 0 && Math.abs(total - 100) > 1) {
-            devices.forEach(device => {
-              device.value = Math.round((device.value / total) * 1000) / 10;
-              device.percentage = device.value;
-            });
-          }
+          devices.push({
+            name: 'Mobile',
+            value: 0,
+            percentage: 0,
+            color: this.getDeviceColor('Mobile')
+          });
+          debugLog('UNIFIED', `Competitor ${competitor.domain} is Desktop-only (100% Desktop, 0% Mobile)`);
+        }
+        // If we only have Mobile, add Desktop as 0
+        else if (!hasDesktop && hasMobile) {
+          devices.push({
+            name: 'Desktop',
+            value: 0,
+            percentage: 0,
+            color: this.getDeviceColor('Desktop')
+          });
+          debugLog('UNIFIED', `Competitor ${competitor.domain} is Mobile-only (0% Desktop, 100% Mobile)`);
+        }
+        
+        // Normalize percentages to ensure they sum to 100
+        const total = devices.reduce((sum, d) => sum + d.value, 0);
+        if (total > 0 && Math.abs(total - 100) > 1) {
+          devices.forEach(device => {
+            device.value = Math.round((device.value / total) * 1000) / 10;
+            device.percentage = device.value;
+          });
         }
       }
       
-      // Only add to result if we have complete data (both Desktop and Mobile)
-      if (dataFound && devices.length >= 2) {
+      // Add to result if we have ANY device data
+      if (dataFound && devices.length > 0) {
+        // Sort devices to ensure Desktop comes before Mobile
+        devices.sort((a, b) => a.name === 'Desktop' ? -1 : 1);
         result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: this.cleanDomainName(competitor.domain),
