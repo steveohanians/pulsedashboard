@@ -8,8 +8,9 @@ import { userService } from '@/services/api';
 interface ViewAsSelectorProps {
   currentUserId: string;
   currentClientId: string;
+  viewAsUserId?: string | null; // The user currently being viewed as
   isAdmin: boolean;
-  onViewAs: (clientId: string, userName: string) => void;
+  onViewAs: (clientId: string, userName: string, userId: string, userData: UserOption) => void;
   onReset: () => void;
 }
 
@@ -26,6 +27,7 @@ interface UserOption {
 export function ViewAsSelector({ 
   currentUserId, 
   currentClientId,
+  viewAsUserId,
   isAdmin, 
   onViewAs,
   onReset 
@@ -49,10 +51,13 @@ export function ViewAsSelector({
       console.log('ViewAsSelector users data:', usersData);
       console.log('ViewAsSelector users count:', usersData.length);
       console.log('Current user ID:', currentUserId);
+      console.log('View as user ID:', viewAsUserId);
       setUsers(usersData);
-      // Set current user as default selection
-      setSelectedUserId(currentUserId);
-      console.log('ViewAsSelector selectedUserId set to:', currentUserId);
+      // Set the currently viewed user as selected, or default to current user
+      const selectedUser = viewAsUserId || currentUserId;
+      setSelectedUserId(selectedUser);
+      setIsViewingAs(!!viewAsUserId);
+      console.log('ViewAsSelector selectedUserId set to:', selectedUser);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       toast({
@@ -89,7 +94,7 @@ export function ViewAsSelector({
         setIsViewingAs(true);
         
         // Call the parent callback to update dashboard context
-        onViewAs(data.clientId, data.userName);
+        onViewAs(data.clientId, data.userName, selectedUserId, selectedUser || {} as UserOption);
         
         toast({
           title: 'View switched',

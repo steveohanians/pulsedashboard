@@ -71,6 +71,8 @@ export default function Dashboard() {
   const [industryVertical, setIndustryVertical] = useState("All");
   const [viewAsClientId, setViewAsClientId] = useState<string | null>(null);
   const [viewAsUserName, setViewAsUserName] = useState<string | null>(null);
+  const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
+  const [viewAsUser, setViewAsUser] = useState<any>(null);
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -385,7 +387,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-6">
-            {/* User Avatar and Name */}
+            {/* User Avatar and Name - Show viewed user when admin is viewing as someone */}
             {user && (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Avatar className="h-8 w-8">
@@ -396,16 +398,21 @@ export default function Dashboard() {
                     />
                   )}
                   <AvatarFallback className="text-xs font-semibold">
-                    {(user.name || user.email || "User").substring(0, 2).toUpperCase()}
+                    {(viewAsUser?.name || user.name || user.email || "User").substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
-                  {user.name || user.email}
+                  {viewAsUser?.name || user.name || user.email}
                 </span>
+                {viewAsUser && (
+                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                    Viewing as
+                  </span>
+                )}
               </div>
             )}
             
-            {user?.role === "Admin" && (
+            {(viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -472,7 +479,7 @@ export default function Dashboard() {
                   </button>
                 </li>
               ))}
-              {user?.role === "Admin" && (
+              {(viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && (
                 <>
                   <li className="my-4">
                     <hr className="border-slate-200" />
@@ -516,14 +523,19 @@ export default function Dashboard() {
             <ViewAsSelector
               currentUserId={user.id}
               currentClientId={user.clientId || ''}
+              viewAsUserId={viewAsUserId}
               isAdmin={true}
-              onViewAs={(clientId, userName) => {
+              onViewAs={(clientId, userName, userId, userData) => {
                 setViewAsClientId(clientId);
                 setViewAsUserName(userName);
+                setViewAsUserId(userId);
+                setViewAsUser(userData);
               }}
               onReset={() => {
                 setViewAsClientId(null);
                 setViewAsUserName(null);
+                setViewAsUserId(null);
+                setViewAsUser(null);
               }}
             />
           )}
@@ -538,7 +550,7 @@ export default function Dashboard() {
           />
 
           {/* Data Quality Banner - Admin Only */}
-          {dataQuality && user?.role === 'Admin' && !dataBannerDismissed && (
+          {dataQuality && (viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && !dataBannerDismissed && (
             <div className={`mb-4 p-4 rounded-lg border ${
               dataQuality.completeness === 1 
                 ? 'bg-green-50 border-green-200' 
