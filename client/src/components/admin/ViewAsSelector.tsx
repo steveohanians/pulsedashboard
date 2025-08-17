@@ -47,9 +47,12 @@ export function ViewAsSelector({
       setLoading(true);
       const usersData = await userService.getAll<UserOption>();
       console.log('ViewAsSelector users data:', usersData);
+      console.log('ViewAsSelector users count:', usersData.length);
+      console.log('Current user ID:', currentUserId);
       setUsers(usersData);
       // Set current user as default selection
       setSelectedUserId(currentUserId);
+      console.log('ViewAsSelector selectedUserId set to:', currentUserId);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       toast({
@@ -115,6 +118,14 @@ export function ViewAsSelector({
 
   if (!isAdmin) return null;
 
+  console.log('ViewAsSelector render:', { 
+    usersCount: users.length, 
+    selectedUserId, 
+    currentUserId, 
+    loading,
+    isViewingAs 
+  });
+
   return (
     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
       <div className="flex items-center gap-3">
@@ -123,9 +134,11 @@ export function ViewAsSelector({
           <span className="text-sm font-medium">Admin View As:</span>
         </div>
         
-        <Select
+        <select
           value={selectedUserId}
-          onValueChange={(value) => {
+          onChange={(e) => {
+            const value = e.target.value;
+            console.log('Native select onChange triggered:', value, 'current users:', users.length);
             setSelectedUserId(value);
             // Auto-trigger view change when different user is selected
             if (value && value !== currentUserId) {
@@ -171,18 +184,18 @@ export function ViewAsSelector({
             }
           }}
           disabled={loading}
+          className="flex-1 max-w-sm text-sm border border-gray-300 rounded px-3 py-2"
         >
-          <SelectTrigger className="flex-1 max-w-sm text-sm">
-            <SelectValue placeholder="Select a user..." />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map(user => (
-              <SelectItem key={user.id} value={user.id}>
+          {users.length === 0 ? (
+            <option value="" disabled>Loading users...</option>
+          ) : (
+            users.map(user => (
+              <option key={user.id} value={user.id}>
                 {user.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              </option>
+            ))
+          )}
+        </select>
         
         <Button
           size="sm"
