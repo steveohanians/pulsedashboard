@@ -389,9 +389,9 @@ export default function Dashboard() {
             {user && (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Avatar className="h-8 w-8">
-                  {client?.websiteUrl && (
+                  {client?.iconUrl && (
                     <AvatarImage 
-                      src={`https://img.logo.dev/${client.websiteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "")}?token=pk_JCkG843xSluDCmLvQrxWkgsG7Ko_KAbW`}
+                      src={client.iconUrl}
                       alt={client?.name || "Client"}
                     />
                   )}
