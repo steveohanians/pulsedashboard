@@ -345,22 +345,66 @@ export class UnifiedDataService {
       });
     }
 
-    // Process Industry Average - CHECK AVERAGEDMETRICS FIRST
-    if (averagedMetrics && averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"]["Industry_Avg"]) {
-      // Use pre-calculated industry average
-      const industryValue = averagedMetrics["Device Distribution"]["Industry_Avg"];
-      const devices = this.parseDeviceValue(industryValue);
-      if (devices.length > 0) {
-        result.push({
-          sourceType: "Industry_Avg",
-          label: "Industry Avg",
-          devices: devices
-        });
+    // Process Industry Average - TRY MULTIPLE APPROACHES (authentic data only)
+    let industryProcessed = false;
+    
+    debugLog('UNIFIED', 'Checking Industry_Avg data', {
+      hasAveragedMetrics: !!averagedMetrics,
+      averagedMetricsKeys: averagedMetrics ? Object.keys(averagedMetrics) : [],
+      averagedMetricsPreview: averagedMetrics ? JSON.stringify(averagedMetrics).substring(0, 500) : 'none',
+      industryMetricsInArray: deviceMetrics.filter(m => 
+        m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry"
+      ).length,
+      industryMetricsDetail: deviceMetrics.filter(m => 
+        m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry"
+      ).map(m => ({ sourceType: m.sourceType, value: m.value, channel: m.channel }))
+    });
+    
+    // Approach 1: Check averagedMetrics with multiple possible keys
+    if (!industryProcessed && averagedMetrics) {
+      const possibleKeys = ["Device Distribution", "DeviceDistribution", "device_distribution"];
+      for (const key of possibleKeys) {
+        if (averagedMetrics[key]) {
+          const industryData = averagedMetrics[key]["Industry_Avg"] || 
+                              averagedMetrics[key]["industry_avg"] || 
+                              averagedMetrics[key]["Industry"];
+          if (industryData) {
+            debugLog('UNIFIED', 'Found Industry_Avg in averagedMetrics', { key, data: industryData });
+            
+            // Handle different data formats
+            let devices: any[] = [];
+            if (typeof industryData === 'object' && industryData.Desktop !== undefined) {
+              // Format: { Desktop: 60, Mobile: 40 }
+              devices = [
+                { name: 'Desktop', value: industryData.Desktop, percentage: industryData.Desktop, color: this.getDeviceColor('Desktop') },
+                { name: 'Mobile', value: industryData.Mobile, percentage: industryData.Mobile, color: this.getDeviceColor('Mobile') }
+              ];
+            } else {
+              devices = this.parseDeviceValue(industryData);
+            }
+            
+            if (devices.length > 0) {
+              result.push({
+                sourceType: "Industry_Avg",
+                label: "Industry Avg",
+                devices: devices
+              });
+              industryProcessed = true;
+              break;
+            }
+          }
+        }
       }
-    } else {
-      // Fallback to existing logic
+    }
+    
+    // Approach 2: Check metrics array
+    if (!industryProcessed) {
       const industryDevices = this.aggregateDevicesBySource(
-        deviceMetrics.filter(m => m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry")
+        deviceMetrics.filter(m => 
+          m.sourceType === "Industry_Avg" || 
+          m.sourceType === "industry_avg" || 
+          m.sourceType === "Industry"
+        )
       );
       if (industryDevices.length > 0) {
         result.push({
@@ -368,44 +412,115 @@ export class UnifiedDataService {
           label: "Industry Avg",
           devices: industryDevices
         });
-      } else {
-        // If no Industry_Avg data, check if we have it in metrics format
-        const industryMetric = metrics.find(m => 
-          m.metricName === "Device Distribution" && 
-          (m.sourceType === "Industry_Avg" || m.sourceType === "Industry")
-        );
-        if (industryMetric) {
-          const devices = this.parseDeviceValue(industryMetric.value);
-          if (devices.length > 0) {
-            result.push({
-              sourceType: "Industry_Avg",
-              label: "Industry Avg",
-              devices: devices
-            });
-          }
+        industryProcessed = true;
+      }
+    }
+    
+    // Approach 3: Check individual metrics for different formats
+    if (!industryProcessed) {
+      const industryMetric = metrics.find(m => 
+        m.metricName === "Device Distribution" && 
+        (m.sourceType === "Industry_Avg" || m.sourceType === "Industry")
+      );
+      if (industryMetric) {
+        const devices = this.parseDeviceValue(industryMetric.value);
+        if (devices.length > 0) {
+          result.push({
+            sourceType: "Industry_Avg",
+            label: "Industry Avg",
+            devices: devices
+          });
+          industryProcessed = true;
         }
       }
     }
+    
+    if (!industryProcessed) {
+      debugLog('UNIFIED', 'No authentic Industry_Avg device data found - maintaining data integrity');
+    }
 
-    // Process each Competitor individually - enhanced data checking
+    // Process each Competitor individually - comprehensive data checking (authentic data only)
     competitors.forEach(competitor => {
-      // First try to find in regular metrics
-      const competitorMetrics = deviceMetrics.filter(m => 
-        m.sourceType === "Competitor" && 
-        m.competitorId === competitor.id
-      );
+      let competitorProcessed = false;
       
-      if (competitorMetrics.length > 0) {
-        const competitorDevices = this.aggregateDevicesBySource(competitorMetrics);
-        if (competitorDevices.length > 0) {
-          result.push({
-            sourceType: `Competitor_${competitor.id}`,
-            label: this.cleanDomainName(competitor.domain),
-            devices: competitorDevices
-          });
+      debugLog('UNIFIED', `Checking competitor ${competitor.id} device data`, {
+        competitorId: competitor.id,
+        domain: competitor.domain,
+        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
+        competitorMetricsDetail: deviceMetrics.filter(m => m.competitorId === competitor.id)
+          .map(m => ({ sourceType: m.sourceType, value: m.value, channel: m.channel })),
+        hasAveragedCompetitorData: averagedMetrics && 
+          Object.keys(averagedMetrics).some(key => 
+            averagedMetrics[key] && 
+            (averagedMetrics[key][`Competitor_${competitor.id}`] || 
+             averagedMetrics[key][competitor.id] || 
+             averagedMetrics[key][competitor.domain])
+          )
+      });
+      
+      // Approach 1: Regular metrics with competitorId
+      if (!competitorProcessed) {
+        const competitorMetrics = deviceMetrics.filter(m => 
+          m.sourceType === "Competitor" && 
+          m.competitorId === competitor.id
+        );
+        
+        if (competitorMetrics.length > 0) {
+          const competitorDevices = this.aggregateDevicesBySource(competitorMetrics);
+          if (competitorDevices.length > 0) {
+            result.push({
+              sourceType: `Competitor_${competitor.id}`,
+              label: this.cleanDomainName(competitor.domain),
+              devices: competitorDevices
+            });
+            competitorProcessed = true;
+          }
         }
-      } else {
-        // Try to find competitor data in different format
+      }
+      
+      // Approach 2: Check averagedMetrics for competitor data
+      if (!competitorProcessed && averagedMetrics) {
+        const possibleKeys = ["Device Distribution", "DeviceDistribution", "device_distribution"];
+        for (const key of possibleKeys) {
+          if (averagedMetrics[key]) {
+            const competitorKey = `Competitor_${competitor.id}`;
+            const competitorData = averagedMetrics[key][competitorKey] || 
+                                  averagedMetrics[key][competitor.id] || 
+                                  averagedMetrics[key][competitor.domain];
+            
+            if (competitorData) {
+              debugLog('UNIFIED', `Found competitor data in averagedMetrics`, { 
+                competitorId: competitor.id, 
+                key, 
+                data: competitorData 
+              });
+              
+              let devices: any[] = [];
+              if (typeof competitorData === 'object' && competitorData.Desktop !== undefined) {
+                devices = [
+                  { name: 'Desktop', value: competitorData.Desktop, percentage: competitorData.Desktop, color: this.getDeviceColor('Desktop') },
+                  { name: 'Mobile', value: competitorData.Mobile, percentage: competitorData.Mobile, color: this.getDeviceColor('Mobile') }
+                ];
+              } else {
+                devices = this.parseDeviceValue(competitorData);
+              }
+              
+              if (devices.length > 0) {
+                result.push({
+                  sourceType: `Competitor_${competitor.id}`,
+                  label: this.cleanDomainName(competitor.domain),
+                  devices: devices
+                });
+                competitorProcessed = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Approach 3: Single metric check
+      if (!competitorProcessed) {
         const competitorMetric = metrics.find(m => 
           m.metricName === "Device Distribution" && 
           m.sourceType === "Competitor" && 
@@ -420,21 +535,13 @@ export class UnifiedDataService {
               label: this.cleanDomainName(competitor.domain),
               devices: devices
             });
-          }
-        } else {
-          // Also check in averagedMetrics for competitor data
-          if (averagedMetrics && averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"][`Competitor_${competitor.id}`]) {
-            const competitorValue = averagedMetrics["Device Distribution"][`Competitor_${competitor.id}`];
-            const devices = this.parseDeviceValue(competitorValue);
-            if (devices.length > 0) {
-              result.push({
-                sourceType: `Competitor_${competitor.id}`,
-                label: this.cleanDomainName(competitor.domain),
-                devices: devices
-              });
-            }
+            competitorProcessed = true;
           }
         }
+      }
+      
+      if (!competitorProcessed) {
+        debugLog('UNIFIED', `No authentic device data found for competitor ${competitor.id} - maintaining data integrity`);
       }
     });
 
@@ -589,7 +696,13 @@ export class UnifiedDataService {
       
       // Also check if metric has channel field being used for device name
       if (metric.channel && !devices.length) {
-        const deviceName = metric.channel;
+        let deviceName = metric.channel;
+        
+        // Convert numeric device types to text (Industry_Avg uses '0', '1')
+        if (deviceName === "0") deviceName = "Desktop";
+        else if (deviceName === "1") deviceName = "Mobile";
+        else if (deviceName === "2") deviceName = "Tablet";
+        
         const value = parseFloat(String(metric.value));
         if (!isNaN(value)) {
           devices.push({
