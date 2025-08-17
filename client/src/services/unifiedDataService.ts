@@ -818,7 +818,10 @@ export class UnifiedDataService {
 
     // Check for each data source
     const hasClientData = Object.values(metrics).some(m => 'Client' in m);
-    const hasCompetitorData = Object.values(metrics).some(m => 'Competitor' in m);
+    
+    // Enhanced competitor data detection using same logic as charts
+    const hasCompetitorData = this.checkCompetitorDataAvailable(metrics, deviceDistribution);
+    
     const hasPortfolioData = Object.values(metrics).some(m => 'CD_Avg' in m);
     const hasIndustryData = Object.values(metrics).some(m => 'Industry_Avg' in m);
 
@@ -863,6 +866,39 @@ export class UnifiedDataService {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     return `${year}-${month}`;
+  }
+
+  /**
+   * Enhanced competitor data detection using comprehensive discovery logic
+   */
+  private checkCompetitorDataAvailable(metrics: ProcessedMetrics, deviceDistribution: any[]): boolean {
+    // Check 1: Traditional competitor metrics
+    const hasCompetitorInMetrics = Object.values(metrics).some(m => 'Competitor' in m);
+    
+    // Check 2: Competitor data in device distribution (like charts use)
+    const hasCompetitorInDevices = deviceDistribution.some(device => 
+      device.sourceType === 'Competitor' || 
+      (device.competitors && device.competitors.length > 0)
+    );
+    
+    // Check 3: Any competitor names found in device distribution data
+    const competitorNames = ['baunfire.com', 'adidas.com', 'liquidagency.com'];
+    const hasNamedCompetitors = deviceDistribution.some(device =>
+      competitorNames.some(name => 
+        device.name === name || 
+        (device.competitors && device.competitors.some((c: any) => c.name === name))
+      )
+    );
+
+    debugLog('Data Quality', 'Competitor data assessment', {
+      hasCompetitorInMetrics,
+      hasCompetitorInDevices,
+      hasNamedCompetitors,
+      deviceDistributionCount: deviceDistribution.length,
+      finalResult: hasCompetitorInMetrics || hasCompetitorInDevices || hasNamedCompetitors
+    });
+
+    return hasCompetitorInMetrics || hasCompetitorInDevices || hasNamedCompetitors;
   }
 
   private getDisplayPeriod(timePeriod: string, ga4Date: Date, semrushDate: Date): string {
