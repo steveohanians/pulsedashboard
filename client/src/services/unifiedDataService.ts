@@ -84,20 +84,23 @@ export class UnifiedDataService {
       timePeriod
     );
     
-    // Step 3: Process traffic channels
+    // Step 3: Process traffic channels - pass ALL data like original
     const trafficChannels = this.processTrafficChannels(
       dashboardData.metrics || [],
       dashboardData.competitors || [],
       dashboardData.client,
-      periods
+      periods,
+      dashboardData.trafficChannelMetrics || [],
+      dashboardData.timeSeriesData
     );
     
-    // Step 4: Process device distribution
+    // Step 4: Process device distribution - include averagedMetrics
     const deviceDistribution = this.processDeviceDistribution(
       dashboardData.metrics || [],
       dashboardData.competitors || [],
       dashboardData.client,
-      periods
+      periods,
+      dashboardData.averagedMetrics
     );
 
     // Step 5: Assess data quality
@@ -234,9 +237,14 @@ export class UnifiedDataService {
     metrics: DashboardMetric[],
     competitors: Array<{ id: string; domain: string }>,
     client: { name?: string } | undefined,
-    periods: DataPeriods
+    periods: DataPeriods,
+    trafficChannelMetrics?: any[],
+    timeSeriesData?: any
   ): any[] {
-    const trafficMetrics = metrics.filter(m => m.metricName === "Traffic Channels");
+    // Use trafficChannelMetrics if available (like original)
+    const trafficMetrics = trafficChannelMetrics && trafficChannelMetrics.length > 0 
+      ? trafficChannelMetrics 
+      : metrics.filter(m => m.metricName === "Traffic Channels");
     const result: any[] = [];
 
     // Process Client data (GA4 - uses client period)
@@ -301,7 +309,8 @@ export class UnifiedDataService {
     metrics: DashboardMetric[],
     competitors: Array<{ id: string; domain: string }>,
     client: { name?: string } | undefined,
-    periods: DataPeriods
+    periods: DataPeriods,
+    averagedMetrics?: any
   ): any[] {
     const deviceMetrics = metrics.filter(m => m.metricName === "Device Distribution");
     const result: any[] = [];
@@ -336,49 +345,65 @@ export class UnifiedDataService {
       });
     }
 
-    // Process Industry Average (SEMrush - uses industryBenchmark period)
-    const industryDevices = this.aggregateDevicesBySource(
-      deviceMetrics.filter(m => m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry")
-    );
-    if (industryDevices.length > 0) {
-      result.push({
-        sourceType: "Industry_Avg",
-        label: "Industry Avg",
-        devices: industryDevices
-      });
+    // Process Industry Average - CHECK AVERAGEDMETRICS FIRST
+    if (averagedMetrics && averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"]["Industry_Avg"]) {
+      // Use pre-calculated industry average
+      const industryValue = averagedMetrics["Device Distribution"]["Industry_Avg"];
+      const devices = this.parseDeviceValue(industryValue);
+      if (devices.length > 0) {
+        result.push({
+          sourceType: "Industry_Avg",
+          label: "Industry Avg",
+          devices: devices
+        });
+      }
     } else {
-      // If no Industry_Avg data, check if we have it in averagedMetrics format
-      const industryMetric = metrics.find(m => 
-        m.metricName === "Device Distribution" && 
-        (m.sourceType === "Industry_Avg" || m.sourceType === "Industry")
+      // Fallback to existing logic
+      const industryDevices = this.aggregateDevicesBySource(
+        deviceMetrics.filter(m => m.sourceType === "Industry_Avg" || m.sourceType === "industry_avg" || m.sourceType === "Industry")
       );
-      if (industryMetric) {
-        const devices = this.parseDeviceValue(industryMetric.value);
-        if (devices.length > 0) {
-          result.push({
-            sourceType: "Industry_Avg",
-            label: "Industry Avg",
-            devices: devices
-          });
+      if (industryDevices.length > 0) {
+        result.push({
+          sourceType: "Industry_Avg",
+          label: "Industry Avg",
+          devices: industryDevices
+        });
+      } else {
+        // If no Industry_Avg data, check if we have it in metrics format
+        const industryMetric = metrics.find(m => 
+          m.metricName === "Device Distribution" && 
+          (m.sourceType === "Industry_Avg" || m.sourceType === "Industry")
+        );
+        if (industryMetric) {
+          const devices = this.parseDeviceValue(industryMetric.value);
+          if (devices.length > 0) {
+            result.push({
+              sourceType: "Industry_Avg",
+              label: "Industry Avg",
+              devices: devices
+            });
+          }
         }
       }
     }
 
-    // Process each Competitor individually
+    // Process each Competitor individually - enhanced data checking
     competitors.forEach(competitor => {
-      const competitorDevices = this.aggregateDevicesBySource(
-        deviceMetrics.filter(m => 
-          m.sourceType === "Competitor" && 
-          m.competitorId === competitor.id
-        )
+      // First try to find in regular metrics
+      const competitorMetrics = deviceMetrics.filter(m => 
+        m.sourceType === "Competitor" && 
+        m.competitorId === competitor.id
       );
       
-      if (competitorDevices.length > 0) {
-        result.push({
-          sourceType: `Competitor_${competitor.id}`,
-          label: this.cleanDomainName(competitor.domain),
-          devices: competitorDevices
-        });
+      if (competitorMetrics.length > 0) {
+        const competitorDevices = this.aggregateDevicesBySource(competitorMetrics);
+        if (competitorDevices.length > 0) {
+          result.push({
+            sourceType: `Competitor_${competitor.id}`,
+            label: this.cleanDomainName(competitor.domain),
+            devices: competitorDevices
+          });
+        }
       } else {
         // Try to find competitor data in different format
         const competitorMetric = metrics.find(m => 
@@ -395,6 +420,19 @@ export class UnifiedDataService {
               label: this.cleanDomainName(competitor.domain),
               devices: devices
             });
+          }
+        } else {
+          // Also check in averagedMetrics for competitor data
+          if (averagedMetrics && averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"][`Competitor_${competitor.id}`]) {
+            const competitorValue = averagedMetrics["Device Distribution"][`Competitor_${competitor.id}`];
+            const devices = this.parseDeviceValue(competitorValue);
+            if (devices.length > 0) {
+              result.push({
+                sourceType: `Competitor_${competitor.id}`,
+                label: this.cleanDomainName(competitor.domain),
+                devices: devices
+              });
+            }
           }
         }
       }
