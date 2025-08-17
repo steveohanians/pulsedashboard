@@ -691,11 +691,6 @@ export default function Dashboard() {
                       <p className="text-xs font-semibold text-slate-800 leading-tight">
                         {displayText}
                       </p>
-                      {periods && periods.client !== periods.competitors && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Note: Competitor data is from {new Date(periods.competitors + '-01').toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-                        </p>
-                      )}
                     </div>
                   ) : null;
                 })()}
