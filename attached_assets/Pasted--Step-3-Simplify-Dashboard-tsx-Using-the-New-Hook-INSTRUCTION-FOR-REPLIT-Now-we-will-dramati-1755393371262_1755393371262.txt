@@ -1,3 +1,19 @@
+# Step 3: Simplify Dashboard.tsx Using the New Hook
+
+**INSTRUCTION FOR REPLIT:**
+Now we will dramatically simplify the dashboard.tsx file by using our new `useDashboardData` hook. This will reduce the file from 2000+ lines to about 500-600 lines by removing ALL data processing logic.
+
+**IMPORTANT RULES:**
+1. DO NOT delete any UI components or styling
+2. KEEP all the chart components as they are
+3. KEEP the navigation and header sections
+4. ONLY remove data fetching and processing logic
+5. The charts should receive processed data from the hook
+6. Keep the same visual layout and functionality
+
+**MODIFY THE FILE `/client/src/pages/dashboard.tsx` TO THIS:**
+
+```typescript
 import { useState, useEffect, useRef } from "react";
 import { useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/use-auth";
@@ -75,7 +91,7 @@ export default function Dashboard() {
   const [dataBannerDismissed, setDataBannerDismissed] = useState(false);
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [metricStatuses, setMetricStatuses] = useState<
+  const [metricStatuses, setMetricStatuses] = useState
     Record<string, "success" | "needs_improvement" | "warning" | undefined>
   >({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -330,7 +346,7 @@ export default function Dashboard() {
                 {client?.websiteUrl && (
                   <>
                     <span className="hidden sm:inline"> | </span>
-                    <a
+                    
                       href={client.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -781,3 +797,7 @@ export default function Dashboard() {
     </div>
   );
 }
+```
+
+**AFTER MODIFYING THIS FILE:**
+Tell me "Dashboard simplified successfully" and I'll give you the next step to update the chart components to use the processed data properly.
