@@ -454,8 +454,7 @@ export class UnifiedDataService {
       let dataFound = false;
       
       // The data exists but needs proper parsing
-      // Based on the console log, we're finding data but it's showing Desktop: 100%
-      // This suggests the data might be in a different format
+      // Device data may be in various formats requiring proper extraction
       
       // Check for metrics with numeric channels (like Industry_Avg)
       const numericDeviceMetrics = metrics.filter(m => 
@@ -477,15 +476,16 @@ export class UnifiedDataService {
         numericDeviceMetrics.forEach(metric => {
           // Convert numeric channel to device name (same as Industry_Avg)
           let deviceName = '';
-          if (metric.channel === '0' || metric.channel === 0) {
+          const channel = String(metric.channel);
+          if (channel === '0') {
             deviceName = 'Desktop';
-          } else if (metric.channel === '1' || metric.channel === 1) {
+          } else if (channel === '1') {
             deviceName = 'Mobile';
-          } else if (metric.channel === '2' || metric.channel === 2) {
+          } else if (channel === '2') {
             deviceName = 'Tablet'; // In case there's tablet data
           } else {
             // Try to use channel as-is if it's already a string like "Desktop"
-            deviceName = String(metric.channel);
+            deviceName = channel;
           }
           
           const value = parseFloat(String(metric.value));
