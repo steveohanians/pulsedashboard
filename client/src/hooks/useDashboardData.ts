@@ -76,10 +76,7 @@ export function useDashboardData({
           `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
-        // TEMPORARY DEBUG - Remove after investigation
-        if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-          debugDeviceDistribution(result);
-        }
+
         
         return result;
       } catch (error) {

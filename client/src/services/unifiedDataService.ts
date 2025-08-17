@@ -62,6 +62,8 @@ export class UnifiedDataService {
     dashboardData: any,
     timePeriod: string
   ): ProcessedDashboardData | null {
+    console.log('🔥 UNIFIED SERVICE CALLED', { timePeriod, hasData: !!dashboardData });
+    
     if (!dashboardData) {
       debugLog('UNIFIED', 'No dashboard data available');
       return null;
@@ -95,6 +97,13 @@ export class UnifiedDataService {
     );
     
     // Step 4: Process device distribution - include averagedMetrics
+    console.log('🔥 About to process device distribution', {
+      metricsCount: (dashboardData.metrics || []).length,
+      competitorsCount: (dashboardData.competitors || []).length,
+      competitorsData: dashboardData.competitors,
+      hasAveragedMetrics: !!dashboardData.averagedMetrics
+    });
+    
     const deviceDistribution = this.processDeviceDistribution(
       dashboardData.metrics || [],
       dashboardData.competitors || [],
@@ -440,29 +449,66 @@ export class UnifiedDataService {
     }
 
     // Process Competitors - FIND THE REAL DATA (SEMrush source like CD_Avg and Industry_Avg)
+    console.log('🔥 Starting competitor device processing', {
+      competitorsCount: competitors.length,
+      competitorIds: competitors.map(c => c.id),
+      competitorDomains: competitors.map(c => c.domain)
+    });
+    
     competitors.forEach((competitor) => {
+      console.log(`🔥 Processing competitor: ${competitor.domain}`, { id: competitor.id });
       let devices: any[] = [];
       let dataFound = false;
       
-      debugLog('UNIFIED', `Comprehensive competitor device data search for ${competitor.domain}`, {
+      console.log(`🔥 Searching for device data for competitor ${competitor.domain}`, {
         competitorId: competitor.id,
         domain: competitor.domain,
         totalDeviceMetrics: deviceMetrics.length,
-        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length
+        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
+        competitorMetricsPreview: deviceMetrics.filter(m => m.competitorId === competitor.id).map(m => ({ 
+          metricName: m.metricName, 
+          sourceType: m.sourceType, 
+          timePeriod: m.timePeriod,
+          channel: m.channel,
+          value: m.value
+        }))
       });
       
-      // Check 1: Look in metrics with competitorId
+      // Check 1: Look in metrics with competitorId (current period first, then fallback)
       if (!dataFound) {
-        const competitorMetrics = deviceMetrics.filter(m => 
+        // First try exact period match, then fallback to most recent available
+        let competitorMetrics = deviceMetrics.filter(m => 
           m.sourceType === "Competitor" && 
           m.competitorId === competitor.id
         );
         
+        // Sort by period to get most recent first
+        competitorMetrics.sort((a, b) => (b.timePeriod || '').localeCompare(a.timePeriod || ''));
+        
+        if (competitorMetrics.length > 0) {
+          const availablePeriod = competitorMetrics[0]?.timePeriod;
+          console.log(`🔥 Found ${competitorMetrics.length} device metrics for competitor ${competitor.domain}`, { 
+            competitorId: competitor.id,
+            availablePeriod,
+            fallbackDataCount: competitorMetrics.length,
+            metrics: competitorMetrics.map(m => ({ value: m.value, channel: m.channel, timePeriod: m.timePeriod }))
+          });
+        } else {
+          console.log(`🔥 NO device metrics found for competitor ${competitor.domain}`, { 
+            competitorId: competitor.id,
+            deviceMetricsWithSameId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
+            allDeviceMetricsCount: deviceMetrics.length
+          });
+        }
+        
         if (competitorMetrics.length > 0) {
           devices = this.aggregateDevicesBySource(competitorMetrics);
+          console.log(`🔥 Aggregated devices for ${competitor.domain}:`, { devices, devicesCount: devices.length });
           if (devices.length > 0) {
             dataFound = true;
-            debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} in metrics`, { devices });
+            console.log(`🔥 SUCCESS: Found device data for competitor ${competitor.domain}`, { devices });
+          } else {
+            console.log(`🔥 PROBLEM: aggregateDevicesBySource returned empty array for ${competitor.domain}`);
           }
         }
       }
@@ -542,11 +588,13 @@ export class UnifiedDataService {
           });
         }
         
-        result.push({
+        const competitorData = {
           sourceType: `Competitor_${competitor.id}`,
           label: this.cleanDomainName(competitor.domain),
           devices: devices
-        });
+        };
+        result.push(competitorData);
+        console.log(`🔥 Added competitor to result:`, competitorData);
       } else {
         // Log that we couldn't find data - this helps debugging
         debugLog('UNIFIED', `WARNING: No device data found for competitor ${competitor.domain}`, {
@@ -558,9 +606,10 @@ export class UnifiedDataService {
       }
     });
 
-    debugLog('UNIFIED', 'Device distribution processed', {
+    console.log('🔥 FINAL DEVICE DISTRIBUTION RESULT:', {
       resultCount: result.length,
-      sources: result.map(r => ({ source: r.sourceType, deviceCount: r.devices.length }))
+      sources: result.map(r => ({ source: r.sourceType, label: r.label, deviceCount: r.devices.length })),
+      fullResult: result
     });
 
     return result;
