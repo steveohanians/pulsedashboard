@@ -39,7 +39,7 @@ import {
   Sparkles,
   RefreshCw,
 } from "lucide-react";
-import StatusBanner from "@/components/StatusBanner";
+
 import { ViewAsSelector } from '@/components/admin/ViewAsSelector';
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -78,7 +78,6 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
-  const [dataBannerDismissed, setDataBannerDismissed] = useState(false);
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [metricStatuses, setMetricStatuses] = useState<
@@ -518,11 +517,7 @@ export default function Dashboard() {
           ref={dashboardRootRef}
           className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
         >
-          <StatusBanner
-            clientId={viewAsClientId || user?.clientId || ""}
-            timePeriod={timePeriod}
-            isAdmin={user?.role === "Admin"}
-          />
+
 
           {/* Admin View-As Selector */}
           {user?.role === "Admin" && (
@@ -555,40 +550,7 @@ export default function Dashboard() {
             onDismiss={dismissDashboardError}
           />
 
-          {/* Data Quality Banner - Admin Only */}
-          {dataQuality && (viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && !dataBannerDismissed && (
-            <div className={`mb-4 p-4 rounded-lg border ${
-              dataQuality.completeness === 1 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-yellow-50 border-yellow-200'
-            }`}>
-              <div className="flex items-start">
-                {dataQuality.completeness === 1 ? (
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    Data Source Status ({Math.round(dataQuality.completeness * 100)}% Complete)
-                  </p>
-                  {dataQuality.warnings.length > 0 && (
-                    <ul className="mt-2 text-xs text-yellow-700 space-y-1">
-                      {dataQuality.warnings.map((warning: string, index: number) => (
-                        <li key={index}>• {warning}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <button
-                  onClick={() => setDataBannerDismissed(true)}
-                  className="ml-2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+
 
           {/* Filters Section - Simplified */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
