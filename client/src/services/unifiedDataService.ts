@@ -6,6 +6,7 @@
 
 import { parseMetricValue } from '@/utils/metricParser';
 import { debugLog } from '@/config/dataSourceConfig';
+import { verifyAverages, calculateStandardAverage } from '@/utils/averageVerification';
 
 interface DashboardMetric {
   metricName: string;
@@ -172,6 +173,21 @@ export class UnifiedDataService {
     periods: DataPeriods,
     timePeriod: string
   ): ProcessedMetrics {
+    
+    // TEMPORARY: Verify averaging logic
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      // Check if we have CD Portfolio companies
+      const cdPortfolioCompanies = (window as any).__cdPortfolioCompanies || [];
+      const benchmarkCompanies = (window as any).__benchmarkCompanies || [];
+      
+      if (cdPortfolioCompanies.length > 0) {
+        verifyAverages(metrics, cdPortfolioCompanies, 'CD_Portfolio');
+      }
+      if (benchmarkCompanies.length > 0) {
+        verifyAverages(metrics, benchmarkCompanies, 'Benchmark');
+      }
+    }
+    
     const result: ProcessedMetrics = {};
     const counts: Record<string, Record<string, number>> = {};
 

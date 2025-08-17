@@ -11,7 +11,7 @@ import { unifiedDataService } from '@/services/unifiedDataService';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { APIError } from '@/lib/queryClient';
-import { debugDeviceDistribution } from '@/utils/debugDeviceData';
+
 
 interface DashboardHookOptions {
   timePeriod: string;
@@ -76,7 +76,11 @@ export function useDashboardData({
           `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
-
+        // TEMPORARY: Expose company data for verification
+        if (typeof window !== 'undefined') {
+          (window as any).__cdPortfolioCompanies = result.cdPortfolioCompanies || [];
+          (window as any).__benchmarkCompanies = result.benchmarkCompanies || [];
+        }
         
         return result;
       } catch (error) {
