@@ -237,13 +237,13 @@ export default function Dashboard() {
           Mobile: mobile,
         });
         
-        console.log(`✅ Including competitor in chart: ${competitor.domain}`, { desktop, mobile });
+
       } else {
-        console.log(`❌ No device data for competitor: ${competitor.domain}`);
+
       }
     });
     
-    console.log('📊 Final competitors for LollipopChart:', competitorsWithData);
+
     return competitorsWithData;
   };
 

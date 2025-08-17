@@ -62,7 +62,7 @@ export class UnifiedDataService {
     dashboardData: any,
     timePeriod: string
   ): ProcessedDashboardData | null {
-    console.log('🔥 UNIFIED SERVICE CALLED', { timePeriod, hasData: !!dashboardData });
+    debugLog('UNIFIED', 'Service called', { timePeriod, hasData: !!dashboardData });
     
     if (!dashboardData) {
       debugLog('UNIFIED', 'No dashboard data available');
@@ -97,7 +97,7 @@ export class UnifiedDataService {
     );
     
     // Step 4: Process device distribution - include averagedMetrics
-    console.log('🔥 About to process device distribution', {
+    debugLog('UNIFIED', 'About to process device distribution', {
       metricsCount: (dashboardData.metrics || []).length,
       competitorsCount: (dashboardData.competitors || []).length,
       competitorsData: dashboardData.competitors,
@@ -596,7 +596,7 @@ export class UnifiedDataService {
       }
     });
 
-    console.log('🔥 FINAL DEVICE DISTRIBUTION RESULT:', {
+    debugLog('UNIFIED', 'Device distribution processing complete', {
       resultCount: result.length,
       sources: result.map(r => ({ source: r.sourceType, label: r.label, deviceCount: r.devices.length })),
       fullResult: result
