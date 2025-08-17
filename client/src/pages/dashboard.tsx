@@ -86,6 +86,12 @@ export default function Dashboard() {
   >({});
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Clear metric statuses when switching between clients to prevent cross-client contamination
+  const effectiveClientId = viewAsClientId || user?.clientId;
+  useEffect(() => {
+    setMetricStatuses({});
+  }, [effectiveClientId]);
+
   // Error banner state
   const {
     error: dashboardError,
