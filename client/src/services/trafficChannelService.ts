@@ -167,7 +167,6 @@ export class TrafficChannelService {
         color: this.getChannelColor(channel.name)
       }));
 
-      
       result.push({
         sourceType: "Industry_Avg",
         label: "Industry Avg",

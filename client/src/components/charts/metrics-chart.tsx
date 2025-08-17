@@ -16,14 +16,7 @@ interface MetricsChartProps {
  * @param data - Record of data source names to numeric values
  */
 export function MetricsChart({ metricName, data }: MetricsChartProps) {
-  console.error(`🎯 METRICS-CHART RECEIVED for ${metricName}:`, {
-    dataParam: JSON.stringify(data),
-    hasIndustry_Avg: 'Industry_Avg' in (data || {}),
-    hasCD_Avg: 'CD_Avg' in (data || {}),
-    Industry_Avg_value: data?.Industry_Avg,
-    CD_Avg_value: data?.CD_Avg,
-    dataKeys: Object.keys(data || {})
-  });
+  // Debug logging removed for production
 
   const isTrafficOrDevice = metricName.includes('Traffic') || metricName.includes('Device');
   

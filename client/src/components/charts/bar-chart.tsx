@@ -397,18 +397,6 @@ function generateBarData(timePeriod: string, clientData: number, industryAvg: nu
 export function MetricBarChart({ metricName, timePeriod, clientData, industryAvg, cdAvg, clientUrl, competitors, timeSeriesData, periods }: BarChartProps) {
   const clientKey = clientUrl || 'Client';
 
-  // 🎯 DEBUG: Log what MetricBarChart receives for Industry Average
-  console.error(`🎯 METRICBARCHART RECEIVED ${metricName}:`, {
-    industryAvg,
-    cdAvg,
-    clientData,
-    industryAvgType: typeof industryAvg,
-    hasIndustryAvg: industryAvg !== undefined && industryAvg !== null && industryAvg !== 0
-  });
-  
-
-
-  
   // Data validation improved for proper number handling
   
   // Check if we have any valid data - improved validation
