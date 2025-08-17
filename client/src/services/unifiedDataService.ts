@@ -448,160 +448,140 @@ export class UnifiedDataService {
       debugLog('UNIFIED', 'No authentic Industry_Avg device data found - maintaining data integrity');
     }
 
-    // Process Competitors - FIND THE REAL DATA (SEMrush source like CD_Avg and Industry_Avg)
-    console.log('🔥 Starting competitor device processing', {
-      competitorsCount: competitors.length,
-      competitorIds: competitors.map(c => c.id),
-      competitorDomains: competitors.map(c => c.domain)
-    });
-    
+    // Process Competitors - FIND AND CORRECTLY PARSE THE REAL DATA
     competitors.forEach((competitor) => {
-      console.log(`🔥 Processing competitor: ${competitor.domain}`, { id: competitor.id });
       let devices: any[] = [];
       let dataFound = false;
       
-      console.log(`🔥 Searching for device data for competitor ${competitor.domain}`, {
-        competitorId: competitor.id,
-        domain: competitor.domain,
-        totalDeviceMetrics: deviceMetrics.length,
-        metricsWithCompetitorId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
-        competitorMetricsPreview: deviceMetrics.filter(m => m.competitorId === competitor.id).map(m => ({ 
-          metricName: m.metricName, 
-          sourceType: m.sourceType, 
-          timePeriod: m.timePeriod,
-          channel: m.channel,
-          value: m.value
-        }))
+      // The data exists but needs proper parsing
+      // Based on the console log, we're finding data but it's showing Desktop: 100%
+      // This suggests the data might be in a different format
+      
+      // Check for metrics with numeric channels (like Industry_Avg)
+      const numericDeviceMetrics = metrics.filter(m => 
+        m.metricName === "Device Distribution" &&
+        m.sourceType === "Competitor" &&
+        m.competitorId === competitor.id &&
+        m.channel !== undefined
+      );
+      
+      debugLog('UNIFIED', `Checking competitor ${competitor.domain}`, {
+        numericMetricsFound: numericDeviceMetrics.length,
+        sample: numericDeviceMetrics[0]
       });
       
-      // Check 1: Look in metrics with competitorId (current period first, then fallback)
+      if (numericDeviceMetrics.length > 0) {
+        const deviceMap = new Map<string, number>();
+        const deviceCounts = new Map<string, number>();
+        
+        numericDeviceMetrics.forEach(metric => {
+          // Convert numeric channel to device name (same as Industry_Avg)
+          let deviceName = '';
+          if (metric.channel === '0' || metric.channel === 0) {
+            deviceName = 'Desktop';
+          } else if (metric.channel === '1' || metric.channel === 1) {
+            deviceName = 'Mobile';
+          } else if (metric.channel === '2' || metric.channel === 2) {
+            deviceName = 'Tablet'; // In case there's tablet data
+          } else {
+            // Try to use channel as-is if it's already a string like "Desktop"
+            deviceName = String(metric.channel);
+          }
+          
+          const value = parseFloat(String(metric.value));
+          
+          if (deviceName && !isNaN(value)) {
+            deviceMap.set(deviceName, (deviceMap.get(deviceName) || 0) + value);
+            deviceCounts.set(deviceName, (deviceCounts.get(deviceName) || 0) + 1);
+          }
+        });
+        
+        // Calculate averages
+        deviceMap.forEach((sum, name) => {
+          const count = deviceCounts.get(name) || 1;
+          const avgValue = sum / count;
+          
+          // Only add if it's Desktop or Mobile (ignore Tablet for consistency)
+          if (name === 'Desktop' || name === 'Mobile') {
+            devices.push({
+              name,
+              value: Math.round(avgValue * 10) / 10,
+              percentage: Math.round(avgValue * 10) / 10,
+              color: this.getDeviceColor(name)
+            });
+          }
+        });
+        
+        if (devices.length > 0) {
+          dataFound = true;
+          debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} using numeric channels`, { 
+            devices,
+            raw: Array.from(deviceMap.entries())
+          });
+        }
+      }
+      
+      // If we didn't find numeric channel data, try regular format
       if (!dataFound) {
-        // First try exact period match, then fallback to most recent available
-        let competitorMetrics = deviceMetrics.filter(m => 
+        const competitorMetrics = deviceMetrics.filter(m => 
           m.sourceType === "Competitor" && 
           m.competitorId === competitor.id
         );
         
-        // Sort by period to get most recent first
-        competitorMetrics.sort((a, b) => (b.timePeriod || '').localeCompare(a.timePeriod || ''));
-        
-        if (competitorMetrics.length > 0) {
-          const availablePeriod = competitorMetrics[0]?.timePeriod;
-          console.log(`🔥 Found ${competitorMetrics.length} device metrics for competitor ${competitor.domain}`, { 
-            competitorId: competitor.id,
-            availablePeriod,
-            fallbackDataCount: competitorMetrics.length,
-            metrics: competitorMetrics.map(m => ({ value: m.value, channel: m.channel, timePeriod: m.timePeriod }))
-          });
-        } else {
-          console.log(`🔥 NO device metrics found for competitor ${competitor.domain}`, { 
-            competitorId: competitor.id,
-            deviceMetricsWithSameId: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
-            allDeviceMetricsCount: deviceMetrics.length
-          });
-        }
-        
         if (competitorMetrics.length > 0) {
           devices = this.aggregateDevicesBySource(competitorMetrics);
-          console.log(`🔥 Aggregated devices for ${competitor.domain}:`, { devices, devicesCount: devices.length });
           if (devices.length > 0) {
             dataFound = true;
-            console.log(`🔥 SUCCESS: Found device data for competitor ${competitor.domain}`, { devices });
-          } else {
-            console.log(`🔥 PROBLEM: aggregateDevicesBySource returned empty array for ${competitor.domain}`);
+            debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} in regular format`, { devices });
           }
         }
       }
       
-      // Check 2: Look for metrics with channel field containing numeric device types (like Industry_Avg)
-      if (!dataFound) {
-        const numericDeviceMetrics = metrics.filter(m => 
-          m.metricName === "Device Distribution" &&
-          m.sourceType === "Competitor" &&
-          m.competitorId === competitor.id &&
-          m.channel !== undefined
-        );
-        
-        if (numericDeviceMetrics.length > 0) {
-          const deviceMap = new Map<string, number>();
-          
-          numericDeviceMetrics.forEach(metric => {
-            // Convert numeric channel to device name (same as Industry_Avg)
-            let deviceName = metric.channel;
-            if (deviceName === '0') deviceName = 'Desktop';
-            else if (deviceName === '1') deviceName = 'Mobile';
-            else if (deviceName === '2') deviceName = 'Tablet';
-            
-            const value = parseFloat(String(metric.value));
-            
-            if (deviceName && !isNaN(value)) {
-              deviceMap.set(deviceName, (deviceMap.get(deviceName) || 0) + value);
-            }
-          });
-          
-          deviceMap.forEach((value, name) => {
-            devices.push({
-              name,
-              value: Math.round(value * 10) / 10,
-              percentage: Math.round(value * 10) / 10,
-              color: this.getDeviceColor(name)
-            });
-          });
-          
-          if (devices.length > 0) {
-            dataFound = true;
-            debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} using numeric channels`, { devices });
-          }
-        }
-      }
-      
-      // Check 3: Look in averagedMetrics if available
-      if (!dataFound && averagedMetrics) {
-        const possibleKeys = [
-          `Competitor_${competitor.id}`,
-          `competitor_${competitor.id}`,
-          competitor.domain,
-          competitor.id
-        ];
-        
-        for (const key of possibleKeys) {
-          if (averagedMetrics["Device Distribution"] && averagedMetrics["Device Distribution"][key]) {
-            const competitorData = averagedMetrics["Device Distribution"][key];
-            devices = this.parseDeviceValue(competitorData);
-            if (devices.length > 0) {
-              dataFound = true;
-              debugLog('UNIFIED', `Found device data for competitor ${competitor.domain} in averagedMetrics`, { key, devices });
-              break;
-            }
-          }
-        }
-      }
-      
-      // Only add to result if we found real data
+      // Ensure we have both Desktop and Mobile
       if (dataFound && devices.length > 0) {
-        // Normalize percentages to ensure they add to 100
-        const total = devices.reduce((sum, d) => sum + d.value, 0);
-        if (total > 0 && Math.abs(total - 100) > 1) {
-          devices.forEach(device => {
-            device.value = Math.round((device.value / total) * 1000) / 10;
-            device.percentage = device.value;
-          });
-        }
+        // Check if we're missing Mobile or Desktop
+        const hasDesktop = devices.find(d => d.name === 'Desktop');
+        const hasMobile = devices.find(d => d.name === 'Mobile');
         
-        const competitorData = {
+        // If we only have Desktop at 100%, something's wrong - likely missing Mobile data
+        if (hasDesktop && !hasMobile) {
+          // This shouldn't happen with real data, log warning
+          debugLog('UNIFIED', `WARNING: Competitor ${competitor.domain} only has Desktop data`, { devices });
+          // Don't add incomplete data
+          dataFound = false;
+        } else if (!hasDesktop && hasMobile) {
+          // This shouldn't happen either
+          debugLog('UNIFIED', `WARNING: Competitor ${competitor.domain} only has Mobile data`, { devices });
+          dataFound = false;
+        } else if (hasDesktop && hasMobile) {
+          // Normalize percentages to ensure they sum to 100
+          const total = hasDesktop.value + hasMobile.value;
+          if (total > 0 && Math.abs(total - 100) > 1) {
+            devices.forEach(device => {
+              device.value = Math.round((device.value / total) * 1000) / 10;
+              device.percentage = device.value;
+            });
+          }
+        }
+      }
+      
+      // Only add to result if we have complete data (both Desktop and Mobile)
+      if (dataFound && devices.length >= 2) {
+        result.push({
           sourceType: `Competitor_${competitor.id}`,
           label: this.cleanDomainName(competitor.domain),
           devices: devices
-        };
-        result.push(competitorData);
-        console.log(`🔥 Added competitor to result:`, competitorData);
+        });
+        
+        debugLog('UNIFIED', `✅ Added competitor ${competitor.domain} to device distribution`, { 
+          devices: devices.map(d => `${d.name}: ${d.value}%`).join(', ')
+        });
       } else {
-        // Log that we couldn't find data - this helps debugging
-        debugLog('UNIFIED', `WARNING: No device data found for competitor ${competitor.domain}`, {
-          competitorId: competitor.id,
-          checkedMetricsCount: deviceMetrics.filter(m => m.competitorId === competitor.id).length,
-          availableSourceTypes: Array.from(new Set(deviceMetrics.map(m => m.sourceType))),
-          availableCompetitorIds: Array.from(new Set(deviceMetrics.filter(m => m.sourceType === "Competitor").map(m => m.competitorId)))
+        // Log why we're not including this competitor
+        debugLog('UNIFIED', `❌ Competitor ${competitor.domain} excluded - incomplete device data`, {
+          dataFound,
+          deviceCount: devices.length,
+          devices
         });
       }
     });
