@@ -133,7 +133,51 @@ export function ViewAsSelector({
         
         <Select
           value={selectedUserId}
-          onValueChange={setSelectedUserId}
+          onValueChange={(value) => {
+            setSelectedUserId(value);
+            // Auto-trigger view change when different user is selected
+            if (value && value !== currentUserId) {
+              setTimeout(() => {
+                // Use the new value directly since state might not be updated yet
+                const targetUserId = value;
+                const handleAutoViewAs = async () => {
+                  try {
+                    setLoading(true);
+                    const response = await fetch(`/api/admin/view-as/${targetUserId}`, {
+                      credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error('Failed to switch view');
+                    }
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                      const selectedUser = users.find(u => u.id === targetUserId);
+                      onViewAs(data.clientId, data.userName);
+                      setIsViewingAs(true);
+                      
+                      toast({
+                        title: 'View switched',
+                        description: `Now viewing as ${selectedUser?.name}`,
+                        duration: 3000
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Failed to switch view:', error);
+                    toast({
+                      title: 'Failed to switch view',
+                      description: 'Could not switch to selected user view',
+                      variant: 'destructive'
+                    });
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                handleAutoViewAs();
+              }, 100);
+            }
+          }}
           disabled={loading}
         >
           <SelectTrigger className="flex-1 max-w-sm text-sm">
