@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { userService } from '@/services/api';
 
 interface ViewAsSelectorProps {
   currentUserId: string;
@@ -44,20 +45,11 @@ export function ViewAsSelector({
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/users', {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      
-      const data = await response.json();
-      if (data.success && data.users) {
-        setUsers(data.users);
-        // Set current user as default selection
-        setSelectedUserId(currentUserId);
-      }
+      const usersData = await userService.getAll<UserOption>();
+      console.log('ViewAsSelector users data:', usersData);
+      setUsers(usersData);
+      // Set current user as default selection
+      setSelectedUserId(currentUserId);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       toast({
