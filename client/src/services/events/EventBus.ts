@@ -154,7 +154,7 @@ class EventBus {
         });
         
         if (response.status === 429) {
-          console.warn('EventBus: Rate limited. Backing off...');
+          // Rate limited - warning removed for cleaner console
           return; // Skip this poll cycle
         }
         
@@ -168,8 +168,7 @@ class EventBus {
           });
         }
       } catch (error) {
-        // Silent fail for polling
-        console.debug('EventBus poll error:', error);
+        // Silent fail for polling - error logging removed for cleaner console
       }
     }, APP_CONFIG.polling.eventPoll);
   }

@@ -665,13 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         current.setMonth(current.getMonth() + 1);
       }
       
-      // Debug logging for period mapping
-      logger.info(`🔍 DASHBOARD PERIOD MAPPING: ${JSON.stringify({
-        timePeriod: req.query.timePeriod as string,
-        canonicalTimePeriod: canonicalTimePeriod.type,
-        dbRange,
-        periodsToQuery
-      })}`);
+      // Period mapping debug logs removed for cleaner console
       
       // Verify user has access to this client
       if (!req.user || (req.user.clientId !== clientId && req.user.role !== "Admin")) {
@@ -725,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Add them to the result.metrics array
           if (industryAvgMetrics.length > 0) {
-            logger.info(`Adding ${industryAvgMetrics.length} Industry_Avg metrics to response`);
+            // Industry_Avg metrics addition logs removed for cleaner console
             result.metrics = [...result.metrics, ...industryAvgMetrics];
           }
         }
@@ -738,22 +732,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cdAvgCoreMetrics = cdAvgMetrics.filter((m: any) => coreMetrics.includes(m.metricName));
       const industryAvgCoreMetrics = industryAvgMetrics.filter((m: any) => coreMetrics.includes(m.metricName));
       
-      logger.info(`🔍 DASHBOARD OPTIMIZER RESULT: CD_Avg data analysis`, {
-        totalMetrics: result.metrics?.length || 0,
-        cdAvgCount: cdAvgMetrics.length,
-        cdAvgCoreCount: cdAvgCoreMetrics.length,
-        cdAvgMetricNames: Array.from(new Set(cdAvgMetrics.map((m: any) => m.metricName))),
-        cdAvgCorePeriods: cdAvgCoreMetrics.map((m: any) => ({ metric: m.metricName, period: m.timePeriod })),
-        requestedPeriod: periodsToQuery[0]
-      });
+      // CD_Avg data analysis logs removed for cleaner console
       
-      logger.info(`🔍 DASHBOARD OPTIMIZER RESULT: Industry_Avg data analysis`, {
-        industryAvgCount: industryAvgMetrics.length,
-        industryAvgCoreCount: industryAvgCoreMetrics.length,
-        industryAvgMetricNames: Array.from(new Set(industryAvgMetrics.map((m: any) => m.metricName))),
-        industryAvgCorePeriods: industryAvgCoreMetrics.map((m: any) => ({ metric: m.metricName, period: m.timePeriod })),
-        requestedPeriod: periodsToQuery[0]
-      });
+      // Industry_Avg data analysis logs removed for cleaner console
       
       // Queue AI insights generation in background (non-blocking)
       backgroundProcessor.enqueue('AI_INSIGHT', {
@@ -877,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const periodParam = req.query.period as string || req.query.timePeriod as string;
       let canonicalTimePeriod: string;
       
-      logger.info('🔍 PERIOD DEBUG', { periodParam, queryParams: req.query });
+      // Period debug logs removed for cleaner console
       
       try {
         if (periodParam) {
@@ -900,7 +881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canonicalTimePeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
         }
         
-        logger.info('🔍 PERIOD RESOLVED', { originalPeriod: periodParam, canonicalTimePeriod });
+        // Period resolved logs removed for cleaner console
         
       } catch (error) {
         return sendError(res, 422, "SCHEMA_MISMATCH", "Invalid time period format", (error as Error).message);

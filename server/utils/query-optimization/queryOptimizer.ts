@@ -606,21 +606,18 @@ export async function getDashboardDataOptimized(
               competitorId: null
             });
             
-            // Log each simple metric grouping
-            if (simpleMetrics.includes(metricName)) {
-              logger.info(`  → ${metricName}: ${average.toFixed(2)} (avg of ${values.length} daily values)`);
-            }
+            // Simple metric grouping logs removed for cleaner console
           });
         }
         
         if (Object.keys(groupedPeriods).length > 0) {
-          logger.info(`✅ CREATED ${Object.keys(groupedPeriods).length} grouped periods for Last Month time series`);
+          // Grouped periods creation logs removed for cleaner console
           
           // Add competitor and CD_Avg metrics as single monthly points across all groups
           const competitorMetrics = processedData.filter(m => m.sourceType === 'Competitor');
           const cdAvgMetrics = processedData.filter(m => m.sourceType === 'CD_Avg');
           
-          logger.info(`📈 ADDING MONTHLY DATA: ${competitorMetrics.length} competitor metrics, ${cdAvgMetrics.length} CD_Avg metrics`);
+          // Monthly data addition logs removed for cleaner console
           
           Object.keys(groupedPeriods).forEach(periodKey => {
             // Add both CD_Avg and Competitor metrics to each grouped period
@@ -631,15 +628,9 @@ export async function getDashboardDataOptimized(
                   try {
                     const parsed = JSON.parse(metric.value);
                     processedValue = Number(parsed.percentage) || 0;
-                    console.log('🔍 GROUPED PERIODS JSON PARSE SUCCESS:', {
-                      metricName: metric.metricName,
-                      sourceType: metric.sourceType,
-                      periodKey: periodKey,
-                      parsedPercentage: processedValue,
-                      channel: metric.channel
-                    });
+                    // JSON parse success logs removed for cleaner console
                   } catch (e) {
-                    console.log('🔍 GROUPED PERIODS JSON PARSE ERROR:', e, 'Metric:', metric.metricName, 'Value:', metric.value);
+                    // JSON parse error logs removed for cleaner console
                     processedValue = 0;
                   }
                 } else if (typeof metric.value === 'object' && metric.value !== null && 'percentage' in metric.value) {
@@ -661,15 +652,7 @@ export async function getDashboardDataOptimized(
           timeSeriesData = groupedPeriods;
           periodsToQuery = Object.keys(groupedPeriods).sort();
           
-          // Log final payload structure 
-          logger.info(`🎯 FINAL TIME SERIES PAYLOAD: ${periodsToQuery.length} periods`);
-          periodsToQuery.forEach(period => {
-            const periodData = groupedPeriods[period];
-            const clientCount = periodData.filter(m => m.sourceType === 'Client').length;
-            const competitorCount = periodData.filter(m => m.sourceType === 'Competitor').length;
-            const cdAvgCount = periodData.filter(m => m.sourceType === 'CD_Avg').length;
-            logger.info(`  ${period}: Client=${clientCount}, Competitor=${competitorCount}, CD_Avg=${cdAvgCount}`);
-          });
+          // Final payload structure logs removed for cleaner console
         }
       } else {
         logger.warn(`❌ NO DAILY DATA: Cannot create grouped time series for Last Month - falling back to single monthly points`);
