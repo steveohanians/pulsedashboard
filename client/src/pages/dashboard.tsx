@@ -190,63 +190,6 @@ export default function Dashboard() {
     });
   };
 
-  // Get device data for specific source
-  const getDeviceData = (sourceType: string) => {
-    const sourceData = deviceDistributionData.find(d => d.sourceType === sourceType);
-    if (!sourceData || !sourceData.devices || sourceData.devices.length === 0) {
-      return { Desktop: 55, Mobile: 45 }; // Default fallback
-    }
-    
-    const result: any = { Desktop: 0, Mobile: 0 };
-    sourceData.devices.forEach((device: { name: string; percentage?: number; value?: number }) => {
-      if (device.name === 'Desktop' || device.name === 'Mobile') {
-        result[device.name] = device.percentage || device.value || 0;
-      }
-    });
-    
-    // Ensure we have valid percentages
-    if (result.Desktop === 0 && result.Mobile === 0) {
-      return { Desktop: 55, Mobile: 45 }; // Default if no valid data
-    }
-    
-    return result;
-  };
-
-  // Get competitor device data - include ALL competitors with data
-  const getCompetitorDeviceData = () => {
-    const competitorsWithData: any[] = [];
-    
-    competitors.forEach((competitor: any) => {
-      // Find device data for this competitor
-      const competitorDeviceData = deviceDistributionData.find(
-        d => d.sourceType === `Competitor_${competitor.id}`
-      );
-      
-      if (competitorDeviceData && competitorDeviceData.devices && competitorDeviceData.devices.length > 0) {
-        const desktopDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Desktop');
-        const mobileDevice = competitorDeviceData.devices.find((d: any) => d.name === 'Mobile');
-        
-        // Include competitor even if they only have Desktop or only Mobile
-        const desktop = desktopDevice ? (desktopDevice.percentage || desktopDevice.value || 0) : 0;
-        const mobile = mobileDevice ? (mobileDevice.percentage || mobileDevice.value || 0) : 0;
-        
-        competitorsWithData.push({
-          id: competitor.id,
-          label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
-          Desktop: desktop,
-          Mobile: mobile,
-        });
-        
-
-      } else {
-
-      }
-    });
-    
-
-    return competitorsWithData;
-  };
-
   const metricNames = [
     "Bounce Rate",
     "Session Duration",
@@ -836,11 +779,22 @@ export default function Dashboard() {
                           const currentDeviceData = processedData?.deviceDistribution || [];
                           
                           // Extract REAL data for each source - NO FALLBACKS
+                          interface DeviceData {
+                            name: string;
+                            percentage?: number;
+                            value?: number;
+                          }
+                          
+                          interface DeviceDistribution {
+                            sourceType: string;
+                            devices?: DeviceData[];
+                          }
+                          
                           const clientData = (() => {
-                            const data = currentDeviceData.find(d => d.sourceType === "Client");
+                            const data = currentDeviceData.find((d: DeviceDistribution) => d.sourceType === "Client");
                             if (!data || !data.devices || data.devices.length === 0) return null;
-                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
-                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            const desktop = data.devices.find((d: DeviceData) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: DeviceData) => d.name === 'Mobile');
                             if (!desktop && !mobile) return null;
                             return {
                               Desktop: desktop?.percentage || desktop?.value || 0,
@@ -849,10 +803,10 @@ export default function Dashboard() {
                           })();
                           
                           const industryData = (() => {
-                            const data = currentDeviceData.find(d => d.sourceType === "Industry_Avg");
+                            const data = currentDeviceData.find((d: DeviceDistribution) => d.sourceType === "Industry_Avg");
                             if (!data || !data.devices || data.devices.length === 0) return null;
-                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
-                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            const desktop = data.devices.find((d: DeviceData) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: DeviceData) => d.name === 'Mobile');
                             if (!desktop && !mobile) return null;
                             return {
                               Desktop: desktop?.percentage || desktop?.value || 0,
@@ -861,10 +815,10 @@ export default function Dashboard() {
                           })();
                           
                           const cdData = (() => {
-                            const data = currentDeviceData.find(d => d.sourceType === "CD_Avg");
+                            const data = currentDeviceData.find((d: DeviceDistribution) => d.sourceType === "CD_Avg");
                             if (!data || !data.devices || data.devices.length === 0) return null;
-                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
-                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            const desktop = data.devices.find((d: DeviceData) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: DeviceData) => d.name === 'Mobile');
                             if (!desktop && !mobile) return null;
                             return {
                               Desktop: desktop?.percentage || desktop?.value || 0,
@@ -874,10 +828,10 @@ export default function Dashboard() {
                           
                           // Get REAL competitor data only - transform to LollipopChart format
                           const competitorData = competitors.map((competitor: any) => {
-                            const data = currentDeviceData.find((d: any) => d.sourceType === `Competitor_${competitor.id}`);
+                            const data = currentDeviceData.find((d: DeviceDistribution) => d.sourceType === `Competitor_${competitor.id}`);
                             if (!data || !data.devices || data.devices.length === 0) return null;
-                            const desktop = data.devices.find((d: any) => d.name === 'Desktop');
-                            const mobile = data.devices.find((d: any) => d.name === 'Mobile');
+                            const desktop = data.devices.find((d: DeviceData) => d.name === 'Desktop');
+                            const mobile = data.devices.find((d: DeviceData) => d.name === 'Mobile');
                             // Include even if only desktop or only mobile (that might be real data)
                             if (!desktop && !mobile) return null;
                             return {
@@ -888,7 +842,7 @@ export default function Dashboard() {
                                 Mobile: mobile?.percentage || mobile?.value || 0
                               }
                             };
-                          }).filter(Boolean); // Remove nulls
+                          }).filter((item): item is NonNullable<typeof item> => item !== null); // Remove nulls with proper typing
                           
                           // Only render chart if we have client data at minimum
                           if (!clientData) {
