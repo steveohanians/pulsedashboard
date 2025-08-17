@@ -404,7 +404,7 @@ export default function Dashboard() {
                 <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
                   {viewAsUser?.name || user.name || user.email}
                 </span>
-                {viewAsUser && (
+                {viewAsUser && viewAsUser.id !== user?.id && (
                   <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                     Viewing as
                   </span>
@@ -979,7 +979,7 @@ export default function Dashboard() {
         isOpen={showCompetitorModal}
         onClose={() => setShowCompetitorModal(false)}
         competitors={competitors}
-        clientId={user?.clientId || ""}
+        clientId={viewAsClientId || user?.clientId || ""}
       />
 
       {/* Footer */}

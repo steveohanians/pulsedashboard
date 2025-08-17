@@ -71,8 +71,13 @@ export function ViewAsSelector({
   };
 
   const handleViewAs = async () => {
-    if (!selectedUserId || selectedUserId === currentUserId) {
+    if (!selectedUserId) {
       return;
+    }
+    
+    // Allow switching back to admin user or to any user
+    if (selectedUserId === currentUserId && !isViewingAs) {
+      return; // Already viewing as self and not in view-as mode
     }
 
     try {
