@@ -196,23 +196,27 @@ function generateAreaData(
           const periodData = timeSeriesData[period] || [];
           const clientMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'Client');
           const cdAvgMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'CD_Avg');
+          const industryMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'Industry_Avg');
           
           // Convert values and apply percentage conversion for Rate metrics
           let clientValue = Number(clientMetric?.value) || 0;
           let cdAvgValue = Number(cdAvgMetric?.value) || 0;
+          // Use fallback industry average when timeSeriesData is missing Industry_Avg
+          let industryValue = industryMetric ? Number(industryMetric.value) : industryAvg;
           
           if (metricName?.includes('Rate')) {
             cdAvgValue = cdAvgValue * 100; // Convert to percentage
+            industryValue = industryValue * 100; // Convert to percentage
           }
           
           // Create authentic data point
           const point: AreaDataPoint = {
             date: `Period ${index + 1}`,
             client: clientValue,
-            industryAvg: 0, // No synthetic data for industry
+            industryAvg: industryValue,
             cdAvg: cdAvgValue,
             [clientKey]: clientValue,
-            'Industry Avg': 0,
+            'Industry Avg': industryValue,
             'Clear Digital Clients Avg': cdAvgValue,
           };
           

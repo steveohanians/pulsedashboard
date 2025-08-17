@@ -711,9 +711,8 @@ export function TimeSeriesChart({ metricName, timePeriod, clientData, industryAv
           />
           <div 
             className={`w-3 h-3 mr-2 border-2 rounded-sm flex items-center justify-center transition-colors ${
-              visibleLines['Industry_Avg'] ? 'border-gray-400' : 'border-gray-300'
+              visibleLines['Industry_Avg'] ? 'bg-gray-400 border-gray-400' : 'border-gray-300'
             }`}
-            style={{ backgroundColor: visibleLines['Industry_Avg'] ? colors['Industry_Avg'] : 'transparent' }}
           >
             {visibleLines['Industry_Avg'] && (
               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
