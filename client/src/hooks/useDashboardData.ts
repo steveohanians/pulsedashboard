@@ -17,6 +17,7 @@ interface DashboardHookOptions {
   timePeriod: string;
   businessSize?: string;
   industryVertical?: string;
+  clientId?: string;
 }
 
 interface DashboardHookReturn {
@@ -51,7 +52,8 @@ interface DashboardHookReturn {
 export function useDashboardData({
   timePeriod = 'Last Month',
   businessSize = 'All',
-  industryVertical = 'All'
+  industryVertical = 'All',
+  clientId
 }: DashboardHookOptions): DashboardHookReturn {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -73,7 +75,7 @@ export function useDashboardData({
       try {
         const result = await apiRequest(
           'GET',
-          `/api/dashboard/${user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
+          `/api/dashboard/${clientId || user?.clientId}?timePeriod=${encodeURIComponent(effectiveTimePeriod)}&businessSize=${encodeURIComponent(businessSize)}&industryVertical=${encodeURIComponent(industryVertical)}`
         );
         
         // DEBUG: Log what we actually receive

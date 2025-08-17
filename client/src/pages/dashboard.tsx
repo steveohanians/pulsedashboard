@@ -39,6 +39,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import StatusBanner from "@/components/StatusBanner";
+import { ViewAsSelector } from '@/components/admin/ViewAsSelector';
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { MetricsChart } from "@/components/charts/metrics-chart";
@@ -67,6 +68,8 @@ export default function Dashboard() {
   const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
+  const [viewAsClientId, setViewAsClientId] = useState<string | null>(null);
+  const [viewAsUserName, setViewAsUserName] = useState<string | null>(null);
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -115,6 +118,7 @@ export default function Dashboard() {
     timePeriod: effectiveTimePeriod,
     businessSize,
     industryVertical,
+    clientId: viewAsClientId || user?.clientId || '',
   });
 
   // Use filters hook
@@ -481,10 +485,27 @@ export default function Dashboard() {
           className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
         >
           <StatusBanner
-            clientId={user?.clientId || ""}
+            clientId={viewAsClientId || user?.clientId || ""}
             timePeriod={timePeriod}
             isAdmin={user?.role === "Admin"}
           />
+
+          {/* Admin View-As Selector */}
+          {user?.role === "Admin" && (
+            <ViewAsSelector
+              currentUserId={user.id}
+              currentClientId={user.clientId || ''}
+              isAdmin={true}
+              onViewAs={(clientId, userName) => {
+                setViewAsClientId(clientId);
+                setViewAsUserName(userName);
+              }}
+              onReset={() => {
+                setViewAsClientId(null);
+                setViewAsUserName(null);
+              }}
+            />
+          )}
 
           <ErrorBanner
             error={dashboardError}
