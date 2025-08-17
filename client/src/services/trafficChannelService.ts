@@ -39,6 +39,22 @@ export class TrafficChannelService {
   }
 
   /**
+   * Map numeric channel identifiers (used by Industry_Avg) to standard channel names
+   */
+  private mapNumericChannelToName(channelIdentifier: string): string {
+    const numericChannelMap: Record<string, string> = {
+      '0': 'Organic Search',
+      '1': 'Direct', 
+      '2': 'Social Media',
+      '3': 'Paid Search',
+      '4': 'Email',
+      '5': 'Referral',
+      '6': 'Other'
+    };
+    return numericChannelMap[channelIdentifier] || channelIdentifier;
+  }
+
+  /**
    * Get channel color based on channel name
    */
   private getChannelColor(channelName: string): string {
@@ -138,10 +154,19 @@ export class TrafficChannelService {
     const industryMetrics = trafficMetrics.filter(m => m.sourceType === "Industry_Avg");
     if (industryMetrics.length > 0) {
       const channelMap = aggregateChannelData(industryMetrics);
-      const sortedChannels = sortChannelsByLegendOrder(channelMap).map(channel => ({
+      
+      // Convert numeric channel identifiers to proper channel names for Industry_Avg
+      const mappedChannelMap = new Map();
+      channelMap.forEach((value, key) => {
+        const mappedChannelName = this.mapNumericChannelToName(key);
+        mappedChannelMap.set(mappedChannelName, value);
+      });
+      
+      const sortedChannels = sortChannelsByLegendOrder(mappedChannelMap).map(channel => ({
         ...channel,
         color: this.getChannelColor(channel.name)
       }));
+
       
       result.push({
         sourceType: "Industry_Avg",
