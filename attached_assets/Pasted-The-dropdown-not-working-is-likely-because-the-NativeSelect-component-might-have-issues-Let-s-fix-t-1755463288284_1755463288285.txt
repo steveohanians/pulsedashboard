@@ -1,5 +1,16 @@
+The dropdown not working is likely because the NativeSelect component might have issues. Let's fix this with a simpler HTML select element.
+
+# Step 24: Fix the View-As Dropdown
+
+**INSTRUCTION FOR REPLIT:**
+Let's replace the NativeSelect with a standard HTML select element to fix the dropdown issue.
+
+**MODIFY `/client/src/components/admin/ViewAsSelector.tsx` - REPLACE THE NATIVESELECT:**
+
+Replace the entire component with this simpler version:
+
+```typescript
 import React, { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +64,8 @@ export function ViewAsSelector({
       }
       
       const data = await response.json();
+      console.log('Fetched users:', data); // Debug log
+      
       if (data.success && data.users) {
         setUsers(data.users);
         // Set current user as default selection
@@ -131,22 +144,23 @@ export function ViewAsSelector({
           <span className="text-sm font-medium">Admin View As:</span>
         </div>
         
-        <Select
+        {/* Use standard HTML select instead of NativeSelect */}
+        <select
           value={selectedUserId}
-          onValueChange={setSelectedUserId}
+          onChange={(e) => {
+            console.log('Selected user ID:', e.target.value); // Debug log
+            setSelectedUserId(e.target.value);
+          }}
           disabled={loading}
+          className="flex-1 max-w-sm text-sm px-3 py-1.5 border border-amber-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
-          <SelectTrigger className="flex-1 max-w-sm text-sm">
-            <SelectValue placeholder="Select a user..." />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map(user => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <option value="">Select a user...</option>
+          {users.map(user => (
+            <option key={user.id} value={user.id}>
+              {user.label}
+            </option>
+          ))}
+        </select>
         
         <Button
           size="sm"
@@ -176,6 +190,44 @@ export function ViewAsSelector({
           Currently viewing dashboard as: <strong>{users.find(u => u.id === selectedUserId)?.name}</strong>
         </div>
       )}
+      
+      {/* Debug info - remove in production */}
+      {loading && (
+        <div className="mt-2 text-xs text-amber-600">Loading users...</div>
+      )}
+      {!loading && users.length === 0 && (
+        <div className="mt-2 text-xs text-amber-600">No users loaded. Check console for errors.</div>
+      )}
     </div>
   );
 }
+```
+
+**Also, let's check if the middleware exists. If not, create it:**
+
+**CREATE `/server/middleware/auth.ts` (if it doesn't exist):**
+
+```typescript
+import { Request, Response, NextFunction } from 'express';
+
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  // Check if user is authenticated
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  next();
+};
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  // Check if user is an admin
+  if (req.session?.userRole !== 'Admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+```
+
+**After making these changes:**
+1. Check the browser console for the debug logs ("Fetched users:", "Selected user ID:")
+2. The dropdown should now work with the standard HTML select element
+3. Tell me if you can see the user list and if selecting a user works
