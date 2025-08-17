@@ -396,7 +396,7 @@ export default function Dashboard() {
                     />
                   )}
                   <AvatarFallback className="text-xs font-semibold">
-                    {(client?.name || "CL").substring(0, 2).toUpperCase()}
+                    {(user.name || user.email || "User").substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
