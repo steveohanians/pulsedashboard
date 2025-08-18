@@ -44,11 +44,11 @@ export default function BrandSignals() {
         return `https://${cleanUrl}`;
       };
 
-      // Fix competitor names and URLs
+      // Fix competitor names and URLs  
       const formattedCompetitors = competitors.map((c: any) => {
         const cleanDomain = c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
         return {
-          name: c.name || cleanDomain.split('.')[0], // Use domain name if no company name
+          name: c.label || cleanDomain.split('.')[0], // Use stored label (competitor name) from database
           url: formatUrl(c.domain)
         };
       });
@@ -211,7 +211,7 @@ export default function BrandSignals() {
                   <ul className="mt-2 ml-4">
                     {competitors.map((c: any) => (
                       <li key={c.id} className="text-xs">
-                        • {c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                        • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
                       </li>
                     ))}
                   </ul>
