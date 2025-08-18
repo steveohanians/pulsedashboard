@@ -5,10 +5,16 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { 
-  LogOut, 
-  TrendingUp, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  LogOut,
+  TrendingUp,
   RefreshCw,
   ArrowLeft,
   ExternalLink,
@@ -16,7 +22,7 @@ import {
   Circle,
   XCircle,
   Info,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
@@ -34,19 +40,19 @@ export default function BrandSignals() {
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
   const [isTestAnalysis, setIsTestAnalysis] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  
+
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
-    clientId: user?.clientId || '',
-    timePeriod: 'Last Month',
-    businessSize: 'All',
-    industryVertical: 'All'
+    clientId: user?.clientId || "",
+    timePeriod: "Last Month",
+    businessSize: "All",
+    industryVertical: "All",
   });
 
   // Add progress with simple string format
   const addProgress = (message: string) => {
-    setProgressSteps(prev => [...prev, message]);
-    setCurrentStep(prev => prev + 1);
+    setProgressSteps((prev) => [...prev, message]);
+    setCurrentStep((prev) => prev + 1);
   };
 
   // Function to run SoV analysis with direct response
@@ -56,75 +62,81 @@ export default function BrandSignals() {
     setProgressSteps([]);
     setErrorMessage("");
     setCurrentStep(-1);
-    
+
     try {
       // Format URLs properly
       const formatUrl = (url: string) => {
-        if (!url) return 'https://unknown.com';
-        let cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+        if (!url) return "https://unknown.com";
+        let cleanUrl = url.replace(/^https?:\/\//, "").replace(/^www\./, "");
         return `https://${cleanUrl}`;
       };
 
       // Build the request payload
       const payload = {
         brand: {
-          name: client?.name || 'Unknown',
-          url: formatUrl(client?.websiteUrl || 'unknown.com')
+          name: client?.name || "Unknown",
+          url: formatUrl(client?.websiteUrl || "unknown.com"),
         },
         competitors: competitors.slice(0, 3).map((c: any) => ({
-          name: c.label || c.name || c.domain.split('.')[0],
-          url: formatUrl(c.domain)
+          name: c.label || c.name || c.domain.split(".")[0],
+          url: formatUrl(c.domain),
         })),
-        vertical: client?.industryVertical || 'General'
+        vertical: client?.industryVertical || "General",
       };
-      
+
       // Show progress messages one at a time with delays
       addProgress(`Starting analysis for ${payload.brand.name}...`);
-      
+
       // Add delay to show progress
       setTimeout(() => {
-        addProgress(`Analyzing against ${payload.competitors.length} competitors`);
+        addProgress(
+          `Analyzing against ${payload.competitors.length} competitors`,
+        );
       }, 500);
-      
+
       setTimeout(() => {
         addProgress(`Processing... This may take 2-3 minutes`);
       }, 1000);
-      
+
       // Call the API and wait for results
-      const response = await fetch('/api/sov/analyze', {
-        method: 'POST',
+      const response = await fetch("/api/sov/analyze", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+        throw new Error(
+          errorData.error || errorData.message || `HTTP ${response.status}`,
+        );
       }
-      
+
       const data = await response.json();
-      
+
       // Check if we got valid results
       if (data.success === false) {
         setErrorMessage(data.error || "Analysis failed");
         return;
       }
-      
+
       // Set the results
       setAnalysisResults(data);
-      addProgress(`✅ Analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`);
-      
+      addProgress(
+        `✅ Analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`,
+      );
+
       toast({
         title: "Analysis Complete",
         description: `Successfully analyzed ${data.summary?.totalQuestions || 0} questions`,
       });
-      
     } catch (error: any) {
-      const errorMsg = error instanceof Error ? error.message : 'Analysis failed';
+      const errorMsg =
+        error instanceof Error ? error.message : "Analysis failed";
       setErrorMessage(errorMsg);
-      
+
       toast({
         title: "Analysis Failed",
         description: errorMsg,
@@ -142,70 +154,82 @@ export default function BrandSignals() {
     setAnalysisResults(null);
     setProgressSteps([]);
     setErrorMessage("");
-    
+
     try {
       // Hardcoded test data
       const testPayload = {
         brand: {
           name: "HubSpot",
-          url: "https://www.hubspot.com"
+          url: "https://www.hubspot.com",
         },
         competitors: [
           { name: "Salesforce", url: "https://www.salesforce.com" },
           { name: "Zoho", url: "https://www.zoho.com" },
-          { name: "Mailchimp", url: "https://mailchimp.com" }
+          { name: "Mailchimp", url: "https://mailchimp.com" },
         ],
-        vertical: "Marketing Software"
+        vertical: "Marketing Software",
       };
-      
+
       // Show progress messages
-      setProgressSteps([`Starting test analysis for ${testPayload.brand.name}...`]);
-      
+      setProgressSteps([
+        `Starting test analysis for ${testPayload.brand.name}...`,
+      ]);
+
       setTimeout(() => {
-        setProgressSteps(prev => [...prev, `Analyzing against well-known competitors`]);
+        setProgressSteps((prev) => [
+          ...prev,
+          `Analyzing against well-known competitors`,
+        ]);
       }, 500);
-      
+
       setTimeout(() => {
-        setProgressSteps(prev => [...prev, `Processing... This may take 2-3 minutes`]);
+        setProgressSteps((prev) => [
+          ...prev,
+          `Processing... This may take 2-3 minutes`,
+        ]);
       }, 1000);
-      
+
       // Call the API with test data
-      const response = await fetch('/api/sov/analyze', {
-        method: 'POST',
+      const response = await fetch("/api/sov/analyze", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(testPayload)
+        body: JSON.stringify(testPayload),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+        throw new Error(
+          errorData.error || errorData.message || `HTTP ${response.status}`,
+        );
       }
-      
+
       const data = await response.json();
-      
+
       // Check if we got valid results
       if (data.success === false) {
         setErrorMessage(data.error || "Test analysis failed");
-        setProgressSteps(prev => [...prev, `❌ Error: ${data.error}`]);
+        setProgressSteps((prev) => [...prev, `❌ Error: ${data.error}`]);
         return;
       }
-      
+
       // Set the results
       setAnalysisResults(data);
-      setProgressSteps(prev => [...prev, `✅ Test analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`]);
-      
+      setProgressSteps((prev) => [
+        ...prev,
+        `✅ Test analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`,
+      ]);
+
       toast({
         title: "Test Analysis Complete",
         description: `Successfully analyzed HubSpot vs competitors`,
       });
-      
     } catch (error: any) {
-      const errorMsg = error?.message || 'Test analysis failed';
+      const errorMsg = error?.message || "Test analysis failed";
       setErrorMessage(errorMsg);
-      setProgressSteps(prev => [...prev, `❌ Error: ${errorMsg}`]);
-      
+      setProgressSteps((prev) => [...prev, `❌ Error: ${errorMsg}`]);
+
       toast({
         title: "Test Analysis Failed",
         description: errorMsg,
@@ -259,13 +283,15 @@ export default function BrandSignals() {
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Avatar className="h-8 w-8">
                   {client?.iconUrl && (
-                    <AvatarImage 
+                    <AvatarImage
                       src={client.iconUrl}
                       alt={client?.name || "Client"}
                     />
                   )}
                   <AvatarFallback className="text-xs font-semibold">
-                    {(user.name || user.email || "User").substring(0, 2).toUpperCase()}
+                    {(user.name || user.email || "User")
+                      .substring(0, 2)
+                      .toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline truncate max-w-24 lg:max-w-32">
@@ -273,14 +299,14 @@ export default function BrandSignals() {
                 </span>
               </div>
             )}
-            
+
             <PdfExportButton
               targetRef={brandSignalsRef}
               clientLabel={client?.name}
               clientName={client?.name}
               className="ml-1"
             />
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -294,55 +320,83 @@ export default function BrandSignals() {
       </header>
 
       {/* Main Content */}
-      <div ref={brandSignalsRef} className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        
+      <div
+        ref={brandSignalsRef}
+        className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
+      >
         {/* Back to Dashboard Link - IN BODY NOW */}
         <div className="mb-4">
-          <Link href="/" className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
         </div>
-        
+
         {/* Main Container Card - Similar to Dashboard's Bounce Rate */}
         <Card id="ai-share-of-voice" className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg lg:text-xl">AI Share of Voice</CardTitle>
+            <CardTitle className="text-lg lg:text-xl">
+              AI Share of Voice
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-slate-50/50 rounded-xl p-6">
+            <div className="bg-slate-50/50 rounded-xl">
               {/* Description */}
               <p className="text-slate-600 text-sm mb-6">
-                This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
-                It is not based on SEO rankings, ads, or social mentions.
+                This analysis reflects how OpenAI's ChatGPT responds to key
+                industry questions. It is not based on SEO rankings, ads, or
+                social mentions.
               </p>
 
               {/* Pulse AI Analysis Section - Matching Dashboard's Pulse AI Insight styling */}
               <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-6">
                 <div className="flex items-center mb-4">
                   <Sparkles className="h-5 w-5 text-primary mr-3" />
-                  <h3 className="text-lg font-bold text-primary">Pulse AI Analysis</h3>
+                  <h3 className="text-lg font-bold text-primary">
+                    Pulse AI Analysis
+                  </h3>
                 </div>
 
                 {/* Client/Website/Competitors Info Block */}
                 <div className="text-sm text-slate-600 mb-6">
-                  <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
-                  <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
-                  <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
+                  <p>
+                    <strong>Client:</strong> {client?.name || "Loading..."}
+                  </p>
+                  <p>
+                    <strong>Website:</strong>{" "}
+                    {client?.websiteUrl?.replace(/^https?:\/\//, "") ||
+                      "Loading..."}
+                  </p>
+                  <p>
+                    <strong>Competitors:</strong> {competitors?.length || 0}{" "}
+                    configured
+                  </p>
                   {competitors?.length > 0 && (
                     <ul className="mt-2 ml-4">
                       {competitors.map((c: any) => (
                         <li key={c.id} className="text-xs">
-                          • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
+                          •{" "}
+                          {c.label ||
+                            c.domain
+                              .replace(/^https?:\/\//, "")
+                              .replace(/^www\./, "")}{" "}
+                          (
+                          {c.domain
+                            .replace(/^https?:\/\//, "")
+                            .replace(/^www\./, "")}
+                          )
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-                
+
                 {/* Two Buttons */}
                 <div className="flex gap-4 mb-6">
-                  <Button 
+                  <Button
                     className="flex-1 h-10"
                     onClick={runAnalysis}
                     disabled={isAnalyzing || !client}
@@ -359,8 +413,8 @@ export default function BrandSignals() {
                       </>
                     )}
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     variant="outline"
                     className="flex-1 h-10"
                     onClick={runTestAnalysis}
@@ -379,28 +433,42 @@ export default function BrandSignals() {
                     )}
                   </Button>
                 </div>
-                
+
                 {/* Progress Steps - appear below buttons when running */}
                 {isAnalyzing && progressSteps.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+                    <h4 className="text-sm font-medium text-slate-700">
+                      Analysis Progress:
+                    </h4>
                     {progressSteps.map((step, index) => {
-                      const isExplicitlyCompleted = step.includes('✅');
-                      const isFailed = step.includes('❌');
-                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
-                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
-                      
+                      const isExplicitlyCompleted = step.includes("✅");
+                      const isFailed = step.includes("❌");
+                      const isCurrentStep =
+                        index === progressSteps.length - 1 &&
+                        !isExplicitlyCompleted &&
+                        !isFailed;
+                      const isImplicitlyCompleted =
+                        !isExplicitlyCompleted && !isFailed && !isCurrentStep;
+
                       return (
-                        <div key={index} className="flex items-center space-x-3 text-sm">
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3 text-sm"
+                        >
                           <div className="flex-shrink-0">
-                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
+                            {(isExplicitlyCompleted ||
+                              isImplicitlyCompleted) && (
                               <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-green-600 text-xs font-bold">✓</span>
+                                <span className="text-green-600 text-xs font-bold">
+                                  ✓
+                                </span>
                               </div>
                             )}
                             {isFailed && (
                               <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 text-xs font-bold">✕</span>
+                                <span className="text-red-600 text-xs font-bold">
+                                  ✕
+                                </span>
                               </div>
                             )}
                             {isCurrentStep && (
@@ -409,7 +477,13 @@ export default function BrandSignals() {
                               </div>
                             )}
                           </div>
-                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                          <span
+                            className={
+                              step.includes("❌")
+                                ? "text-red-700"
+                                : "text-slate-700"
+                            }
+                          >
                             {step}
                           </span>
                         </div>
@@ -417,7 +491,7 @@ export default function BrandSignals() {
                     })}
                   </div>
                 )}
-                
+
                 {/* Error Message Display */}
                 {errorMessage && (
                   <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -434,36 +508,58 @@ export default function BrandSignals() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                       <Card className="bg-slate-50">
                         <CardContent className="p-6">
-                          <div className="text-xs font-medium text-slate-600 mb-1">Overall ChatGPT SoV</div>
-                          <div className="text-2xl font-bold text-primary">
-                            {analysisResults.metrics?.overallSoV?.[analysisResults.summary?.brand] || 0}%
+                          <div className="text-xs font-medium text-slate-600 mb-1">
+                            Overall ChatGPT SoV
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                          <div className="text-2xl font-bold text-primary">
+                            {analysisResults.metrics?.overallSoV?.[
+                              analysisResults.summary?.brand
+                            ] || 0}
+                            %
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Data source: AI responses to generated questions
+                          </p>
                         </CardContent>
                       </Card>
-                      
+
                       <Card className="bg-slate-50">
                         <CardContent className="p-6">
-                          <div className="text-xs font-medium text-slate-600 mb-1">Question Coverage</div>
-                          <div className="text-2xl font-bold text-primary">
-                            {analysisResults.metrics?.questionCoverage?.[analysisResults.summary?.brand] || 0}%
+                          <div className="text-xs font-medium text-slate-600 mb-1">
+                            Question Coverage
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                          <div className="text-2xl font-bold text-primary">
+                            {analysisResults.metrics?.questionCoverage?.[
+                              analysisResults.summary?.brand
+                            ] || 0}
+                            %
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Data source: AI responses to generated questions
+                          </p>
                         </CardContent>
                       </Card>
-                      
+
                       <Card className="bg-slate-50">
                         <CardContent className="p-6">
-                          <div className="text-xs font-medium text-slate-600 mb-1">AI Visibility Leader</div>
+                          <div className="text-xs font-medium text-slate-600 mb-1">
+                            AI Visibility Leader
+                          </div>
                           <div className="text-lg font-bold text-slate-800 truncate">
                             {(() => {
-                              const sov = analysisResults.metrics?.overallSoV || {};
-                              const leader = Object.entries(sov).reduce((a, b) => 
-                                (b[1] as number) > (a[1] as number) ? b : a, ['None', 0]);
+                              const sov =
+                                analysisResults.metrics?.overallSoV || {};
+                              const leader = Object.entries(sov).reduce(
+                                (a, b) =>
+                                  (b[1] as number) > (a[1] as number) ? b : a,
+                                ["None", 0],
+                              );
                               return leader[0];
                             })()}
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Data source: AI responses to generated questions
+                          </p>
                         </CardContent>
                       </Card>
                     </div>
@@ -474,70 +570,106 @@ export default function BrandSignals() {
                       {analysisResults.questionResults && (
                         <Card className="bg-slate-50">
                           <CardHeader>
-                            <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
-                            <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                            <CardTitle className="text-lg">
+                              Performance by Buyer Journey Stage
+                            </CardTitle>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Data source: AI responses to generated questions
+                            </p>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-6">
-                              {['awareness', 'consideration', 'decision'].map(stage => {
-                                const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
-                                const brandName = analysisResults.summary?.brand;
-                                
-                                // Calculate average SoV for this stage
-                                const stageSoV = stageQuestions.reduce((sum: number, q: any) => {
-                                  return sum + (q.sov?.[brandName] || 0);
-                                }, 0) / (stageQuestions.length || 1);
-                                
-                                // Find stage leader
-                                const allBrands = new Set<string>();
-                                stageQuestions.forEach((q: any) => {
-                                  Object.keys(q.sov || {}).forEach(brand => allBrands.add(brand));
-                                });
-                                
-                                const brandAverages = Array.from(allBrands).map(brand => ({
-                                  brand,
-                                  avg: stageQuestions.reduce((sum: number, q: any) => 
-                                    sum + (q.sov?.[brand] || 0), 0) / (stageQuestions.length || 1)
-                                }));
-                                
-                                const stageLeader = brandAverages.reduce((a, b) => 
-                                  b.avg > a.avg ? b : a, { brand: 'None', avg: 0 });
-                                
-                                return (
-                                  <div key={stage} className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium capitalize">{stage}</span>
-                                        <button 
-                                          onClick={() => setShowQuestionsDialog(true)}
-                                          className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
-                                        >
-                                          ({stageQuestions.length} questions)
-                                        </button>
-                                      </div>
-                                      <div className="text-sm text-slate-600">
-                                        Leader: <span className="font-medium">{stageLeader.brand}</span> ({Math.round(stageLeader.avg)}%)
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                      <span className="text-sm font-medium text-slate-700 w-20">Your SoV:</span>
-                                      <div className="flex-1">
+                              {["awareness", "consideration", "decision"].map(
+                                (stage) => {
+                                  const stageQuestions =
+                                    analysisResults.questionResults.filter(
+                                      (q: any) => q.stage === stage,
+                                    );
+                                  const brandName =
+                                    analysisResults.summary?.brand;
+
+                                  // Calculate average SoV for this stage
+                                  const stageSoV =
+                                    stageQuestions.reduce(
+                                      (sum: number, q: any) => {
+                                        return sum + (q.sov?.[brandName] || 0);
+                                      },
+                                      0,
+                                    ) / (stageQuestions.length || 1);
+
+                                  // Find stage leader
+                                  const allBrands = new Set<string>();
+                                  stageQuestions.forEach((q: any) => {
+                                    Object.keys(q.sov || {}).forEach((brand) =>
+                                      allBrands.add(brand),
+                                    );
+                                  });
+
+                                  const brandAverages = Array.from(
+                                    allBrands,
+                                  ).map((brand) => ({
+                                    brand,
+                                    avg:
+                                      stageQuestions.reduce(
+                                        (sum: number, q: any) =>
+                                          sum + (q.sov?.[brand] || 0),
+                                        0,
+                                      ) / (stageQuestions.length || 1),
+                                  }));
+
+                                  const stageLeader = brandAverages.reduce(
+                                    (a, b) => (b.avg > a.avg ? b : a),
+                                    { brand: "None", avg: 0 },
+                                  );
+
+                                  return (
+                                    <div key={stage} className="space-y-2">
+                                      <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                          <div className="flex-1 bg-slate-200 rounded-full h-3">
-                                            <div 
-                                              className="bg-primary h-3 rounded-full transition-all duration-500"
-                                              style={{ width: `${Math.min(100, Math.round(stageSoV))}%` }}
-                                            />
-                                          </div>
-                                          <span className="text-sm font-bold text-slate-800 w-12 text-right">
-                                            {Math.round(stageSoV)}%
+                                          <span className="font-medium capitalize">
+                                            {stage}
                                           </span>
+                                          <button
+                                            onClick={() =>
+                                              setShowQuestionsDialog(true)
+                                            }
+                                            className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
+                                          >
+                                            ({stageQuestions.length} questions)
+                                          </button>
+                                        </div>
+                                        <div className="text-sm text-slate-600">
+                                          Leader:{" "}
+                                          <span className="font-medium">
+                                            {stageLeader.brand}
+                                          </span>{" "}
+                                          ({Math.round(stageLeader.avg)}%)
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className="text-sm font-medium text-slate-700 w-20">
+                                          Your SoV:
+                                        </span>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <div className="flex-1 bg-slate-200 rounded-full h-3">
+                                              <div
+                                                className="bg-primary h-3 rounded-full transition-all duration-500"
+                                                style={{
+                                                  width: `${Math.min(100, Math.round(stageSoV))}%`,
+                                                }}
+                                              />
+                                            </div>
+                                            <span className="text-sm font-bold text-slate-800 w-12 text-right">
+                                              {Math.round(stageSoV)}%
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                },
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -546,22 +678,38 @@ export default function BrandSignals() {
                       {/* AI Share of Voice by Competitor */}
                       <Card className="bg-slate-50">
                         <CardHeader>
-                          <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
-                          <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                          <CardTitle className="text-lg">
+                            AI Share of Voice by Competitor
+                          </CardTitle>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Data source: AI responses to generated questions
+                          </p>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            {Object.entries(analysisResults.metrics?.overallSoV || {}).map(([brand, percentage]) => (
-                              <div key={brand} className="flex items-center gap-4">
-                                <div className="w-32 text-sm font-medium text-slate-700 truncate">{brand}</div>
+                            {Object.entries(
+                              analysisResults.metrics?.overallSoV || {},
+                            ).map(([brand, percentage]) => (
+                              <div
+                                key={brand}
+                                className="flex items-center gap-4"
+                              >
+                                <div className="w-32 text-sm font-medium text-slate-700 truncate">
+                                  {brand}
+                                </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <div className="flex-1 bg-slate-200 rounded-full h-3">
-                                      <div 
+                                      <div
                                         className={`h-3 rounded-full transition-all duration-500 ${
-                                          brand === analysisResults.summary?.brand ? 'bg-primary' : 'bg-slate-400'
+                                          brand ===
+                                          analysisResults.summary?.brand
+                                            ? "bg-primary"
+                                            : "bg-slate-400"
                                         }`}
-                                        style={{ width: `${String(percentage)}%` }}
+                                        style={{
+                                          width: `${String(percentage)}%`,
+                                        }}
                                       />
                                     </div>
                                     <span className="text-sm font-bold text-slate-800 w-16 text-right">
@@ -579,15 +727,79 @@ export default function BrandSignals() {
                     {/* Strategic Insights & Recommendations - Full Width */}
                     <Card className="mb-6 bg-slate-50">
                       <CardHeader>
-                        <CardTitle className="text-lg">Strategic Insights & Recommendations</CardTitle>
-                        <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                        <CardTitle className="text-lg">
+                          Strategic Insights & Recommendations
+                        </CardTitle>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Data source: AI responses to generated questions
+                        </p>
                       </CardHeader>
                       <CardContent className="pt-0">
-                        <div className="prose prose-sm max-w-none">
-                          <div className="whitespace-pre-wrap text-slate-700">
-                            {analysisResults.summary?.strategicInsights || 
-                              "Strategic insights will appear here after running an analysis."}
-                          </div>
+                        <div className="space-y-4">
+                          {analysisResults.summary?.strategicInsights ? (
+                            (() => {
+                              // Parse strategic insights into individual insight objects
+                              const parseInsights = (insightsText: string) => {
+                                const insights = insightsText.split('\n\n').map(insight => {
+                                  const lines = insight.split('\n');
+                                  if (lines.length < 3) return null;
+                                  
+                                  const title = lines[0].trim();
+                                  const description = lines[1].trim();
+                                  const actionLine = lines.find(line => line.startsWith('Action:'));
+                                  const deliverablesLine = lines.find(line => line.startsWith('Deliverables:'));
+                                  
+                                  const action = actionLine ? actionLine.replace('Action:', '').trim() : '';
+                                  const deliverables = deliverablesLine ? deliverablesLine.replace('Deliverables:', '').trim() : '';
+                                  
+                                  // Determine performance level from title/content
+                                  let performanceLevel = 'ok'; // default orange
+                                  if (title.includes('Scale Market Momentum') || title.includes('Strong') || 
+                                      description.includes('Strong performance') || description.includes('amplify')) {
+                                    performanceLevel = 'good'; // green
+                                  } else if (title.includes('Insufficient') || title.includes('Crack') || 
+                                            title.includes('Close') || title.includes('invisible') || 
+                                            title.includes('Missing') || description.includes('0%')) {
+                                    performanceLevel = 'bad'; // red
+                                  }
+                                  
+                                  return { title, description, action, deliverables, performanceLevel };
+                                }).filter(Boolean);
+                                
+                                return insights;
+                              };
+                              
+                              const insights = parseInsights(analysisResults.summary.strategicInsights);
+                              
+                              return insights.map((insight: any, index: number) => {
+                                const bgColorClass = 
+                                  insight.performanceLevel === 'good' ? 'bg-green-50 border-green-200' :
+                                  insight.performanceLevel === 'bad' ? 'bg-red-50 border-red-200' :
+                                  'bg-orange-50 border-orange-200';
+                                
+                                return (
+                                  <div key={index} className={`p-4 rounded-lg border ${bgColorClass}`}>
+                                    <h4 className="font-bold text-slate-800 mb-2">{insight.title}</h4>
+                                    <p className="text-slate-700 mb-3">{insight.description}</p>
+                                    {insight.action && (
+                                      <p className="text-slate-700 mb-2">
+                                        <span className="font-bold">Action:</span> {insight.action}
+                                      </p>
+                                    )}
+                                    {insight.deliverables && (
+                                      <p className="text-slate-700">
+                                        <span className="font-bold">Deliverables:</span> {insight.deliverables}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              });
+                            })()
+                          ) : (
+                            <div className="text-slate-500 text-center py-8">
+                              Strategic insights will appear here after running an analysis.
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -599,25 +811,37 @@ export default function BrandSignals() {
         </Card>
 
         {/* Questions Dialog */}
-        <Dialog open={showQuestionsDialog} onOpenChange={setShowQuestionsDialog}>
+        <Dialog
+          open={showQuestionsDialog}
+          onOpenChange={setShowQuestionsDialog}
+        >
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Generated Questions by Stage</DialogTitle>
               <DialogDescription>
-                These are the questions our AI generated to analyze your brand's share of voice across the buyer journey.
+                These are the questions our AI generated to analyze your brand's
+                share of voice across the buyer journey.
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto">
               {analysisResults?.questionResults && (
                 <div className="space-y-6">
-                  {['awareness', 'consideration', 'decision'].map(stage => {
-                    const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                  {["awareness", "consideration", "decision"].map((stage) => {
+                    const stageQuestions =
+                      analysisResults.questionResults.filter(
+                        (q: any) => q.stage === stage,
+                      );
                     return (
                       <div key={stage} className="space-y-3">
-                        <h4 className="font-semibold capitalize text-primary">{stage} Stage</h4>
+                        <h4 className="font-semibold capitalize text-primary">
+                          {stage} Stage
+                        </h4>
                         <ul className="space-y-2">
                           {stageQuestions.map((q: any, i: number) => (
-                            <li key={i} className="text-sm text-slate-600 pl-4 border-l-2 border-slate-200">
+                            <li
+                              key={i}
+                              className="text-sm text-slate-600 pl-4 border-l-2 border-slate-200"
+                            >
                               {q.question}
                             </li>
                           ))}
@@ -634,15 +858,17 @@ export default function BrandSignals() {
         {/* Placeholder for future sections */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-slate-400">Brand Perception - Coming Soon</CardTitle>
+            <CardTitle className="text-slate-400">
+              Brand Perception - Coming Soon
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-500">
-              Track how AI platforms describe your brand with sentiment analysis and competitive positioning.
+              Track how AI platforms describe your brand with sentiment analysis
+              and competitive positioning.
             </p>
           </CardContent>
         </Card>
-        
       </div>
     </div>
   );

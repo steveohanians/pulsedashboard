@@ -557,6 +557,7 @@ etc.`
     overallSoV: Record<string, number>
   ): string {
     const insights: string[] = [];
+    const usedArchetypes: Set<string> = new Set();
     const stages = ['awareness', 'consideration', 'decision'];
     
     // Find priority gaps (largest positive gap = competitor avg - brand SoV)
@@ -566,8 +567,11 @@ etc.`
       data: stageMetrics[stage]
     })).sort((a, b) => b.gap - a.gap);
     
-    // Apply archetype triggers in priority order
+    // Apply archetype triggers in priority order (max 5, no repeats)
     gaps.forEach(({ stage, gap, data }) => {
+      // Stop if we already have 5 insights
+      if (insights.length >= 5) return;
+      
       const brandSoV = data.brandSoV;
       const competitorAvg = data.competitorAvg;
       const othersAvg = data.othersAvg;
@@ -575,7 +579,11 @@ etc.`
       
       // Skip if insufficient data
       if (questions < 3) {
-        insights.push(`**Insufficient ${stage.charAt(0).toUpperCase() + stage.slice(1)} Data**\n${brandName} analyzed across ${questions} ${stage} question(s). Minimum 3 questions needed for reliable insights.\nAction: Expand question set for comprehensive ${stage} analysis.\nDelivered by Clear Digital: Brand Strategy & Messaging; Content development; Market research expansion.`);
+        const archetype = 'Insufficient Data';
+        if (!usedArchetypes.has(archetype)) {
+          usedArchetypes.add(archetype);
+          insights.push(`Insufficient ${stage.charAt(0).toUpperCase() + stage.slice(1)} Data\n${brandName} analyzed across ${questions} ${stage} question(s). Minimum 3 questions needed for reliable insights.\nAction: Expand question set for comprehensive ${stage} analysis.\nDeliverables: Brand Strategy & Messaging; Content development; Market research expansion.`);
+        }
         return;
       }
       
@@ -583,31 +591,55 @@ etc.`
       if (brandSoV === 0) {
         // Absent = 0% presence
         if (stage === 'awareness') {
-          insights.push(`**Crack the Visibility Lists**\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Currently invisible in category discussions.\nAction: Earn inclusion in category roundups/directories and publish cite-able explainers.\nDelivered by Clear Digital: Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.`);
+          const archetype = 'Crack the Visibility Lists';
+          if (!usedArchetypes.has(archetype)) {
+            usedArchetypes.add(archetype);
+            insights.push(`Crack the Visibility Lists\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Currently invisible in category discussions.\nAction: Earn inclusion in category roundups/directories and publish cite-able explainers.\nDeliverables: Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.`);
+          }
         } else if (stage === 'consideration') {
-          insights.push(`**Close the Shortlist Gap**\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Missing from buyer shortlists entirely.\nAction: Build comparison pages, evaluator checklists, "why us" proof.\nDelivered by Clear Digital: Web design & development; UX/UI; Messaging frameworks; Landing pages.`);
+          const archetype = 'Close the Shortlist Gap';
+          if (!usedArchetypes.has(archetype)) {
+            usedArchetypes.add(archetype);
+            insights.push(`Close the Shortlist Gap\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Missing from buyer shortlists entirely.\nAction: Build comparison pages, evaluator checklists, "why us" proof.\nDeliverables: Web design & development; UX/UI; Messaging frameworks; Landing pages.`);
+          }
         }
       } else if (brandSoV + 5 < competitorAvg) {
         // Underperforming = brandSoV + 5pp < competitor avg
         if (stage === 'awareness') {
-          insights.push(`**Own the Category Narrative**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Underperforming in early-stage visibility.\nAction: Publish POV frameworks, definitions, and comparison primers AI can quote.\nDelivered by Clear Digital: Brand Platform/Messaging; Content development; Campaign creative.`);
+          const archetype = 'Own the Category Narrative';
+          if (!usedArchetypes.has(archetype)) {
+            usedArchetypes.add(archetype);
+            insights.push(`Own the Category Narrative\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Underperforming in early-stage visibility.\nAction: Publish POV frameworks, definitions, and comparison primers AI can quote.\nDeliverables: Brand Platform/Messaging; Content development; Campaign creative.`);
+          }
         } else if (stage === 'decision') {
-          insights.push(`**Prove Measurable Outcomes**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Failing to demonstrate clear ROI/impact.\nAction: Quantified case studies; before/after KPIs; outcome dashboards.\nDelivered by Clear Digital: KPI analysis, conversion tracking, engagement analytics; Analytics dashboards.`);
+          const archetype = 'Prove Measurable Outcomes';
+          if (!usedArchetypes.has(archetype)) {
+            usedArchetypes.add(archetype);
+            insights.push(`Prove Measurable Outcomes\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Failing to demonstrate clear ROI/impact.\nAction: Quantified case studies; before/after KPIs; outcome dashboards.\nDeliverables: KPI analysis, conversion tracking, engagement analytics; Analytics dashboards.`);
+          }
         }
       } else if (brandSoV >= competitorAvg - 5) {
         // Strong = brandSoV ≥ competitor avg - 5pp
-        insights.push(`**Scale Market Momentum**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Strong performance to amplify.\nAction: Amplify what's working across paid/earned/owned; expand formats.\nDelivered by Clear Digital: Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative/motion.`);
+        const archetype = 'Scale Market Momentum';
+        if (!usedArchetypes.has(archetype)) {
+          usedArchetypes.add(archetype);
+          insights.push(`Scale Market Momentum\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Strong performance to amplify.\nAction: Amplify what's working across paid/earned/owned; expand formats.\nDeliverables: Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative/motion.`);
+        }
       }
       
       // Check for fragmented market control
       if (othersAvg >= Math.max(competitorAvg, 20)) {
-        insights.push(`**Control the Fragmented Space**\n"Others" at ${othersAvg}% vs competitor avg ${competitorAvg}% in ${stage}. Market highly fragmented.\nAction: Publish authoritative, comprehensive category resources to consolidate scattered mentions.\nDelivered by Clear Digital: Authoritative content hubs; Comparison matrices; Information architecture updates.`);
+        const archetype = 'Control the Fragmented Space';
+        if (!usedArchetypes.has(archetype) && insights.length < 5) {
+          usedArchetypes.add(archetype);
+          insights.push(`Control the Fragmented Space\n"Others" at ${othersAvg}% vs competitor avg ${competitorAvg}% in ${stage}. Market highly fragmented.\nAction: Publish authoritative, comprehensive category resources to consolidate scattered mentions.\nDeliverables: Authoritative content hubs; Comparison matrices; Information architecture updates.`);
+        }
       }
     });
     
     // If no specific insights triggered, add generic recommendations
     if (insights.length === 0) {
-      insights.push(`**Differentiate with Signature Strengths**\n${brandName} shows presence but lacks distinctive positioning vs competitors. Generic associations detected.\nAction: Name/seed distinctive features, verticals, methods across site & content.\nDelivered by Clear Digital: Positioning + product messaging; Industry/vertical landing pages; Motion/visual stories.`);
+      insights.push(`Differentiate with Signature Strengths\n${brandName} shows presence but lacks distinctive positioning vs competitors. Generic associations detected.\nAction: Name/seed distinctive features, verticals, methods across site & content.\nDeliverables: Positioning + product messaging; Industry/vertical landing pages; Motion/visual stories.`);
     }
     
     return insights.join('\n\n');
