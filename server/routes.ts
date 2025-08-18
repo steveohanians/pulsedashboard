@@ -3296,14 +3296,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Domain is required" });
       }
       
+      // Clean domain name - remove protocols, www, paths, ports
+      const cleanDomain = domain
+        .replace(/^https?:\/\//, '') // Remove http:// or https://
+        .replace(/^www\./, '')       // Remove www.
+        .replace(/:\d+/, '')         // Remove port numbers
+        .replace(/\/.*$/, '')        // Remove paths and trailing content
+        .trim();
+      
+      if (!cleanDomain) {
+        return res.status(400).json({ message: "Invalid domain provided" });
+      }
+      
       // Verify client exists
       const client = await storage.getClient(id);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      // Call Brandfetch API
-      const brandfetchResponse = await fetch(`https://api.brandfetch.io/v2/brands/${domain}`, {
+      // Call Brandfetch API with cleaned domain
+      const brandfetchResponse = await fetch(`https://api.brandfetch.io/v2/brands/${cleanDomain}`, {
         headers: {
           'Authorization': `Bearer ${process.env.BRANDFETCH_API_KEY}`,
           'Content-Type': 'application/json'
