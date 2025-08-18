@@ -577,21 +577,20 @@ export default function BrandSignals() {
                     </div>
 
                     {/* Strategic Insights & Recommendations - Full Width */}
-                    {analysisResults.summary?.strategicInsights && (
-                      <Card className="mb-6">
-                        <CardHeader>
-                          <CardTitle className="text-lg">Strategic Insights & Recommendations</CardTitle>
-                          <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="prose prose-sm max-w-none">
-                            <div className="whitespace-pre-wrap text-slate-700">
-                              {analysisResults.summary.strategicInsights}
-                            </div>
+                    <Card className="mb-6">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Strategic Insights & Recommendations</CardTitle>
+                        <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="prose prose-sm max-w-none">
+                          <div className="whitespace-pre-wrap text-slate-700">
+                            {analysisResults.summary?.strategicInsights || 
+                              "Strategic insights will appear here after running an analysis."}
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </div>
