@@ -395,7 +395,7 @@ export default function Dashboard() {
             {/* User Avatar and Name - Show viewed user when admin is viewing as someone */}
             {user && (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <Avatar className="h-8 w-8">
+                <Avatar className={`h-8 w-8 ${client?.iconUrl ? 'bg-[#8c8c8c]' : ''}`}>
                   {client?.iconUrl && (
                     <AvatarImage 
                       src={client.iconUrl}
