@@ -659,73 +659,198 @@ export default function BrandSignals() {
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <span>💡</span> Strategic Insights
+                  <span>💡</span> Strategic Insights & Recommendations
                 </CardTitle>
+                <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {(() => {
                     const brandName = analysisResults.summary?.brand;
-                    const brandSoV = analysisResults.metrics?.overallSoV?.[brandName] || 0;
+                    const questionResults = analysisResults.questionResults || [];
                     const insights = [];
                     
-                    // Generate insights based on data
-                    if (brandSoV < 20) {
-                      insights.push({
-                        type: 'warning',
-                        title: 'Low Brand Visibility',
-                        text: 'Your brand has limited presence in AI-generated responses. Consider creating more authoritative content and building stronger brand signals.'
-                      });
-                    } else if (brandSoV > 40) {
-                      insights.push({
-                        type: 'success',
-                        title: 'Strong Market Position',
-                        text: 'Your brand is well-represented in AI responses. Continue building on this momentum with consistent content strategy.'
-                      });
-                    } else {
-                      insights.push({
-                        type: 'info',
-                        title: 'Moderate Brand Presence',
-                        text: `Your brand captures ${brandSoV.toFixed(1)}% share of voice. There's opportunity to increase visibility through targeted content and strategic positioning.`
-                      });
-                    }
-                    
-                    // Check stage performance
+                    // Calculate stage-specific metrics
                     const stages = ['awareness', 'consideration', 'decision'];
+                    const stageMetrics = {};
+                    
                     stages.forEach(stage => {
-                      const stageQ = analysisResults.questionResults?.filter((q: any) => q.stage === stage) || [];
-                      const avgSoV = stageQ.reduce((sum: number, q: any) => 
-                        sum + (q.sov?.[brandName] || 0), 0) / (stageQ.length || 1);
+                      const stageQuestions = questionResults.filter((q: any) => q.stage === stage);
+                      const brandSoV = stageQuestions.reduce((sum: number, q: any) => 
+                        sum + (q.sov?.[brandName] || 0), 0) / (stageQuestions.length || 1);
                       
-                      if (avgSoV < 15) {
-                        insights.push({
-                          type: 'warning',
-                          title: `Weak ${stage.charAt(0).toUpperCase() + stage.slice(1)} Stage`,
-                          text: `Low visibility in ${stage} stage queries. Focus on creating content that addresses ${
-                            stage === 'awareness' ? 'educational and introductory topics' :
-                            stage === 'consideration' ? 'comparison and evaluation criteria' :
-                            'implementation and pricing information'
-                          }.`
+                      // Calculate competitor average (excluding "Others")
+                      const allBrands = new Set<string>();
+                      stageQuestions.forEach((q: any) => {
+                        Object.keys(q.sov || {}).forEach(brand => {
+                          if (brand !== 'Others') allBrands.add(brand);
+                        });
+                      });
+                      
+                      const competitorSoVs = Array.from(allBrands)
+                        .filter(brand => brand !== brandName)
+                        .map(brand => {
+                          return stageQuestions.reduce((sum: number, q: any) => 
+                            sum + (q.sov?.[brand] || 0), 0) / (stageQuestions.length || 1);
+                        });
+                      
+                      const competitorAvg = competitorSoVs.length > 0 ? 
+                        competitorSoVs.reduce((sum, val) => sum + val, 0) / competitorSoVs.length : 0;
+                      
+                      // Calculate "Others" percentage
+                      const othersAvg = stageQuestions.reduce((sum: number, q: any) => 
+                        sum + (q.sov?.['Others'] || 0), 0) / (stageQuestions.length || 1);
+                      
+                      stageMetrics[stage] = {
+                        brandSoV: Math.round(brandSoV * 10) / 10,
+                        competitorAvg: Math.round(competitorAvg * 10) / 10,
+                        othersAvg: Math.round(othersAvg * 10) / 10,
+                        questionCount: stageQuestions.length
+                      };
+                    });
+                    
+                    // Apply archetype logic with priority: largest gap, then Decision → Consideration → Awareness
+                    const stageOrder = ['decision', 'consideration', 'awareness'];
+                    const archetype_insights = [];
+                    
+                    stageOrder.forEach(stage => {
+                      const metrics = stageMetrics[stage];
+                      if (!metrics || metrics.questionCount < 3) return; // Insufficient data
+                      
+                      const brandSoV = metrics.brandSoV;
+                      const competitorAvg = metrics.competitorAvg;
+                      const othersAvg = metrics.othersAvg;
+                      const gap = competitorAvg - brandSoV;
+                      
+                      // Archetype matching
+                      if (brandSoV === 0) {
+                        // Absent
+                        if (stage === 'awareness') {
+                          archetype_insights.push({
+                            title: "Crack the Visibility Lists",
+                            rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Zero presence in category discovery.`,
+                            action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
+                            deliverables: "Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.",
+                            priority: gap,
+                            type: 'critical'
+                          });
+                        } else if (stage === 'consideration') {
+                          archetype_insights.push({
+                            title: "Close the Shortlist Gap",
+                            rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Missing from evaluation shortlists.`,
+                            action: "Build comparison pages, evaluator checklists, \"why us\" proof.",
+                            deliverables: "Web design & development; UX/UI; Messaging frameworks; Landing pages.",
+                            priority: gap,
+                            type: 'critical'
+                          });
+                        }
+                      } else if (brandSoV + 5 < competitorAvg) {
+                        // Underperforming
+                        if (stage === 'awareness') {
+                          archetype_insights.push({
+                            title: "Own the Category Narrative",
+                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Lagging in thought leadership.`,
+                            action: "Publish POV frameworks, definitions, and comparison primers AI can quote.",
+                            deliverables: "Brand Platform/Messaging; Content development; Campaign creative.",
+                            priority: gap,
+                            type: 'warning'
+                          });
+                        } else if (stage === 'decision') {
+                          archetype_insights.push({
+                            title: "Improve Ease of Choice",
+                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Decision friction evident.`,
+                            action: "Clarify pricing/tiers, integration guides, evaluation tools.",
+                            deliverables: "UX for pricing comparators; Integration documentation pages; Interactive tools/calculators.",
+                            priority: gap,
+                            type: 'warning'
+                          });
+                        }
+                      } else if (brandSoV >= competitorAvg - 5) {
+                        // Strong performance
+                        archetype_insights.push({
+                          title: "Scale Market Momentum",
+                          rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Strong position to amplify.`,
+                          action: "Amplify what's working across paid/earned/owned; expand formats.",
+                          deliverables: "Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative/motion.",
+                          priority: -gap, // Negative for opportunities
+                          type: 'success'
+                        });
+                      }
+                      
+                      // Check for fragmentation
+                      if (othersAvg >= Math.max(competitorAvg, 20)) {
+                        archetype_insights.push({
+                          title: "Control the Fragmented Space",
+                          rationale: `"Others" at ${othersAvg}% in ${stage} stage indicates market fragmentation. Opportunity to consolidate authority.`,
+                          action: "Publish authoritative, comprehensive category resources to consolidate scattered mentions.",
+                          deliverables: "Authoritative content hubs; Comparison matrices; Information architecture updates.",
+                          priority: othersAvg,
+                          type: 'opportunity'
                         });
                       }
                     });
                     
-                    return insights.map((insight, idx) => (
-                      <div key={idx} className={`p-3 rounded-lg ${
-                        insight.type === 'warning' ? 'bg-orange-50' : 
-                        insight.type === 'success' ? 'bg-green-50' : 'bg-blue-50'
+                    // Sort by priority (largest gaps first) and take top 3-4 insights
+                    const prioritizedInsights = archetype_insights
+                      .sort((a, b) => b.priority - a.priority)
+                      .slice(0, 4);
+                    
+                    // If no specific insights, add generic ones
+                    if (prioritizedInsights.length === 0) {
+                      const overallBrandSoV = analysisResults.metrics?.overallSoV?.[brandName] || 0;
+                      prioritizedInsights.push({
+                        title: "Accelerate Buyer Education",
+                        rationale: `${brandName} showing ${overallBrandSoV}% overall share of voice. Need stronger educational content presence.`,
+                        action: "Guides, glossaries, \"what is / how it works\" series; schema/IA to surface it.",
+                        deliverables: "Content strategy & creation; UX/IA & prototyping; SEO strategy.",
+                        priority: 0,
+                        type: 'info'
+                      });
+                    }
+                    
+                    return prioritizedInsights.map((insight, idx) => (
+                      <div key={idx} className={`p-4 rounded-lg border-l-4 ${
+                        insight.type === 'critical' ? 'bg-red-50 border-red-400' :
+                        insight.type === 'warning' ? 'bg-orange-50 border-orange-400' : 
+                        insight.type === 'success' ? 'bg-green-50 border-green-400' : 
+                        insight.type === 'opportunity' ? 'bg-purple-50 border-purple-400' :
+                        'bg-blue-50 border-blue-400'
                       }`}>
-                        <div className={`font-medium text-sm mb-1 ${
+                        <div className={`font-semibold text-sm mb-2 ${
+                          insight.type === 'critical' ? 'text-red-800' :
                           insight.type === 'warning' ? 'text-orange-800' : 
-                          insight.type === 'success' ? 'text-green-800' : 'text-blue-800'
+                          insight.type === 'success' ? 'text-green-800' : 
+                          insight.type === 'opportunity' ? 'text-purple-800' :
+                          'text-blue-800'
                         }`}>
                           {insight.title}
                         </div>
-                        <div className={`text-xs ${
+                        <div className={`text-xs mb-2 ${
+                          insight.type === 'critical' ? 'text-red-700' :
                           insight.type === 'warning' ? 'text-orange-700' : 
-                          insight.type === 'success' ? 'text-green-700' : 'text-blue-700'
+                          insight.type === 'success' ? 'text-green-700' : 
+                          insight.type === 'opportunity' ? 'text-purple-700' :
+                          'text-blue-700'
                         }`}>
-                          {insight.text}
+                          {insight.rationale}
+                        </div>
+                        <div className={`text-xs mb-2 font-medium ${
+                          insight.type === 'critical' ? 'text-red-800' :
+                          insight.type === 'warning' ? 'text-orange-800' : 
+                          insight.type === 'success' ? 'text-green-800' : 
+                          insight.type === 'opportunity' ? 'text-purple-800' :
+                          'text-blue-800'
+                        }`}>
+                          Action: {insight.action}
+                        </div>
+                        <div className={`text-xs ${
+                          insight.type === 'critical' ? 'text-red-700' :
+                          insight.type === 'warning' ? 'text-orange-700' : 
+                          insight.type === 'success' ? 'text-green-700' : 
+                          insight.type === 'opportunity' ? 'text-purple-700' :
+                          'text-blue-700'
+                        }`}>
+                          <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
                         </div>
                       </div>
                     ));
