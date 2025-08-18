@@ -739,78 +739,108 @@ export default function BrandSignals() {
                       const othersAvg = metrics.othersAvg;
                       const gap = competitorAvg - brandSoV;
                       
-                      // Archetype matching
-                      if (brandSoV === 0) {
-                        // Absent
-                        if (stage === 'awareness') {
-                          archetype_insights.push({
-                            title: "Crack the Visibility Lists",
-                            rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Zero presence in category discovery.`,
-                            action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
-                            deliverables: "Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.",
-                            priority: gap,
-                            type: 'critical'
-                          });
-                        } else if (stage === 'consideration') {
-                          archetype_insights.push({
-                            title: "Close the Shortlist Gap",
-                            rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Missing from evaluation shortlists.`,
-                            action: "Build comparison pages, evaluator checklists, \"why us\" proof.",
-                            deliverables: "Web design & development; UX/UI; Messaging frameworks; Landing pages.",
-                            priority: gap,
-                            type: 'critical'
-                          });
-                        }
-                      } else if (brandSoV + 5 < competitorAvg) {
-                        // Underperforming
-                        if (stage === 'awareness') {
-                          archetype_insights.push({
-                            title: "Own the Category Narrative",
-                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Lagging in thought leadership.`,
-                            action: "Publish POV frameworks, definitions, and comparison primers AI can quote.",
-                            deliverables: "Brand Platform/Messaging; Content development; Campaign creative.",
-                            priority: gap,
-                            type: 'warning'
-                          });
-                        } else if (stage === 'decision') {
-                          archetype_insights.push({
-                            title: "Improve Ease of Choice",
-                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Decision friction evident.`,
-                            action: "Clarify pricing/tiers, integration guides, evaluation tools.",
-                            deliverables: "UX for pricing comparators; Integration documentation pages; Interactive tools/calculators.",
-                            priority: gap,
-                            type: 'warning'
-                          });
-                        }
-                      } else if (brandSoV >= competitorAvg - 5) {
-                        // Strong performance
+                      // Check for fragmentation first (takes priority)
+                      const fragmentationKey = `fragmentation-${stage}`;
+                      if (othersAvg >= Math.max(competitorAvg, 20) && !addedInsights.has(fragmentationKey)) {
+                        addedInsights.add(fragmentationKey);
+                        addedInsights.add(`${stage}-archetype`); // Block other insights for this stage
                         archetype_insights.push({
-                          title: "Scale Market Momentum",
-                          rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s). Strong position to amplify.`,
-                          action: "Amplify what's working across paid/earned/owned; expand formats.",
-                          deliverables: "Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative/motion.",
-                          priority: -gap, // Negative for opportunities
-                          type: 'success'
-                        });
-                      }
-                      
-                      // Check for fragmentation (only once to prevent duplicates)
-                      if (othersAvg >= Math.max(competitorAvg, 20) && !addedInsights.has('fragmentation')) {
-                        addedInsights.add('fragmentation');
-                        archetype_insights.push({
-                          title: "Control the Fragmented Space",
+                          title: `Control the Fragmented Space (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
                           rationale: `"Others" at ${othersAvg}% in ${stage} stage indicates market fragmentation. Opportunity to consolidate authority.`,
                           action: "Publish authoritative, comprehensive category resources to consolidate scattered mentions.",
                           deliverables: "Authoritative content hubs; Comparison matrices; Information architecture updates.",
                           priority: othersAvg,
                           type: 'opportunity'
                         });
+                      } 
+                      // Skip other archetypes if fragmentation already handled this stage
+                      else if (!addedInsights.has(`${stage}-archetype`)) {
+                        // Archetype matching
+                        if (brandSoV === 0) {
+                          // Absent
+                          if (stage === 'awareness') {
+                            // Special handling for awareness when competitor avg = 0%
+                            if (competitorAvg === 0) {
+                              archetype_insights.push({
+                                title: "Crack the Visibility Lists (Awareness)",
+                                rationale: `${brandName} appears in 0% of awareness queries across ${metrics.questionCount} question(s). Zero unaided recall in category discovery.`,
+                                action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
+                                deliverables: "Brand Strategy & Messaging; Visual Identity & style guide; Educational content hub.",
+                                priority: 100, // High priority for zero presence
+                                type: 'critical'
+                              });
+                            } else {
+                              archetype_insights.push({
+                                title: "Crack the Visibility Lists (Awareness)",
+                                rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} awareness question(s). Zero presence in category discovery.`,
+                                action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
+                                deliverables: "Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.",
+                                priority: gap,
+                                type: 'critical'
+                              });
+                            }
+                          } else if (stage === 'consideration') {
+                            archetype_insights.push({
+                              title: "Close the Shortlist Gap (Consideration)",
+                              rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} consideration question(s). Missing from evaluation shortlists.`,
+                              action: "Build comparison pages, evaluator checklists, \"why us\" proof.",
+                              deliverables: "Web design & development; UX/UI; Messaging frameworks; Landing pages.",
+                              priority: gap,
+                              type: 'critical'
+                            });
+                          }
+                        } else if (brandSoV + 5 < competitorAvg) {
+                          // Underperforming
+                          if (stage === 'awareness') {
+                            archetype_insights.push({
+                              title: "Own the Category Narrative (Awareness)",
+                              rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} awareness question(s). Lagging in thought leadership.`,
+                              action: "Publish POV frameworks, definitions, and comparison primers AI can quote.",
+                              deliverables: "Brand Platform/Messaging; Content development; Campaign creative.",
+                              priority: gap,
+                              type: 'warning'
+                            });
+                          } else if (stage === 'decision') {
+                            archetype_insights.push({
+                              title: "Improve Ease of Choice (Decision)",
+                              rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} decision question(s). Decision friction evident.`,
+                              action: "Clarify pricing/tiers, integration guides, evaluation tools.",
+                              deliverables: "UX for pricing comparators; Integration documentation pages; Interactive tools/calculators.",
+                              priority: gap,
+                              type: 'warning'
+                            });
+                          }
+                        } else if (brandSoV >= competitorAvg - 5) {
+                          // Strong performance - use "near parity" language when close
+                          const gapDescription = Math.abs(gap) <= 5 ? "near parity; efficient to amplify" : "strong position to amplify";
+                          archetype_insights.push({
+                            title: `Scale Market Momentum (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
+                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s)—${gapDescription}.`,
+                            action: "Amplify what's working across paid/earned/owned; expand formats.",
+                            deliverables: "Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative & motion.",
+                            priority: -Math.abs(gap), // Negative for opportunities, smaller gaps = higher priority
+                            type: 'success'
+                          });
+                        }
+                        addedInsights.add(`${stage}-archetype`);
                       }
+                      
+                      // Fragmentation check moved above to take priority
                     });
                     
-                    // Sort by priority (largest gaps first) and take top 3-4 insights
+                    // Sort by priority: largest gaps first, then by stage importance (Decision → Consideration → Awareness)
+                    const stageImportance = { 'decision': 3, 'consideration': 2, 'awareness': 1 };
                     const prioritizedInsights = archetype_insights
-                      .sort((a, b) => b.priority - a.priority)
+                      .sort((a, b) => {
+                        // First by priority (gap size)
+                        if (Math.abs(b.priority - a.priority) > 0.1) return b.priority - a.priority;
+                        // Then by stage importance if priorities are similar
+                        const aStage = a.title.toLowerCase().includes('decision') ? 'decision' : 
+                                      a.title.toLowerCase().includes('consideration') ? 'consideration' : 'awareness';
+                        const bStage = b.title.toLowerCase().includes('decision') ? 'decision' :
+                                      b.title.toLowerCase().includes('consideration') ? 'consideration' : 'awareness';
+                        return stageImportance[bStage] - stageImportance[aStage];
+                      })
                       .slice(0, 4);
                     
                     // If no specific insights, add generic ones
