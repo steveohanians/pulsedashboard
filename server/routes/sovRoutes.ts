@@ -47,20 +47,34 @@ router.post('/analyze', requireAuth, async (req, res) => {
       clientId: req.user?.clientId ? parseInt(req.user.clientId) : undefined
     };
 
-    // Perform analysis with progress tracking
-    const result = await sovService.analyzeShareOfVoice(analysisInput, analysisId);
-
-    logger.info('SoV analysis completed successfully', {
-      brand: validatedInput.brand.name,
-      totalQuestions: result.summary.totalQuestions,
-      overallSoV: result.metrics.overallSoV
-    });
-
-    res.status(200).json({
+    // Return immediately with analysis ID, then start analysis asynchronously
+    res.status(202).json({
       success: true,
-      data: result,
-      analysisId
+      analysisId,
+      message: 'Analysis started. Connect to progress stream for updates.'
     });
+
+    // Start analysis in background
+    setImmediate(async () => {
+      try {
+        const result = await sovService.analyzeShareOfVoice(analysisInput, analysisId);
+        // Store result temporarily for retrieval
+        (global as any).analysisResults = (global as any).analysisResults || {};
+        (global as any).analysisResults[analysisId] = result;
+      } catch (error) {
+        logger.error('Background SoV analysis failed', { error, analysisId });
+        // Emit error through progress system
+        sovService.emit('progress', {
+          analysisId,
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          step: -1,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // This code is now handled in the background async section above
 
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -194,8 +208,20 @@ router.get('/progress/:analysisId', requireAuth, (req, res) => {
         ...progressData
       })}\n\n`);
       
-      // Close connection when analysis is complete or errors
-      if (progressData.status === 'complete' || progressData.status === 'error') {
+      // Send results when analysis is complete
+      if (progressData.status === 'complete') {
+        const results = (global as any).analysisResults?.[analysisId];
+        if (results) {
+          res.write(`data: ${JSON.stringify({
+            type: 'results',
+            data: results,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+          
+          // Clean up stored results
+          delete (global as any).analysisResults[analysisId];
+        }
+        
         setTimeout(() => {
           res.write(`data: ${JSON.stringify({
             type: 'end',
@@ -203,7 +229,19 @@ router.get('/progress/:analysisId', requireAuth, (req, res) => {
             timestamp: new Date().toISOString()
           })}\n\n`);
           res.end();
-        }, 1000); // Small delay to ensure final message is sent
+        }, 1000);
+      }
+      
+      // Handle errors
+      if (progressData.status === 'error') {
+        setTimeout(() => {
+          res.write(`data: ${JSON.stringify({
+            type: 'end',
+            message: 'Analysis failed',
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+          res.end();
+        }, 1000);
       }
     }
   };

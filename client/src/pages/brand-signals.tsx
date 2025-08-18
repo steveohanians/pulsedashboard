@@ -118,7 +118,7 @@ export default function BrandSignals() {
       const responseData = await response.json();
       const analysisId = responseData.analysisId;
 
-      // Start listening to SSE progress updates
+      // Start listening to SSE progress updates immediately
       const eventSource = new EventSource(`/api/sov/progress/${analysisId}`);
       
       eventSource.onmessage = (event) => {
@@ -140,36 +140,31 @@ export default function BrandSignals() {
           const status = data.status === 'error' ? 'error' : statusMap[data.status] || 'running';
           updateProgressFromSSE(data.step, status, data.message);
           
-          // Handle completion
-          if (data.status === 'complete') {
-            setAnalysisResults(responseData.data);
-            eventSource.close();
-            toast({
-              title: "Analysis Complete", 
-              description: "Share of Voice analysis has been completed.",
-            });
-          }
-          
           // Handle errors
           if (data.status === 'error') {
             eventSource.close();
             throw new Error(data.message);
           }
         }
+        
+        // Handle results coming via SSE
+        if (data.type === 'results') {
+          setAnalysisResults(data.data);
+          toast({
+            title: "Analysis Complete", 
+            description: "Share of Voice analysis has been completed.",
+          });
+        }
+        
+        // Handle connection end
+        if (data.type === 'end') {
+          eventSource.close();
+        }
       };
 
       eventSource.onerror = () => {
         eventSource.close();
-        // If we get here, analysis might have completed without SSE updates
-        if (responseData.success !== false && responseData.data) {
-          setAnalysisResults(responseData.data);
-          toast({
-            title: "Analysis Complete",
-            description: "Share of Voice analysis has been completed.",
-          });
-        } else {
-          throw new Error("Connection to progress updates was lost");
-        }
+        throw new Error("Connection to progress updates was lost");
       };
 
     } catch (error: any) {
@@ -395,19 +390,24 @@ export default function BrandSignals() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Executive Summary</h3>
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-slate-700 leading-relaxed">{analysisResults.summary}</p>
+                      <p className="text-slate-700 leading-relaxed">
+                        {typeof analysisResults.summary === 'string' 
+                          ? analysisResults.summary 
+                          : analysisResults.summary.text || JSON.stringify(analysisResults.summary)
+                        }
+                      </p>
                     </div>
                   </div>
                 )}
 
                 {/* Share of Voice Metrics */}
-                {analysisResults.metrics && (
+                {analysisResults.metrics && typeof analysisResults.metrics === 'object' && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Share of Voice Breakdown</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Object.entries(analysisResults.metrics).map(([brand, percentage]) => (
                         <div key={brand} className="bg-slate-50 p-3 rounded-lg">
-                          <div className="font-medium text-slate-800">{brand}</div>
+                          <div className="font-medium text-slate-800">{String(brand)}</div>
                           <div className="text-2xl font-bold text-primary">{String(percentage)}%</div>
                         </div>
                       ))}
@@ -416,15 +416,19 @@ export default function BrandSignals() {
                 )}
 
                 {/* Overall Share of Voice */}
-                {analysisResults.overallSoV && (
+                {analysisResults.overallSoV && typeof analysisResults.overallSoV === 'object' && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Overall Market Position</h3>
                     <div className="bg-green-50 p-4 rounded-lg">
                       {Object.entries(analysisResults.overallSoV).map(([brand, data]: [string, any]) => (
                         <div key={brand} className="mb-2">
-                          <span className="font-medium">{brand}:</span>
-                          <span className="ml-2 text-lg font-bold text-green-700">{data.percentage}%</span>
-                          <span className="ml-2 text-sm text-slate-600">({data.mentions} mentions)</span>
+                          <span className="font-medium">{String(brand)}:</span>
+                          <span className="ml-2 text-lg font-bold text-green-700">
+                            {typeof data === 'object' ? String(data.percentage || 0) : String(data)}%
+                          </span>
+                          {typeof data === 'object' && data.mentions && (
+                            <span className="ml-2 text-sm text-slate-600">({String(data.mentions)} mentions)</span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -432,7 +436,7 @@ export default function BrandSignals() {
                 )}
 
                 {/* Question Results Summary */}
-                {analysisResults.questionResults && (
+                {analysisResults.questionResults && Array.isArray(analysisResults.questionResults) && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Research Coverage</h3>
                     <div className="bg-slate-50 p-4 rounded-lg">
