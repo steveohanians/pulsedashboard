@@ -546,14 +546,10 @@ export default function BrandSignals() {
                       const stageLeader = brandAverages.reduce((a, b) => 
                         b.avg > a.avg ? b : a, { brand: 'None', avg: 0 });
                       
-                      const stageEmoji = stage === 'awareness' ? '🔍' : 
-                                       stage === 'consideration' ? '🤔' : '✅';
-                      
                       return (
                         <div key={stage} className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-lg">{stageEmoji}</span>
                               <span className="font-medium capitalize">{stage}</span>
                               <button 
                                 onClick={() => setShowQuestionsDialog(true)}
@@ -600,13 +596,10 @@ export default function BrandSignals() {
                   <div className="space-y-6 mt-4">
                     {['awareness', 'consideration', 'decision'].map(stage => {
                       const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
-                      const stageEmoji = stage === 'awareness' ? '🔍' : 
-                                       stage === 'consideration' ? '🤔' : '✅';
                       
                       return (
                         <div key={stage}>
                           <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
-                            <span>{stageEmoji}</span>
                             <span className="capitalize">{stage} Stage</span>
                             <span className="text-slate-500">({stageQuestions.length} questions)</span>
                           </h3>
