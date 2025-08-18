@@ -510,7 +510,6 @@ export default function Dashboard() {
                         className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <TrendingUp className="h-3 w-3 inline mr-2" />
                         Brand Signals
                       </button>
                     </Link>
@@ -595,7 +594,6 @@ export default function Dashboard() {
               <li>
                 <Link href="/brand-signals">
                   <button className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary">
-                    <TrendingUp className="h-3 w-3 inline mr-2" />
                     Brand Signals
                   </button>
                 </Link>
