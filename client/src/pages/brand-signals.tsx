@@ -414,7 +414,7 @@ export default function BrandSignals() {
                                     rel="noopener noreferrer"
                                     className="text-primary underline inline-flex items-center gap-1 group text-xs"
                                   >
-                                    <span>({cleanDomain})</span>
+                                    <span>{cleanDomain}</span>
                                     <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                                   </a>
                                 </div>
