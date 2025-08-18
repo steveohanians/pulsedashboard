@@ -42,6 +42,7 @@ export default function BrandSignals() {
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
   const [isTestAnalysis, setIsTestAnalysis] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [activeAnalysisType, setActiveAnalysisType] = useState<'main' | 'test' | null>(null);
 
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -60,6 +61,7 @@ export default function BrandSignals() {
   // Function to run SoV analysis with direct response
   const runAnalysis = async () => {
     setIsAnalyzing(true);
+    setActiveAnalysisType('main');
     setAnalysisResults(null);
     setProgressSteps([]);
     setErrorMessage("");
@@ -146,12 +148,14 @@ export default function BrandSignals() {
       });
     } finally {
       setIsAnalyzing(false);
+      setActiveAnalysisType(null);
     }
   };
 
   // Function to run test analysis with well-known brands
   const runTestAnalysis = async () => {
     setIsAnalyzing(true);
+    setActiveAnalysisType('test');
     setIsTestAnalysis(true);
     setAnalysisResults(null);
     setProgressSteps([]);
@@ -239,6 +243,7 @@ export default function BrandSignals() {
       });
     } finally {
       setIsAnalyzing(false);
+      setActiveAnalysisType(null);
       setIsTestAnalysis(false);
     }
   };
@@ -434,7 +439,7 @@ export default function BrandSignals() {
                     onClick={runAnalysis}
                     disabled={isAnalyzing || !client}
                   >
-                    {isAnalyzing ? (
+                    {isAnalyzing && activeAnalysisType === 'main' ? (
                       <>
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                         Analyzing...
@@ -453,7 +458,7 @@ export default function BrandSignals() {
                     onClick={runTestAnalysis}
                     disabled={isAnalyzing}
                   >
-                    {isAnalyzing ? (
+                    {isAnalyzing && activeAnalysisType === 'test' ? (
                       <>
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                         Analyzing...
