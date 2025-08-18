@@ -73,7 +73,12 @@ export class BenchmarkService extends BaseService {
     const formData = new FormData();
     formData.append('csvFile', file);
     
-    const result = await this.request('POST', '/csv-import', formData);
+    const result = await this.request('POST', '/csv-import', formData) as {
+      imported: number;
+      skipped: number;
+      errors: string[];
+      message: string;
+    };
     cacheManager.invalidate('benchmark');
     return result;
   }
@@ -82,7 +87,7 @@ export class BenchmarkService extends BaseService {
    * Resync competitor SEMrush data
    */
   async resyncCompetitorSemrush(id: string): Promise<{ message: string }> {
-    const result = await this.request('POST', `/api/admin/competitors/${id}/resync-semrush`);
+    const result = await this.request('POST', `/api/admin/competitors/${id}/resync-semrush`) as { message: string };
     cacheManager.invalidate('competitor');
     return result;
   }
