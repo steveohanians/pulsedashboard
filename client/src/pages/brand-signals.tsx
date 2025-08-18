@@ -556,7 +556,13 @@ export default function BrandSignals() {
                             %
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            Data source: AI responses to generated questions
+                            Data source: AI responses to generated{" "}
+                            <button
+                              onClick={() => setShowQuestionsDialog(true)}
+                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                            >
+                              questions
+                            </button>
                           </p>
                         </CardContent>
                       </Card>
@@ -573,7 +579,13 @@ export default function BrandSignals() {
                             %
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            Data source: AI responses to generated questions
+                            Data source: AI responses to generated{" "}
+                            <button
+                              onClick={() => setShowQuestionsDialog(true)}
+                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                            >
+                              questions
+                            </button>
                           </p>
                         </CardContent>
                       </Card>
@@ -596,7 +608,13 @@ export default function BrandSignals() {
                             })()}
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            Data source: AI responses to generated questions
+                            Data source: AI responses to generated{" "}
+                            <button
+                              onClick={() => setShowQuestionsDialog(true)}
+                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                            >
+                              questions
+                            </button>
                           </p>
                         </CardContent>
                       </Card>
@@ -612,7 +630,13 @@ export default function BrandSignals() {
                               Performance by Buyer Journey Stage
                             </CardTitle>
                             <p className="text-xs text-slate-500 mt-1">
-                              Data source: AI responses to generated questions
+                              Data source: AI responses to generated{" "}
+                              <button
+                                onClick={() => setShowQuestionsDialog(true)}
+                                className="text-primary hover:text-primary/80 underline cursor-pointer"
+                              >
+                                questions
+                              </button>
                             </p>
                           </CardHeader>
                           <CardContent>
@@ -667,14 +691,6 @@ export default function BrandSignals() {
                                           <span className="font-medium capitalize">
                                             {stage}
                                           </span>
-                                          <button
-                                            onClick={() =>
-                                              setShowQuestionsDialog(true)
-                                            }
-                                            className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
-                                          >
-                                            ({stageQuestions.length} questions)
-                                          </button>
                                         </div>
                                         <div className="text-sm text-slate-600">
                                           Leader:{" "}
