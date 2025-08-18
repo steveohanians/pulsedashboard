@@ -658,8 +658,8 @@ export default function BrandSignals() {
             {/* Strategic Insights */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span>💡</span> Strategic Insights & Recommendations
+                <CardTitle className="text-lg">
+                  Strategic Insights & Recommendations
                 </CardTitle>
                 <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
               </CardHeader>
@@ -863,27 +863,41 @@ export default function BrandSignals() {
                       });
                     }
                     
-                    return prioritizedInsights.map((insight, idx) => (
-                      <div key={idx} className={`p-4 rounded-lg ${
-                        insight.type === 'critical' ? 'bg-red-100' :
-                        insight.type === 'warning' ? 'bg-orange-100' : 
-                        insight.type === 'success' ? 'bg-green-100' : 
-                        'bg-orange-100'
-                      }`}>
-                        <div className="font-semibold text-sm mb-2 text-black">
-                          {insight.title}
+                    return prioritizedInsights.map((insight, idx) => {
+                      // Extract stage from title for tag display
+                      const titleParts = insight.title.match(/^(.*?) \((.+?)\)$/);
+                      const mainTitle = titleParts ? titleParts[1] : insight.title;
+                      const stage = titleParts ? titleParts[2] : '';
+                      
+                      return (
+                        <div key={idx} className={`p-4 rounded-lg ${
+                          insight.type === 'critical' ? 'bg-red-100' :
+                          insight.type === 'warning' ? 'bg-orange-100' : 
+                          insight.type === 'success' ? 'bg-green-100' : 
+                          'bg-orange-100'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="font-semibold text-sm text-black">
+                              {mainTitle}
+                            </div>
+                            {stage && (
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-slate-100 text-slate-800 rounded-full">
+                                {stage}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs mb-2 text-black">
+                            {insight.rationale}
+                          </div>
+                          <div className="text-xs mb-2 font-medium text-black">
+                            Action: {insight.action}
+                          </div>
+                          {/* <div className="text-xs text-black">
+                            <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
+                          </div> */}
                         </div>
-                        <div className="text-xs mb-2 text-black">
-                          {insight.rationale}
-                        </div>
-                        <div className="text-xs mb-2 font-medium text-black">
-                          Action: {insight.action}
-                        </div>
-                        {/* <div className="text-xs text-black">
-                          <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
-                        </div> */}
-                      </div>
-                    ));
+                      );
+                    });
                   })()}
                 </div>
               </CardContent>
