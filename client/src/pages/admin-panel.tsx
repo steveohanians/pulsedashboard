@@ -3825,7 +3825,8 @@ export default function AdminPanel() {
           open={isCSVImportOpen}
           onOpenChange={setIsCSVImportOpen}
           onImportComplete={() => {
-            // Cache invalidation handled automatically by service layer
+            // Invalidate benchmark companies cache to refresh the table
+            queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
           }}
         />
         </div>
