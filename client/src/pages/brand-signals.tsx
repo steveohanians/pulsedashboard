@@ -371,7 +371,7 @@ export default function BrandSignals() {
                     {/* Website */}
                     <div className="flex items-center text-sm text-slate-600 mb-3">
                       <Globe className="h-4 w-4 mr-2 text-slate-400" />
-                      <span className="text-slate-500 min-w-[60px]">Website: </span>
+                      <span className="text-slate-500">Website:&nbsp;</span>
                       <a 
                         href={client?.websiteUrl} 
                         target="_blank" 
@@ -379,7 +379,7 @@ export default function BrandSignals() {
                         className="text-primary underline inline-flex items-center gap-1 group"
                       >
                         <span>
-                          {client?.websiteUrl?.replace(/^https?:\/\//, "").replace(/^www\./, "") || "Loading..."}
+                          {client?.websiteUrl?.replace(/^https?:\/\//, "") || "Loading..."}
                         </span>
                         <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                       </a>
@@ -398,8 +398,8 @@ export default function BrandSignals() {
                         {competitors?.length > 0 && (
                           <div className="grid gap-2">
                             {competitors.map((c: any) => {
-                              const displayName = c.label || c.domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
-                              const cleanDomain = c.domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+                              const displayName = c.label || c.domain.replace(/^https?:\/\//, "");
+                              const cleanDomain = c.domain.replace(/^https?:\/\//, "");
                               return (
                                 <div 
                                   key={c.id} 
@@ -408,7 +408,15 @@ export default function BrandSignals() {
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-slate-700">{displayName}</span>
                                   </div>
-                                  <span className="text-xs text-slate-500">({cleanDomain})</span>
+                                  <a 
+                                    href={c.domain} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-primary underline inline-flex items-center gap-1 group text-xs"
+                                  >
+                                    <span>({cleanDomain})</span>
+                                    <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
+                                  </a>
                                 </div>
                               );
                             })}
