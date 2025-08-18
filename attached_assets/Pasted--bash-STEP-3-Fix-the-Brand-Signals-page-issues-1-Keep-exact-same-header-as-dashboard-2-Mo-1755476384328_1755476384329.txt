@@ -1,3 +1,18 @@
+```bash
+# STEP 3: Fix the Brand Signals page issues
+# 1. Keep exact same header as dashboard
+# 2. Move "Back to Dashboard" to body
+# 3. Fix competitor URL validation issue
+```
+
+```tsx
+// FILE: client/src/pages/brand-signals.tsx
+// 
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. REPLACE the entire file content with this fixed version
+// 2. This fixes: header to match dashboard exactly, back button moved to body, URL validation
+// 3. The header should be IDENTICAL to dashboard header
+
 import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -101,7 +116,7 @@ export default function BrandSignals() {
                 {client?.websiteUrl && (
                   <>
                     <span className="hidden sm:inline"> | </span>
-                    <a
+                    
                       href={client.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -162,9 +177,11 @@ export default function BrandSignals() {
         
         {/* Back to Dashboard Link - IN BODY NOW */}
         <div className="mb-4">
-          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+          <Link href="/dashboard">
+            <a className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </a>
           </Link>
         </div>
         
@@ -244,3 +261,14 @@ export default function BrandSignals() {
     </div>
   );
 }
+```
+
+```bash
+# KEY FIXES:
+# 1. Header now exactly matches dashboard (shows "Pulse Dashboard™" not "Brand Signals")
+# 2. Back to Dashboard moved to body, uses proper Link/a tag syntax
+# 3. URL formatting function ensures competitors have valid https:// URLs
+# 4. Cleans up domain display to remove protocols
+#
+# The analysis should now work without validation errors
+```
