@@ -29,6 +29,7 @@ export default function BrandSignals() {
   }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [showRawData, setShowRawData] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -49,7 +50,7 @@ export default function BrandSignals() {
     setAnalysisResults(null);
     setProgressSteps([]);
     setErrorMessage("");
-    setCurrentStep("Starting analysis...");
+    setCurrentStep(-1);
     
     try {
       // Format URLs properly
@@ -122,7 +123,7 @@ export default function BrandSignals() {
       });
     } finally {
       setIsAnalyzing(false);
-      setCurrentStep("");
+      setCurrentStep(-1);
     }
   };
 
