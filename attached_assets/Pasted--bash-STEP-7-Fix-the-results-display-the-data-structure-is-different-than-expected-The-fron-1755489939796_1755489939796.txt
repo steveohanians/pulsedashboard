@@ -1,0 +1,247 @@
+```bash
+# STEP 7: Fix the results display - the data structure is different than expected
+# The frontend needs to properly parse the nested metrics structure
+```
+
+```javascript
+// FILE: client/src/pages/brand-signals.tsx
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. Find the Results Display section (where analysisResults is displayed)
+// 2. REPLACE the entire results display section with this fixed version
+// 3. This properly handles the nested data structure from the backend
+
+// Find this section: {/* Analysis Results */}
+// And REPLACE the entire Card component with:
+
+{/* Analysis Results */}
+{analysisResults && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center justify-between">
+        Share of Voice Results
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRawData(!showRawData)}
+        >
+          {showRawData ? 'Hide' : 'Show'} Raw Data
+        </Button>
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-6">
+        
+        {/* Summary */}
+        {analysisResults.summary && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-slate-800">Executive Summary</h3>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-sm text-slate-700 space-y-1">
+                <p><strong>Brand:</strong> {analysisResults.summary.brand}</p>
+                <p><strong>Competitors:</strong> {analysisResults.summary.competitors?.join(', ')}</p>
+                <p><strong>Questions Analyzed:</strong> {analysisResults.summary.totalQuestions}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Share of Voice Metrics - Fixed to handle nested structure */}
+        {analysisResults.metrics?.overallSoV && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-slate-800">Share of Voice Breakdown</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(analysisResults.metrics.overallSoV).map(([brand, percentage]) => (
+                <div key={brand} className="bg-slate-50 p-4 rounded-lg">
+                  <div className="text-sm font-medium text-slate-600">{brand}</div>
+                  <div className="text-2xl font-bold text-primary mt-1">
+                    {percentage}%
+                  </div>
+                  {analysisResults.metrics.totalMentions?.[brand] && (
+                    <div className="text-xs text-slate-500 mt-1">
+                      {analysisResults.metrics.totalMentions[brand]} mentions
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Question Coverage */}
+        {analysisResults.metrics?.questionCoverage && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-slate-800">Question Coverage</h3>
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <div className="space-y-2">
+                {Object.entries(analysisResults.metrics.questionCoverage).map(([brand, coverage]) => (
+                  <div key={brand} className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-slate-700">{brand}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full" 
+                          style={{ width: `${coverage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-slate-600 w-12 text-right">{coverage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Question Results by Stage */}
+        {analysisResults.questionResults && Array.isArray(analysisResults.questionResults) && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-slate-800">Analysis by Stage</h3>
+            <div className="space-y-4">
+              {['awareness', 'consideration', 'decision'].map(stage => {
+                const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                if (stageQuestions.length === 0) return null;
+                
+                return (
+                  <div key={stage} className="bg-slate-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-slate-800 capitalize mb-2">
+                      {stage} Stage ({stageQuestions.length} questions)
+                    </h4>
+                    <div className="text-xs text-slate-600">
+                      {stageQuestions.map((q: any, idx: number) => (
+                        <div key={idx} className="mb-1">
+                          Q{idx + 1}: {Object.entries(q.sov || {}).map(([brand, pct]) => 
+                            `${brand}: ${pct}%`
+                          ).join(', ') || 'No mentions'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Raw Data (Collapsible) */}
+        {showRawData && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-slate-800">Raw Analysis Data</h3>
+            <div className="bg-slate-100 p-4 rounded-lg overflow-x-auto">
+              <pre className="text-xs text-slate-700 whitespace-pre-wrap">
+                {JSON.stringify(analysisResults, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+// Also FIX the progress display to show real-time updates
+// REPLACE the addProgress function with:
+const addProgress = (message: string) => {
+  setProgressSteps(prev => [...prev, message]);
+  setCurrentStep(message);
+};
+
+// And UPDATE the runAnalysis function progress section:
+const runAnalysis = async () => {
+  setIsAnalyzing(true);
+  setAnalysisResults(null);
+  setProgressSteps([]);
+  setErrorMessage("");
+  
+  try {
+    // Format URLs properly
+    const formatUrl = (url: string) => {
+      if (!url) return 'https://unknown.com';
+      let cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+      return `https://${cleanUrl}`;
+    };
+
+    // Build the request payload
+    const payload = {
+      brand: {
+        name: client?.name || 'Unknown',
+        url: formatUrl(client?.websiteUrl || 'unknown.com')
+      },
+      competitors: competitors.slice(0, 3).map((c: any) => ({
+        name: c.label || c.name || c.domain.split('.')[0],
+        url: formatUrl(c.domain)
+      })),
+      vertical: client?.industryVertical || 'General'
+    };
+    
+    // Show progress messages one at a time
+    setProgressSteps([`Starting analysis for ${payload.brand.name}...`]);
+    
+    // Add delay to show progress
+    setTimeout(() => {
+      setProgressSteps(prev => [...prev, `Analyzing against ${payload.competitors.length} competitors`]);
+    }, 500);
+    
+    setTimeout(() => {
+      setProgressSteps(prev => [...prev, `Processing... This may take 2-3 minutes`]);
+    }, 1000);
+    
+    // Call the API and wait for results
+    const response = await fetch('/api/sov/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Check if we got valid results
+    if (data.success === false) {
+      setErrorMessage(data.error || "Analysis failed");
+      setProgressSteps(prev => [...prev, `❌ Error: ${data.error}`]);
+      return;
+    }
+    
+    // Set the results
+    setAnalysisResults(data);
+    setProgressSteps(prev => [...prev, `✅ Analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`]);
+    
+    toast({
+      title: "Analysis Complete",
+      description: `Successfully analyzed ${data.summary?.totalQuestions || 0} questions`,
+    });
+    
+  } catch (error) {
+    const errorMsg = error.message || 'Analysis failed';
+    setErrorMessage(errorMsg);
+    setProgressSteps(prev => [...prev, `❌ Error: ${errorMsg}`]);
+    
+    toast({
+      title: "Analysis Failed",
+      description: errorMsg,
+      variant: "destructive",
+    });
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
+```
+
+```bash
+# KEY FIXES:
+# 1. Results display now properly handles the nested metrics.overallSoV structure
+# 2. Shows actual percentages and mention counts
+# 3. Progress messages appear one at a time with delays
+# 4. Question coverage shows as progress bars
+# 5. Results grouped by stage (awareness, consideration, decision)
+#
+# The results should now display properly with actual data!
+```

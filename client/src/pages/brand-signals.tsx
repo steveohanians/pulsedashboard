@@ -22,11 +22,7 @@ export default function BrandSignals() {
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
-  const [progressSteps, setProgressSteps] = useState<{
-    step: string;
-    status: 'pending' | 'running' | 'completed' | 'error';
-    message?: string;
-  }[]>([]);
+  const [progressSteps, setProgressSteps] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [showRawData, setShowRawData] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -39,9 +35,10 @@ export default function BrandSignals() {
     industryVertical: 'All'
   });
 
-  // Initialize progress steps
+  // Add progress with simple string format
   const addProgress = (message: string) => {
-    setProgressSteps(prev => [...prev, { step: message, status: 'completed' as const }]);
+    setProgressSteps(prev => [...prev, message]);
+    setCurrentStep(prev => prev + 1);
   };
 
   // Function to run SoV analysis with direct response
@@ -73,9 +70,17 @@ export default function BrandSignals() {
         vertical: client?.industryVertical || 'General'
       };
       
-      addProgress(`Analyzing ${payload.brand.name} vs ${payload.competitors.length} competitors`);
-      addProgress("Processing analysis... This may take 2-3 minutes");
-      addProgress("⏳ Researching brands and generating questions...");
+      // Show progress messages one at a time with delays
+      addProgress(`Starting analysis for ${payload.brand.name}...`);
+      
+      // Add delay to show progress
+      setTimeout(() => {
+        addProgress(`Analyzing against ${payload.competitors.length} competitors`);
+      }, 500);
+      
+      setTimeout(() => {
+        addProgress(`Processing... This may take 2-3 minutes`);
+      }, 1000);
       
       // Call the API and wait for results
       const response = await fetch('/api/sov/analyze', {
@@ -85,8 +90,6 @@ export default function BrandSignals() {
         },
         body: JSON.stringify(payload)
       });
-      
-      addProgress(`Server responded with status: ${response.status}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -98,7 +101,6 @@ export default function BrandSignals() {
       // Check if we got valid results
       if (data.success === false) {
         setErrorMessage(data.error || "Analysis failed");
-        addProgress(`❌ Error: ${data.error}`);
         return;
       }
       
@@ -114,7 +116,6 @@ export default function BrandSignals() {
     } catch (error: any) {
       const errorMsg = error instanceof Error ? error.message : 'Analysis failed';
       setErrorMessage(errorMsg);
-      addProgress(`❌ Error: ${errorMsg}`);
       
       toast({
         title: "Analysis Failed",
@@ -123,7 +124,6 @@ export default function BrandSignals() {
       });
     } finally {
       setIsAnalyzing(false);
-      setCurrentStep(-1);
     }
   };
 
@@ -257,47 +257,18 @@ export default function BrandSignals() {
                 )}
               </Button>
               
-              {/* Progress Steps */}
+              {/* Progress Steps - Simplified */}
               {isAnalyzing && progressSteps.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
-                  {progressSteps.map((step, index) => (
-                    <div key={index} className="flex items-center space-x-3 text-sm">
-                      <div className="flex-shrink-0">
-                        {step.status === 'completed' && (
-                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-green-600 text-xs font-bold">✓</span>
-                          </div>
-                        )}
-                        {step.status === 'running' && (
-                          <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                            <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
-                          </div>
-                        )}
-                        {step.status === 'error' && (
-                          <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                            <span className="text-red-600 text-xs font-bold">✕</span>
-                          </div>
-                        )}
-                        {step.status === 'pending' && (
-                          <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
-                            <span className="text-slate-400 text-xs">○</span>
-                          </div>
-                        )}
+                  <div className="bg-slate-50 p-3 rounded-lg space-y-1">
+                    {progressSteps.map((message, index) => (
+                      <div key={index} className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-slate-700">{message}</span>
                       </div>
-                      <span className={`${
-                        step.status === 'completed' ? 'text-green-700' : 
-                        step.status === 'running' ? 'text-blue-700' : 
-                        step.status === 'error' ? 'text-red-700' : 
-                        'text-slate-500'
-                      }`}>
-                        {step.step}
-                      </span>
-                      {step.message && (
-                        <span className="text-xs text-slate-500">- {step.message}</span>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -327,44 +298,30 @@ export default function BrandSignals() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Executive Summary</h3>
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-slate-700 leading-relaxed">
-                        {typeof analysisResults.summary === 'string' 
-                          ? analysisResults.summary 
-                          : analysisResults.summary.text || JSON.stringify(analysisResults.summary)
-                        }
-                      </p>
+                      <div className="text-sm text-slate-700 space-y-1">
+                        <p><strong>Brand:</strong> {analysisResults.summary.brand}</p>
+                        <p><strong>Competitors:</strong> {analysisResults.summary.competitors?.join(', ')}</p>
+                        <p><strong>Questions Analyzed:</strong> {analysisResults.summary.totalQuestions}</p>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Share of Voice Metrics */}
-                {analysisResults.metrics && typeof analysisResults.metrics === 'object' && (
+                {/* Share of Voice Metrics - Fixed to handle nested structure */}
+                {analysisResults.metrics?.overallSoV && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-slate-800">Share of Voice Breakdown</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {Object.entries(analysisResults.metrics).map(([brand, percentage]) => (
-                        <div key={brand} className="bg-slate-50 p-3 rounded-lg">
-                          <div className="font-medium text-slate-800">{String(brand)}</div>
-                          <div className="text-2xl font-bold text-primary">{String(percentage)}%</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Overall Share of Voice */}
-                {analysisResults.overallSoV && typeof analysisResults.overallSoV === 'object' && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Overall Market Position</h3>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      {Object.entries(analysisResults.overallSoV).map(([brand, data]: [string, any]) => (
-                        <div key={brand} className="mb-2">
-                          <span className="font-medium">{String(brand)}:</span>
-                          <span className="ml-2 text-lg font-bold text-green-700">
-                            {typeof data === 'object' ? String(data.percentage || 0) : String(data)}%
-                          </span>
-                          {typeof data === 'object' && data.mentions && (
-                            <span className="ml-2 text-sm text-slate-600">({String(data.mentions)} mentions)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(analysisResults.metrics.overallSoV).map(([brand, percentage]) => (
+                        <div key={brand} className="bg-slate-50 p-4 rounded-lg">
+                          <div className="text-sm font-medium text-slate-600">{brand}</div>
+                          <div className="text-2xl font-bold text-primary mt-1">
+                            {percentage}%
+                          </div>
+                          {analysisResults.metrics.totalMentions?.[brand] && (
+                            <div className="text-xs text-slate-500 mt-1">
+                              {analysisResults.metrics.totalMentions[brand]} mentions
+                            </div>
                           )}
                         </div>
                       ))}
@@ -372,14 +329,57 @@ export default function BrandSignals() {
                   </div>
                 )}
 
-                {/* Question Results Summary */}
+                {/* Question Coverage */}
+                {analysisResults.metrics?.questionCoverage && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Question Coverage</h3>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <div className="space-y-2">
+                        {Object.entries(analysisResults.metrics.questionCoverage).map(([brand, coverage]) => (
+                          <div key={brand} className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-slate-700">{brand}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-32 bg-slate-200 rounded-full h-2">
+                                <div 
+                                  className="bg-primary h-2 rounded-full" 
+                                  style={{ width: `${coverage}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-slate-600 w-12 text-right">{coverage}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Question Results by Stage */}
                 {analysisResults.questionResults && Array.isArray(analysisResults.questionResults) && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Research Coverage</h3>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-slate-700">
-                        Analyzed <strong>{analysisResults.questionResults.length} research questions</strong> across multiple AI platforms to gather comprehensive brand intelligence.
-                      </p>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Analysis by Stage</h3>
+                    <div className="space-y-4">
+                      {['awareness', 'consideration', 'decision'].map(stage => {
+                        const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                        if (stageQuestions.length === 0) return null;
+                        
+                        return (
+                          <div key={stage} className="bg-slate-50 p-4 rounded-lg">
+                            <h4 className="font-medium text-slate-800 capitalize mb-2">
+                              {stage} Stage ({stageQuestions.length} questions)
+                            </h4>
+                            <div className="text-xs text-slate-600">
+                              {stageQuestions.map((q: any, idx: number) => (
+                                <div key={idx} className="mb-1">
+                                  Q{idx + 1}: {Object.entries(q.sov || {}).map(([brand, pct]) => 
+                                    `${brand}: ${pct}%`
+                                  ).join(', ') || 'No mentions'}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
