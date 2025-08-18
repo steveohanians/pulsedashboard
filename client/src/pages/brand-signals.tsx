@@ -162,7 +162,7 @@ export default function BrandSignals() {
         
         {/* Back to Dashboard Link - IN BODY NOW */}
         <div className="mb-4">
-          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
+          <Link href="/" className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
