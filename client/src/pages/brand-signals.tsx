@@ -692,7 +692,11 @@ export default function BrandSignals() {
                                 key={brand}
                                 className="flex items-center gap-4"
                               >
-                                <div className="w-32 text-sm font-medium text-slate-700 truncate">
+                                <div className={`w-32 text-sm font-medium truncate ${
+                                  brand === analysisResults.summary?.brand
+                                    ? "text-pink-600"
+                                    : "text-slate-700"
+                                }`}>
                                   {brand}
                                 </div>
                                 <div className="flex-1">
@@ -710,7 +714,7 @@ export default function BrandSignals() {
                                         }}
                                       />
                                     </div>
-                                    <span className="text-sm font-bold text-slate-800 w-16 text-right">
+                                    <span className="text-sm font-thin text-slate-800 w-16 text-right">
                                       {String(percentage)}%
                                     </span>
                                   </div>
