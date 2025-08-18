@@ -377,8 +377,8 @@ export default function BrandSignals() {
                             </div>
                           )}
                           {!step.includes('✅') && !step.includes('❌') && (
-                            <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
-                              <span className="text-slate-400 text-xs">○</span>
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
                             </div>
                           )}
                         </div>
@@ -455,8 +455,8 @@ export default function BrandSignals() {
                             </div>
                           )}
                           {!step.includes('✅') && !step.includes('❌') && (
-                            <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
-                              <span className="text-slate-400 text-xs">○</span>
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
                             </div>
                           )}
                         </div>
@@ -479,7 +479,7 @@ export default function BrandSignals() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <Card>
                 <CardContent className="p-6">
-                  <div className="text-xs font-medium text-slate-600 mb-1">Overall AI SoV</div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">Overall ChatGPT SoV</div>
                   <div className="text-2xl font-bold text-primary">
                     {analysisResults.metrics?.overallSoV?.[analysisResults.summary?.brand] || 0}%
                   </div>
@@ -499,7 +499,7 @@ export default function BrandSignals() {
               
               <Card>
                 <CardContent className="p-6">
-                  <div className="text-xs font-medium text-slate-600 mb-1">AI Market Leader</div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">AI Visibility Leader</div>
                   <div className="text-lg font-bold text-slate-800 truncate">
                     {(() => {
                       const sov = analysisResults.metrics?.overallSoV || {};
