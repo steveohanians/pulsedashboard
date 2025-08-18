@@ -314,8 +314,7 @@ export class DatabaseStorage implements IStorage {
         businessSize: benchmarkCompanies.businessSize,
         active: benchmarkCompanies.active,
         sourceVerified: benchmarkCompanies.sourceVerified,
-        createdAt: benchmarkCompanies.createdAt,
-        updatedAt: benchmarkCompanies.updatedAt
+        createdAt: benchmarkCompanies.createdAt
       })
       .from(benchmarkCompanies)
       .innerJoin(metrics, eq(metrics.benchmarkCompanyId, benchmarkCompanies.id))
@@ -328,8 +327,7 @@ export class DatabaseStorage implements IStorage {
         benchmarkCompanies.businessSize,
         benchmarkCompanies.active,
         benchmarkCompanies.sourceVerified,
-        benchmarkCompanies.createdAt,
-        benchmarkCompanies.updatedAt
+        benchmarkCompanies.createdAt
       );
     
     return companiesWithMetrics;
