@@ -3319,7 +3319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const brandData = await brandfetchResponse.json();
       
-      // Find the best icon - prioritize "symbol" (icon only), then "logo" (full logo with text)
+      // Find the best icon - prioritize "icon" first, then "logo", then "symbol"
       let iconUrl = null;
       if (brandData.logos && brandData.logos.length > 0) {
         // Helper function to validate image URL
@@ -3343,8 +3343,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Try different logo types in order of preference
         const logoTypes = [
-          brandData.logos.find((logo: any) => logo.type === 'symbol'), // icon/symbol only
+          brandData.logos.find((logo: any) => logo.type === 'icon'),   // icon type first
           brandData.logos.find((logo: any) => logo.type === 'logo'),   // full logo with text
+          brandData.logos.find((logo: any) => logo.type === 'symbol'), // symbol/mark only
           brandData.logos[0] // fallback to first available
         ].filter(Boolean);
 
