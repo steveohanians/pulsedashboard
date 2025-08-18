@@ -316,7 +316,7 @@ export default function BrandSignals() {
                         <div key={brand} className="bg-slate-50 p-4 rounded-lg">
                           <div className="text-sm font-medium text-slate-600">{brand}</div>
                           <div className="text-2xl font-bold text-primary mt-1">
-                            {percentage}%
+                            {String(percentage)}%
                           </div>
                           {analysisResults.metrics.totalMentions?.[brand] && (
                             <div className="text-xs text-slate-500 mt-1">
@@ -342,10 +342,10 @@ export default function BrandSignals() {
                               <div className="w-32 bg-slate-200 rounded-full h-2">
                                 <div 
                                   className="bg-primary h-2 rounded-full" 
-                                  style={{ width: `${coverage}%` }}
+                                  style={{ width: `${String(coverage)}%` }}
                                 />
                               </div>
-                              <span className="text-sm text-slate-600 w-12 text-right">{coverage}%</span>
+                              <span className="text-sm text-slate-600 w-12 text-right">{String(coverage)}%</span>
                             </div>
                           </div>
                         ))}
