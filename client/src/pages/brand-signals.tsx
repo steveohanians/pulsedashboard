@@ -23,6 +23,8 @@ import {
   XCircle,
   Info,
   Sparkles,
+  Building2,
+  Globe,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
@@ -358,38 +360,61 @@ export default function BrandSignals() {
                   </h3>
                 </div>
 
-                {/* Client/Website/Competitors Info Block */}
-                <div className="text-sm text-slate-600 mb-6">
-                  <p>
-                    <strong>Client:</strong> {client?.name || "Loading..."}
-                  </p>
-                  <p>
-                    <strong>Website:</strong>{" "}
-                    {client?.websiteUrl?.replace(/^https?:\/\//, "") ||
-                      "Loading..."}
-                  </p>
-                  <p>
-                    <strong>Competitors:</strong> {competitors?.length || 0}{" "}
-                    configured
-                  </p>
-                  {competitors?.length > 0 && (
-                    <ul className="mt-2 ml-4">
-                      {competitors.map((c: any) => (
-                        <li key={c.id} className="text-xs">
-                          •{" "}
-                          {c.label ||
-                            c.domain
-                              .replace(/^https?:\/\//, "")
-                              .replace(/^www\./, "")}{" "}
-                          (
-                          {c.domain
-                            .replace(/^https?:\/\//, "")
-                            .replace(/^www\./, "")}
-                          )
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                {/* Enhanced Client/Website/Competitors Info Block */}
+                <div className="space-y-4 mb-6">
+                  {/* Client Info Section */}
+                  <div className="bg-white/50 rounded-lg p-4 border border-slate-200/50">
+                    <h4 className="text-lg font-semibold text-slate-800 mb-3">
+                      {client?.name || "Loading..."}
+                    </h4>
+                    
+                    {/* Website */}
+                    <div className="flex items-center text-sm text-slate-600 mb-3">
+                      <Globe className="h-4 w-4 mr-2 text-slate-400" />
+                      <span className="text-slate-500 min-w-[60px]">Website:</span>
+                      <a 
+                        href={client?.websiteUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 transition-colors font-medium"
+                      >
+                        {client?.websiteUrl?.replace(/^https?:\/\//, "").replace(/^www\./, "") || "Loading..."}
+                      </a>
+                    </div>
+                    
+                    {/* Competitors Section */}
+                    <div className="flex items-start text-sm text-slate-600">
+                      <Building2 className="h-4 w-4 mr-2 text-slate-400 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-slate-500">Competitors:</span>
+                          <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full font-medium">
+                            {competitors?.length || 0} configured
+                          </span>
+                        </div>
+                        {competitors?.length > 0 && (
+                          <div className="grid gap-2">
+                            {competitors.map((c: any) => {
+                              const displayName = c.label || c.domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+                              const cleanDomain = c.domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+                              return (
+                                <div 
+                                  key={c.id} 
+                                  className="flex items-center justify-between bg-slate-50/50 rounded-md px-3 py-2 border border-slate-200/30"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
+                                    <span className="font-medium text-slate-700">{displayName}</span>
+                                  </div>
+                                  <span className="text-xs text-slate-500">({cleanDomain})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Two Buttons */}
