@@ -1,3 +1,18 @@
+```bash
+# STEP 10: Fix the SoV backend to properly detect mentions and populate "Others"
+# This improves brand detection, logs responses, and ensures data is always populated
+# VERTICAL-AGNOSTIC VERSION - works for any industry
+```
+
+```javascript
+// FILE: server/services/sov/sovService.ts
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. REPLACE the entire sovService.ts file with this improved version
+// 2. This adds better detection, logging, and "Others" population
+// 3. Questions now guide AI to mention specific brands
+// 4. VERTICAL-AGNOSTIC - no hardcoded agencies or specific industries
+
 import OpenAI from 'openai';
 import { db } from '../../db';
 import logger from '../../utils/logging/logger';
@@ -444,3 +459,19 @@ Output as a numbered list.`
 
 // Export singleton instance
 export const sovService = new SovService();
+```
+
+```bash
+# What this improves (VERTICAL-AGNOSTIC VERSION):
+# 1. Questions adapt to ANY industry based on the vertical parameter
+# 2. Flexible brand detection - handles variations of brand names
+# 3. Domain detection - finds mentions of URLs
+# 4. ALWAYS populates "Others" when no specific brands found
+# 5. Counts generic business terms (company, vendor, provider, etc.)
+# 6. Logs AI responses for debugging
+# 7. Detects other companies using patterns (Company Inc, Ltd, etc.)
+# 8. NO hardcoded agency names or industry-specific terms
+# 9. Works for ANY vertical - SaaS, retail, healthcare, finance, etc.
+#
+# Now works for all your clients regardless of industry!
+```
