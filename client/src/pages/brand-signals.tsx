@@ -363,30 +363,41 @@ export default function BrandSignals() {
                 {isAnalyzing && progressSteps.length > 0 && !isTestAnalysis && (
                   <div className="mt-4 space-y-2">
                     <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
-                    {progressSteps.map((step, index) => (
-                      <div key={index} className="flex items-center space-x-3 text-sm">
-                        <div className="flex-shrink-0">
-                          {step.includes('✅') && (
-                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                              <span className="text-green-600 text-xs font-bold">✓</span>
-                            </div>
-                          )}
-                          {step.includes('❌') && (
-                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                              <span className="text-red-600 text-xs font-bold">✕</span>
-                            </div>
-                          )}
-                          {!step.includes('✅') && !step.includes('❌') && (
-                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                            </div>
-                          )}
+                    {progressSteps.map((step, index) => {
+                      const isCompleted = step.includes('✅');
+                      const isFailed = step.includes('❌');
+                      const isCurrentStep = index === progressSteps.length - 1 && !isCompleted && !isFailed;
+                      
+                      return (
+                        <div key={index} className="flex items-center space-x-3 text-sm">
+                          <div className="flex-shrink-0">
+                            {isCompleted && (
+                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 text-xs font-bold">✓</span>
+                              </div>
+                            )}
+                            {isFailed && (
+                              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 text-xs font-bold">✕</span>
+                              </div>
+                            )}
+                            {!isCompleted && !isFailed && isCurrentStep && (
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
+                              </div>
+                            )}
+                            {!isCompleted && !isFailed && !isCurrentStep && (
+                              <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                                <span className="text-slate-400 text-xs">○</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                            {step}
+                          </span>
                         </div>
-                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
-                          {step}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -441,30 +452,41 @@ export default function BrandSignals() {
                 {isAnalyzing && progressSteps.length > 0 && isTestAnalysis && (
                   <div className="mt-4 space-y-2">
                     <h4 className="text-sm font-medium text-slate-700">Test Analysis Progress:</h4>
-                    {progressSteps.map((step, index) => (
-                      <div key={index} className="flex items-center space-x-3 text-sm">
-                        <div className="flex-shrink-0">
-                          {step.includes('✅') && (
-                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                              <span className="text-green-600 text-xs font-bold">✓</span>
-                            </div>
-                          )}
-                          {step.includes('❌') && (
-                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                              <span className="text-red-600 text-xs font-bold">✕</span>
-                            </div>
-                          )}
-                          {!step.includes('✅') && !step.includes('❌') && (
-                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                            </div>
-                          )}
+                    {progressSteps.map((step, index) => {
+                      const isCompleted = step.includes('✅');
+                      const isFailed = step.includes('❌');
+                      const isCurrentStep = index === progressSteps.length - 1 && !isCompleted && !isFailed;
+                      
+                      return (
+                        <div key={index} className="flex items-center space-x-3 text-sm">
+                          <div className="flex-shrink-0">
+                            {isCompleted && (
+                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 text-xs font-bold">✓</span>
+                              </div>
+                            )}
+                            {isFailed && (
+                              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 text-xs font-bold">✕</span>
+                              </div>
+                            )}
+                            {!isCompleted && !isFailed && isCurrentStep && (
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
+                              </div>
+                            )}
+                            {!isCompleted && !isFailed && !isCurrentStep && (
+                              <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                                <span className="text-slate-400 text-xs">○</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                            {step}
+                          </span>
                         </div>
-                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
-                          {step}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
