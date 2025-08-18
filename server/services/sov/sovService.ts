@@ -83,13 +83,15 @@ export class SovService extends EventEmitter {
    */
   private emitProgress(analysisId: string | undefined, status: string, message: string, step: number) {
     if (analysisId) {
-      this.emit('progress', {
+      const progressData = {
         analysisId,
         status,
         message,
         step,
         timestamp: new Date().toISOString()
-      });
+      };
+      logger.info('Emitting SoV progress', progressData);
+      this.emit('progress', progressData);
     }
   }
 

@@ -122,6 +122,7 @@ export default function BrandSignals() {
       const eventSource = new EventSource(`/api/sov/progress/${analysisId}`);
       
       eventSource.onmessage = (event) => {
+        console.log('SSE Message received:', event.data);
         const data = JSON.parse(event.data);
         
         if (data.type === 'progress') {
@@ -162,7 +163,8 @@ export default function BrandSignals() {
         }
       };
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        console.log('SSE Error:', error);
         eventSource.close();
         throw new Error("Connection to progress updates was lost");
       };
