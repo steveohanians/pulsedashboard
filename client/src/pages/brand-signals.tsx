@@ -277,128 +277,249 @@ export default function BrandSignals() {
 
         {/* Analysis Results */}
         {analysisResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Share of Voice Results
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowRawData(!showRawData)}
-                >
-                  {showRawData ? 'Hide' : 'Show'} Raw Data
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                
-                {/* Summary */}
-                {analysisResults.summary && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Executive Summary</h3>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-sm text-slate-700 space-y-1">
-                        <p><strong>Brand:</strong> {analysisResults.summary.brand}</p>
-                        <p><strong>Competitors:</strong> {analysisResults.summary.competitors?.join(', ')}</p>
-                        <p><strong>Questions Analyzed:</strong> {analysisResults.summary.totalQuestions}</p>
-                      </div>
-                    </div>
+          <>
+            {/* Summary Cards Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-xs font-medium text-slate-600 mb-1">Overall SoV</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {analysisResults.metrics?.overallSoV?.[analysisResults.summary?.brand] || 0}%
                   </div>
-                )}
-
-                {/* Share of Voice Metrics - Fixed to handle nested structure */}
-                {analysisResults.metrics?.overallSoV && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Share of Voice Breakdown</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(analysisResults.metrics.overallSoV).map(([brand, percentage]) => (
-                        <div key={brand} className="bg-slate-50 p-4 rounded-lg">
-                          <div className="text-sm font-medium text-slate-600">{brand}</div>
-                          <div className="text-2xl font-bold text-primary mt-1">
-                            {String(percentage)}%
-                          </div>
-                          {analysisResults.metrics.totalMentions?.[brand] && (
-                            <div className="text-xs text-slate-500 mt-1">
-                              {analysisResults.metrics.totalMentions[brand]} mentions
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-xs font-medium text-slate-600 mb-1">Question Coverage</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {analysisResults.metrics?.questionCoverage?.[analysisResults.summary?.brand] || 0}%
                   </div>
-                )}
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-xs font-medium text-slate-600 mb-1">Market Leader</div>
+                  <div className="text-lg font-bold text-slate-800 truncate">
+                    {(() => {
+                      const sov = analysisResults.metrics?.overallSoV || {};
+                      const leader = Object.entries(sov).reduce((a, b) => 
+                        (b[1] as number) > (a[1] as number) ? b : a, ['None', 0]);
+                      return leader[0];
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-xs font-medium text-slate-600 mb-1">Total Mentions</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {Object.values(analysisResults.metrics?.totalMentions || {})
+                      .reduce((sum: number, val: any) => sum + (val as number), 0)}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                {/* Question Coverage */}
-                {analysisResults.metrics?.questionCoverage && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Question Coverage</h3>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <div className="space-y-2">
-                        {Object.entries(analysisResults.metrics.questionCoverage).map(([brand, coverage]) => (
-                          <div key={brand} className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-slate-700">{brand}</span>
+            {/* Stage Performance Breakdown */}
+            {analysisResults.questionResults && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {['awareness', 'consideration', 'decision'].map(stage => {
+                      const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                      const brandName = analysisResults.summary?.brand;
+                      
+                      // Calculate average SoV for this stage
+                      const stageSoV = stageQuestions.reduce((sum: number, q: any) => {
+                        return sum + (q.sov?.[brandName] || 0);
+                      }, 0) / (stageQuestions.length || 1);
+                      
+                      // Find stage leader
+                      const allBrands = new Set<string>();
+                      stageQuestions.forEach((q: any) => {
+                        Object.keys(q.sov || {}).forEach(brand => allBrands.add(brand));
+                      });
+                      
+                      const brandAverages = Array.from(allBrands).map(brand => ({
+                        brand,
+                        avg: stageQuestions.reduce((sum: number, q: any) => 
+                          sum + (q.sov?.[brand] || 0), 0) / (stageQuestions.length || 1)
+                      }));
+                      
+                      const stageLeader = brandAverages.reduce((a, b) => 
+                        b.avg > a.avg ? b : a, { brand: 'None', avg: 0 });
+                      
+                      const stageEmoji = stage === 'awareness' ? '🔍' : 
+                                       stage === 'consideration' ? '🤔' : '✅';
+                      
+                      return (
+                        <div key={stage} className="space-y-2">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="w-32 bg-slate-200 rounded-full h-2">
-                                <div 
-                                  className="bg-primary h-2 rounded-full" 
-                                  style={{ width: `${String(coverage)}%` }}
-                                />
-                              </div>
-                              <span className="text-sm text-slate-600 w-12 text-right">{String(coverage)}%</span>
+                              <span className="text-lg">{stageEmoji}</span>
+                              <span className="font-medium capitalize">{stage}</span>
+                              <span className="text-sm text-slate-500">({stageQuestions.length} questions)</span>
+                            </div>
+                            <div className="text-sm text-slate-600">
+                              Leader: <span className="font-medium">{stageLeader.brand}</span> ({Math.round(stageLeader.avg)}%)
                             </div>
                           </div>
-                        ))}
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-slate-700 w-20">Your SoV:</span>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-slate-200 rounded-full h-3">
+                                  <div 
+                                    className="bg-primary h-3 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, Math.round(stageSoV))}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-bold text-slate-800 w-12 text-right">
+                                  {Math.round(stageSoV)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Competitive Comparison */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Share of Voice by Competitor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(analysisResults.metrics?.overallSoV || {}).map(([brand, percentage]) => (
+                    <div key={brand} className="flex items-center gap-4">
+                      <div className="w-32 text-sm font-medium text-slate-700 truncate">{brand}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-200 rounded-full h-3">
+                            <div 
+                              className={`h-3 rounded-full transition-all duration-500 ${
+                                brand === analysisResults.summary?.brand ? 'bg-primary' : 'bg-slate-400'
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-800 w-16 text-right">
+                            {percentage}%
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Question Results by Stage */}
-                {analysisResults.questionResults && Array.isArray(analysisResults.questionResults) && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Analysis by Stage</h3>
-                    <div className="space-y-4">
-                      {['awareness', 'consideration', 'decision'].map(stage => {
-                        const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
-                        if (stageQuestions.length === 0) return null;
-                        
-                        return (
-                          <div key={stage} className="bg-slate-50 p-4 rounded-lg">
-                            <h4 className="font-medium text-slate-800 capitalize mb-2">
-                              {stage} Stage ({stageQuestions.length} questions)
-                            </h4>
-                            <div className="text-xs text-slate-600">
-                              {stageQuestions.map((q: any, idx: number) => (
-                                <div key={idx} className="mb-1">
-                                  Q{idx + 1}: {Object.entries(q.sov || {}).map(([brand, pct]) => 
-                                    `${brand}: ${pct}%`
-                                  ).join(', ') || 'No mentions'}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            {/* Strategic Insights */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span>💡</span> Strategic Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {(() => {
+                    const brandName = analysisResults.summary?.brand;
+                    const brandSoV = analysisResults.metrics?.overallSoV?.[brandName] || 0;
+                    const insights = [];
+                    
+                    // Generate insights based on data
+                    if (brandSoV < 20) {
+                      insights.push({
+                        type: 'warning',
+                        title: 'Low Brand Visibility',
+                        text: 'Your brand has limited presence in AI-generated responses. Consider creating more authoritative content and building stronger brand signals.'
+                      });
+                    } else if (brandSoV > 40) {
+                      insights.push({
+                        type: 'success',
+                        title: 'Strong Market Position',
+                        text: 'Your brand is well-represented in AI responses. Continue building on this momentum with consistent content strategy.'
+                      });
+                    }
+                    
+                    // Check stage performance
+                    const stages = ['awareness', 'consideration', 'decision'];
+                    stages.forEach(stage => {
+                      const stageQ = analysisResults.questionResults?.filter((q: any) => q.stage === stage) || [];
+                      const avgSoV = stageQ.reduce((sum: number, q: any) => 
+                        sum + (q.sov?.[brandName] || 0), 0) / (stageQ.length || 1);
+                      
+                      if (avgSoV < 15) {
+                        insights.push({
+                          type: 'warning',
+                          title: `Weak ${stage.charAt(0).toUpperCase() + stage.slice(1)} Stage`,
+                          text: `Low visibility in ${stage} stage queries. Focus on creating content that addresses ${
+                            stage === 'awareness' ? 'educational and introductory topics' :
+                            stage === 'consideration' ? 'comparison and evaluation criteria' :
+                            'implementation and pricing information'
+                          }.`
+                        });
+                      }
+                    });
+                    
+                    return insights.map((insight, idx) => (
+                      <div key={idx} className={`p-3 rounded-lg ${
+                        insight.type === 'warning' ? 'bg-orange-50' : 'bg-green-50'
+                      }`}>
+                        <div className={`font-medium text-sm mb-1 ${
+                          insight.type === 'warning' ? 'text-orange-800' : 'text-green-800'
+                        }`}>
+                          {insight.title}
+                        </div>
+                        <div className={`text-xs ${
+                          insight.type === 'warning' ? 'text-orange-700' : 'text-green-700'
+                        }`}>
+                          {insight.text}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Raw Data (Collapsible) */}
-                {showRawData && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Raw Analysis Data</h3>
-                    <div className="bg-slate-100 p-4 rounded-lg overflow-x-auto">
-                      <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-                        {JSON.stringify(analysisResults, null, 2)}
-                      </pre>
-                    </div>
+            {/* Raw Data Toggle */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Detailed Analysis Data
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRawData(!showRawData)}
+                  >
+                    {showRawData ? 'Hide' : 'Show'} Raw Data
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              {showRawData && (
+                <CardContent>
+                  <div className="bg-slate-100 p-4 rounded-lg overflow-x-auto">
+                    <pre className="text-xs text-slate-700 whitespace-pre-wrap">
+                      {JSON.stringify(analysisResults, null, 2)}
+                    </pre>
                   </div>
-                )}
-
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              )}
+            </Card>
+          </>
         )}
 
         {/* Placeholder for future sections */}
