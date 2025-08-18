@@ -11,7 +11,11 @@ import {
   TrendingUp, 
   RefreshCw,
   ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  CheckCircle,
+  Circle,
+  XCircle,
+  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
@@ -299,6 +303,17 @@ export default function BrandSignals() {
           </Link>
         </div>
         
+        {/* AI Disclosure Banner */}
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-amber-800">
+              <strong>Note:</strong> This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
+              It is not based on SEO rankings, ads, or social mentions.
+            </p>
+          </div>
+        </div>
+        
         {/* Analysis Control Cards - Real and Test */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Real Client Analysis Card */}
@@ -306,7 +321,7 @@ export default function BrandSignals() {
             <CardHeader>
               <CardTitle className="flex items-center text-base">
                 <TrendingUp className="h-5 w-5 mr-3 text-primary" />
-                Share of Voice Analysis
+                AI Share of Voice Analysis (ChatGPT)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -383,7 +398,7 @@ export default function BrandSignals() {
             <CardHeader>
               <CardTitle className="flex items-center text-base">
                 <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
-                Share of Voice Analysis (with test companies)
+                AI Share of Voice Analysis - Test Companies (ChatGPT)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -461,13 +476,14 @@ export default function BrandSignals() {
         {analysisResults && (
           <>
             {/* Summary Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <Card>
                 <CardContent className="p-6">
-                  <div className="text-xs font-medium text-slate-600 mb-1">Overall SoV</div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">Overall AI SoV</div>
                   <div className="text-2xl font-bold text-primary">
                     {analysisResults.metrics?.overallSoV?.[analysisResults.summary?.brand] || 0}%
                   </div>
+                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
                 </CardContent>
               </Card>
               
@@ -477,12 +493,13 @@ export default function BrandSignals() {
                   <div className="text-2xl font-bold text-primary">
                     {analysisResults.metrics?.questionCoverage?.[analysisResults.summary?.brand] || 0}%
                   </div>
+                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-6">
-                  <div className="text-xs font-medium text-slate-600 mb-1">Market Leader</div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">AI Market Leader</div>
                   <div className="text-lg font-bold text-slate-800 truncate">
                     {(() => {
                       const sov = analysisResults.metrics?.overallSoV || {};
@@ -491,16 +508,7 @@ export default function BrandSignals() {
                       return leader[0];
                     })()}
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-xs font-medium text-slate-600 mb-1">Total Mentions</div>
-                  <div className="text-2xl font-bold text-primary">
-                    {Object.values(analysisResults.metrics?.totalMentions || {})
-                      .reduce((sum: number, val: any) => sum + (val as number), 0)}
-                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
                 </CardContent>
               </Card>
             </div>
@@ -510,6 +518,7 @@ export default function BrandSignals() {
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
+                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
@@ -624,7 +633,8 @@ export default function BrandSignals() {
             {/* Competitive Comparison */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg">Share of Voice by Competitor</CardTitle>
+                <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
+                <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

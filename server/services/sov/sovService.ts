@@ -25,6 +25,7 @@ interface BrandMention {
 interface QuestionResult {
   question: string;
   stage: string;
+  type: 'organic' | 'prompted';
   responses: Record<string, string>;
   mentions: Record<string, BrandMention>;
   sov: Record<string, number>;
@@ -101,31 +102,44 @@ export class SovService extends EventEmitter {
   private async generateQuestions(
     brandContext: string, 
     input: SovAnalysisInput
-  ): Promise<string[]> {
+  ): Promise<Array<{ question: string; type: 'organic' | 'prompted' }>> {
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [{
         role: 'system',
-        content: 'You are an expert at creating questions that potential buyers would ask when researching solutions and comparing vendors.'
+        content: 'You are an expert at creating questions that potential buyers would ask when researching solutions.'
       }, {
         role: 'user',
         content: `Based on these competing brands in the ${input.vertical} industry:
 ${brandContext}
 
-Generate 15 questions that someone evaluating these types of solutions would search for.
+Generate 15 questions following these guidelines:
+
+AWARENESS STAGE (5 questions):
+- 4 ORGANIC questions (brand-agnostic): Focus on categories, problems, outcomes
+- 1 PROMPTED question: Can mention category leaders or "top providers"
+- Examples: "What is the best tool for...", "How do companies handle...", "What solutions exist for..."
+
+CONSIDERATION STAGE (5 questions):
+- 3 ORGANIC questions: Feature comparisons without brand names
+- 2 PROMPTED questions: Direct brand comparisons
+- Vary formats: "Which platforms offer...", "How to choose between...", "Compare features of..."
+
+DECISION STAGE (5 questions):
+- 2 ORGANIC questions: Implementation and pricing concerns
+- 3 PROMPTED questions: Head-to-head brand comparisons using these specific brands: ${input.brand.name}, ${input.competitors.map(c => c.name).join(', ')}
+- Examples: "${input.brand.name} vs ${input.competitors[0]?.name} for...", "Is ${input.brand.name} better than ${input.competitors[1]?.name}..."
 
 Requirements:
-- Questions should naturally lead to discussions of specific vendors/companies
-- Include questions that would prompt comparisons between solutions
-- Mix of question types:
-  * 5 Awareness stage (what solutions exist, who provides them)
-  * 5 Consideration stage (comparing specific vendors, best providers)
-  * 5 Decision stage (choosing between specific options)
-- Use formats like: "which companies", "best providers for", "top solutions for", "compare X vendors"
-- Make questions specific to ${input.vertical} industry needs and challenges
-- Focus on the specific services these companies offer based on the brand context
+- Use natural buyer language
+- Cover multiple angles: features, cost, scalability, integration, ease of use, support, results
+- Vary question structures (avoid repetitive patterns)
+- Tag each question as [ORGANIC] or [PROMPTED]
 
-Output as a numbered list.`
+Output as numbered list with tags:
+1. [ORGANIC] Question here
+2. [PROMPTED] Question here
+etc.`
       }],
       temperature: 0.7
     });
@@ -134,14 +148,21 @@ Output as a numbered list.`
     return questionsText
       .split('\n')
       .filter(q => q.match(/^\d/))
-      .map(q => q.replace(/^\d+\.\s*(?:\[.*?\]\s*)?/, ''));
+      .map(q => {
+        const isPrompted = q.includes('[PROMPTED]');
+        const cleanQuestion = q.replace(/^\d+\.\s*(?:\[.*?\]\s*)?/, '');
+        return {
+          question: cleanQuestion,
+          type: isPrompted ? 'prompted' : 'organic'
+        };
+      });
   }
 
   /**
    * Query AI platforms with questions
    */
   private async queryAIPlatforms(
-    questions: string[], 
+    questions: Array<{ question: string; type: 'organic' | 'prompted' }>, 
     input: SovAnalysisInput
   ): Promise<QuestionResult[]> {
     const results: QuestionResult[] = [];
@@ -154,8 +175,15 @@ Output as a numbered list.`
     });
     
     for (let index = 0; index < questions.length; index++) {
-      const question = questions[index];
+      const { question, type } = questions[index];
       const stage = index < 5 ? 'awareness' : index < 10 ? 'consideration' : 'decision';
+      
+      // Log question type for analysis
+      logger.info(`AI query ${index + 1}`, {
+        question: question.substring(0, 100),
+        type,
+        stage
+      });
       
       // Query OpenAI with context about the industry
       const response = await this.openai.chat.completions.create({
@@ -190,6 +218,7 @@ Output as a numbered list.`
       results.push({
         question,
         stage,
+        type,
         responses: { openai: responseText },
         mentions,
         sov

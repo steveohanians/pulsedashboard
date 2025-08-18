@@ -1,0 +1,241 @@
+```bash
+# STEP 13: Update Share of Voice page with AI disclosure and improved question generation
+# This adds disclaimers, renames modules, and improves question quality
+```
+
+```tsx
+// FILE: client/src/pages/brand-signals.tsx
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. Add the disclaimer banner at the top of the main content
+// 2. Update card titles to specify AI/ChatGPT
+// 3. Remove Total Mentions card from summary
+// 4. Update question generation logic in backend
+
+// FIND the main content div and ADD disclaimer banner right after "Back to Dashboard":
+{/* Main Content */}
+<div ref={brandSignalsRef} className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  
+  {/* Back to Dashboard Link */}
+  <div className="mb-4">
+    <Link href="/" className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors">
+      <ArrowLeft className="h-4 w-4 mr-2" />
+      Back to Dashboard
+    </Link>
+  </div>
+  
+  {/* ADD THIS DISCLAIMER BANNER */}
+  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+    <div className="flex items-start gap-3">
+      <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+      <p className="text-sm text-amber-800">
+        <strong>Note:</strong> This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
+        It is not based on SEO rankings, ads, or social mentions.
+      </p>
+    </div>
+  </div>
+
+// UPDATE the card titles in the grid:
+// REPLACE:
+<CardTitle className="flex items-center text-base">
+  <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+  Share of Voice Analysis
+</CardTitle>
+
+// WITH:
+<CardTitle className="flex items-center text-base">
+  <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+  AI Share of Voice Analysis (ChatGPT)
+</CardTitle>
+
+// AND FOR TEST CARD REPLACE:
+<CardTitle className="flex items-center text-base">
+  <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
+  Share of Voice Analysis (with test companies)
+</CardTitle>
+
+// WITH:
+<CardTitle className="flex items-center text-base">
+  <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
+  AI Share of Voice Analysis - Test Companies (ChatGPT)
+</CardTitle>
+
+// UPDATE Summary Cards - REMOVE Total Mentions card and keep only 3:
+{/* Summary Cards Row */}
+<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  <Card>
+    <CardContent className="p-6">
+      <div className="text-xs font-medium text-slate-600 mb-1">Overall AI SoV</div>
+      <div className="text-2xl font-bold text-primary">
+        {analysisResults.metrics?.overallSoV?.[analysisResults.summary?.brand] || 0}%
+      </div>
+      <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+    </CardContent>
+  </Card>
+  
+  <Card>
+    <CardContent className="p-6">
+      <div className="text-xs font-medium text-slate-600 mb-1">Question Coverage</div>
+      <div className="text-2xl font-bold text-primary">
+        {analysisResults.metrics?.questionCoverage?.[analysisResults.summary?.brand] || 0}%
+      </div>
+      <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+    </CardContent>
+  </Card>
+  
+  <Card>
+    <CardContent className="p-6">
+      <div className="text-xs font-medium text-slate-600 mb-1">AI Market Leader</div>
+      <div className="text-lg font-bold text-slate-800 truncate">
+        {(() => {
+          const sov = analysisResults.metrics?.overallSoV || {};
+          const leader = Object.entries(sov).reduce((a, b) => 
+            (b[1] as number) > (a[1] as number) ? b : a, ['None', 0]);
+          return leader[0];
+        })()}
+      </div>
+      <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+    </CardContent>
+  </Card>
+</div>
+
+// UPDATE chart titles to include sub-labels:
+// In Stage Performance Breakdown:
+<CardHeader>
+  <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
+  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+</CardHeader>
+
+// In Competitive Comparison:
+<CardHeader>
+  <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
+  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+</CardHeader>
+
+// ADD import for Info icon at the top:
+import { 
+  LogOut, 
+  TrendingUp, 
+  RefreshCw,
+  ArrowLeft,
+  ExternalLink,
+  CheckCircle,
+  Circle,
+  XCircle,
+  Info  // ADD THIS
+} from "lucide-react";
+```
+
+```javascript
+// FILE: server/services/sov/sovService.ts
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// UPDATE the generateQuestions method to create better balanced questions
+
+private async generateQuestions(
+  brandContext: string, 
+  input: SovAnalysisInput
+): Promise<{ question: string; type: 'organic' | 'prompted' }[]> {
+  const response = await this.openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{
+      role: 'system',
+      content: 'You are an expert at creating questions that potential buyers would ask when researching solutions.'
+    }, {
+      role: 'user',
+      content: `Based on these competing brands in the ${input.vertical} industry:
+${brandContext}
+
+Generate 15 questions following these guidelines:
+
+AWARENESS STAGE (5 questions):
+- 4 ORGANIC questions (brand-agnostic): Focus on categories, problems, outcomes
+- 1 PROMPTED question: Can mention category leaders or "top providers"
+- Examples: "What is the best tool for...", "How do companies handle...", "What solutions exist for..."
+
+CONSIDERATION STAGE (5 questions):
+- 3 ORGANIC questions: Feature comparisons without brand names
+- 2 PROMPTED questions: Direct brand comparisons
+- Vary formats: "Which platforms offer...", "How to choose between...", "Compare features of..."
+
+DECISION STAGE (5 questions):
+- 2 ORGANIC questions: Implementation and pricing concerns
+- 3 PROMPTED questions: Head-to-head brand comparisons using these specific brands: ${input.brand.name}, ${input.competitors.map(c => c.name).join(', ')}
+- Examples: "${input.brand.name} vs ${input.competitors[0]?.name} for...", "Is ${input.brand.name} better than ${input.competitors[1]?.name}..."
+
+Requirements:
+- Use natural buyer language
+- Cover multiple angles: features, cost, scalability, integration, ease of use, support, results
+- Vary question structures (avoid repetitive patterns)
+- Tag each question as [ORGANIC] or [PROMPTED]
+
+Output as numbered list with tags:
+1. [ORGANIC] Question here
+2. [PROMPTED] Question here
+etc.`
+    }],
+    temperature: 0.7
+  });
+  
+  const questionsText = response.choices[0].message.content || '';
+  return questionsText
+    .split('\n')
+    .filter(q => q.match(/^\d/))
+    .map(q => {
+      const isPrompted = q.includes('[PROMPTED]');
+      const cleanQuestion = q.replace(/^\d+\.\s*(?:\[.*?\]\s*)?/, '');
+      return {
+        question: cleanQuestion,
+        type: isPrompted ? 'prompted' : 'organic'
+      };
+    });
+}
+
+// UPDATE the queryAIPlatforms method to handle the new question format:
+private async queryAIPlatforms(
+  questions: Array<{ question: string; type: 'organic' | 'prompted' }>, 
+  input: SovAnalysisInput
+): Promise<QuestionResult[]> {
+  // ... existing code ...
+  
+  for (let index = 0; index < questions.length; index++) {
+    const { question, type } = questions[index];  // Destructure to get both
+    const stage = index < 5 ? 'awareness' : index < 10 ? 'consideration' : 'decision';
+    
+    // Log question type for analysis
+    logger.info(`AI query ${index + 1}`, {
+      question: question.substring(0, 100),
+      type,  // Log whether organic or prompted
+      stage
+    });
+    
+    // ... rest of existing code but use 'question' variable ...
+    
+    results.push({
+      question,
+      stage,
+      type,  // Include type in results
+      responses: { openai: responseText },
+      mentions,
+      sov
+    });
+  }
+  
+  // ... rest of method ...
+}
+```
+
+```bash
+# What this improves:
+# 1. Renames modules to clearly indicate "AI Share of Voice (ChatGPT)"
+# 2. Adds persistent disclaimer banner about AI data source
+# 3. Adds sub-labels on all charts noting data source
+# 4. Removes Total Mentions card (now 3 cards instead of 4)
+# 5. Improves question generation:
+#    - Balances organic (brand-agnostic) vs prompted (brand-specific)
+#    - Varies by stage (more organic in awareness, more prompted in decision)
+#    - Uses natural buyer language
+#    - Covers multiple angles
+#    - Tags questions as organic/prompted
+# 6. Better reflects true AI brand visibility
+```
