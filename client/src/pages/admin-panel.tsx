@@ -261,6 +261,13 @@ export default function AdminPanel() {
     enabled: user?.role === "Admin" && activeTab === "benchmark",
   });
 
+  // Fetch benchmark companies statistics for Data Coverage
+  const { data: benchmarkStats } = useQuery({
+    queryKey: AdminQueryKeys.benchmarkCompaniesStats(),
+    queryFn: () => benchmarkService.getStats(),
+    enabled: user?.role === "Admin" && activeTab === "benchmark",
+  });
+
   const { data: users, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: AdminQueryKeys.users(),
     queryFn: () => userService.getAll(),
@@ -2263,8 +2270,8 @@ export default function AdminPanel() {
                       <CardTitle className="text-sm font-medium text-slate-600">Data Coverage</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-2xl font-bold ${(benchmarkCompanies?.length || 0) > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {(benchmarkCompanies?.length || 0) > 0 ? '100%' : '0%'}
+                      <div className={`text-2xl font-bold ${(benchmarkStats?.coveragePercentage || 0) > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
+                        {benchmarkStats?.coveragePercentage || 0}%
                       </div>
                     </CardContent>
                   </Card>
@@ -2417,8 +2424,8 @@ export default function AdminPanel() {
                             <div className="text-xs text-gray-500">Industry: {company.industryVertical}</div>
                             <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
-                                {company.sourceVerified ? "Verified" : "Pending"}
+                              <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
+                                {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
                               </Badge>
                               <Badge variant={company.active ? "secondary" : "destructive"} className="text-xs">
                                 {company.active ? "Active" : "Inactive"}
@@ -2626,8 +2633,8 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 lg:hidden">{company.websiteUrl}</div>
                                 <div className="text-xs text-gray-500 md:hidden">{company.businessSize}</div>
                                 <div className="text-xs text-gray-500 lg:hidden">
-                                  <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
-                                    {company.sourceVerified ? "Verified" : "Pending"}
+                                  <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
+                                    {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
                                   </Badge>
                                 </div>
                               </div>
@@ -2636,8 +2643,8 @@ export default function AdminPanel() {
                             <TableCell className="text-xs">{company.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <Badge variant={company.sourceVerified ? "secondary" : "outline"} className="text-xs">
-                                {company.sourceVerified ? "Verified" : "Pending"}
+                              <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
+                                {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
                               </Badge>
                             </TableCell>
                             <TableCell>

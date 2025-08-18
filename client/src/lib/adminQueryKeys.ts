@@ -6,6 +6,7 @@
 export const AdminQueryKeys = {
   clients: () => ["/api/admin/clients"] as const,
   benchmarkCompanies: () => ["/api/admin/benchmark-companies"] as const,
+  benchmarkCompaniesStats: () => ["/api/admin/benchmark-companies/stats"] as const,
   users: () => ["/api/admin/users"] as const,
   cdPortfolio: () => ["/api/admin/cd-portfolio"] as const,
   filterOptions: () => ["/api/admin/filter-options"] as const,

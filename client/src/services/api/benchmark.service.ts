@@ -86,4 +86,16 @@ export class BenchmarkService extends BaseService {
     cacheManager.invalidate('competitor');
     return result;
   }
+
+  /**
+   * Get benchmark companies metrics statistics
+   */
+  async getStats(): Promise<{
+    totalCompanies: number;
+    companiesWithMetrics: number;
+    coveragePercentage: number;
+    companiesWithMetricsIds: string[];
+  }> {
+    return this.makeRequest('GET', '/stats');
+  }
 }

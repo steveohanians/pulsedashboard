@@ -3511,6 +3511,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get benchmark companies metrics statistics
+  app.get("/api/admin/benchmark-companies/stats", requireAdmin, adminLimiter, async (req, res) => {
+    try {
+      const companies = await storage.getBenchmarkCompanies();
+      const totalCompanies = companies.length;
+      
+      // Get benchmark companies with metrics
+      const companiesWithMetrics = await storage.getBenchmarkCompaniesWithMetrics();
+      const companiesWithMetricsCount = companiesWithMetrics.length;
+      
+      const coveragePercentage = totalCompanies > 0 ? Math.round((companiesWithMetricsCount / totalCompanies) * 100) : 0;
+      
+      res.json({
+        totalCompanies,
+        companiesWithMetrics: companiesWithMetricsCount,
+        coveragePercentage,
+        companiesWithMetricsIds: companiesWithMetrics.map(c => c.id)
+      });
+    } catch (error) {
+      logger.error("Error fetching benchmark companies stats", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/admin/benchmark-companies", requireAdmin, async (req, res) => {
     try {
       // Use enhanced global creation utility for comprehensive validation

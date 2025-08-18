@@ -57,6 +57,7 @@ export interface IStorage {
   
   // Benchmark Companies
   getBenchmarkCompanies(): Promise<BenchmarkCompany[]>;
+  getBenchmarkCompaniesWithMetrics(): Promise<BenchmarkCompany[]>;
   createBenchmarkCompany(company: InsertBenchmarkCompany): Promise<BenchmarkCompany>;
   updateBenchmarkCompany(id: string, company: Partial<InsertBenchmarkCompany>): Promise<BenchmarkCompany | undefined>;
   deleteBenchmarkCompany(id: string): Promise<void>;
@@ -301,6 +302,37 @@ export class DatabaseStorage implements IStorage {
   // Benchmark Companies
   async getBenchmarkCompanies(): Promise<BenchmarkCompany[]> {
     return await db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
+  }
+
+  async getBenchmarkCompaniesWithMetrics(): Promise<BenchmarkCompany[]> {
+    const companiesWithMetrics = await db
+      .select({
+        id: benchmarkCompanies.id,
+        name: benchmarkCompanies.name,
+        websiteUrl: benchmarkCompanies.websiteUrl,
+        industryVertical: benchmarkCompanies.industryVertical,
+        businessSize: benchmarkCompanies.businessSize,
+        active: benchmarkCompanies.active,
+        sourceVerified: benchmarkCompanies.sourceVerified,
+        createdAt: benchmarkCompanies.createdAt,
+        updatedAt: benchmarkCompanies.updatedAt
+      })
+      .from(benchmarkCompanies)
+      .innerJoin(metrics, eq(metrics.benchmarkCompanyId, benchmarkCompanies.id))
+      .where(eq(benchmarkCompanies.active, true))
+      .groupBy(
+        benchmarkCompanies.id,
+        benchmarkCompanies.name,
+        benchmarkCompanies.websiteUrl,
+        benchmarkCompanies.industryVertical,
+        benchmarkCompanies.businessSize,
+        benchmarkCompanies.active,
+        benchmarkCompanies.sourceVerified,
+        benchmarkCompanies.createdAt,
+        benchmarkCompanies.updatedAt
+      );
+    
+    return companiesWithMetrics;
   }
 
   // Benchmark Companies - consolidated using DatabaseRepository
