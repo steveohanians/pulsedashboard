@@ -668,11 +668,27 @@ export default function BrandSignals() {
                   {(() => {
                     const brandName = analysisResults.summary?.brand;
                     const questionResults = analysisResults.questionResults || [];
-                    const insights = [];
+                    
+                    // Define TypeScript interfaces
+                    interface StageMetric {
+                      brandSoV: number;
+                      competitorAvg: number;
+                      othersAvg: number;
+                      questionCount: number;
+                    }
+                    
+                    interface ArchetypeInsight {
+                      title: string;
+                      rationale: string;
+                      action: string;
+                      deliverables: string;
+                      priority: number;
+                      type: 'critical' | 'warning' | 'success' | 'opportunity' | 'info';
+                    }
                     
                     // Calculate stage-specific metrics
                     const stages = ['awareness', 'consideration', 'decision'];
-                    const stageMetrics = {};
+                    const stageMetrics: Record<string, StageMetric> = {};
                     
                     stages.forEach(stage => {
                       const stageQuestions = questionResults.filter((q: any) => q.stage === stage);
@@ -711,7 +727,8 @@ export default function BrandSignals() {
                     
                     // Apply archetype logic with priority: largest gap, then Decision → Consideration → Awareness
                     const stageOrder = ['decision', 'consideration', 'awareness'];
-                    const archetype_insights = [];
+                    const archetype_insights: ArchetypeInsight[] = [];
+                    const addedInsights = new Set<string>(); // Track added insights to prevent duplicates
                     
                     stageOrder.forEach(stage => {
                       const metrics = stageMetrics[stage];
@@ -777,8 +794,9 @@ export default function BrandSignals() {
                         });
                       }
                       
-                      // Check for fragmentation
-                      if (othersAvg >= Math.max(competitorAvg, 20)) {
+                      // Check for fragmentation (only once to prevent duplicates)
+                      if (othersAvg >= Math.max(competitorAvg, 20) && !addedInsights.has('fragmentation')) {
+                        addedInsights.add('fragmentation');
                         archetype_insights.push({
                           title: "Control the Fragmented Space",
                           rationale: `"Others" at ${othersAvg}% in ${stage} stage indicates market fragmentation. Opportunity to consolidate authority.`,
@@ -809,47 +827,22 @@ export default function BrandSignals() {
                     }
                     
                     return prioritizedInsights.map((insight, idx) => (
-                      <div key={idx} className={`p-4 rounded-lg border-l-4 ${
-                        insight.type === 'critical' ? 'bg-red-50 border-red-400' :
-                        insight.type === 'warning' ? 'bg-orange-50 border-orange-400' : 
-                        insight.type === 'success' ? 'bg-green-50 border-green-400' : 
-                        insight.type === 'opportunity' ? 'bg-purple-50 border-purple-400' :
-                        'bg-blue-50 border-blue-400'
+                      <div key={idx} className={`p-4 rounded-lg ${
+                        insight.type === 'critical' ? 'bg-red-100' :
+                        insight.type === 'warning' ? 'bg-orange-100' : 
+                        insight.type === 'success' ? 'bg-green-100' : 
+                        'bg-orange-100'
                       }`}>
-                        <div className={`font-semibold text-sm mb-2 ${
-                          insight.type === 'critical' ? 'text-red-800' :
-                          insight.type === 'warning' ? 'text-orange-800' : 
-                          insight.type === 'success' ? 'text-green-800' : 
-                          insight.type === 'opportunity' ? 'text-purple-800' :
-                          'text-blue-800'
-                        }`}>
+                        <div className="font-semibold text-sm mb-2 text-black">
                           {insight.title}
                         </div>
-                        <div className={`text-xs mb-2 ${
-                          insight.type === 'critical' ? 'text-red-700' :
-                          insight.type === 'warning' ? 'text-orange-700' : 
-                          insight.type === 'success' ? 'text-green-700' : 
-                          insight.type === 'opportunity' ? 'text-purple-700' :
-                          'text-blue-700'
-                        }`}>
+                        <div className="text-xs mb-2 text-black">
                           {insight.rationale}
                         </div>
-                        <div className={`text-xs mb-2 font-medium ${
-                          insight.type === 'critical' ? 'text-red-800' :
-                          insight.type === 'warning' ? 'text-orange-800' : 
-                          insight.type === 'success' ? 'text-green-800' : 
-                          insight.type === 'opportunity' ? 'text-purple-800' :
-                          'text-blue-800'
-                        }`}>
+                        <div className="text-xs mb-2 font-medium text-black">
                           Action: {insight.action}
                         </div>
-                        <div className={`text-xs ${
-                          insight.type === 'critical' ? 'text-red-700' :
-                          insight.type === 'warning' ? 'text-orange-700' : 
-                          insight.type === 'success' ? 'text-green-700' : 
-                          insight.type === 'opportunity' ? 'text-purple-700' :
-                          'text-blue-700'
-                        }`}>
+                        <div className="text-xs text-black">
                           <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
                         </div>
                       </div>
