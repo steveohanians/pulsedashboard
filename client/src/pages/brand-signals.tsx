@@ -371,14 +371,17 @@ export default function BrandSignals() {
                     {/* Website */}
                     <div className="flex items-center text-sm text-slate-600 mb-3">
                       <Globe className="h-4 w-4 mr-2 text-slate-400" />
-                      <span className="text-slate-500 min-w-[60px]">Website:</span>
+                      <span className="text-slate-500 min-w-[60px]">Website: </span>
                       <a 
                         href={client?.websiteUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-primary hover:text-primary/80 transition-colors font-medium"
+                        className="text-primary underline inline-flex items-center gap-1 group"
                       >
-                        {client?.websiteUrl?.replace(/^https?:\/\//, "").replace(/^www\./, "") || "Loading..."}
+                        <span>
+                          {client?.websiteUrl?.replace(/^https?:\/\//, "").replace(/^www\./, "") || "Loading..."}
+                        </span>
+                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" />
                       </a>
                     </div>
                     
@@ -403,7 +406,6 @@ export default function BrandSignals() {
                                   className="flex items-center justify-between bg-slate-50/50 rounded-md px-3 py-2 border border-slate-200/30"
                                 >
                                   <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
                                     <span className="font-medium text-slate-700">{displayName}</span>
                                   </div>
                                   <span className="text-xs text-slate-500">({cleanDomain})</span>
