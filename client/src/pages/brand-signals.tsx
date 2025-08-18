@@ -37,31 +37,49 @@ export default function BrandSignals() {
     try {
       // Fix URL formatting - ensure they're proper URLs
       const formatUrl = (url: string) => {
+        if (!url) return 'https://unknown.com';
         // Remove any protocol if exists
         let cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
         // Add https:// to make it a valid URL
         return `https://${cleanUrl}`;
       };
 
+      // Fix competitor names and URLs
+      const formattedCompetitors = competitors.map((c: any) => {
+        const cleanDomain = c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+        return {
+          name: c.name || cleanDomain.split('.')[0], // Use domain name if no company name
+          url: formatUrl(c.domain)
+        };
+      });
+
+      const payload = {
+        brand: {
+          name: client?.name || 'Unknown',
+          url: formatUrl(client?.websiteUrl || 'unknown.com')
+        },
+        competitors: formattedCompetitors,
+        vertical: client?.industryVertical || 'General'
+      };
+
+      console.log('SoV Analysis Payload:', payload);
+
       const response = await fetch('/api/sov/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          brand: {
-            name: client?.name || 'Unknown',
-            url: formatUrl(client?.websiteUrl || 'unknown.com')
-          },
-          competitors: competitors.map((c: any) => ({
-            name: c.name || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
-            url: formatUrl(c.domain)
-          })),
-          vertical: client?.industryVertical || 'General'
-        })
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(120000) // 2 minute timeout
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('SoV Analysis Response:', data);
       setAnalysisResults(data);
       
       if (data.success !== false) {
@@ -69,11 +87,18 @@ export default function BrandSignals() {
           title: "Analysis Complete",
           description: "Share of Voice analysis has been completed.",
         });
+      } else {
+        toast({
+          title: "Analysis Error",
+          description: data.error || "Analysis completed with errors.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('SoV Analysis Error:', error);
       toast({
         title: "Analysis Failed",
-        description: "Could not complete the analysis. Please try again.",
+        description: error.message || "Could not complete the analysis. Please try again.",
         variant: "destructive",
       });
     } finally {
