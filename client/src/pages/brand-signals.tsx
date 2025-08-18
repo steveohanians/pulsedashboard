@@ -761,86 +761,140 @@ export default function BrandSignals() {
                         addedInsights.add(`${stage}-archetype`); // Block other insights for this stage
                         addedArchetypes.add('Control the Fragmented Space');
                         archetype_insights.push({
-                          title: `Control the Fragmented Space (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
+                          title: "Control the Fragmented Space",
                           rationale: `"Others" at ${othersAvg}% in ${stage} stage indicates market fragmentation. Opportunity to consolidate authority.`,
                           action: "Publish authoritative, comprehensive category resources to consolidate scattered mentions.",
-                          deliverables: "Authoritative content hubs; Comparison matrices; Information architecture updates.",
+                          deliverables: "Authoritative content hubs; comparison matrices; backlink/analyst citation plan.",
                           priority: othersAvg,
                           type: 'opportunity'
                         });
                       } 
                       // Skip other archetypes if fragmentation already handled this stage
                       else if (!addedInsights.has(`${stage}-archetype`)) {
-                        // Archetype matching
+                        // Archetype matching with new 14-archetype system
                         if (brandSoV === 0) {
-                          // Absent
+                          // Absent triggers
                           if (stage === 'awareness' && !addedArchetypes.has('Crack the Visibility Lists')) {
                             addedArchetypes.add('Crack the Visibility Lists');
-                            // Special handling for awareness when competitor avg = 0%
-                            if (competitorAvg === 0) {
-                              archetype_insights.push({
-                                title: "Crack the Visibility Lists (Awareness)",
-                                rationale: `${brandName} appears in 0% of awareness queries across ${metrics.questionCount} question(s). Zero unaided recall in category discovery.`,
-                                action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
-                                deliverables: "Brand Strategy & Messaging; Visual Identity & style guide; Educational content hub.",
-                                priority: 100, // High priority for zero presence
-                                type: 'critical'
-                              });
-                            } else {
-                              archetype_insights.push({
-                                title: "Crack the Visibility Lists (Awareness)",
-                                rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} awareness question(s). Zero presence in category discovery.`,
-                                action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
-                                deliverables: "Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.",
-                                priority: gap,
-                                type: 'critical'
-                              });
-                            }
+                            archetype_insights.push({
+                              title: "Crack the Visibility Lists",
+                              rationale: `${brandName} absent in awareness stage (0% vs competitor avg ${competitorAvg}%). Missing from category discovery.`,
+                              action: "Earn inclusion in category roundups/directories and publish cite-able explainers.",
+                              deliverables: "Educational content hub; roundup/directories outreach plan; lightweight messaging alignment (not full brand refresh).",
+                              priority: competitorAvg === 0 ? 100 : gap,
+                              type: 'critical'
+                            });
                           } else if (stage === 'consideration' && !addedArchetypes.has('Close the Shortlist Gap')) {
                             addedArchetypes.add('Close the Shortlist Gap');
                             archetype_insights.push({
-                              title: "Close the Shortlist Gap (Consideration)",
-                              rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} consideration question(s). Missing from evaluation shortlists.`,
+                              title: "Close the Shortlist Gap",
+                              rationale: `${brandName} absent in consideration stage (0% vs competitor avg ${competitorAvg}%). Missing from evaluation shortlists.`,
                               action: "Build comparison pages, evaluator checklists, \"why us\" proof.",
-                              deliverables: "Web design & development; UX/UI; Messaging frameworks; Landing pages.",
+                              deliverables: "Structured comparison pages (with schema); evaluator checklist templates; targeted landing pages.",
+                              priority: gap,
+                              type: 'critical'
+                            });
+                          } else if (stage === 'decision' && !addedArchetypes.has('Strengthen Trust Signals')) {
+                            addedArchetypes.add('Strengthen Trust Signals');
+                            archetype_insights.push({
+                              title: "Strengthen Trust Signals",
+                              rationale: `${brandName} absent in decision stage (0% vs competitor avg ${competitorAvg}%). Trust/credibility barriers evident.`,
+                              action: "Surface certifications, compliance, recognizable clients, SLAs, accessibility — plus reviews/analyst mentions.",
+                              deliverables: "Trust-center content hub; accessibility audit; client logos/testimonials; third-party reviews integration.",
                               priority: gap,
                               type: 'critical'
                             });
                           }
                         } else if (brandSoV + 5 < competitorAvg) {
-                          // Underperforming
+                          // Underperforming triggers
                           if (stage === 'awareness' && !addedArchetypes.has('Own the Category Narrative')) {
                             addedArchetypes.add('Own the Category Narrative');
                             archetype_insights.push({
-                              title: "Own the Category Narrative (Awareness)",
-                              rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} awareness question(s). Lagging in thought leadership.`,
+                              title: "Own the Category Narrative",
+                              rationale: `${brandName} underperforming in awareness (${brandSoV}% vs competitor avg ${competitorAvg}%). Lagging in thought leadership.`,
                               action: "Publish POV frameworks, definitions, and comparison primers AI can quote.",
-                              deliverables: "Brand Platform/Messaging; Content development; Campaign creative.",
+                              deliverables: "POV content frameworks; category definition articles; campaign creative to distribute/seed.",
                               priority: gap,
                               type: 'warning'
                             });
-                          } else if (stage === 'decision' && !addedArchetypes.has('Improve Ease of Choice')) {
-                            addedArchetypes.add('Improve Ease of Choice');
+                          } else if (stage === 'consideration' && !addedArchetypes.has('Differentiate with Signature Strengths')) {
+                            addedArchetypes.add('Differentiate with Signature Strengths');
                             archetype_insights.push({
-                              title: "Improve Ease of Choice (Decision)",
-                              rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} decision question(s). Decision friction evident.`,
-                              action: "Clarify pricing/tiers, integration guides, evaluation tools.",
-                              deliverables: "UX for pricing comparators; Integration documentation pages; Interactive tools/calculators.",
+                              title: "Differentiate with Signature Strengths",
+                              rationale: `${brandName} underperforming in consideration (${brandSoV}% vs competitor avg ${competitorAvg}%). Present but generic (no unique associations).`,
+                              action: "Name/seed distinctive features, verticals, methods across site & content — and propagate through earned mentions.",
+                              deliverables: "Positioning + product messaging; vertical/feature landing pages; earned media/PR amplification.",
+                              priority: gap,
+                              type: 'warning'
+                            });
+                          } else if (stage === 'decision' && !addedArchetypes.has('Prove Measurable Outcomes')) {
+                            addedArchetypes.add('Prove Measurable Outcomes');
+                            archetype_insights.push({
+                              title: "Prove Measurable Outcomes",
+                              rationale: `${brandName} underperforming in decision (${brandSoV}% vs competitor avg ${competitorAvg}%). ROI/impact evidence lacking.`,
+                              action: "Quantified case studies; before/after KPIs; outcome dashboards.",
+                              deliverables: "Case study templates with metrics; conversion & engagement analytics; outcome dashboards.",
                               priority: gap,
                               type: 'warning'
                             });
                           }
                         } else if (brandSoV >= competitorAvg - 5 && !addedArchetypes.has('Scale Market Momentum')) {
-                          // Strong performance - use "near parity" language when close
+                          // Strong performance trigger
                           addedArchetypes.add('Scale Market Momentum');
                           const gapDescription = Math.abs(gap) <= 5 ? "near parity; efficient to amplify" : "strong position to amplify";
                           archetype_insights.push({
-                            title: `Scale Market Momentum (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
-                            rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} ${stage} question(s)—${gapDescription}.`,
-                            action: "Amplify what's working across paid/earned/owned; expand formats.",
-                            deliverables: "Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative & motion.",
-                            priority: -Math.abs(gap), // Negative for opportunities, smaller gaps = higher priority
+                            title: "Scale Market Momentum",
+                            rationale: `${brandName} strong in ${stage} stage (${brandSoV}% vs competitor avg ${competitorAvg}%)—${gapDescription}.`,
+                            action: "Amplify what's working across paid/earned/owned; expand into new formats.",
+                            deliverables: "Paid search/social + programmatic plan; SEO retargeting program; campaign creative & motion assets.",
+                            priority: -Math.abs(gap), // Negative for opportunities
                             type: 'success'
+                          });
+                        }
+
+                        // Additional specialized archetypes for specific conditions
+                        if (stage === 'awareness' && brandSoV > 0 && !addedArchetypes.has('Accelerate Buyer Education')) {
+                          // When competitors dominate awareness explainers
+                          const dominatedByCompetitorExplainers = competitorAvg > brandSoV + 10;
+                          if (dominatedByCompetitorExplainers) {
+                            addedArchetypes.add('Accelerate Buyer Education');
+                            archetype_insights.push({
+                              title: "Accelerate Buyer Education",
+                              rationale: `Awareness queries dominated by competitor explainers (competitor avg ${competitorAvg}% vs ${brandName} ${brandSoV}%).`,
+                              action: "Guides, glossaries, \"what is / how it works\" series; schema/IA to surface it.",
+                              deliverables: "Content strategy & creation; UX/IA + schema markup; SEO strategy.",
+                              priority: gap,
+                              type: 'warning'
+                            });
+                          }
+                        }
+
+                        if (stage === 'consideration' && !addedArchetypes.has('Expand Vertical Proof')) {
+                          // When competitors tied to verticals; brand is not
+                          const verticalTiedCompetitors = competitorAvg > brandSoV + 8;
+                          if (verticalTiedCompetitors && brandSoV > 0) {
+                            addedArchetypes.add('Expand Vertical Proof');
+                            archetype_insights.push({
+                              title: "Expand Vertical Proof",
+                              rationale: `Competitors tied to verticals while ${brandName} shows generic positioning (${brandSoV}% vs competitor avg ${competitorAvg}%).`,
+                              action: "Publish tailored case studies, outcomes, logos per industry.",
+                              deliverables: "Vertical case stories; modular web templates; outcome metrics embedded via analytics snippets.",
+                              priority: gap,
+                              type: 'warning'
+                            });
+                          }
+                        }
+
+                        if (stage === 'decision' && brandSoV > 0 && brandSoV + 5 < competitorAvg && !addedArchetypes.has('Improve Ease of Choice')) {
+                          // When decision-stage queries show confusion
+                          addedArchetypes.add('Improve Ease of Choice');
+                          archetype_insights.push({
+                            title: "Improve Ease of Choice",
+                            rationale: `Decision-stage queries show confusion (${brandName} ${brandSoV}% vs competitor avg ${competitorAvg}%). Pricing, integrations, fit unclear.`,
+                            action: "Clarify pricing/tiers, integration guides, evaluation tools.",
+                            deliverables: "Pricing schema + comparators; integration documentation; interactive fit calculators/tools.",
+                            priority: gap,
+                            type: 'warning'
                           });
                         }
                         addedInsights.add(`${stage}-archetype`);
@@ -864,17 +918,20 @@ export default function BrandSignals() {
                       })
                       .slice(0, 5);
                     
-                    // If no specific insights, add generic ones
+                    // If no specific insights, add technical/enabler archetypes
                     if (prioritizedInsights.length === 0) {
                       const overallBrandSoV = analysisResults.metrics?.overallSoV?.[brandName] || 0;
-                      prioritizedInsights.push({
-                        title: "Accelerate Buyer Education",
-                        rationale: `${brandName} showing ${overallBrandSoV}% overall share of voice. Need stronger educational content presence.`,
-                        action: "Guides, glossaries, \"what is / how it works\" series; schema/IA to surface it.",
-                        deliverables: "Content strategy & creation; UX/IA & prototyping; SEO strategy.",
-                        priority: 0,
-                        type: 'info'
-                      });
+                      
+                      if (overallBrandSoV < 10) {
+                        prioritizedInsights.push({
+                          title: "Fix Technical Discoverability",
+                          rationale: `${brandName} showing ${overallBrandSoV}% overall share of voice. Low awareness suggests technical issues.`,
+                          action: "Improve crawlability, speed, metadata, structured content.",
+                          deliverables: "Technical SEO audit + fixes; site speed/performance optimization; structured data activation.",
+                          priority: 10 - overallBrandSoV,
+                          type: 'info'
+                        });
+                      }
                     }
                     
                     return prioritizedInsights.map((insight, idx) => {
@@ -906,9 +963,9 @@ export default function BrandSignals() {
                           <div className="text-xs mb-2 font-medium text-black">
                             Action: {insight.action}
                           </div>
-                          {/* <div className="text-xs text-black">
-                            <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
-                          </div> */}
+                          <div className="text-xs text-black">
+                            <strong>Deliverables:</strong> {insight.deliverables}
+                          </div>
                         </div>
                       );
                     });
