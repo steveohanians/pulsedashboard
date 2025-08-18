@@ -400,7 +400,7 @@ export default function Dashboard() {
                     <AvatarImage 
                       src={client.iconUrl}
                       alt={client?.name || "Client"}
-                      className="object-contain"
+                      className="object-contain p-0.5"
                     />
                   )}
                   <AvatarFallback className="text-xs font-semibold">
