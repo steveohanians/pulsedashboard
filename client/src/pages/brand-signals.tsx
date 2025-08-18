@@ -729,6 +729,7 @@ export default function BrandSignals() {
                     const stageOrder = ['decision', 'consideration', 'awareness'];
                     const archetype_insights: ArchetypeInsight[] = [];
                     const addedInsights = new Set<string>(); // Track added insights to prevent duplicates
+                    const addedArchetypes = new Set<string>(); // Track added archetype types to prevent repeats
                     
                     stageOrder.forEach(stage => {
                       const metrics = stageMetrics[stage];
@@ -741,9 +742,10 @@ export default function BrandSignals() {
                       
                       // Check for fragmentation first (takes priority)
                       const fragmentationKey = `fragmentation-${stage}`;
-                      if (othersAvg >= Math.max(competitorAvg, 20) && !addedInsights.has(fragmentationKey)) {
+                      if (othersAvg >= Math.max(competitorAvg, 20) && !addedInsights.has(fragmentationKey) && !addedArchetypes.has('Control the Fragmented Space')) {
                         addedInsights.add(fragmentationKey);
                         addedInsights.add(`${stage}-archetype`); // Block other insights for this stage
+                        addedArchetypes.add('Control the Fragmented Space');
                         archetype_insights.push({
                           title: `Control the Fragmented Space (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
                           rationale: `"Others" at ${othersAvg}% in ${stage} stage indicates market fragmentation. Opportunity to consolidate authority.`,
@@ -758,7 +760,8 @@ export default function BrandSignals() {
                         // Archetype matching
                         if (brandSoV === 0) {
                           // Absent
-                          if (stage === 'awareness') {
+                          if (stage === 'awareness' && !addedArchetypes.has('Crack the Visibility Lists')) {
+                            addedArchetypes.add('Crack the Visibility Lists');
                             // Special handling for awareness when competitor avg = 0%
                             if (competitorAvg === 0) {
                               archetype_insights.push({
@@ -779,7 +782,8 @@ export default function BrandSignals() {
                                 type: 'critical'
                               });
                             }
-                          } else if (stage === 'consideration') {
+                          } else if (stage === 'consideration' && !addedArchetypes.has('Close the Shortlist Gap')) {
+                            addedArchetypes.add('Close the Shortlist Gap');
                             archetype_insights.push({
                               title: "Close the Shortlist Gap (Consideration)",
                               rationale: `${brandName} at 0% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} consideration question(s). Missing from evaluation shortlists.`,
@@ -791,7 +795,8 @@ export default function BrandSignals() {
                           }
                         } else if (brandSoV + 5 < competitorAvg) {
                           // Underperforming
-                          if (stage === 'awareness') {
+                          if (stage === 'awareness' && !addedArchetypes.has('Own the Category Narrative')) {
+                            addedArchetypes.add('Own the Category Narrative');
                             archetype_insights.push({
                               title: "Own the Category Narrative (Awareness)",
                               rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} awareness question(s). Lagging in thought leadership.`,
@@ -800,7 +805,8 @@ export default function BrandSignals() {
                               priority: gap,
                               type: 'warning'
                             });
-                          } else if (stage === 'decision') {
+                          } else if (stage === 'decision' && !addedArchetypes.has('Improve Ease of Choice')) {
+                            addedArchetypes.add('Improve Ease of Choice');
                             archetype_insights.push({
                               title: "Improve Ease of Choice (Decision)",
                               rationale: `${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${metrics.questionCount} decision question(s). Decision friction evident.`,
@@ -810,8 +816,9 @@ export default function BrandSignals() {
                               type: 'warning'
                             });
                           }
-                        } else if (brandSoV >= competitorAvg - 5) {
+                        } else if (brandSoV >= competitorAvg - 5 && !addedArchetypes.has('Scale Market Momentum')) {
                           // Strong performance - use "near parity" language when close
+                          addedArchetypes.add('Scale Market Momentum');
                           const gapDescription = Math.abs(gap) <= 5 ? "near parity; efficient to amplify" : "strong position to amplify";
                           archetype_insights.push({
                             title: `Scale Market Momentum (${stage.charAt(0).toUpperCase() + stage.slice(1)})`,
@@ -841,7 +848,7 @@ export default function BrandSignals() {
                                       b.title.toLowerCase().includes('consideration') ? 'consideration' : 'awareness';
                         return stageImportance[bStage] - stageImportance[aStage];
                       })
-                      .slice(0, 4);
+                      .slice(0, 5);
                     
                     // If no specific insights, add generic ones
                     if (prioritizedInsights.length === 0) {
@@ -872,9 +879,9 @@ export default function BrandSignals() {
                         <div className="text-xs mb-2 font-medium text-black">
                           Action: {insight.action}
                         </div>
-                        <div className="text-xs text-black">
+                        {/* <div className="text-xs text-black">
                           <strong>Delivered by Clear Digital:</strong> {insight.deliverables}
-                        </div>
+                        </div> */}
                       </div>
                     ));
                   })()}
