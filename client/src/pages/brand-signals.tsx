@@ -364,14 +364,15 @@ export default function BrandSignals() {
                   <div className="mt-4 space-y-2">
                     <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
                     {progressSteps.map((step, index) => {
-                      const isCompleted = step.includes('✅');
+                      const isExplicitlyCompleted = step.includes('✅');
                       const isFailed = step.includes('❌');
-                      const isCurrentStep = index === progressSteps.length - 1 && !isCompleted && !isFailed;
+                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
+                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
                       
                       return (
                         <div key={index} className="flex items-center space-x-3 text-sm">
                           <div className="flex-shrink-0">
-                            {isCompleted && (
+                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
                               <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
                                 <span className="text-green-600 text-xs font-bold">✓</span>
                               </div>
@@ -381,14 +382,9 @@ export default function BrandSignals() {
                                 <span className="text-red-600 text-xs font-bold">✕</span>
                               </div>
                             )}
-                            {!isCompleted && !isFailed && isCurrentStep && (
+                            {isCurrentStep && (
                               <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
                                 <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                              </div>
-                            )}
-                            {!isCompleted && !isFailed && !isCurrentStep && (
-                              <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
-                                <span className="text-slate-400 text-xs">○</span>
                               </div>
                             )}
                           </div>
@@ -453,14 +449,15 @@ export default function BrandSignals() {
                   <div className="mt-4 space-y-2">
                     <h4 className="text-sm font-medium text-slate-700">Test Analysis Progress:</h4>
                     {progressSteps.map((step, index) => {
-                      const isCompleted = step.includes('✅');
+                      const isExplicitlyCompleted = step.includes('✅');
                       const isFailed = step.includes('❌');
-                      const isCurrentStep = index === progressSteps.length - 1 && !isCompleted && !isFailed;
+                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
+                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
                       
                       return (
                         <div key={index} className="flex items-center space-x-3 text-sm">
                           <div className="flex-shrink-0">
-                            {isCompleted && (
+                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
                               <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
                                 <span className="text-green-600 text-xs font-bold">✓</span>
                               </div>
@@ -470,14 +467,9 @@ export default function BrandSignals() {
                                 <span className="text-red-600 text-xs font-bold">✕</span>
                               </div>
                             )}
-                            {!isCompleted && !isFailed && isCurrentStep && (
+                            {isCurrentStep && (
                               <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
                                 <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                              </div>
-                            )}
-                            {!isCompleted && !isFailed && !isCurrentStep && (
-                              <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
-                                <span className="text-slate-400 text-xs">○</span>
                               </div>
                             )}
                           </div>
