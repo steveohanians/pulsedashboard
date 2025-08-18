@@ -160,13 +160,25 @@ export default function BrandSignals() {
         // Handle connection end
         if (data.type === 'end') {
           eventSource.close();
+          setIsAnalyzing(false); // Close progress dialog when SSE ends
         }
       };
 
       eventSource.onerror = (error) => {
         console.log('SSE Error:', error);
         eventSource.close();
-        throw new Error("Connection to progress updates was lost");
+        setIsAnalyzing(false); // Close progress dialog on error
+        
+        // Mark current step as error
+        if (currentStep >= 0) {
+          updateProgressFromSSE(currentStep, 'error', 'Connection to progress updates was lost');
+        }
+        
+        toast({
+          title: "Analysis Failed",
+          description: "Connection to progress updates was lost. Please try again.",
+          variant: "destructive",
+        });
       };
 
     } catch (error: any) {
@@ -187,8 +199,7 @@ export default function BrandSignals() {
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsAnalyzing(false);
+      setIsAnalyzing(false); // Close progress dialog on error
     }
   };
 

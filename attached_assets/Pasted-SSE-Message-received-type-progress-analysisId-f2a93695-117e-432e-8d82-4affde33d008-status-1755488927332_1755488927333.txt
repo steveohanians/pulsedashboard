@@ -1,0 +1,59 @@
+SSE Message received: {"type":"progress","analysisId":"f2a93695-117e-432e-8d82-4affde33d008","status":"researched","message":"Brand research complete","step":1,"timestamp":"2025-08-18T03:46:51.600Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f2a93695-117e-432e-8d82-4affde33d008","status":"generating","message":"Generating research questions...","step":2,"timestamp":"2025-08-18T03:46:51.600Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f2a93695-117e-432e-8d82-4affde33d008","status":"generated","message":"Generated 15 questions","step":2,"timestamp":"2025-08-18T03:46:56.604Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f2a93695-117e-432e-8d82-4affde33d008","status":"analyzing","message":"Analyzing brand mentions...","step":3,"timestamp":"2025-08-18T03:46:56.604Z"}
+injected.js:5 [USO] Button detection aborting due to timeout.
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"4e510065-8f7d-4116-b60a-5d4b189a5f3e","status":"analyzed","message":"Brand mention analysis complete","step":3,"timestamp":"2025-08-18T03:48:23.828Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"4e510065-8f7d-4116-b60a-5d4b189a5f3e","status":"calculating","message":"Calculating Share of Voice...","step":4,"timestamp":"2025-08-18T03:48:23.828Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"4e510065-8f7d-4116-b60a-5d4b189a5f3e","status":"complete","message":"Analysis complete!","step":5,"timestamp":"2025-08-18T03:48:23.829Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"df6a5e69-9a0e-40b5-a09e-17a42d058147","status":"analyzed","message":"Brand mention analysis complete","step":3,"timestamp":"2025-08-18T03:48:24.053Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"df6a5e69-9a0e-40b5-a09e-17a42d058147","status":"calculating","message":"Calculating Share of Voice...","step":4,"timestamp":"2025-08-18T03:48:24.054Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"df6a5e69-9a0e-40b5-a09e-17a42d058147","status":"complete","message":"Analysis complete!","step":5,"timestamp":"2025-08-18T03:48:24.054Z"}
+eruda.js:2 SSE Message received: {"type":"end","message":"Analysis finished","timestamp":"2025-08-18T03:48:24.829Z"}
+eruda.js:2 SSE Message received: {"type":"end","message":"Analysis finished","timestamp":"2025-08-18T03:48:25.054Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f515256f-b244-414b-9304-266bf002b241","status":"analyzed","message":"Brand mention analysis complete","step":3,"timestamp":"2025-08-18T03:48:30.006Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f515256f-b244-414b-9304-266bf002b241","status":"calculating","message":"Calculating Share of Voice...","step":4,"timestamp":"2025-08-18T03:48:30.006Z"}
+eruda.js:2 SSE Message received: {"type":"progress","analysisId":"f515256f-b244-414b-9304-266bf002b241","status":"complete","message":"Analysis complete!","step":5,"timestamp":"2025-08-18T03:48:30.006Z"}
+eruda.js:2 SSE Message received: {"type":"end","message":"Analysis finished","timestamp":"2025-08-18T03:48:31.006Z"}
+_app-99885506b51cf210.js:13  POST https://replit.com/graphql net::ERR_CONNECTION_CLOSED
+(anonymous) @ _app-99885506b51cf210.js:13
+(anonymous) @ _app-99885506b51cf210.js:40
+e @ _app-99885506b51cf210.js:23
+t.subscribe @ _app-99885506b51cf210.js:23
+e.consumeQueue @ _app-99885506b51cf210.js:40
+(anonymous) @ _app-99885506b51cf210.js:40
+n @ _app-99885506b51cf210.js:13
+setTimeout
+(anonymous) @ _app-99885506b51cf210.js:13
+e.scheduleQueueConsumption @ _app-99885506b51cf210.js:40
+(anonymous) @ _app-99885506b51cf210.js:40
+e @ _app-99885506b51cf210.js:23
+t.subscribe @ _app-99885506b51cf210.js:23
+(anonymous) @ _app-99885506b51cf210.js:40
+e @ _app-99885506b51cf210.js:23
+t.subscribe @ _app-99885506b51cf210.js:23
+e.try @ _app-99885506b51cf210.js:40
+e.start @ _app-99885506b51cf210.js:40
+t.request @ _app-99885506b51cf210.js:40
+(anonymous) @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:40
+(anonymous) @ _app-99885506b51cf210.js:28
+e.execute @ _app-99885506b51cf210.js:28
+e.getObservableFromLink @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:15
+(anonymous) @ _app-99885506b51cf210.js:15
+s @ _app-99885506b51cf210.js:15
+e.mutate @ _app-99885506b51cf210.js:28
+e.mutate @ _app-99885506b51cf210.js:28
+(anonymous) @ _app-99885506b51cf210.js:20
+(anonymous) @ _app-99885506b51cf210.js:15
+(anonymous) @ main-9b4c60c68fc5a7b6.js:1
+n @ main-9b4c60c68fc5a7b6.js:1
+u @ main-9b4c60c68fc5a7b6.js:1
+(anonymous) @ main-9b4c60c68fc5a7b6.js:1
+(anonymous) @ main-9b4c60c68fc5a7b6.js:1
+(anonymous) @ _app-99885506b51cf210.js:15
+n @ _app-99885506b51cf210.js:13Understand this error
