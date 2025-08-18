@@ -1,0 +1,283 @@
+```bash
+# STEP 12: Add test companies card for Share of Voice analysis
+# This adds a second card with well-known test companies
+```
+
+```tsx
+// FILE: client/src/pages/brand-signals.tsx
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. Find the Analysis Control Card section
+// 2. REPLACE the single Card with a grid containing both cards
+// 3. The test card sends hardcoded HubSpot data when clicked
+
+// FIND THIS SECTION:
+{/* Analysis Control Card */}
+<Card className="mb-6">
+  <CardHeader>
+    <CardTitle className="flex items-center text-base">
+      <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+      Share of Voice Analysis
+    </CardTitle>
+  </CardHeader>
+  {/* ... existing card content ... */}
+</Card>
+
+// REPLACE WITH THIS GRID OF TWO CARDS:
+
+{/* Analysis Control Cards - Real and Test */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  {/* Real Client Analysis Card */}
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center text-base">
+        <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+        Share of Voice Analysis
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        <div className="text-sm text-slate-600">
+          <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
+          <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
+          <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
+          {competitors?.length > 0 && (
+            <ul className="mt-2 ml-4">
+              {competitors.map((c: any) => (
+                <li key={c.id} className="text-xs">
+                  • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        
+        <Button 
+          className="w-full h-10"
+          onClick={runAnalysis}
+          disabled={isAnalyzing || !client}
+        >
+          {isAnalyzing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Run New Analysis
+            </>
+          )}
+        </Button>
+        
+        {/* Progress Steps - only show if analyzing real client */}
+        {isAnalyzing && progressSteps.length > 0 && !isTestAnalysis && (
+          <div className="mt-4 space-y-2">
+            <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+            {progressSteps.map((step, index) => (
+              <div key={index} className="flex items-center space-x-3 text-sm">
+                <div className="flex-shrink-0">
+                  {step.includes('✅') && (
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 text-xs font-bold">✓</span>
+                    </div>
+                  )}
+                  {step.includes('❌') && (
+                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-red-600 text-xs font-bold">✕</span>
+                    </div>
+                  )}
+                  {!step.includes('✅') && !step.includes('❌') && (
+                    <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                      <span className="text-slate-400 text-xs">○</span>
+                    </div>
+                  )}
+                </div>
+                <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                  {step}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Test Companies Analysis Card */}
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center text-base">
+        <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
+        Share of Voice Analysis (with test companies)
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        <div className="text-sm text-slate-600">
+          <p><strong>Client:</strong> HubSpot</p>
+          <p><strong>Website:</strong> hubspot.com</p>
+          <p><strong>Competitors:</strong> 3 configured</p>
+          <ul className="mt-2 ml-4">
+            <li className="text-xs">• Salesforce (salesforce.com)</li>
+            <li className="text-xs">• Zoho (zoho.com)</li>
+            <li className="text-xs">• Mailchimp (mailchimp.com)</li>
+          </ul>
+          <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              <strong>Note:</strong> Test with well-known brands to see real Share of Voice results
+            </p>
+          </div>
+        </div>
+        
+        <Button 
+          className="w-full h-10 bg-blue-600 hover:bg-blue-700"
+          onClick={runTestAnalysis}
+          disabled={isAnalyzing}
+        >
+          {isAnalyzing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Run Test Analysis
+            </>
+          )}
+        </Button>
+        
+        {/* Progress Steps - only show if analyzing test companies */}
+        {isAnalyzing && progressSteps.length > 0 && isTestAnalysis && (
+          <div className="mt-4 space-y-2">
+            <h4 className="text-sm font-medium text-slate-700">Test Analysis Progress:</h4>
+            {progressSteps.map((step, index) => (
+              <div key={index} className="flex items-center space-x-3 text-sm">
+                <div className="flex-shrink-0">
+                  {step.includes('✅') && (
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 text-xs font-bold">✓</span>
+                    </div>
+                  )}
+                  {step.includes('❌') && (
+                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-red-600 text-xs font-bold">✕</span>
+                    </div>
+                  )}
+                  {!step.includes('✅') && !step.includes('❌') && (
+                    <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                      <span className="text-slate-400 text-xs">○</span>
+                    </div>
+                  )}
+                </div>
+                <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                  {step}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+</div>
+
+// ALSO ADD these items with the other useState declarations at the top:
+const [isTestAnalysis, setIsTestAnalysis] = useState(false);
+
+// AND ADD this new function after the existing runAnalysis function:
+const runTestAnalysis = async () => {
+  setIsAnalyzing(true);
+  setIsTestAnalysis(true);
+  setAnalysisResults(null);
+  setProgressSteps([]);
+  setErrorMessage("");
+  
+  try {
+    // Hardcoded test data
+    const testPayload = {
+      brand: {
+        name: "HubSpot",
+        url: "https://www.hubspot.com"
+      },
+      competitors: [
+        { name: "Salesforce", url: "https://www.salesforce.com" },
+        { name: "Zoho", url: "https://www.zoho.com" },
+        { name: "Mailchimp", url: "https://mailchimp.com" }
+      ],
+      vertical: "Marketing Software"
+    };
+    
+    // Show progress messages
+    setProgressSteps([`Starting test analysis for ${testPayload.brand.name}...`]);
+    
+    setTimeout(() => {
+      setProgressSteps(prev => [...prev, `Analyzing against well-known competitors`]);
+    }, 500);
+    
+    setTimeout(() => {
+      setProgressSteps(prev => [...prev, `Processing... This may take 2-3 minutes`]);
+    }, 1000);
+    
+    // Call the API with test data
+    const response = await fetch('/api/sov/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testPayload)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Check if we got valid results
+    if (data.success === false) {
+      setErrorMessage(data.error || "Test analysis failed");
+      setProgressSteps(prev => [...prev, `❌ Error: ${data.error}`]);
+      return;
+    }
+    
+    // Set the results
+    setAnalysisResults(data);
+    setProgressSteps(prev => [...prev, `✅ Test analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`]);
+    
+    toast({
+      title: "Test Analysis Complete",
+      description: `Successfully analyzed HubSpot vs competitors`,
+    });
+    
+  } catch (error) {
+    const errorMsg = error.message || 'Test analysis failed';
+    setErrorMessage(errorMsg);
+    setProgressSteps(prev => [...prev, `❌ Error: ${errorMsg}`]);
+    
+    toast({
+      title: "Test Analysis Failed",
+      description: errorMsg,
+      variant: "destructive",
+    });
+  } finally {
+    setIsAnalyzing(false);
+    setIsTestAnalysis(false);
+  }
+};
+```
+
+```bash
+# What this adds:
+# 1. Two cards side by side (responsive - stacks on mobile)
+# 2. Left card: Your existing dynamic client analysis
+# 3. Right card: Static test with HubSpot, Salesforce, Zoho, Mailchimp
+# 4. Blue styling for test card to differentiate it
+# 5. Both use the same results display area
+# 6. Test analysis sends hardcoded well-known brands
+# 7. Progress shows which analysis is running
+#
+# These test brands WILL get mentions and show real SoV percentages!
+```

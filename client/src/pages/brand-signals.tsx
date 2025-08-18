@@ -27,6 +27,7 @@ export default function BrandSignals() {
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [showRawData, setShowRawData] = useState(false);
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
+  const [isTestAnalysis, setIsTestAnalysis] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   
   // Get client and competitors from existing dashboard data
@@ -129,6 +130,88 @@ export default function BrandSignals() {
     }
   };
 
+  // Function to run test analysis with well-known brands
+  const runTestAnalysis = async () => {
+    setIsAnalyzing(true);
+    setIsTestAnalysis(true);
+    setAnalysisResults(null);
+    setProgressSteps([]);
+    setErrorMessage("");
+    
+    try {
+      // Hardcoded test data
+      const testPayload = {
+        brand: {
+          name: "HubSpot",
+          url: "https://www.hubspot.com"
+        },
+        competitors: [
+          { name: "Salesforce", url: "https://www.salesforce.com" },
+          { name: "Zoho", url: "https://www.zoho.com" },
+          { name: "Mailchimp", url: "https://mailchimp.com" }
+        ],
+        vertical: "Marketing Software"
+      };
+      
+      // Show progress messages
+      setProgressSteps([`Starting test analysis for ${testPayload.brand.name}...`]);
+      
+      setTimeout(() => {
+        setProgressSteps(prev => [...prev, `Analyzing against well-known competitors`]);
+      }, 500);
+      
+      setTimeout(() => {
+        setProgressSteps(prev => [...prev, `Processing... This may take 2-3 minutes`]);
+      }, 1000);
+      
+      // Call the API with test data
+      const response = await fetch('/api/sov/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testPayload)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if we got valid results
+      if (data.success === false) {
+        setErrorMessage(data.error || "Test analysis failed");
+        setProgressSteps(prev => [...prev, `❌ Error: ${data.error}`]);
+        return;
+      }
+      
+      // Set the results
+      setAnalysisResults(data);
+      setProgressSteps(prev => [...prev, `✅ Test analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`]);
+      
+      toast({
+        title: "Test Analysis Complete",
+        description: `Successfully analyzed HubSpot vs competitors`,
+      });
+      
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Test analysis failed';
+      setErrorMessage(errorMsg);
+      setProgressSteps(prev => [...prev, `❌ Error: ${errorMsg}`]);
+      
+      toast({
+        title: "Test Analysis Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+      setIsTestAnalysis(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header - EXACT SAME AS DASHBOARD */}
@@ -216,66 +299,163 @@ export default function BrandSignals() {
           </Link>
         </div>
         
-        {/* Analysis Control Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center text-base">
-              <TrendingUp className="h-5 w-5 mr-3 text-primary" />
-              Share of Voice Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm text-slate-600">
-                <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
-                <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
-                <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
-                {competitors?.length > 0 && (
-                  <ul className="mt-2 ml-4">
-                    {competitors.map((c: any) => (
-                      <li key={c.id} className="text-xs">
-                        • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              
-              <Button 
-                className="w-full h-10"
-                onClick={runAnalysis}
-                disabled={isAnalyzing || !client}
-              >
-                {isAnalyzing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Run New Analysis
-                  </>
-                )}
-              </Button>
-              
-              {/* Progress Steps - Simplified */}
-              {isAnalyzing && progressSteps.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
-                  <div className="bg-slate-50 p-3 rounded-lg space-y-1">
-                    {progressSteps.map((message, index) => (
-                      <div key={index} className="flex items-center space-x-2 text-sm">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-slate-700">{message}</span>
+        {/* Analysis Control Cards - Real and Test */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Real Client Analysis Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-base">
+                <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+                Share of Voice Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-slate-600">
+                  <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
+                  <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
+                  <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
+                  {competitors?.length > 0 && (
+                    <ul className="mt-2 ml-4">
+                      {competitors.map((c: any) => (
+                        <li key={c.id} className="text-xs">
+                          • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                
+                <Button 
+                  className="w-full h-10"
+                  onClick={runAnalysis}
+                  disabled={isAnalyzing || !client}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Run New Analysis
+                    </>
+                  )}
+                </Button>
+                
+                {/* Progress Steps - only show if analyzing real client */}
+                {isAnalyzing && progressSteps.length > 0 && !isTestAnalysis && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+                    {progressSteps.map((step, index) => (
+                      <div key={index} className="flex items-center space-x-3 text-sm">
+                        <div className="flex-shrink-0">
+                          {step.includes('✅') && (
+                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-green-600 text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                          {step.includes('❌') && (
+                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-xs font-bold">✕</span>
+                            </div>
+                          )}
+                          {!step.includes('✅') && !step.includes('❌') && (
+                            <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                              <span className="text-slate-400 text-xs">○</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                          {step}
+                        </span>
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Test Companies Analysis Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-base">
+                <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
+                Share of Voice Analysis (with test companies)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-slate-600">
+                  <p><strong>Client:</strong> HubSpot</p>
+                  <p><strong>Website:</strong> hubspot.com</p>
+                  <p><strong>Competitors:</strong> 3 configured</p>
+                  <ul className="mt-2 ml-4">
+                    <li className="text-xs">• Salesforce (salesforce.com)</li>
+                    <li className="text-xs">• Zoho (zoho.com)</li>
+                    <li className="text-xs">• Mailchimp (mailchimp.com)</li>
+                  </ul>
+                  <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-700">
+                      <strong>Note:</strong> Test with well-known brands to see real Share of Voice results
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                
+                <Button 
+                  className="w-full h-10 bg-blue-600 hover:bg-blue-700"
+                  onClick={runTestAnalysis}
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Run Test Analysis
+                    </>
+                  )}
+                </Button>
+                
+                {/* Progress Steps - only show if analyzing test companies */}
+                {isAnalyzing && progressSteps.length > 0 && isTestAnalysis && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-slate-700">Test Analysis Progress:</h4>
+                    {progressSteps.map((step, index) => (
+                      <div key={index} className="flex items-center space-x-3 text-sm">
+                        <div className="flex-shrink-0">
+                          {step.includes('✅') && (
+                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-green-600 text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                          {step.includes('❌') && (
+                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-xs font-bold">✕</span>
+                            </div>
+                          )}
+                          {!step.includes('✅') && !step.includes('❌') && (
+                            <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                              <span className="text-slate-400 text-xs">○</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                          {step}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Analysis Results */}
         {analysisResults && (
@@ -458,7 +638,7 @@ export default function BrandSignals() {
                               className={`h-3 rounded-full transition-all duration-500 ${
                                 brand === analysisResults.summary?.brand ? 'bg-primary' : 'bg-slate-400'
                               }`}
-                              style={{ width: `${percentage}%` }}
+                              style={{ width: `${String(percentage)}%` }}
                             />
                           </div>
                           <span className="text-sm font-bold text-slate-800 w-16 text-right">
