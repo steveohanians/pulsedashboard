@@ -432,7 +432,7 @@ export default function BrandSignals() {
                   <div className="mt-6">
                     {/* Summary Cards Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                      <Card>
+                      <Card className="bg-slate-50">
                         <CardContent className="p-6">
                           <div className="text-xs font-medium text-slate-600 mb-1">Overall ChatGPT SoV</div>
                           <div className="text-2xl font-bold text-primary">
@@ -442,7 +442,7 @@ export default function BrandSignals() {
                         </CardContent>
                       </Card>
                       
-                      <Card>
+                      <Card className="bg-slate-50">
                         <CardContent className="p-6">
                           <div className="text-xs font-medium text-slate-600 mb-1">Question Coverage</div>
                           <div className="text-2xl font-bold text-primary">
@@ -452,7 +452,7 @@ export default function BrandSignals() {
                         </CardContent>
                       </Card>
                       
-                      <Card>
+                      <Card className="bg-slate-50">
                         <CardContent className="p-6">
                           <div className="text-xs font-medium text-slate-600 mb-1">AI Visibility Leader</div>
                           <div className="text-lg font-bold text-slate-800 truncate">
@@ -472,7 +472,7 @@ export default function BrandSignals() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                       {/* Performance by Buyer Journey Stage */}
                       {analysisResults.questionResults && (
-                        <Card>
+                        <Card className="bg-slate-50">
                           <CardHeader>
                             <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
                             <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
@@ -544,7 +544,7 @@ export default function BrandSignals() {
                       )}
 
                       {/* AI Share of Voice by Competitor */}
-                      <Card>
+                      <Card className="bg-slate-50">
                         <CardHeader>
                           <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
                           <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
@@ -577,7 +577,7 @@ export default function BrandSignals() {
                     </div>
 
                     {/* Strategic Insights & Recommendations - Full Width */}
-                    <Card className="mb-6">
+                    <Card className="mb-6 bg-slate-50">
                       <CardHeader>
                         <CardTitle className="text-lg">Strategic Insights & Recommendations</CardTitle>
                         <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>

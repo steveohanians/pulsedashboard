@@ -400,7 +400,7 @@ etc.`
   }
 
   /**
-   * Calculate overall SoV metrics
+   * Calculate overall SoV metrics with strategic insights
    */
   private calculateSoV(
     results: QuestionResult[], 
@@ -443,6 +443,9 @@ etc.`
       }
     }
     
+    // Generate strategic insights using archetype analysis
+    const strategicInsights = this.generateStrategicInsights(results, input, overallSoV);
+    
     // Log final metrics
     logger.info('Final SoV metrics calculated', {
       overallSoV,
@@ -455,7 +458,8 @@ etc.`
         brand: input.brand.name,
         competitors: input.competitors.map(c => c.name),
         totalQuestions: results.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        strategicInsights
       },
       metrics: {
         overallSoV,
@@ -468,6 +472,145 @@ etc.`
         sov: r.sov
       }))
     };
+  }
+
+  /**
+   * Generate strategic insights using archetype-based analysis
+   */
+  private generateStrategicInsights(
+    results: QuestionResult[],
+    input: SovAnalysisInput,
+    overallSoV: Record<string, number>
+  ): string {
+    const brandName = input.brand.name;
+    const competitorNames = input.competitors.map(c => c.name);
+    
+    // Calculate stage-specific metrics
+    const stageMetrics = this.calculateStageMetrics(results, brandName, competitorNames);
+    
+    // Apply archetype logic to determine strategic insights
+    const insights = this.applyArchetypeLogic(stageMetrics, brandName, overallSoV);
+    
+    return insights;
+  }
+
+  /**
+   * Calculate performance metrics by buyer journey stage
+   */
+  private calculateStageMetrics(
+    results: QuestionResult[],
+    brandName: string,
+    competitorNames: string[]
+  ) {
+    const stages = ['awareness', 'consideration', 'decision'];
+    const stageData: Record<string, any> = {};
+    
+    stages.forEach(stage => {
+      const stageResults = results.filter(r => r.stage === stage);
+      const stageQuestions = stageResults.length;
+      
+      // Calculate brand SoV for this stage
+      let brandSoV = 0;
+      let brandPresence = 0;
+      let competitorSoVs: number[] = [];
+      let othersTotal = 0;
+      
+      stageResults.forEach(result => {
+        const brandValue = result.sov[brandName] || 0;
+        brandSoV += brandValue;
+        if (brandValue > 0) brandPresence++;
+        
+        // Collect competitor SoVs (excluding Others)
+        competitorNames.forEach(comp => {
+          const compValue = result.sov[comp] || 0;
+          competitorSoVs.push(compValue);
+        });
+        
+        othersTotal += result.sov['Others'] || 0;
+      });
+      
+      // Calculate averages
+      const avgBrandSoV = stageQuestions > 0 ? brandSoV / stageQuestions : 0;
+      const avgCompetitorSoV = competitorSoVs.length > 0 ? 
+        competitorSoVs.reduce((a, b) => a + b, 0) / competitorSoVs.length : 0;
+      const avgOthers = stageQuestions > 0 ? othersTotal / stageQuestions : 0;
+      
+      stageData[stage] = {
+        questions: stageQuestions,
+        brandSoV: Number(avgBrandSoV.toFixed(1)),
+        competitorAvg: Number(avgCompetitorSoV.toFixed(1)),
+        othersAvg: Number(avgOthers.toFixed(1)),
+        brandPresence: brandPresence,
+        presenceRate: stageQuestions > 0 ? Number(((brandPresence / stageQuestions) * 100).toFixed(1)) : 0
+      };
+    });
+    
+    return stageData;
+  }
+
+  /**
+   * Apply the 14 archetype patterns to generate strategic insights
+   */
+  private applyArchetypeLogic(
+    stageMetrics: Record<string, any>,
+    brandName: string,
+    overallSoV: Record<string, number>
+  ): string {
+    const insights: string[] = [];
+    const stages = ['awareness', 'consideration', 'decision'];
+    
+    // Find priority gaps (largest positive gap = competitor avg - brand SoV)
+    const gaps = stages.map(stage => ({
+      stage,
+      gap: stageMetrics[stage].competitorAvg - stageMetrics[stage].brandSoV,
+      data: stageMetrics[stage]
+    })).sort((a, b) => b.gap - a.gap);
+    
+    // Apply archetype triggers in priority order
+    gaps.forEach(({ stage, gap, data }) => {
+      const brandSoV = data.brandSoV;
+      const competitorAvg = data.competitorAvg;
+      const othersAvg = data.othersAvg;
+      const questions = data.questions;
+      
+      // Skip if insufficient data
+      if (questions < 3) {
+        insights.push(`**Insufficient ${stage.charAt(0).toUpperCase() + stage.slice(1)} Data**\n${brandName} analyzed across ${questions} ${stage} question(s). Minimum 3 questions needed for reliable insights.\nAction: Expand question set for comprehensive ${stage} analysis.\nDelivered by Clear Digital: Brand Strategy & Messaging; Content development; Market research expansion.`);
+        return;
+      }
+      
+      // Apply thresholds and archetype triggers
+      if (brandSoV === 0) {
+        // Absent = 0% presence
+        if (stage === 'awareness') {
+          insights.push(`**Crack the Visibility Lists**\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Currently invisible in category discussions.\nAction: Earn inclusion in category roundups/directories and publish cite-able explainers.\nDelivered by Clear Digital: Brand Strategy & Messaging; Visual Identity refresh & guidelines; Educational content hub.`);
+        } else if (stage === 'consideration') {
+          insights.push(`**Close the Shortlist Gap**\n${brandName} at 0% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Missing from buyer shortlists entirely.\nAction: Build comparison pages, evaluator checklists, "why us" proof.\nDelivered by Clear Digital: Web design & development; UX/UI; Messaging frameworks; Landing pages.`);
+        }
+      } else if (brandSoV + 5 < competitorAvg) {
+        // Underperforming = brandSoV + 5pp < competitor avg
+        if (stage === 'awareness') {
+          insights.push(`**Own the Category Narrative**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Underperforming in early-stage visibility.\nAction: Publish POV frameworks, definitions, and comparison primers AI can quote.\nDelivered by Clear Digital: Brand Platform/Messaging; Content development; Campaign creative.`);
+        } else if (stage === 'decision') {
+          insights.push(`**Prove Measurable Outcomes**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Failing to demonstrate clear ROI/impact.\nAction: Quantified case studies; before/after KPIs; outcome dashboards.\nDelivered by Clear Digital: KPI analysis, conversion tracking, engagement analytics; Analytics dashboards.`);
+        }
+      } else if (brandSoV >= competitorAvg - 5) {
+        // Strong = brandSoV ≥ competitor avg - 5pp
+        insights.push(`**Scale Market Momentum**\n${brandName} at ${brandSoV}% vs competitor avg ${competitorAvg}% across ${questions} ${stage} question(s). Strong performance to amplify.\nAction: Amplify what's working across paid/earned/owned; expand formats.\nDelivered by Clear Digital: Media service plans (paid search/social, programmatic, video/audio); SEO monthly program; Campaign creative/motion.`);
+      }
+      
+      // Check for fragmented market control
+      if (othersAvg >= Math.max(competitorAvg, 20)) {
+        insights.push(`**Control the Fragmented Space**\n"Others" at ${othersAvg}% vs competitor avg ${competitorAvg}% in ${stage}. Market highly fragmented.\nAction: Publish authoritative, comprehensive category resources to consolidate scattered mentions.\nDelivered by Clear Digital: Authoritative content hubs; Comparison matrices; Information architecture updates.`);
+      }
+    });
+    
+    // If no specific insights triggered, add generic recommendations
+    if (insights.length === 0) {
+      insights.push(`**Differentiate with Signature Strengths**\n${brandName} shows presence but lacks distinctive positioning vs competitors. Generic associations detected.\nAction: Name/seed distinctive features, verticals, methods across site & content.\nDelivered by Clear Digital: Positioning + product messaging; Industry/vertical landing pages; Motion/visual stories.`);
+    }
+    
+    return insights.join('\n\n');
   }
 }
 
