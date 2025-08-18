@@ -5,6 +5,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   LogOut, 
   TrendingUp, 
@@ -25,6 +26,7 @@ export default function BrandSignals() {
   const [progressSteps, setProgressSteps] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [showRawData, setShowRawData] = useState(false);
+  const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   
   // Get client and competitors from existing dashboard data
@@ -364,7 +366,12 @@ export default function BrandSignals() {
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{stageEmoji}</span>
                               <span className="font-medium capitalize">{stage}</span>
-                              <span className="text-sm text-slate-500">({stageQuestions.length} questions)</span>
+                              <button 
+                                onClick={() => setShowQuestionsDialog(true)}
+                                className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
+                              >
+                                ({stageQuestions.length} questions)
+                              </button>
                             </div>
                             <div className="text-sm text-slate-600">
                               Leader: <span className="font-medium">{stageLeader.brand}</span> ({Math.round(stageLeader.avg)}%)
@@ -392,6 +399,46 @@ export default function BrandSignals() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Questions Dialog */}
+            {showQuestionsDialog && analysisResults.questionResults && (
+              <Dialog open={showQuestionsDialog} onOpenChange={setShowQuestionsDialog}>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Research Questions by Stage</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 mt-4">
+                    {['awareness', 'consideration', 'decision'].map(stage => {
+                      const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                      const stageEmoji = stage === 'awareness' ? '🔍' : 
+                                       stage === 'consideration' ? '🤔' : '✅';
+                      
+                      return (
+                        <div key={stage}>
+                          <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                            <span>{stageEmoji}</span>
+                            <span className="capitalize">{stage} Stage</span>
+                            <span className="text-slate-500">({stageQuestions.length} questions)</span>
+                          </h3>
+                          <div className="space-y-2">
+                            {stageQuestions.map((q: any, idx: number) => (
+                              <div key={idx} className="bg-slate-50 p-3 rounded-lg">
+                                <p className="text-sm text-slate-700 mb-2">{q.question}</p>
+                                <div className="text-xs text-slate-500">
+                                  Share of Voice: {Object.entries(q.sov || {}).map(([brand, pct]) => 
+                                    `${brand}: ${String(pct)}%`
+                                  ).join(', ') || 'No mentions detected'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
             )}
 
             {/* Competitive Comparison */}
