@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sovService } from '../services/sov/sovService';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import logger from '../utils/logging/logger';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -36,6 +37,9 @@ router.post('/analyze', requireAuth, async (req, res) => {
       userId: req.user?.id
     });
 
+    // Generate unique analysis ID for progress tracking
+    const analysisId = randomUUID();
+
     // Add user context with proper type conversion
     const analysisInput = {
       ...validatedInput,
@@ -43,8 +47,8 @@ router.post('/analyze', requireAuth, async (req, res) => {
       clientId: req.user?.clientId ? parseInt(req.user.clientId) : undefined
     };
 
-    // Perform analysis
-    const result = await sovService.analyzeShareOfVoice(analysisInput);
+    // Perform analysis with progress tracking
+    const result = await sovService.analyzeShareOfVoice(analysisInput, analysisId);
 
     logger.info('SoV analysis completed successfully', {
       brand: validatedInput.brand.name,
@@ -54,7 +58,8 @@ router.post('/analyze', requireAuth, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: result
+      data: result,
+      analysisId
     });
 
   } catch (error) {
@@ -156,6 +161,67 @@ router.get('/health', async (req, res) => {
       error: (error as Error).message
     });
   }
+});
+
+/**
+ * GET /api/sov/progress/:analysisId
+ * Server-Sent Events endpoint for real-time progress updates
+ */
+router.get('/progress/:analysisId', requireAuth, (req, res) => {
+  const { analysisId } = req.params;
+  
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+
+  logger.info('SSE progress stream started', { analysisId, userId: req.user?.id });
+
+  // Send initial connection event
+  res.write(`data: ${JSON.stringify({
+    type: 'connected',
+    message: 'Progress stream connected',
+    timestamp: new Date().toISOString()
+  })}\n\n`);
+
+  // Listen for progress events from the SoV service
+  const progressHandler = (progressData: any) => {
+    if (progressData.analysisId === analysisId) {
+      res.write(`data: ${JSON.stringify({
+        type: 'progress',
+        ...progressData
+      })}\n\n`);
+      
+      // Close connection when analysis is complete or errors
+      if (progressData.status === 'complete' || progressData.status === 'error') {
+        setTimeout(() => {
+          res.write(`data: ${JSON.stringify({
+            type: 'end',
+            message: 'Analysis finished',
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+          res.end();
+        }, 1000); // Small delay to ensure final message is sent
+      }
+    }
+  };
+
+  sovService.on('progress', progressHandler);
+
+  // Clean up on client disconnect
+  req.on('close', () => {
+    logger.info('SSE progress stream closed', { analysisId, userId: req.user?.id });
+    sovService.removeListener('progress', progressHandler);
+  });
+
+  // Timeout after 10 minutes
+  setTimeout(() => {
+    logger.info('SSE progress stream timeout', { analysisId, userId: req.user?.id });
+    sovService.removeListener('progress', progressHandler);
+    res.end();
+  }, 600000);
 });
 
 export default router;

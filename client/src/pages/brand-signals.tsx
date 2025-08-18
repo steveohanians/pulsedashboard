@@ -42,9 +42,9 @@ export default function BrandSignals() {
   const initializeProgress = () => {
     const steps = [
       { step: 'Initializing analysis...', status: 'pending' as const },
+      { step: 'Researching brands...', status: 'pending' as const },
       { step: 'Generating research questions...', status: 'pending' as const },
       { step: 'Analyzing brand mentions...', status: 'pending' as const },
-      { step: 'Processing competitor data...', status: 'pending' as const },
       { step: 'Calculating Share of Voice...', status: 'pending' as const },
       { step: 'Generating insights...', status: 'pending' as const }
     ];
@@ -52,24 +52,27 @@ export default function BrandSignals() {
     setCurrentStep(-1);
   };
 
-  const updateProgress = (stepIndex: number, status: 'running' | 'completed' | 'error', message?: string) => {
-    setCurrentStep(stepIndex);
-    setProgressSteps(prev => prev.map((step, index) => 
-      index === stepIndex ? { ...step, status, message } : step
-    ));
+  const updateProgressFromSSE = (step: number, status: 'running' | 'completed' | 'error', message: string) => {
+    setCurrentStep(step);
+    setProgressSteps(prev => prev.map((stepData, index) => {
+      if (index === step) {
+        return { ...stepData, status, message };
+      }
+      // Mark previous steps as completed if current step is running
+      if (index < step && status === 'running' && stepData.status !== 'completed') {
+        return { ...stepData, status: 'completed' as const };
+      }
+      return stepData;
+    }));
   };
 
-  // Function to run SoV analysis
+  // Function to run SoV analysis with real SSE progress
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     setAnalysisResults(null);
     initializeProgress();
     
     try {
-      // Step 1: Initialize
-      updateProgress(0, 'running');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause to show step
-      
       // Fix URL formatting - ensure they're proper URLs
       const formatUrl = (url: string) => {
         if (!url) return 'https://unknown.com';
@@ -97,9 +100,7 @@ export default function BrandSignals() {
         vertical: client?.industryVertical || 'General'
       };
 
-      updateProgress(0, 'completed');
-      updateProgress(1, 'running');
-
+      // Start the analysis (this will return immediately with an analysisId)
       const response = await fetch('/api/sov/analyze', {
         method: 'POST',
         headers: {
@@ -114,49 +115,67 @@ export default function BrandSignals() {
         throw new Error(`HTTP ${response.status}: ${errorData}`);
       }
 
-      // Simulate progress updates during the long analysis
-      const progressInterval = setInterval(() => {
-        setCurrentStep(prev => {
-          if (prev < 4) {
-            const nextStep = prev + 1;
-            updateProgress(nextStep, 'running');
-            if (nextStep > 1) {
-              // Complete previous step
-              updateProgress(nextStep - 1, 'completed');
-            }
-            return nextStep;
-          }
-          return prev;
-        });
-      }, 30000); // Update every 30 seconds
+      const responseData = await response.json();
+      const analysisId = responseData.analysisId;
 
-      const rawText = await response.text();
-      const data = JSON.parse(rawText);
-      clearInterval(progressInterval);
+      // Start listening to SSE progress updates
+      const eventSource = new EventSource(`/api/sov/progress/${analysisId}`);
       
-      // Mark all steps as completed
-      for (let i = 1; i < 6; i++) {
-        updateProgress(i, 'completed');
-      }
-      
-      setAnalysisResults(data);
-      
-      if (data.success !== false) {
-        toast({
-          title: "Analysis Complete",
-          description: "Share of Voice analysis has been completed.",
-        });
-      } else {
-        toast({
-          title: "Analysis Error",
-          description: data.error || "Analysis completed with errors.",
-          variant: "destructive",
-        });
-      }
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'progress') {
+          const statusMap: Record<string, 'running' | 'completed'> = {
+            'initializing': 'running',
+            'researching': 'running', 
+            'researched': 'completed',
+            'generating': 'running',
+            'generated': 'completed',
+            'analyzing': 'running',
+            'analyzed': 'completed', 
+            'calculating': 'running',
+            'complete': 'completed'
+          };
+          
+          const status = data.status === 'error' ? 'error' : statusMap[data.status] || 'running';
+          updateProgressFromSSE(data.step, status, data.message);
+          
+          // Handle completion
+          if (data.status === 'complete') {
+            setAnalysisResults(responseData.data);
+            eventSource.close();
+            toast({
+              title: "Analysis Complete", 
+              description: "Share of Voice analysis has been completed.",
+            });
+          }
+          
+          // Handle errors
+          if (data.status === 'error') {
+            eventSource.close();
+            throw new Error(data.message);
+          }
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        // If we get here, analysis might have completed without SSE updates
+        if (responseData.success !== false && responseData.data) {
+          setAnalysisResults(responseData.data);
+          toast({
+            title: "Analysis Complete",
+            description: "Share of Voice analysis has been completed.",
+          });
+        } else {
+          throw new Error("Connection to progress updates was lost");
+        }
+      };
+
     } catch (error: any) {
       // Mark current step as error
       if (currentStep >= 0) {
-        updateProgress(currentStep, 'error', error instanceof Error ? error.message : 'Unknown error');
+        updateProgressFromSSE(currentStep, 'error', error instanceof Error ? error.message : 'Unknown error');
       }
       
       let errorMessage = "Could not complete the analysis. Please try again.";
@@ -389,7 +408,7 @@ export default function BrandSignals() {
                       {Object.entries(analysisResults.metrics).map(([brand, percentage]) => (
                         <div key={brand} className="bg-slate-50 p-3 rounded-lg">
                           <div className="font-medium text-slate-800">{brand}</div>
-                          <div className="text-2xl font-bold text-primary">{percentage}%</div>
+                          <div className="text-2xl font-bold text-primary">{String(percentage)}%</div>
                         </div>
                       ))}
                     </div>

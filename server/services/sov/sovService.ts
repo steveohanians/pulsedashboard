@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { db } from '../../db';
 import logger from '../../utils/logging/logger';
+import { EventEmitter } from 'events';
 
 interface BrandInput {
   name: string;
@@ -29,10 +30,11 @@ interface QuestionResult {
   sov: Record<string, number>;
 }
 
-export class SovService {
+export class SovService extends EventEmitter {
   private openai: OpenAI;
   
   constructor() {
+    super();
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
@@ -41,28 +43,53 @@ export class SovService {
   /**
    * Main entry point for SoV analysis
    */
-  async analyzeShareOfVoice(input: SovAnalysisInput): Promise<any> {
+  async analyzeShareOfVoice(input: SovAnalysisInput, analysisId?: string): Promise<any> {
     try {
-      logger.info('Starting SoV analysis', { brand: input.brand.name });
+      logger.info('Starting SoV analysis', { brand: input.brand.name, analysisId });
+      this.emitProgress(analysisId, 'initializing', 'Initializing analysis...', 0);
       
       // Step 1: Understand the brands
+      this.emitProgress(analysisId, 'researching', 'Researching brands...', 1);
       const brandContext = await this.researchBrands(input);
+      this.emitProgress(analysisId, 'researched', 'Brand research complete', 1);
       
       // Step 2: Generate intelligent questions
+      this.emitProgress(analysisId, 'generating', 'Generating research questions...', 2);
       const questions = await this.generateQuestions(brandContext, input);
+      this.emitProgress(analysisId, 'generated', `Generated ${questions.length} questions`, 2);
       
       // Step 3: Query AI platforms with questions
+      this.emitProgress(analysisId, 'analyzing', 'Analyzing brand mentions...', 3);
       const results = await this.queryAIPlatforms(questions, input);
+      this.emitProgress(analysisId, 'analyzed', 'Brand mention analysis complete', 3);
       
       // Step 4: Calculate Share of Voice
+      this.emitProgress(analysisId, 'calculating', 'Calculating Share of Voice...', 4);
       const sovMetrics = this.calculateSoV(results, input);
+      this.emitProgress(analysisId, 'complete', 'Analysis complete!', 5);
       
-      logger.info('SoV analysis complete', { brand: input.brand.name });
+      logger.info('SoV analysis complete', { brand: input.brand.name, analysisId });
       return sovMetrics;
       
     } catch (error) {
-      logger.error('SoV analysis failed', { error, brand: input.brand.name });
+      this.emitProgress(analysisId, 'error', `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, -1);
+      logger.error('SoV analysis failed', { error, brand: input.brand.name, analysisId });
       throw error;
+    }
+  }
+
+  /**
+   * Emit progress updates
+   */
+  private emitProgress(analysisId: string | undefined, status: string, message: string, step: number) {
+    if (analysisId) {
+      this.emit('progress', {
+        analysisId,
+        status,
+        message,
+        step,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
