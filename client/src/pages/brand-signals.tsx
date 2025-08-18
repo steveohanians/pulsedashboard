@@ -331,7 +331,7 @@ export default function BrandSignals() {
                   onClick={runAnalysis}
                   disabled={isAnalyzing || !client}
                 >
-                  {isAnalyzing ? (
+                  {isAnalyzing && !isTestAnalysis ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Analyzing...
@@ -409,7 +409,7 @@ export default function BrandSignals() {
                   onClick={runTestAnalysis}
                   disabled={isAnalyzing}
                 >
-                  {isAnalyzing ? (
+                  {isAnalyzing && isTestAnalysis ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Analyzing...
@@ -642,7 +642,7 @@ export default function BrandSignals() {
                             />
                           </div>
                           <span className="text-sm font-bold text-slate-800 w-16 text-right">
-                            {percentage}%
+                            {String(percentage)}%
                           </span>
                         </div>
                       </div>
@@ -679,6 +679,12 @@ export default function BrandSignals() {
                         title: 'Strong Market Position',
                         text: 'Your brand is well-represented in AI responses. Continue building on this momentum with consistent content strategy.'
                       });
+                    } else {
+                      insights.push({
+                        type: 'info',
+                        title: 'Moderate Brand Presence',
+                        text: `Your brand captures ${brandSoV.toFixed(1)}% share of voice. There's opportunity to increase visibility through targeted content and strategic positioning.`
+                      });
                     }
                     
                     // Check stage performance
@@ -703,15 +709,18 @@ export default function BrandSignals() {
                     
                     return insights.map((insight, idx) => (
                       <div key={idx} className={`p-3 rounded-lg ${
-                        insight.type === 'warning' ? 'bg-orange-50' : 'bg-green-50'
+                        insight.type === 'warning' ? 'bg-orange-50' : 
+                        insight.type === 'success' ? 'bg-green-50' : 'bg-blue-50'
                       }`}>
                         <div className={`font-medium text-sm mb-1 ${
-                          insight.type === 'warning' ? 'text-orange-800' : 'text-green-800'
+                          insight.type === 'warning' ? 'text-orange-800' : 
+                          insight.type === 'success' ? 'text-green-800' : 'text-blue-800'
                         }`}>
                           {insight.title}
                         </div>
                         <div className={`text-xs ${
-                          insight.type === 'warning' ? 'text-orange-700' : 'text-green-700'
+                          insight.type === 'warning' ? 'text-orange-700' : 
+                          insight.type === 'success' ? 'text-green-700' : 'text-blue-700'
                         }`}>
                           {insight.text}
                         </div>
