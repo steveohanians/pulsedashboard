@@ -96,6 +96,6 @@ export class BenchmarkService extends BaseService {
     coveragePercentage: number;
     companiesWithMetricsIds: string[];
   }> {
-    return this.makeRequest('GET', '/stats');
+    return this.request('GET', '/stats');
   }
 }
