@@ -10,9 +10,7 @@ import {
   TrendingUp, 
   RefreshCw,
   ArrowLeft,
-  ExternalLink,
-  Menu,
-  Settings
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
@@ -24,7 +22,6 @@ export default function BrandSignals() {
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -196,15 +193,6 @@ export default function BrandSignals() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden"
-            >
-              <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
             >
@@ -213,89 +201,6 @@ export default function BrandSignals() {
           </div>
         </div>
       </header>
-
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/50"
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          <div
-            className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  ×
-                </Button>
-              </div>
-              
-              <nav>
-                <ul className="space-y-2">
-                  <li>
-                    <Link href="/dashboard">
-                      <button 
-                        className="w-full text-left p-3 rounded-lg transition-colors text-sm text-slate-700 hover:bg-slate-100 hover:text-primary"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <TrendingUp className="h-4 w-4 inline mr-3" />
-                        Dashboard
-                      </button>
-                    </Link>
-                  </li>
-                  <li>
-                    <button className="w-full text-left p-3 rounded-lg transition-colors text-sm bg-slate-100 text-primary">
-                      <TrendingUp className="h-4 w-4 inline mr-3" />
-                      Brand Signals
-                    </button>
-                  </li>
-                  
-                  {user?.role === "Admin" && (
-                    <>
-                      <li className="my-4">
-                        <hr className="border-slate-200" />
-                      </li>
-                      <li>
-                        <Link href="/admin">
-                          <button 
-                            className="w-full text-left p-3 rounded-lg transition-colors text-sm text-slate-700 hover:bg-slate-100 hover:text-primary"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <Settings className="h-4 w-4 inline mr-3" />
-                            Admin Panel
-                          </button>
-                        </Link>
-                      </li>
-                    </>
-                  )}
-                  
-                  <li className="my-4">
-                    <hr className="border-slate-200" />
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        logoutMutation.mutate();
-                      }}
-                      className="w-full text-left p-3 rounded-lg transition-colors text-sm text-slate-700 hover:bg-slate-100 hover:text-primary"
-                    >
-                      <LogOut className="h-4 w-4 inline mr-3" />
-                      Logout
-                    </button>
-                  </li>
-                </ul>
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <div ref={brandSignalsRef} className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">

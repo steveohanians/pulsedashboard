@@ -454,13 +454,117 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Mobile Navigation - Keep existing */}
+      {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 z-50 bg-black/50"
           onClick={() => setMobileMenuOpen(false)}
         >
-          {/* Keep existing mobile menu code */}
+          <div
+            className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ×
+                </Button>
+              </div>
+              
+              <nav>
+                <div className="mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 mb-2">Vitals</h3>
+                  <ul className="space-y-1">
+                    {metricNames.map((metricName) => (
+                      <li key={metricName}>
+                        <button
+                          onClick={() => {
+                            handleNavigationClick(metricName);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
+                            activeSection === metricName
+                              ? "bg-slate-100 text-primary"
+                              : "text-slate-700 hover:bg-slate-100 hover:text-primary"
+                          }`}
+                        >
+                          {metricName}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <hr className="border-slate-200 my-4" />
+                
+                <ul className="space-y-2">
+                  <li>
+                    <Link href="/brand-signals">
+                      <button 
+                        className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <TrendingUp className="h-3 w-3 inline mr-2" />
+                        Brand Signals
+                      </button>
+                    </Link>
+                  </li>
+                  
+                  {(viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && (
+                    <>
+                      <li className="my-4">
+                        <hr className="border-slate-200" />
+                      </li>
+                      <li>
+                        <Link href="/admin">
+                          <button 
+                            className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <Settings className="h-3 w-3 inline mr-2" />
+                            Admin Panel
+                          </button>
+                        </Link>
+                      </li>
+                      <li>
+                        <button
+                          onClick={() => {
+                            handleRefreshData();
+                            setMobileMenuOpen(false);
+                          }}
+                          className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                        >
+                          <RefreshCw className="h-3 w-3 inline mr-2" />
+                          Refresh Data
+                        </button>
+                      </li>
+                    </>
+                  )}
+                  
+                  <li className="my-4">
+                    <hr className="border-slate-200" />
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logoutMutation.mutate();
+                      }}
+                      className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
+                    >
+                      <LogOut className="h-3 w-3 inline mr-2" />
+                      Logout
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
         </div>
       )}
 
