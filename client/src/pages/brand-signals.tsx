@@ -881,7 +881,7 @@ export default function BrandSignals() {
                               {mainTitle}
                             </div>
                             {stage && (
-                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-slate-100 text-slate-800 rounded-full">
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-white text-slate-800 rounded-full border border-slate-200">
                                 {stage}
                               </span>
                             )}
