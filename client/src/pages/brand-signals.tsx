@@ -64,6 +64,8 @@ export default function BrandSignals() {
 
       console.log('SoV Analysis Payload:', payload);
 
+      console.log('Sending request to /api/sov/analyze...');
+      
       const response = await fetch('/api/sov/analyze', {
         method: 'POST',
         headers: {
@@ -73,14 +75,22 @@ export default function BrandSignals() {
         signal: AbortSignal.timeout(120000) // 2 minute timeout
       });
       
+      console.log('Response received:', response.status, response.statusText);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        const errorData = await response.text(); // Use text() first to see raw response
+        console.error('Error response:', errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData}`);
       }
 
-      const data = await response.json();
-      console.log('SoV Analysis Response:', data);
+      const rawText = await response.text();
+      console.log('Raw response text:', rawText);
+      
+      const data = JSON.parse(rawText);
+      console.log('Parsed SoV Analysis Response:', data);
+      console.log('About to call setAnalysisResults with:', data);
       setAnalysisResults(data);
+      console.log('setAnalysisResults called successfully');
       
       if (data.success !== false) {
         toast({
@@ -96,12 +106,14 @@ export default function BrandSignals() {
       }
     } catch (error: any) {
       console.error('SoV Analysis Error:', error);
+      console.error('Error stack:', error.stack);
       toast({
         title: "Analysis Failed",
         description: error.message || "Could not complete the analysis. Please try again.",
         variant: "destructive",
       });
     } finally {
+      console.log('Setting isAnalyzing to false');
       setIsAnalyzing(false);
     }
   };
@@ -240,18 +252,26 @@ export default function BrandSignals() {
         </Card>
 
         {/* Results Display - TEXT ONLY FOR NOW */}
-        {analysisResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Analysis Results (Text Output)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-xs">
-                {JSON.stringify(analysisResults, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Analysis Results (Debug)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <strong>analysisResults exists:</strong> {analysisResults ? 'YES' : 'NO'}
+              </div>
+              <div>
+                <strong>analysisResults type:</strong> {typeof analysisResults}
+              </div>
+              {analysisResults && (
+                <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-xs">
+                  {JSON.stringify(analysisResults, null, 2)}
+                </pre>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Placeholder for future sections */}
         <Card className="mt-6">
