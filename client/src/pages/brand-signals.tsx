@@ -15,7 +15,8 @@ import {
   CheckCircle,
   Circle,
   XCircle,
-  Info
+  Info,
+  Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
@@ -303,127 +304,129 @@ export default function BrandSignals() {
           </Link>
         </div>
         
-        {/* AI Share of Voice Section Title & Description */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">AI Share of Voice</h2>
-          <p className="text-slate-600">
-            This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
-            It is not based on SEO rankings, ads, or social mentions.
-          </p>
-        </div>
-        
-        {/* Pulse AI Analysis Card */}
-        <Card className="mb-6 border-pink-200 border-2">
+        {/* Main Container Card - Similar to Dashboard's Bounce Rate */}
+        <Card id="ai-share-of-voice" className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <TrendingUp className="h-5 w-5 mr-3 text-primary" />
-              Pulse AI Analysis
-            </CardTitle>
+            <CardTitle className="text-lg lg:text-xl">AI Share of Voice</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Client/Website/Competitors Info Block */}
-              <div className="text-sm text-slate-600">
-                <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
-                <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
-                <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
-                {competitors?.length > 0 && (
-                  <ul className="mt-2 ml-4">
-                    {competitors.map((c: any) => (
-                      <li key={c.id} className="text-xs">
-                        • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
-                      </li>
-                    ))}
-                  </ul>
+            <div className="bg-slate-50/50 rounded-xl p-6">
+              {/* Description */}
+              <p className="text-slate-600 text-sm mb-6">
+                This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
+                It is not based on SEO rankings, ads, or social mentions.
+              </p>
+
+              {/* Pulse AI Analysis Section - Matching Dashboard's Pulse AI Insight styling */}
+              <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-6">
+                <div className="flex items-center mb-4">
+                  <Sparkles className="h-5 w-5 text-primary mr-3" />
+                  <h3 className="text-lg font-bold text-primary">Pulse AI Analysis</h3>
+                </div>
+
+                {/* Client/Website/Competitors Info Block */}
+                <div className="text-sm text-slate-600 mb-6">
+                  <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
+                  <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
+                  <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
+                  {competitors?.length > 0 && (
+                    <ul className="mt-2 ml-4">
+                      {competitors.map((c: any) => (
+                        <li key={c.id} className="text-xs">
+                          • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                
+                {/* Two Buttons */}
+                <div className="flex gap-4 mb-6">
+                  <Button 
+                    className="flex-1 h-10"
+                    onClick={runAnalysis}
+                    disabled={isAnalyzing || !client}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Run New Analysis
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="flex-1 h-10"
+                    onClick={runTestAnalysis}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Run Test Analysis
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {/* Progress Steps - appear below buttons when running */}
+                {isAnalyzing && progressSteps.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+                    {progressSteps.map((step, index) => {
+                      const isExplicitlyCompleted = step.includes('✅');
+                      const isFailed = step.includes('❌');
+                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
+                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
+                      
+                      return (
+                        <div key={index} className="flex items-center space-x-3 text-sm">
+                          <div className="flex-shrink-0">
+                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
+                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 text-xs font-bold">✓</span>
+                              </div>
+                            )}
+                            {isFailed && (
+                              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 text-xs font-bold">✕</span>
+                              </div>
+                            )}
+                            {isCurrentStep && (
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                            {step}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* Error Message Display */}
+                {errorMessage && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">
+                      <strong>Error:</strong> {errorMessage}
+                    </p>
+                  </div>
                 )}
               </div>
-              
-              {/* Two Buttons */}
-              <div className="flex gap-4">
-                <Button 
-                  className="flex-1 h-10"
-                  onClick={runAnalysis}
-                  disabled={isAnalyzing || !client}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Run New Analysis
-                    </>
-                  )}
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  className="flex-1 h-10"
-                  onClick={runTestAnalysis}
-                  disabled={isAnalyzing}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Run Test Analysis
-                    </>
-                  )}
-                </Button>
-              </div>
-              
-              {/* Progress Steps - appear below buttons when running */}
-              {isAnalyzing && progressSteps.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
-                  {progressSteps.map((step, index) => {
-                    const isExplicitlyCompleted = step.includes('✅');
-                    const isFailed = step.includes('❌');
-                    const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
-                    const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
-                    
-                    return (
-                      <div key={index} className="flex items-center space-x-3 text-sm">
-                        <div className="flex-shrink-0">
-                          {(isExplicitlyCompleted || isImplicitlyCompleted) && (
-                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                              <span className="text-green-600 text-xs font-bold">✓</span>
-                            </div>
-                          )}
-                          {isFailed && (
-                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                              <span className="text-red-600 text-xs font-bold">✕</span>
-                            </div>
-                          )}
-                          {isCurrentStep && (
-                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                            </div>
-                          )}
-                        </div>
-                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
-                          {step}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              
-              {/* Error Message Display */}
-              {errorMessage && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">
-                    <strong>Error:</strong> {errorMessage}
-                  </p>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
