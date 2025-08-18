@@ -22,6 +22,13 @@ export default function BrandSignals() {
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const [progressSteps, setProgressSteps] = useState<{
+    step: string;
+    status: 'pending' | 'running' | 'completed' | 'error';
+    message?: string;
+  }[]>([]);
+  const [currentStep, setCurrentStep] = useState<number>(-1);
+  const [showRawData, setShowRawData] = useState(false);
   
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -31,10 +38,38 @@ export default function BrandSignals() {
     industryVertical: 'All'
   });
 
+  // Initialize progress steps
+  const initializeProgress = () => {
+    const steps = [
+      { step: 'Initializing analysis...', status: 'pending' as const },
+      { step: 'Generating research questions...', status: 'pending' as const },
+      { step: 'Analyzing brand mentions...', status: 'pending' as const },
+      { step: 'Processing competitor data...', status: 'pending' as const },
+      { step: 'Calculating Share of Voice...', status: 'pending' as const },
+      { step: 'Generating insights...', status: 'pending' as const }
+    ];
+    setProgressSteps(steps);
+    setCurrentStep(-1);
+  };
+
+  const updateProgress = (stepIndex: number, status: 'running' | 'completed' | 'error', message?: string) => {
+    setCurrentStep(stepIndex);
+    setProgressSteps(prev => prev.map((step, index) => 
+      index === stepIndex ? { ...step, status, message } : step
+    ));
+  };
+
   // Function to run SoV analysis
   const runAnalysis = async () => {
     setIsAnalyzing(true);
+    setAnalysisResults(null);
+    initializeProgress();
+    
     try {
+      // Step 1: Initialize
+      updateProgress(0, 'running');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause to show step
+      
       // Fix URL formatting - ensure they're proper URLs
       const formatUrl = (url: string) => {
         if (!url) return 'https://unknown.com';
@@ -62,10 +97,9 @@ export default function BrandSignals() {
         vertical: client?.industryVertical || 'General'
       };
 
-      console.log('SoV Analysis Payload:', payload);
+      updateProgress(0, 'completed');
+      updateProgress(1, 'running');
 
-      console.log('Sending request to /api/sov/analyze...');
-      
       const response = await fetch('/api/sov/analyze', {
         method: 'POST',
         headers: {
@@ -74,23 +108,38 @@ export default function BrandSignals() {
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(600000) // 10 minute timeout
       });
-      
-      console.log('Response received:', response.status, response.statusText);
-      
+
       if (!response.ok) {
-        const errorData = await response.text(); // Use text() first to see raw response
-        console.error('Error response:', errorData);
+        const errorData = await response.text();
         throw new Error(`HTTP ${response.status}: ${errorData}`);
       }
 
+      // Simulate progress updates during the long analysis
+      const progressInterval = setInterval(() => {
+        setCurrentStep(prev => {
+          if (prev < 4) {
+            const nextStep = prev + 1;
+            updateProgress(nextStep, 'running');
+            if (nextStep > 1) {
+              // Complete previous step
+              updateProgress(nextStep - 1, 'completed');
+            }
+            return nextStep;
+          }
+          return prev;
+        });
+      }, 30000); // Update every 30 seconds
+
       const rawText = await response.text();
-      console.log('Raw response text:', rawText);
-      
       const data = JSON.parse(rawText);
-      console.log('Parsed SoV Analysis Response:', data);
-      console.log('About to call setAnalysisResults with:', data);
+      clearInterval(progressInterval);
+      
+      // Mark all steps as completed
+      for (let i = 1; i < 6; i++) {
+        updateProgress(i, 'completed');
+      }
+      
       setAnalysisResults(data);
-      console.log('setAnalysisResults called successfully');
       
       if (data.success !== false) {
         toast({
@@ -105,8 +154,10 @@ export default function BrandSignals() {
         });
       }
     } catch (error: any) {
-      console.error('SoV Analysis Error:', error);
-      console.error('Error stack:', error.stack);
+      // Mark current step as error
+      if (currentStep >= 0) {
+        updateProgress(currentStep, 'error', error instanceof Error ? error.message : 'Unknown error');
+      }
       
       let errorMessage = "Could not complete the analysis. Please try again.";
       if (error.name === 'TimeoutError') {
@@ -121,7 +172,6 @@ export default function BrandSignals() {
         variant: "destructive",
       });
     } finally {
-      console.log('Setting isAnalyzing to false');
       setIsAnalyzing(false);
     }
   };
@@ -255,31 +305,141 @@ export default function BrandSignals() {
                   </>
                 )}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Display - TEXT ONLY FOR NOW */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Analysis Results (Debug)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <strong>analysisResults exists:</strong> {analysisResults ? 'YES' : 'NO'}
-              </div>
-              <div>
-                <strong>analysisResults type:</strong> {typeof analysisResults}
-              </div>
-              {analysisResults && (
-                <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-xs">
-                  {JSON.stringify(analysisResults, null, 2)}
-                </pre>
+              
+              {/* Progress Steps */}
+              {isAnalyzing && progressSteps.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+                  {progressSteps.map((step, index) => (
+                    <div key={index} className="flex items-center space-x-3 text-sm">
+                      <div className="flex-shrink-0">
+                        {step.status === 'completed' && (
+                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-xs font-bold">✓</span>
+                          </div>
+                        )}
+                        {step.status === 'running' && (
+                          <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                            <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
+                          </div>
+                        )}
+                        {step.status === 'error' && (
+                          <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                            <span className="text-red-600 text-xs font-bold">✕</span>
+                          </div>
+                        )}
+                        {step.status === 'pending' && (
+                          <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center">
+                            <span className="text-slate-400 text-xs">○</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className={`${
+                        step.status === 'completed' ? 'text-green-700' : 
+                        step.status === 'running' ? 'text-blue-700' : 
+                        step.status === 'error' ? 'text-red-700' : 
+                        'text-slate-500'
+                      }`}>
+                        {step.step}
+                      </span>
+                      {step.message && (
+                        <span className="text-xs text-slate-500">- {step.message}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* Analysis Results */}
+        {analysisResults && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Share of Voice Results
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRawData(!showRawData)}
+                >
+                  {showRawData ? 'Hide' : 'Show'} Raw Data
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                
+                {/* Summary */}
+                {analysisResults.summary && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Executive Summary</h3>
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-slate-700 leading-relaxed">{analysisResults.summary}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Share of Voice Metrics */}
+                {analysisResults.metrics && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Share of Voice Breakdown</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Object.entries(analysisResults.metrics).map(([brand, percentage]) => (
+                        <div key={brand} className="bg-slate-50 p-3 rounded-lg">
+                          <div className="font-medium text-slate-800">{brand}</div>
+                          <div className="text-2xl font-bold text-primary">{percentage}%</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Overall Share of Voice */}
+                {analysisResults.overallSoV && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Overall Market Position</h3>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      {Object.entries(analysisResults.overallSoV).map(([brand, data]: [string, any]) => (
+                        <div key={brand} className="mb-2">
+                          <span className="font-medium">{brand}:</span>
+                          <span className="ml-2 text-lg font-bold text-green-700">{data.percentage}%</span>
+                          <span className="ml-2 text-sm text-slate-600">({data.mentions} mentions)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Question Results Summary */}
+                {analysisResults.questionResults && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Research Coverage</h3>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-slate-700">
+                        Analyzed <strong>{analysisResults.questionResults.length} research questions</strong> across multiple AI platforms to gather comprehensive brand intelligence.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw Data (Collapsible) */}
+                {showRawData && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-slate-800">Raw Analysis Data</h3>
+                    <div className="bg-slate-100 p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap">
+                        {JSON.stringify(analysisResults, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Placeholder for future sections */}
         <Card className="mt-6">
