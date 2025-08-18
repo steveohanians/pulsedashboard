@@ -39,167 +39,90 @@ export default function BrandSignals() {
   });
 
   // Initialize progress steps
-  const initializeProgress = () => {
-    const steps = [
-      { step: 'Initializing analysis...', status: 'pending' as const },
-      { step: 'Researching brands...', status: 'pending' as const },
-      { step: 'Generating research questions...', status: 'pending' as const },
-      { step: 'Analyzing brand mentions...', status: 'pending' as const },
-      { step: 'Calculating Share of Voice...', status: 'pending' as const },
-      { step: 'Generating insights...', status: 'pending' as const }
-    ];
-    setProgressSteps(steps);
-    setCurrentStep(-1);
+  const addProgress = (message: string) => {
+    setProgressSteps(prev => [...prev, { step: message, status: 'completed' as const }]);
   };
 
-  const updateProgressFromSSE = (step: number, status: 'running' | 'completed' | 'error', message: string) => {
-    setCurrentStep(step);
-    setProgressSteps(prev => prev.map((stepData, index) => {
-      if (index === step) {
-        return { ...stepData, status, message };
-      }
-      // Mark previous steps as completed if current step is running
-      if (index < step && status === 'running' && stepData.status !== 'completed') {
-        return { ...stepData, status: 'completed' as const };
-      }
-      return stepData;
-    }));
-  };
-
-  // Function to run SoV analysis with real SSE progress
+  // Function to run SoV analysis with direct response
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     setAnalysisResults(null);
-    initializeProgress();
+    setProgressSteps([]);
+    setErrorMessage("");
+    setCurrentStep("Starting analysis...");
     
     try {
-      // Fix URL formatting - ensure they're proper URLs
+      // Format URLs properly
       const formatUrl = (url: string) => {
         if (!url) return 'https://unknown.com';
-        // Remove any protocol if exists
         let cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
-        // Add https:// to make it a valid URL
         return `https://${cleanUrl}`;
       };
 
-      // Fix competitor names and URLs  
-      const formattedCompetitors = competitors.map((c: any) => {
-        const cleanDomain = c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
-        return {
-          name: c.label || cleanDomain.split('.')[0], // Use stored label (competitor name) from database
-          url: formatUrl(c.domain)
-        };
-      });
-
+      // Build the request payload
       const payload = {
         brand: {
           name: client?.name || 'Unknown',
           url: formatUrl(client?.websiteUrl || 'unknown.com')
         },
-        competitors: formattedCompetitors,
+        competitors: competitors.slice(0, 3).map((c: any) => ({
+          name: c.label || c.name || c.domain.split('.')[0],
+          url: formatUrl(c.domain)
+        })),
         vertical: client?.industryVertical || 'General'
       };
-
-      // Start the analysis (this will return immediately with an analysisId)
+      
+      addProgress(`Analyzing ${payload.brand.name} vs ${payload.competitors.length} competitors`);
+      addProgress("Processing analysis... This may take 2-3 minutes");
+      addProgress("⏳ Researching brands and generating questions...");
+      
+      // Call the API and wait for results
       const response = await fetch('/api/sov/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(600000) // 10 minute timeout
+        body: JSON.stringify(payload)
       });
-
+      
+      addProgress(`Server responded with status: ${response.status}`);
+      
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
       }
-
-      const responseData = await response.json();
-      const analysisId = responseData.analysisId;
-
-      // Start listening to SSE progress updates immediately
-      const eventSource = new EventSource(`/api/sov/progress/${analysisId}`);
       
-      eventSource.onmessage = (event) => {
-        console.log('SSE Message received:', event.data);
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'progress') {
-          const statusMap: Record<string, 'running' | 'completed'> = {
-            'initializing': 'running',
-            'researching': 'running', 
-            'researched': 'completed',
-            'generating': 'running',
-            'generated': 'completed',
-            'analyzing': 'running',
-            'analyzed': 'completed', 
-            'calculating': 'running',
-            'complete': 'completed'
-          };
-          
-          const status = data.status === 'error' ? 'error' : statusMap[data.status] || 'running';
-          updateProgressFromSSE(data.step, status, data.message);
-          
-          // Handle errors
-          if (data.status === 'error') {
-            eventSource.close();
-            throw new Error(data.message);
-          }
-        }
-        
-        // Handle results coming via SSE
-        if (data.type === 'results') {
-          setAnalysisResults(data.data);
-          toast({
-            title: "Analysis Complete", 
-            description: "Share of Voice analysis has been completed.",
-          });
-        }
-        
-        // Handle connection end
-        if (data.type === 'end') {
-          eventSource.close();
-          setIsAnalyzing(false); // Close progress dialog when SSE ends
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.log('SSE Error:', error);
-        eventSource.close();
-        setIsAnalyzing(false); // Close progress dialog on error
-        
-        // Mark current step as error
-        if (currentStep >= 0) {
-          updateProgressFromSSE(currentStep, 'error', 'Connection to progress updates was lost');
-        }
-        
-        toast({
-          title: "Analysis Failed",
-          description: "Connection to progress updates was lost. Please try again.",
-          variant: "destructive",
-        });
-      };
-
+      const data = await response.json();
+      
+      // Check if we got valid results
+      if (data.success === false) {
+        setErrorMessage(data.error || "Analysis failed");
+        addProgress(`❌ Error: ${data.error}`);
+        return;
+      }
+      
+      // Set the results
+      setAnalysisResults(data);
+      addProgress(`✅ Analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`);
+      
+      toast({
+        title: "Analysis Complete",
+        description: `Successfully analyzed ${data.summary?.totalQuestions || 0} questions`,
+      });
+      
     } catch (error: any) {
-      // Mark current step as error
-      if (currentStep >= 0) {
-        updateProgressFromSSE(currentStep, 'error', error instanceof Error ? error.message : 'Unknown error');
-      }
-      
-      let errorMessage = "Could not complete the analysis. Please try again.";
-      if (error.name === 'TimeoutError') {
-        errorMessage = "Analysis is taking longer than expected. This is normal for comprehensive brand analysis. Please try again or check back later.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+      const errorMsg = error instanceof Error ? error.message : 'Analysis failed';
+      setErrorMessage(errorMsg);
+      addProgress(`❌ Error: ${errorMsg}`);
       
       toast({
         title: "Analysis Failed",
-        description: errorMessage,
+        description: errorMsg,
         variant: "destructive",
       });
-      setIsAnalyzing(false); // Close progress dialog on error
+    } finally {
+      setIsAnalyzing(false);
+      setCurrentStep("");
     }
   };
 

@@ -1,0 +1,300 @@
+```bash
+# STEP 5: Fix the SoV backend to return results directly (simpler approach)
+# This removes the complex SSE pattern and just returns results synchronously
+# The frontend already has progress display, we just need the backend to complete
+```
+
+```javascript
+// FILE: server/routes/sovRoutes.ts
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. REPLACE the /analyze endpoint to return results directly
+// 2. Remove the SSE complexity - just process and return
+// 3. Keep all validation and error handling
+// 4. This is simpler and will work with the existing frontend
+
+import { Router } from 'express';
+import { z } from 'zod';
+import { sovService } from '../services/sov/sovService';
+import { requireAuth, requireAdmin } from '../middleware/auth';
+import logger from '../utils/logging/logger';
+
+const router = Router();
+
+// Input validation schemas (keep these exactly as they are)
+const BrandSchema = z.object({
+  name: z.string().min(1, 'Brand name is required'),
+  url: z.string().url('Valid URL is required')
+});
+
+const SovAnalysisSchema = z.object({
+  brand: BrandSchema,
+  competitors: z.array(BrandSchema).max(3, 'Maximum 3 competitors allowed'),
+  vertical: z.string().min(1, 'Vertical is required'),
+  clientId: z.number().optional(),
+  userId: z.number().optional()
+});
+
+/**
+ * POST /api/sov/analyze
+ * Analyze Share of Voice for a brand against competitors
+ * SIMPLIFIED VERSION - Returns results directly
+ */
+router.post('/analyze', requireAuth, async (req, res) => {
+  try {
+    // Validate input
+    const validatedInput = SovAnalysisSchema.parse(req.body);
+    
+    logger.info('SoV analysis request received', {
+      brand: validatedInput.brand.name,
+      competitorCount: validatedInput.competitors.length,
+      vertical: validatedInput.vertical,
+      userId: req.user?.id
+    });
+
+    // Add user context
+    const analysisInput = {
+      ...validatedInput,
+      userId: req.user?.id ? parseInt(req.user.id) : undefined,
+      clientId: req.user?.clientId ? parseInt(req.user.clientId) : undefined
+    };
+
+    // Run analysis synchronously and return results
+    logger.info('Starting SoV analysis processing', { brand: validatedInput.brand.name });
+    
+    const result = await sovService.analyzeShareOfVoice(analysisInput);
+    
+    logger.info('SoV analysis completed successfully', { 
+      brand: validatedInput.brand.name,
+      totalQuestions: result.summary?.totalQuestions,
+      overallSoV: result.metrics?.overallSoV
+    });
+
+    // Return the actual results
+    res.status(200).json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      logger.warn('SoV analysis validation failed', { 
+        errors: error.errors,
+        userId: req.user?.id 
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: error.errors
+      });
+    }
+
+    logger.error('SoV analysis failed', { 
+      error: (error as Error).message,
+      userId: req.user?.id,
+      brand: req.body?.brand?.name
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'Share of Voice analysis failed',
+      message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/sov/test
+ * Test endpoint to verify SoV service is working (admin only)
+ * KEEP THIS EXACTLY AS IT IS
+ */
+router.get('/test', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const testInput = {
+      brand: { name: "Notion", url: "https://notion.so" },
+      competitors: [
+        { name: "Obsidian", url: "https://obsidian.md" },
+        { name: "Roam Research", url: "https://roamresearch.com" }
+      ],
+      vertical: "Knowledge Management",
+      userId: req.user?.id ? parseInt(req.user.id) : undefined,
+      clientId: req.user?.clientId ? parseInt(req.user.clientId) : undefined
+    };
+
+    logger.info('SoV test analysis started', { userId: req.user?.id });
+
+    const result = await sovService.analyzeShareOfVoice(testInput);
+
+    res.status(200).json({
+      success: true,
+      message: 'SoV service test completed successfully',
+      data: {
+        summary: result.summary,
+        metricsPreview: {
+          overallSoV: result.metrics.overallSoV,
+          totalQuestions: result.summary.totalQuestions
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('SoV test failed', { 
+      error: (error as Error).message,
+      userId: req.user?.id 
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'SoV test failed',
+      message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/sov/health
+ * Health check for SoV service
+ * KEEP THIS EXACTLY AS IT IS
+ */
+router.get('/health', async (req, res) => {
+  try {
+    const hasApiKey = !!process.env.OPENAI_API_KEY;
+    
+    res.status(200).json({
+      success: true,
+      status: 'healthy',
+      checks: {
+        openaiConfigured: hasApiKey,
+        serviceAvailable: true
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      status: 'unhealthy',
+      error: (error as Error).message
+    });
+  }
+});
+
+export default router;
+```
+
+```bash
+# STEP 6: Simplify the frontend to handle direct response
+# The frontend just needs to wait for the response and display it
+```
+
+```javascript
+// FILE: client/src/pages/brand-signals.tsx
+//
+// INSTRUCTIONS FOR REPLIT AGENT:
+// 1. Find the runAnalysis function
+// 2. REPLACE it with this simpler version that handles direct response
+// 3. Remove all SSE/EventSource code
+// 4. Keep all the UI progress display
+
+// REPLACE the entire runAnalysis function with this:
+const runAnalysis = async () => {
+  setIsAnalyzing(true);
+  setAnalysisResults(null);
+  setProgressSteps([]);
+  setErrorMessage("");
+  setCurrentStep("Starting analysis...");
+  
+  try {
+    // Format URLs properly
+    const formatUrl = (url: string) => {
+      if (!url) return 'https://unknown.com';
+      let cleanUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+      return `https://${cleanUrl}`;
+    };
+
+    // Build the request payload
+    const payload = {
+      brand: {
+        name: client?.name || 'Unknown',
+        url: formatUrl(client?.websiteUrl || 'unknown.com')
+      },
+      competitors: competitors.slice(0, 3).map((c: any) => ({
+        name: c.label || c.name || c.domain.split('.')[0],
+        url: formatUrl(c.domain)
+      })),
+      vertical: client?.industryVertical || 'General'
+    };
+    
+    addProgress(`Analyzing ${payload.brand.name} vs ${payload.competitors.length} competitors`);
+    addProgress("Processing analysis... This may take 2-3 minutes");
+    addProgress("⏳ Researching brands and generating questions...");
+    
+    // Call the API and wait for results
+    const response = await fetch('/api/sov/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    addProgress(`Server responded with status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Check if we got valid results
+    if (data.success === false) {
+      setErrorMessage(data.error || "Analysis failed");
+      addProgress(`❌ Error: ${data.error}`);
+      return;
+    }
+    
+    // Set the results
+    setAnalysisResults(data);
+    addProgress(`✅ Analysis complete! Processed ${data.summary?.totalQuestions || 0} questions`);
+    
+    toast({
+      title: "Analysis Complete",
+      description: `Successfully analyzed ${data.summary?.totalQuestions || 0} questions`,
+    });
+    
+  } catch (error) {
+    const errorMsg = error.message || 'Analysis failed';
+    setErrorMessage(errorMsg);
+    addProgress(`❌ Error: ${errorMsg}`);
+    
+    toast({
+      title: "Analysis Failed",
+      description: errorMsg,
+      variant: "destructive",
+    });
+  } finally {
+    setIsAnalyzing(false);
+    setCurrentStep("");
+  }
+};
+
+// Also REMOVE all EventSource/SSE related code from the component
+// DELETE any references to:
+// - eventSource
+// - EventSource
+// - /api/sov/progress
+// - SSE
+// - updateProgressFromSSE
+// - initializeProgress (unless used by the simple progress display)
+```
+
+```bash
+# EXPECTED RESULT:
+# 1. Click "Run New Analysis" 
+# 2. Frontend shows "Analyzing..." with progress messages
+# 3. Backend processes for 2-3 minutes (normal)
+# 4. Results return and display on the page
+# 5. No SSE complexity, just a simple request/response
+#
+# This is much simpler and will work reliably
+```
