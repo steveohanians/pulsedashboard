@@ -70,10 +70,13 @@ export function useDashboardData({
 
   // Main dashboard data query
   const dashboardQuery = useQuery<any>({
-    queryKey: QueryKeys.dashboard(
-      effectiveClientId,
-      effectiveTimePeriod
-    ),
+    queryKey: [
+      "/api/dashboard", 
+      effectiveClientId, 
+      effectiveTimePeriod,
+      businessSize,
+      industryVertical
+    ],
     queryFn: async () => {
       try {
         const result = await apiRequest(
@@ -305,15 +308,22 @@ export function useDashboardData({
 /**
  * Hook for dashboard filters data
  */
-export function useDashboardFilters() {
+export function useDashboardFilters(useDynamic = false) {
+  const endpoint = useDynamic ? '/api/filters/dynamic' : '/api/filters';
+  const queryKey = useDynamic ? ['/api/filters/dynamic'] : QueryKeys.filters();
+  
   const filtersQuery = useQuery<{
     businessSizes: string[];
     industryVerticals: string[];
     timePeriods: string[];
+    dataSourceInfo?: {
+      companiesWithMetrics: number;
+      totalCompanies: number;
+    };
   }>({
-    queryKey: QueryKeys.filters(),
+    queryKey,
     queryFn: async () => {
-      return apiRequest('GET', '/api/filters');
+      return apiRequest('GET', endpoint);
     },
   });
 
@@ -321,6 +331,7 @@ export function useDashboardFilters() {
     businessSizes: filtersQuery.data?.businessSizes || [],
     industryVerticals: filtersQuery.data?.industryVerticals || [],
     timePeriods: filtersQuery.data?.timePeriods || [],
+    dataSourceInfo: filtersQuery.data?.dataSourceInfo,
     isLoading: filtersQuery.isLoading,
   };
 }

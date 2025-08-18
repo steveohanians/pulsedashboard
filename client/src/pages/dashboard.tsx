@@ -129,13 +129,14 @@ export default function Dashboard() {
     clientId: viewAsClientId || user?.clientId || '',
   });
 
-  // Use filters hook
+  // Use filters hook with dynamic filtering (only companies with metrics)
   const {
     businessSizes,
     industryVerticals,
     timePeriods,
+    dataSourceInfo,
     isLoading: filtersLoading,
-  } = useDashboardFilters();
+  } = useDashboardFilters(true);
 
   // Show error if there's an issue
   useEffect(() => {

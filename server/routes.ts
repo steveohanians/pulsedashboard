@@ -1174,6 +1174,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dynamic filters endpoint - only show options for companies with actual metrics
+  app.get("/api/filters/dynamic", requireAuth, async (req, res) => {
+    try {
+      // Get companies that have metrics data
+      const companiesWithMetrics = await storage.getBenchmarkCompaniesWithMetrics();
+      
+      // Extract unique business sizes and industry verticals from companies with actual data
+      const businessSizesSet = new Set<string>();
+      const industryVerticalsSet = new Set<string>();
+      
+      companiesWithMetrics.forEach(company => {
+        if (company.businessSize) businessSizesSet.add(company.businessSize);
+        if (company.industryVertical) industryVerticalsSet.add(company.industryVertical);
+      });
+      
+      // Convert to sorted arrays with 'All' option
+      const businessSizes = ['All', ...Array.from(businessSizesSet).sort()];
+      const industryVerticals = ['All', ...Array.from(industryVerticalsSet).sort()];
+      
+      // Get time periods (same as regular filters endpoint)
+      const timePeriods = [
+        "Last Month",
+        "Last Quarter", 
+        "Last Year",
+        "Custom Date Range"
+      ];
+      
+      res.json({
+        businessSizes,
+        industryVerticals,
+        timePeriods,
+        dataSourceInfo: {
+          companiesWithMetrics: companiesWithMetrics.length,
+          totalCompanies: (await storage.getBenchmarkCompanies()).length
+        }
+      });
+    } catch (error) {
+      logger.error("Dynamic filters error", { error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
 
 
   // Generate metric-specific insights
