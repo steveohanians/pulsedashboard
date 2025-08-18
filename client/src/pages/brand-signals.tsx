@@ -559,7 +559,7 @@ export default function BrandSignals() {
                             Data source: AI responses to generated{" "}
                             <button
                               onClick={() => setShowQuestionsDialog(true)}
-                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                              className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
                             >
                               questions
                             </button>
@@ -582,7 +582,7 @@ export default function BrandSignals() {
                             Data source: AI responses to generated{" "}
                             <button
                               onClick={() => setShowQuestionsDialog(true)}
-                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                              className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
                             >
                               questions
                             </button>
@@ -611,7 +611,7 @@ export default function BrandSignals() {
                             Data source: AI responses to generated{" "}
                             <button
                               onClick={() => setShowQuestionsDialog(true)}
-                              className="text-primary hover:text-primary/80 underline cursor-pointer"
+                              className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
                             >
                               questions
                             </button>
@@ -633,7 +633,7 @@ export default function BrandSignals() {
                               Data source: AI responses to generated{" "}
                               <button
                                 onClick={() => setShowQuestionsDialog(true)}
-                                className="text-primary hover:text-primary/80 underline cursor-pointer"
+                                className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
                               >
                                 questions
                               </button>
@@ -714,7 +714,7 @@ export default function BrandSignals() {
                                                 }}
                                               />
                                             </div>
-                                            <span className="text-sm font-bold text-slate-800 w-12 text-right">
+                                            <span className="text-sm font-thin text-slate-800 w-12 text-right">
                                               {Math.round(stageSoV)}%
                                             </span>
                                           </div>
@@ -736,7 +736,13 @@ export default function BrandSignals() {
                             AI Share of Voice by Competitor
                           </CardTitle>
                           <p className="text-xs text-slate-500 mt-1">
-                            Data source: AI responses to generated questions
+                            Data source: AI responses to generated{" "}
+                            <button
+                              onClick={() => setShowQuestionsDialog(true)}
+                              className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
+                            >
+                              questions
+                            </button>
                           </p>
                         </CardHeader>
                         <CardContent>
@@ -789,7 +795,13 @@ export default function BrandSignals() {
                           Strategic Insights & Recommendations
                         </CardTitle>
                         <p className="text-xs text-slate-500 mt-1">
-                          Data source: AI responses to generated questions
+                          Data source: AI responses to generated{" "}
+                          <button
+                            onClick={() => setShowQuestionsDialog(true)}
+                            className="text-slate-500 hover:text-slate-400 underline cursor-pointer"
+                          >
+                            questions
+                          </button>
                         </p>
                       </CardHeader>
                       <CardContent className="pt-0">
