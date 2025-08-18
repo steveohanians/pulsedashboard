@@ -72,7 +72,7 @@ export default function BrandSignals() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(120000) // 2 minute timeout
+        signal: AbortSignal.timeout(600000) // 10 minute timeout
       });
       
       console.log('Response received:', response.status, response.statusText);
@@ -107,9 +107,17 @@ export default function BrandSignals() {
     } catch (error: any) {
       console.error('SoV Analysis Error:', error);
       console.error('Error stack:', error.stack);
+      
+      let errorMessage = "Could not complete the analysis. Please try again.";
+      if (error.name === 'TimeoutError') {
+        errorMessage = "Analysis is taking longer than expected. This is normal for comprehensive brand analysis. Please try again or check back later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Analysis Failed",
-        description: error.message || "Could not complete the analysis. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
