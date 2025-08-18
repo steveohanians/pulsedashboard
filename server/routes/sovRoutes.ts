@@ -246,6 +246,7 @@ router.get('/progress/:analysisId', requireAuth, (req, res) => {
     }
   };
 
+  // Register the progress handler with the SoV service
   sovService.on('progress', progressHandler);
 
   // Clean up on client disconnect
