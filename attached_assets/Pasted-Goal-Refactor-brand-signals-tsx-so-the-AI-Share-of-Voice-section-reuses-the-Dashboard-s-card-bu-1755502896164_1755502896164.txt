@@ -1,0 +1,104 @@
+Goal: Refactor brand-signals.tsx so the “AI Share of Voice” section reuses the Dashboard’s card & button styles and implements 3 precise states (Idle → Running → Results) without introducing any new design system or CSS.
+
+Hard rules (do not violate):
+
+Reuse existing UI primitives: Card, CardHeader, CardTitle, CardContent, Button.
+
+Keep the title “AI Share of Voice” and the description sentence pinned at the top of the page section (above the pink Pulse card).
+
+Collapse to one Pulse card (pink outline) titled “Pulse AI Analysis”. Inside it:
+
+Show the Client / Website / Competitors info block at all times.
+
+Show two buttons at the bottom: Run New Analysis (primary) and Run Test Analysis (secondary/outline).
+
+Running state: both buttons turn to “Analyzing…”, show a loader, and are disabled.
+
+Show a progress checklist below the buttons (not above, not replacing anything).
+
+When analysis completes, switch to Results: render 3 KPI cards (row) → 2 side-by-side cards → 1 full-width insights card. Keep the two buttons visible & re-enabled.
+
+State machine:
+
+Use and respect:
+
+isAnalyzing (boolean)
+
+analysisResults (object | null)
+
+progressSteps (string[])
+
+isTestAnalysis (boolean)
+
+Derived state:
+
+status = analysisResults ? 'results' : isAnalyzing ? 'running' : 'idle'
+
+Structure to render (exact order):
+
+Header (unchanged)
+
+AI Share of Voice (title + desc paragraph)
+
+Pulse AI Analysis (pink-outlined card)
+
+Context block (Client/Website/Competitors list)
+
+Two buttons (bottom of the card)
+
+If Running: progress list appears below the buttons
+
+If Results: show
+
+Row of 3 KPI cards:
+
+Overall ChatGPT SoV — value %
+
+Question Coverage — value %
+
+AI Visibility Leader — brand name
+(Each has a small “Data source: AI responses to generated questions” line)
+
+Two side-by-side cards:
+
+Performance by Buyer Journey Stage (your stage bars)
+
+AI Share of Voice by Competitor (your competitor bars)
+
+One full-width: Strategic Insights & Recommendations
+
+Buttons remain visible underneath everything (so user can rerun)
+
+Implementation constraints:
+
+Do not split the layout into separate “Real” and “Test” cards; one Pulse card contains both buttons.
+
+Buttons must share the disabled/loading state when either run is active:
+
+Label during running: “Analyzing…” (same for both)
+
+Show your existing spinner icon component next to the label
+
+Progress list must be below the buttons, not above.
+
+Use your existing fetch to /api/sov/analyze for both runs.
+
+Keep existing toast patterns and error handling.
+
+Keep the rest of the page intact (PDF export, footer, etc.).
+
+Acceptance checks (must pass visually and functionally):
+
+Title “AI Share of Voice” and the desc sentence are visible above the Pulse card across all states.
+
+The Pulse card always shows Client/Website/Competitors and the two buttons.
+
+Clicking either button disables both buttons and changes both labels to “Analyzing…” with loader.
+
+While running, a progress checklist appears below the buttons.
+
+After finishing, results appear as 3 KPI cards → 2 side-by-side → 1 full-width insights (in that order).
+
+The two buttons are re-enabled in Results so user can rerun either mode.
+
+No new CSS files, design tokens, or foreign components added.

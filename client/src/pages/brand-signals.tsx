@@ -303,50 +303,49 @@ export default function BrandSignals() {
           </Link>
         </div>
         
-        {/* AI Disclosure Banner */}
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-amber-800">
-              <strong>Note:</strong> This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
-              It is not based on SEO rankings, ads, or social mentions.
-            </p>
-          </div>
+        {/* AI Share of Voice Section Title & Description */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">AI Share of Voice</h2>
+          <p className="text-slate-600">
+            This analysis reflects how OpenAI's ChatGPT responds to key industry questions. 
+            It is not based on SEO rankings, ads, or social mentions.
+          </p>
         </div>
         
-        {/* Analysis Control Cards - Real and Test */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Real Client Analysis Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-base">
-                <TrendingUp className="h-5 w-5 mr-3 text-primary" />
-                AI Share of Voice Analysis (ChatGPT)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-sm text-slate-600">
-                  <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
-                  <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
-                  <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
-                  {competitors?.length > 0 && (
-                    <ul className="mt-2 ml-4">
-                      {competitors.map((c: any) => (
-                        <li key={c.id} className="text-xs">
-                          • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                
+        {/* Pulse AI Analysis Card */}
+        <Card className="mb-6 border-pink-200 border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <TrendingUp className="h-5 w-5 mr-3 text-primary" />
+              Pulse AI Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Client/Website/Competitors Info Block */}
+              <div className="text-sm text-slate-600">
+                <p><strong>Client:</strong> {client?.name || 'Loading...'}</p>
+                <p><strong>Website:</strong> {client?.websiteUrl?.replace(/^https?:\/\//, '') || 'Loading...'}</p>
+                <p><strong>Competitors:</strong> {competitors?.length || 0} configured</p>
+                {competitors?.length > 0 && (
+                  <ul className="mt-2 ml-4">
+                    {competitors.map((c: any) => (
+                      <li key={c.id} className="text-xs">
+                        • {c.label || c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')} ({c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '')})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              
+              {/* Two Buttons */}
+              <div className="flex gap-4">
                 <Button 
-                  className="w-full h-10"
+                  className="flex-1 h-10"
                   onClick={runAnalysis}
                   disabled={isAnalyzing || !client}
                 >
-                  {isAnalyzing && !isTestAnalysis ? (
+                  {isAnalyzing ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Analyzing...
@@ -359,79 +358,13 @@ export default function BrandSignals() {
                   )}
                 </Button>
                 
-                {/* Progress Steps - only show if analyzing real client */}
-                {isAnalyzing && progressSteps.length > 0 && !isTestAnalysis && (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
-                    {progressSteps.map((step, index) => {
-                      const isExplicitlyCompleted = step.includes('✅');
-                      const isFailed = step.includes('❌');
-                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
-                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
-                      
-                      return (
-                        <div key={index} className="flex items-center space-x-3 text-sm">
-                          <div className="flex-shrink-0">
-                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
-                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-green-600 text-xs font-bold">✓</span>
-                              </div>
-                            )}
-                            {isFailed && (
-                              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 text-xs font-bold">✕</span>
-                              </div>
-                            )}
-                            {isCurrentStep && (
-                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                                <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                              </div>
-                            )}
-                          </div>
-                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
-                            {step}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Test Companies Analysis Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-base">
-                <TrendingUp className="h-5 w-5 mr-3 text-blue-600" />
-                AI Share of Voice Analysis - Test Companies (ChatGPT)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-sm text-slate-600">
-                  <p><strong>Client:</strong> HubSpot</p>
-                  <p><strong>Website:</strong> hubspot.com</p>
-                  <p><strong>Competitors:</strong> 3 configured</p>
-                  <ul className="mt-2 ml-4">
-                    <li className="text-xs">• Salesforce (salesforce.com)</li>
-                    <li className="text-xs">• Zoho (zoho.com)</li>
-                    <li className="text-xs">• Mailchimp (mailchimp.com)</li>
-                  </ul>
-                  <div className="mt-3 p-2 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-700">
-                      <strong>Note:</strong> Test with well-known brands to see real Share of Voice results
-                    </p>
-                  </div>
-                </div>
-                
                 <Button 
-                  className="w-full h-10 bg-blue-600 hover:bg-blue-700"
+                  variant="outline"
+                  className="flex-1 h-10"
                   onClick={runTestAnalysis}
                   disabled={isAnalyzing}
                 >
-                  {isAnalyzing && isTestAnalysis ? (
+                  {isAnalyzing ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Analyzing...
@@ -443,48 +376,57 @@ export default function BrandSignals() {
                     </>
                   )}
                 </Button>
-                
-                {/* Progress Steps - only show if analyzing test companies */}
-                {isAnalyzing && progressSteps.length > 0 && isTestAnalysis && (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="text-sm font-medium text-slate-700">Test Analysis Progress:</h4>
-                    {progressSteps.map((step, index) => {
-                      const isExplicitlyCompleted = step.includes('✅');
-                      const isFailed = step.includes('❌');
-                      const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
-                      const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
-                      
-                      return (
-                        <div key={index} className="flex items-center space-x-3 text-sm">
-                          <div className="flex-shrink-0">
-                            {(isExplicitlyCompleted || isImplicitlyCompleted) && (
-                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-green-600 text-xs font-bold">✓</span>
-                              </div>
-                            )}
-                            {isFailed && (
-                              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 text-xs font-bold">✕</span>
-                              </div>
-                            )}
-                            {isCurrentStep && (
-                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                                <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
-                              </div>
-                            )}
-                          </div>
-                          <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
-                            {step}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              
+              {/* Progress Steps - appear below buttons when running */}
+              {isAnalyzing && progressSteps.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium text-slate-700">Analysis Progress:</h4>
+                  {progressSteps.map((step, index) => {
+                    const isExplicitlyCompleted = step.includes('✅');
+                    const isFailed = step.includes('❌');
+                    const isCurrentStep = index === progressSteps.length - 1 && !isExplicitlyCompleted && !isFailed;
+                    const isImplicitlyCompleted = !isExplicitlyCompleted && !isFailed && !isCurrentStep;
+                    
+                    return (
+                      <div key={index} className="flex items-center space-x-3 text-sm">
+                        <div className="flex-shrink-0">
+                          {(isExplicitlyCompleted || isImplicitlyCompleted) && (
+                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-green-600 text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                          {isFailed && (
+                            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-xs font-bold">✕</span>
+                            </div>
+                          )}
+                          {isCurrentStep && (
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <RefreshCw className="h-3 w-3 text-blue-600 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        <span className={step.includes('❌') ? 'text-red-700' : 'text-slate-700'}>
+                          {step}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    <strong>Error:</strong> {errorMessage}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Analysis Results */}
         {analysisResults && (
@@ -527,78 +469,113 @@ export default function BrandSignals() {
               </Card>
             </div>
 
-            {/* Stage Performance Breakdown */}
-            {analysisResults.questionResults && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
-                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {['awareness', 'consideration', 'decision'].map(stage => {
-                      const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
-                      const brandName = analysisResults.summary?.brand;
-                      
-                      // Calculate average SoV for this stage
-                      const stageSoV = stageQuestions.reduce((sum: number, q: any) => {
-                        return sum + (q.sov?.[brandName] || 0);
-                      }, 0) / (stageQuestions.length || 1);
-                      
-                      // Find stage leader
-                      const allBrands = new Set<string>();
-                      stageQuestions.forEach((q: any) => {
-                        Object.keys(q.sov || {}).forEach(brand => allBrands.add(brand));
-                      });
-                      
-                      const brandAverages = Array.from(allBrands).map(brand => ({
-                        brand,
-                        avg: stageQuestions.reduce((sum: number, q: any) => 
-                          sum + (q.sov?.[brand] || 0), 0) / (stageQuestions.length || 1)
-                      }));
-                      
-                      const stageLeader = brandAverages.reduce((a, b) => 
-                        b.avg > a.avg ? b : a, { brand: 'None', avg: 0 });
-                      
-                      return (
-                        <div key={stage} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium capitalize">{stage}</span>
-                              <button 
-                                onClick={() => setShowQuestionsDialog(true)}
-                                className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
-                              >
-                                ({stageQuestions.length} questions)
-                              </button>
-                            </div>
-                            <div className="text-sm text-slate-600">
-                              Leader: <span className="font-medium">{stageLeader.brand}</span> ({Math.round(stageLeader.avg)}%)
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-slate-700 w-20">Your SoV:</span>
-                            <div className="flex-1">
+            {/* Two Side-by-Side Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Performance by Buyer Journey Stage */}
+              {analysisResults.questionResults && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Performance by Buyer Journey Stage</CardTitle>
+                    <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {['awareness', 'consideration', 'decision'].map(stage => {
+                        const stageQuestions = analysisResults.questionResults.filter((q: any) => q.stage === stage);
+                        const brandName = analysisResults.summary?.brand;
+                        
+                        // Calculate average SoV for this stage
+                        const stageSoV = stageQuestions.reduce((sum: number, q: any) => {
+                          return sum + (q.sov?.[brandName] || 0);
+                        }, 0) / (stageQuestions.length || 1);
+                        
+                        // Find stage leader
+                        const allBrands = new Set<string>();
+                        stageQuestions.forEach((q: any) => {
+                          Object.keys(q.sov || {}).forEach(brand => allBrands.add(brand));
+                        });
+                        
+                        const brandAverages = Array.from(allBrands).map(brand => ({
+                          brand,
+                          avg: stageQuestions.reduce((sum: number, q: any) => 
+                            sum + (q.sov?.[brand] || 0), 0) / (stageQuestions.length || 1)
+                        }));
+                        
+                        const stageLeader = brandAverages.reduce((a, b) => 
+                          b.avg > a.avg ? b : a, { brand: 'None', avg: 0 });
+                        
+                        return (
+                          <div key={stage} className="space-y-2">
+                            <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-slate-200 rounded-full h-3">
-                                  <div 
-                                    className="bg-primary h-3 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, Math.round(stageSoV))}%` }}
-                                  />
+                                <span className="font-medium capitalize">{stage}</span>
+                                <button 
+                                  onClick={() => setShowQuestionsDialog(true)}
+                                  className="text-sm text-slate-500 hover:text-primary underline cursor-pointer"
+                                >
+                                  ({stageQuestions.length} questions)
+                                </button>
+                              </div>
+                              <div className="text-sm text-slate-600">
+                                Leader: <span className="font-medium">{stageLeader.brand}</span> ({Math.round(stageLeader.avg)}%)
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm font-medium text-slate-700 w-20">Your SoV:</span>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-slate-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-primary h-3 rounded-full transition-all duration-500"
+                                      style={{ width: `${Math.min(100, Math.round(stageSoV))}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-bold text-slate-800 w-12 text-right">
+                                    {Math.round(stageSoV)}%
+                                  </span>
                                 </div>
-                                <span className="text-sm font-bold text-slate-800 w-12 text-right">
-                                  {Math.round(stageSoV)}%
-                                </span>
                               </div>
                             </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* AI Share of Voice by Competitor */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
+                  <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Object.entries(analysisResults.metrics?.overallSoV || {}).map(([brand, percentage]) => (
+                      <div key={brand} className="flex items-center gap-4">
+                        <div className="w-32 text-sm font-medium text-slate-700 truncate">{brand}</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-slate-200 rounded-full h-3">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-500 ${
+                                  brand === analysisResults.summary?.brand ? 'bg-primary' : 'bg-slate-400'
+                                }`}
+                                style={{ width: `${String(percentage)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-bold text-slate-800 w-16 text-right">
+                              {String(percentage)}%
+                            </span>
+                          </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </div>
 
             {/* Questions Dialog */}
             {showQuestionsDialog && analysisResults.questionResults && (
@@ -636,38 +613,6 @@ export default function BrandSignals() {
                 </DialogContent>
               </Dialog>
             )}
-
-            {/* Competitive Comparison */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-lg">AI Share of Voice by Competitor</CardTitle>
-                <p className="text-xs text-slate-500 mt-1">Data source: AI responses to generated questions</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(analysisResults.metrics?.overallSoV || {}).map(([brand, percentage]) => (
-                    <div key={brand} className="flex items-center gap-4">
-                      <div className="w-32 text-sm font-medium text-slate-700 truncate">{brand}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-slate-200 rounded-full h-3">
-                            <div 
-                              className={`h-3 rounded-full transition-all duration-500 ${
-                                brand === analysisResults.summary?.brand ? 'bg-primary' : 'bg-slate-400'
-                              }`}
-                              style={{ width: `${String(percentage)}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-bold text-slate-800 w-16 text-right">
-                            {String(percentage)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Strategic Insights */}
             <Card className="mb-6">
@@ -998,6 +943,46 @@ export default function BrandSignals() {
                 </CardContent>
               )}
             </Card>
+            
+            {/* Rerun Analysis Buttons */}
+            <div className="flex gap-4 mt-6">
+              <Button 
+                className="flex-1 h-10"
+                onClick={runAnalysis}
+                disabled={isAnalyzing || !client}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Run New Analysis
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="flex-1 h-10"
+                onClick={runTestAnalysis}
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Run Test Analysis
+                  </>
+                )}
+              </Button>
+            </div>
           </>
         )}
 
