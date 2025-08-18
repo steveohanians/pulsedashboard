@@ -107,7 +107,17 @@ export class SovService extends EventEmitter {
       model: 'gpt-4o',
       messages: [{
         role: 'system',
-        content: 'You are an expert at creating questions that potential buyers would ask when researching solutions.'
+        content: `You are a B2B buyer-journey strategist and industry research expert. Your role is to generate realistic, high-quality questions that potential buyers would naturally ask when evaluating both products and services — including software platforms, technology solutions, professional services, agencies, and consulting firms.
+
+Your questions should:
+
+Reflect how real buyers at organizations (executives, managers, practitioners) search and compare options across Awareness, Consideration, and Decision stages.
+
+Cover both solutions and providers: not just features, but also services, pricing, implementation, support, scalability, and outcomes.
+
+Encourage variety in structure (who/what/how/why, lists, comparisons, trade-offs).
+
+Be phrased in natural buyer language that could realistically appear in search queries, market research, or analyst reports.`
       }, {
         role: 'user',
         content: `Based on these competing brands in the ${input.vertical} industry:
@@ -115,31 +125,48 @@ ${brandContext}
 
 Generate 15 questions following these guidelines:
 
-AWARENESS STAGE (5 questions):
-- 4 ORGANIC questions (brand-agnostic): Focus on categories, problems, outcomes
-- 1 PROMPTED question: Can mention category leaders or "top providers"
-- Examples: "What is the best tool for...", "How do companies handle...", "What solutions exist for..."
+AWARENESS STAGE (5 questions)
 
-CONSIDERATION STAGE (5 questions):
-- 3 ORGANIC questions: Feature comparisons without brand names
-- 2 PROMPTED questions: Direct brand comparisons
-- Vary formats: "Which platforms offer...", "How to choose between...", "Compare features of..."
+3 ORGANIC questions (brand-agnostic): Focus on broad categories, problems, outcomes.
 
-DECISION STAGE (5 questions):
-- 2 ORGANIC questions: Implementation and pricing concerns
-- 3 PROMPTED questions: Head-to-head brand comparisons using these specific brands: ${input.brand.name}, ${input.competitors.map(c => c.name).join(', ')}
-- Examples: "${input.brand.name} vs ${input.competitors[0]?.name} for...", "Is ${input.brand.name} better than ${input.competitors[1]?.name}..."
+1 ORGANIC discovery question: Explicitly seek vendors, providers, or solutions (e.g., "What are the main providers for…?").
+
+1 PROMPTED question: Mention category leaders or "top providers."
+
+Examples: "What solutions exist for…?", "How do companies handle…?", "What are some well-known providers for…?"
+
+CONSIDERATION STAGE (5 questions)
+
+3 ORGANIC questions: Compare features, criteria, trade-offs without naming brands.
+
+2 PROMPTED questions: Direct brand comparisons (side-by-side).
+
+Vary structures: "Which platforms offer…," "How to choose between…," "Compare features of…"
+
+DECISION STAGE (5 questions)
+
+2 ORGANIC questions: Pricing, implementation, support, practical concerns.
+
+3 PROMPTED questions: Head-to-head comparisons using these brands: ${input.brand.name}, ${input.competitors.map(c => c.name).join(', ')}
+
+Examples: "${input.brand.name} vs ${input.competitors[0]?.name} for…," "Is ${input.brand.name} better than ${input.competitors[1]?.name} for…"
 
 Requirements:
-- Use natural buyer language
-- Cover multiple angles: features, cost, scalability, integration, ease of use, support, results
-- Vary question structures (avoid repetitive patterns)
-- Tag each question as [ORGANIC] or [PROMPTED]
 
-Output as numbered list with tags:
-1. [ORGANIC] Question here
-2. [PROMPTED] Question here
-etc.`
+Use natural buyer language.
+
+Cover features, cost, scalability, integration, ease of use, support, results.
+
+Ensure variety in question forms (who/what/how/why, lists, comparisons).
+
+Include services as well as platforms.
+
+Tag each question as [ORGANIC] or [PROMPTED].
+
+Output: Numbered list with tags.
+
+1. [ORGANIC] Question here  
+2. [PROMPTED] Question here`
       }],
       temperature: 0.7
     });
