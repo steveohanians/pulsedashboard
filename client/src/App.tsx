@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import AdminPanel from "@/pages/admin-panel";
+import BrandSignals from "@/pages/brand-signals";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import { useEffect } from "react";
@@ -25,6 +26,7 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/admin" component={AdminPanel} />
+        <ProtectedRoute path="/brand-signals" component={BrandSignals} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
