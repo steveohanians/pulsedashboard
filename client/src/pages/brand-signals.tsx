@@ -346,9 +346,7 @@ export default function BrandSignals() {
             <div className="bg-slate-50/50 rounded-xl">
               {/* Description */}
               <p className="text-slate-600 text-sm mb-6">
-                This analysis reflects how OpenAI's ChatGPT responds to key
-                industry questions. It is not based on SEO rankings, ads, or
-                social mentions.
+                This analysis shows how OpenAI's ChatGPT positions your brand and competitor brands within the GEO category. Results are drawn from AI responses, not SEO rankings, paid media, or social activity.
               </p>
 
               {/* Pulse AI Analysis Section - Matching Dashboard's Pulse AI Insight styling */}
@@ -511,7 +509,7 @@ export default function BrandSignals() {
                           <div className="text-xs font-medium text-slate-600 mb-1">
                             Overall ChatGPT SoV
                           </div>
-                          <div className="text-2xl font-bold text-primary">
+                          <div className="text-2xl font-thin text-primary">
                             {analysisResults.metrics?.overallSoV?.[
                               analysisResults.summary?.brand
                             ] || 0}
@@ -528,7 +526,7 @@ export default function BrandSignals() {
                           <div className="text-xs font-medium text-slate-600 mb-1">
                             Question Coverage
                           </div>
-                          <div className="text-2xl font-bold text-primary">
+                          <div className="text-2xl font-thin text-black">
                             {analysisResults.metrics?.questionCoverage?.[
                               analysisResults.summary?.brand
                             ] || 0}
@@ -545,7 +543,7 @@ export default function BrandSignals() {
                           <div className="text-xs font-medium text-slate-600 mb-1">
                             AI Visibility Leader
                           </div>
-                          <div className="text-lg font-bold text-slate-800 truncate">
+                          <div className="text-lg font-thin text-slate-800 truncate">
                             {(() => {
                               const sov =
                                 analysisResults.metrics?.overallSoV || {};
@@ -780,14 +778,14 @@ export default function BrandSignals() {
                                 return (
                                   <div key={index} className={`p-4 rounded-lg border ${bgColorClass}`}>
                                     <h4 className="font-bold text-slate-800 mb-2">{insight.title}</h4>
-                                    <p className="text-slate-700 mb-3">{insight.description}</p>
+                                    <p className="text-sm text-slate-700 mb-3">{insight.description}</p>
                                     {insight.action && (
-                                      <p className="text-slate-700 mb-2">
+                                      <p className="text-sm text-slate-700 mb-2">
                                         <span className="font-bold">Action:</span> {insight.action}
                                       </p>
                                     )}
                                     {insight.deliverables && (
-                                      <p className="text-slate-700">
+                                      <p className="text-sm text-slate-700">
                                         <span className="font-bold">Deliverables:</span> {insight.deliverables}
                                       </p>
                                     )}

@@ -632,7 +632,7 @@ etc.`
         const archetype = 'Control the Fragmented Space';
         if (!usedArchetypes.has(archetype) && insights.length < 5) {
           usedArchetypes.add(archetype);
-          insights.push(`Control the Fragmented Space\n"Others" at ${othersAvg}% vs competitor avg ${competitorAvg}% in ${stage}. Market highly fragmented.\nAction: Publish authoritative, comprehensive category resources to consolidate scattered mentions.\nDeliverables: Authoritative content hubs; Comparison matrices; Information architecture updates.`);
+          insights.push(`Control the Fragmented Space\nOthers at ${othersAvg}% vs competitor avg ${competitorAvg}% in ${stage}. Market highly fragmented.\nAction: Publish authoritative, comprehensive category resources to consolidate scattered mentions.\nDeliverables: Authoritative content hubs; Comparison matrices; Information architecture updates.`);
         }
       }
     });
