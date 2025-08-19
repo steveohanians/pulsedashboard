@@ -70,13 +70,7 @@ export function useDashboardData({
 
   // Main dashboard data query
   const dashboardQuery = useQuery<any>({
-    queryKey: [
-      "/api/dashboard", 
-      effectiveClientId, 
-      effectiveTimePeriod,
-      businessSize,
-      industryVertical
-    ],
+    queryKey: QueryKeys.dashboard(effectiveClientId, effectiveTimePeriod, businessSize, industryVertical),
     queryFn: async () => {
       try {
         const result = await apiRequest(

@@ -10,12 +10,14 @@
 
 export const QueryKeys = {
   /**
-   * Dashboard data query key (supports canonical time periods)
+   * Dashboard data query key (supports canonical time periods and filters)
    * @param clientId - Client identifier
    * @param timePeriod - Time period for data filtering (string or canonical object)
+   * @param businessSize - Business size filter
+   * @param industryVertical - Industry vertical filter
    */
-  dashboard: (clientId: string, timePeriod: any = "Last Month") => 
-    ["/api/dashboard", clientId, timePeriod] as const,
+  dashboard: (clientId: string, timePeriod: any = "Last Month", businessSize?: string, industryVertical?: string) => 
+    ["/api/dashboard", clientId, timePeriod, businessSize, industryVertical] as const,
 
   /**
    * Filter options query key
