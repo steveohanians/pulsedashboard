@@ -888,8 +888,11 @@ function processMetricsData(
 
   // Competitor metrics pipeline debug logs removed for cleaner console
   
+  // Filter out Industry_Avg metrics from allMetrics when filtered ones exist to prevent duplicates
+  const clientMetricsOnly = allMetrics.filter(m => m.sourceType !== 'Industry_Avg');
+  
   const processedData = [
-    ...processTrafficChannelData(allMetrics.map(m => ({ ...m, sourceType: m.sourceType }))),
+    ...processTrafficChannelData(clientMetricsOnly.map(m => ({ ...m, sourceType: m.sourceType }))),
     ...processTrafficChannelData(allCompetitorMetrics.map(m => ({ ...m, sourceType: 'Competitor' }))),
     ...processTrafficChannelData(allFilteredIndustryMetrics.map(m => ({ ...m, sourceType: 'Industry_Avg' }))),
     ...processTrafficChannelData(allFilteredCdAvgMetrics.map(m => ({ ...m, sourceType: 'CD_Avg' })))

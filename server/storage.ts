@@ -562,6 +562,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     logger.info(`Applying filters: businessSize="${filters.businessSize}", industryVertical="${filters.industryVertical}"`);
+    logger.info(`Current allIndustryMetrics count: ${allIndustryMetrics.length}, sample: ${JSON.stringify(allIndustryMetrics.find(m => m.metricName === 'Bounce Rate'))}`);
     
     // First, get companies that actually have metrics data for this period or recent fallback periods
     const periodsToCheck = [period, '2025-06', '2025-05', '2025-04', '2025-03'];
@@ -658,25 +659,71 @@ export class DatabaseStorage implements IStorage {
     
     // Group metrics by metric name and calculate averages
     const metricGroups: Record<string, number[]> = {};
+    logger.info(`Processing ${metricsToUse.length} metrics for calculation`);
     metricsToUse.forEach(metric => {
       if (!metricGroups[metric.metricName]) {
         metricGroups[metric.metricName] = [];
       }
-      const numValue = parseFloat(String(metric.value));
+      
+      // For the first Bounce Rate metric, log everything to debug
+      if (metric.metricName === 'Bounce Rate' && !metricGroups['Bounce Rate'].length) {
+        logger.info(`BOUNCE RATE DEBUG - Raw: ${JSON.stringify(metric.value)}, Type: ${typeof metric.value}`);
+      }
+      
+      // Parse metric values - handle both object and string formats
+      let numValue;
+      if (typeof metric.value === 'object' && metric.value !== null && 'value' in metric.value) {
+        // Already parsed JSON object: {value: 0.5235, source: "semrush"}
+        numValue = parseFloat(metric.value.value);
+        if (metric.metricName === 'Bounce Rate' && !metricGroups['Bounce Rate'].length) {
+          logger.info(`BOUNCE RATE DEBUG - Object format, extracted: ${numValue}`);
+        }
+      } else {
+        // String format, try to parse as JSON
+        try {
+          const parsed = JSON.parse(String(metric.value));
+          if (parsed && typeof parsed === 'object' && 'value' in parsed) {
+            numValue = parseFloat(parsed.value);
+          } else {
+            numValue = parseFloat(String(metric.value));
+          }
+          if (metric.metricName === 'Bounce Rate' && !metricGroups['Bounce Rate'].length) {
+            logger.info(`BOUNCE RATE DEBUG - String format, parsed: ${numValue}`);
+          }
+        } catch {
+          numValue = parseFloat(String(metric.value));
+          if (metric.metricName === 'Bounce Rate' && !metricGroups['Bounce Rate'].length) {
+            logger.info(`BOUNCE RATE DEBUG - Plain number: ${numValue}`);
+          }
+        }
+      }
+      
       if (!isNaN(numValue)) {
         metricGroups[metric.metricName].push(numValue);
+        if (metric.metricName === 'Bounce Rate') {
+          logger.info(`BOUNCE RATE DEBUG - Added ${numValue} to group, total values: ${metricGroups['Bounce Rate'].length}`);
+        }
+      } else {
+        if (metric.metricName === 'Bounce Rate') {
+          logger.info(`BOUNCE RATE DEBUG - NaN value skipped`);
+        }
       }
     });
     
     const filteredMetrics: Metric[] = [];
     
     // Calculate averages for each metric type
+    logger.info(`Metric groups found: ${Object.keys(metricGroups).join(', ')}`);
     Object.entries(metricGroups).forEach(([metricName, values]) => {
       if (values.length > 0) {
         const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
         const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
           ? Math.round(avgValue * 10) / 10 
+          : metricName === "Bounce Rate" 
+          ? Math.round(avgValue * 10000) / 10000  // Preserve 4 decimal places for percentages
           : Math.round(avgValue);
+        
+        logger.info(`Creating filtered metric ${metricName}: ${finalValue} from values [${values.join(', ')}]`);
         
         filteredMetrics.push({
           id: `industry-avg-filtered-${metricName}-${period}`,
@@ -695,13 +742,20 @@ export class DatabaseStorage implements IStorage {
       }
     });
     
-    // Add Traffic Channels from database if they exist for this period and filters
-    const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.timePeriod === period);
+    // Only add Traffic Channels from database that don't already exist in calculated metrics
+    const calculatedMetricNames = new Set(filteredMetrics.map(m => m.metricName));
+    const trafficChannelsFromDB = allIndustryMetrics.filter(m => 
+      m.metricName === 'Traffic Channels' && 
+      m.timePeriod === period && 
+      !calculatedMetricNames.has(m.metricName)
+    );
+    logger.info(`Adding ${trafficChannelsFromDB.length} traffic channels from database to ${filteredMetrics.length} calculated metrics`);
     if (trafficChannelsFromDB.length > 0) {
       filteredMetrics.push(...trafficChannelsFromDB);
     }
     
     logger.info(`Returning ${filteredMetrics.length} filtered Industry_Avg metrics for period ${period} (filters: ${filters.businessSize}, ${filters.industryVertical})`);
+    logger.info(`Sample filtered metric: ${JSON.stringify(filteredMetrics.find(m => m.metricName === 'Bounce Rate'))}`);
     return filteredMetrics;
   }
 
