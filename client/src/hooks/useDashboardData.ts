@@ -329,3 +329,39 @@ export function useDashboardFilters(useDynamic = false) {
     isLoading: filtersQuery.isLoading,
   };
 }
+
+export function useSmartFilterCombinations(businessSize?: string, industryVertical?: string) {
+  const params = new URLSearchParams();
+  if (businessSize && businessSize !== 'All') params.append('businessSize', businessSize);
+  if (industryVertical && industryVertical !== 'All') params.append('industryVertical', industryVertical);
+  
+  const endpoint = `/api/filters/combinations${params.toString() ? '?' + params.toString() : ''}`;
+  
+  const combinationsQuery = useQuery<{
+    availableBusinessSizes?: string[];
+    availableIndustryVerticals?: string[];
+    selectedBusinessSize?: string;
+    selectedIndustryVertical?: string;
+    disabledCount?: {
+      businessSizes?: number;
+      industries?: number;
+    };
+    totalCombinations?: number;
+  }>({
+    queryKey: ['/api/filters/combinations', businessSize, industryVertical],
+    queryFn: async () => {
+      return apiRequest('GET', endpoint);
+    },
+    enabled: !!(businessSize !== undefined && industryVertical !== undefined), // Only run when filters are provided
+  });
+
+  return {
+    availableBusinessSizes: combinationsQuery.data?.availableBusinessSizes || [],
+    availableIndustryVerticals: combinationsQuery.data?.availableIndustryVerticals || [],
+    selectedBusinessSize: combinationsQuery.data?.selectedBusinessSize,
+    selectedIndustryVertical: combinationsQuery.data?.selectedIndustryVertical,
+    disabledCount: combinationsQuery.data?.disabledCount,
+    totalCombinations: combinationsQuery.data?.totalCombinations,
+    isLoading: combinationsQuery.isLoading,
+  };
+}

@@ -325,7 +325,8 @@ const DEVICE_COLORS = {
 export function getTimeSeriesColors(clientKey: string, competitors: any[], companyName?: string): Record<string, string> {
   const colors: Record<string, string> = {
     [clientKey]: BASE_ENTITY_COLORS.client(),
-    'Industry Avg': BASE_ENTITY_COLORS.industryAvg(),
+    'Industry_Avg': BASE_ENTITY_COLORS.industryAvg(),
+    'Industry Avg': BASE_ENTITY_COLORS.industryAvg(), // Support both naming conventions
     'Clear Digital Clients Avg': BASE_ENTITY_COLORS.cdAvg(),
   };
   

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
+import { useDashboardData, useDashboardFilters, useSmartFilterCombinations } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -137,6 +137,15 @@ export default function Dashboard() {
     dataSourceInfo,
     isLoading: filtersLoading,
   } = useDashboardFilters(true);
+
+  // Use smart filter combinations for interdependent filtering
+  const {
+    availableBusinessSizes,
+    availableIndustryVerticals,
+    disabledCount,
+    totalCombinations,
+    isLoading: combinationsLoading,
+  } = useSmartFilterCombinations(businessSize, industryVertical);
 
   // Show error if there's an issue
   useEffect(() => {
@@ -681,11 +690,16 @@ export default function Dashboard() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Business Size
+                    {disabledCount?.businessSizes && disabledCount.businessSizes > 0 && (
+                      <span className="text-xs text-slate-500 ml-2">
+                        ({disabledCount.businessSizes} options filtered out)
+                      </span>
+                    )}
                   </label>
                   <NativeSelect
                     value={businessSize}
                     onChange={(e) => setBusinessSize(e.target.value)}
-                    options={businessSizes.map((size) => ({
+                    options={(availableBusinessSizes.length > 0 ? availableBusinessSizes : businessSizes).map((size) => ({
                       value: size,
                       label: size,
                     }))}
@@ -695,11 +709,16 @@ export default function Dashboard() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2">
                     Industry Vertical
+                    {disabledCount?.industries && disabledCount.industries > 0 && (
+                      <span className="text-xs text-slate-500 ml-2">
+                        ({disabledCount.industries} options filtered out)
+                      </span>
+                    )}
                   </label>
                   <NativeSelect
                     value={industryVertical}
                     onChange={(e) => setIndustryVertical(e.target.value)}
-                    options={industryVerticals.map((vertical) => ({
+                    options={(availableIndustryVerticals.length > 0 ? availableIndustryVerticals : industryVerticals).map((vertical) => ({
                       value: vertical,
                       label: vertical,
                     }))}

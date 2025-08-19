@@ -1216,7 +1216,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Smart filter combinations endpoint - returns valid combinations based on data
+  app.get("/api/filters/combinations", requireAuth, async (req, res) => {
+    try {
+      const { businessSize, industryVertical } = req.query;
+      
+      // Get companies that have metrics data
+      const companiesWithMetrics = await storage.getBenchmarkCompaniesWithMetrics();
+      
+      // If a business size is selected, return available industry verticals for that size
+      if (businessSize && businessSize !== 'All') {
+        const availableIndustries = companiesWithMetrics
+          .filter(company => company.businessSize === businessSize)
+          .map(company => company.industryVertical)
+          .filter((value): value is string => value != null)
+          .filter((value, index, self) => self.indexOf(value) === index)
+          .sort();
+        
+        return res.json({
+          availableIndustryVerticals: ['All', ...availableIndustries],
+          selectedBusinessSize: businessSize,
+          disabledCount: {
+            industries: Math.max(0, new Set(companiesWithMetrics.map(c => c.industryVertical).filter(Boolean)).size - availableIndustries.length)
+          }
+        });
+      }
 
+      // If an industry vertical is selected, return available business sizes for that industry
+      if (industryVertical && industryVertical !== 'All') {
+        const availableBusinessSizes = companiesWithMetrics
+          .filter(company => company.industryVertical === industryVertical)
+          .map(company => company.businessSize)
+          .filter((value): value is string => value != null)
+          .filter((value, index, self) => self.indexOf(value) === index)
+          .sort();
+        
+        return res.json({
+          availableBusinessSizes: ['All', ...availableBusinessSizes],
+          selectedIndustryVertical: industryVertical,
+          disabledCount: {
+            businessSizes: Math.max(0, new Set(companiesWithMetrics.map(c => c.businessSize).filter(Boolean)).size - availableBusinessSizes.length)
+          }
+        });
+      }
+
+      // No specific filter selected - return all available options
+      const allBusinessSizes = companiesWithMetrics
+        .map(company => company.businessSize)
+        .filter((value): value is string => value != null)
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .sort();
+      
+      const allIndustryVerticals = companiesWithMetrics
+        .map(company => company.industryVertical)
+        .filter((value): value is string => value != null)
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .sort();
+
+      res.json({
+        availableBusinessSizes: ['All', ...allBusinessSizes],
+        availableIndustryVerticals: ['All', ...allIndustryVerticals],
+        totalCombinations: companiesWithMetrics.length
+      });
+
+    } catch (error) {
+      logger.error("Smart filter combinations error", { error: (error as Error).message });
+      res.status(500).json({ 
+        message: "Internal server error",
+        availableBusinessSizes: ['All'],
+        availableIndustryVerticals: ['All']
+      });
+    }
+  });
 
   // Generate metric-specific insights
   app.post("/api/generate-metric-insight/:clientId", requireAuth, async (req, res) => {
