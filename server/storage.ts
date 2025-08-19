@@ -583,51 +583,70 @@ export class DatabaseStorage implements IStorage {
     
     // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
-    // Use the data generation logic to create filtered metrics that match the selected filters
-    // const { generateMetricValue, METRIC_CONFIGS } = await import('./utils/dataGeneratorCore');
-    // const { generateTimePeriods } = await import('./utils/timePeriodsGenerator');
+    // Calculate filtered industry averages from actual benchmark company metrics
+    const matchingCompanyIds = matchingCompanies.map(c => c.id);
     
-    // Fallback if imports fail - return empty for now
-    try {
-      // Dynamic imports for data generation utilities
-      const dataGeneratorCore = await import('./utils/dataGeneratorCore');
-      const timePeriodsGenerator = await import('./utils/timePeriodsGenerator');
-      const { generateMetricValue, METRIC_CONFIGS } = dataGeneratorCore;
-      const { generateTimePeriods } = timePeriodsGenerator;
-      const timePeriods = generateTimePeriods();
+    // Get actual metrics for filtered benchmark companies
+    const actualBenchmarkMetrics = await db
+      .select()
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, 'Benchmark'),
+          eq(metrics.timePeriod, period),
+          inArray(metrics.benchmarkCompanyId, matchingCompanyIds)
+        )
+      );
     
-      const filteredMetrics: Metric[] = [];
-    
-    // Generate filtered metrics by averaging values for matching companies
-    for (const config of METRIC_CONFIGS) {
-      
-      let totalValue = 0;
-      let companyCount = 0;
-      
-      // Calculate average for matching companies using the same logic as data generation
-      for (const company of matchingCompanies) {
-        const value = generateMetricValue(
-          config, 
-          'Industry_Avg', 
-          period, 
-          timePeriods, 
-          company.businessSize, 
-          company.industryVertical
-        );
-        totalValue += value;
-        companyCount++;
+    // If no actual data for this period, try fallback to most recent available period  
+    let metricsToUse = actualBenchmarkMetrics;
+    if (actualBenchmarkMetrics.length === 0) {
+      const fallbackPeriods = ['2025-06', '2025-05', '2025-04', '2025-03'];
+      for (const fallbackPeriod of fallbackPeriods) {
+        const fallbackMetrics = await db
+          .select()
+          .from(metrics)
+          .where(
+            and(
+              eq(metrics.sourceType, 'Benchmark'),
+              eq(metrics.timePeriod, fallbackPeriod),
+              inArray(metrics.benchmarkCompanyId, matchingCompanyIds)
+            )
+          );
+        
+        if (fallbackMetrics.length > 0) {
+          metricsToUse = fallbackMetrics.map(m => ({ ...m, timePeriod: period }));
+          break;
+        }
       }
-      
-      if (companyCount > 0) {
-        const avgValue = totalValue / companyCount;
-        const finalValue = config.name === "Pages per Session" || config.name === "Sessions per User" 
+    }
+    
+    // Group metrics by metric name and calculate averages
+    const metricGroups: Record<string, number[]> = {};
+    metricsToUse.forEach(metric => {
+      if (!metricGroups[metric.metricName]) {
+        metricGroups[metric.metricName] = [];
+      }
+      const numValue = parseFloat(metric.value);
+      if (!isNaN(numValue)) {
+        metricGroups[metric.metricName].push(numValue);
+      }
+    });
+    
+    const filteredMetrics: Metric[] = [];
+    
+    // Calculate averages for each metric type
+    Object.entries(metricGroups).forEach(([metricName, values]) => {
+      if (values.length > 0) {
+        const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+        const finalValue = metricName === "Pages per Session" || metricName === "Sessions per User" 
           ? Math.round(avgValue * 10) / 10 
           : Math.round(avgValue);
         
         filteredMetrics.push({
-          id: `industry-avg-filtered-${config.name}-${period}`,
-          clientId: "", // Not applicable for industry averages
-          metricName: config.name,
+          id: `industry-avg-filtered-${metricName}-${period}`,
+          clientId: "",
+          metricName,
           value: finalValue.toString(),
           sourceType: 'Industry_Avg' as any,
           timePeriod: period,
@@ -638,60 +657,16 @@ export class DatabaseStorage implements IStorage {
           canonicalEnvelope: null,
           createdAt: new Date()
         });
-        
-        // Debug logging disabled for performance
-        // if (config.name === "Session Duration") {
-        //   logger.debug(`Generated filtered Session Duration: ${finalValue} (from ${companyCount} companies, avg: ${avgValue})`);
-        // }
       }
+    });
+    
+    // Add Traffic Channels from database if they exist for this period and filters
+    const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.timePeriod === period);
+    if (trafficChannelsFromDB.length > 0) {
+      filteredMetrics.push(...trafficChannelsFromDB);
     }
     
-      // Generate Industry_Avg Traffic Channels with realistic channel distribution
-      const trafficChannelsFromDB = allIndustryMetrics.filter(m => m.metricName === 'Traffic Channels' && m.timePeriod === period);
-      
-      if (trafficChannelsFromDB.length === 0) {
-        // Generate Industry_Avg Traffic Channels if none exist for this period
-        const industryTrafficChannels = [
-          { channel: '0', name: 'Direct', percentage: 28.5, sessions: 12450 },
-          { channel: '1', name: 'Organic Search', percentage: 35.2, sessions: 15380 },
-          { channel: '2', name: 'Paid Search', percentage: 15.8, sessions: 6920 },
-          { channel: '3', name: 'Social Media', percentage: 12.3, sessions: 5380 },
-          { channel: '4', name: 'Email', percentage: 4.7, sessions: 2050 },
-          { channel: '5', name: 'Referral', percentage: 3.5, sessions: 1530 }
-        ];
-        
-        for (const channel of industryTrafficChannels) {
-          filteredMetrics.push({
-            id: `industry-avg-traffic-${channel.channel}-${period}`,
-            clientId: "",
-            metricName: 'Traffic Channels',
-            value: {
-              percentage: channel.percentage,
-              sessions: channel.sessions,
-              source: 'industry_average'
-            },
-            sourceType: 'Industry_Avg' as any,
-            timePeriod: period,
-            channel: channel.channel,
-            competitorId: null,
-            cdPortfolioCompanyId: null,
-            benchmarkCompanyId: null,
-            canonicalEnvelope: null,
-            createdAt: new Date()
-          });
-        }
-        
-        logger.info(`Generated ${industryTrafficChannels.length} Industry_Avg Traffic Channels for period ${period}`);
-      } else {
-        // Use existing database Traffic Channels if they exist
-        filteredMetrics.push(...trafficChannelsFromDB);
-      }
-      
-      return filteredMetrics;
-    } catch (error) {
-      logger.warn('Failed to import data generation utilities, returning raw industry metrics', error);
-      return allIndustryMetrics;
-    }
+    return filteredMetrics;
   }
 
   // Get CD Average metrics - NO filtering should ever be applied
