@@ -563,7 +563,30 @@ export class DatabaseStorage implements IStorage {
     
     logger.info(`Applying filters: businessSize="${filters.businessSize}", industryVertical="${filters.industryVertical}"`);
     
-    // Get benchmark companies that match the filters to determine which variations to use
+    // First, get companies that actually have metrics data for this period or recent fallback periods
+    const periodsToCheck = [period, '2025-06', '2025-05', '2025-04', '2025-03'];
+    
+    const companiesWithMetrics = await db
+      .select({ 
+        companyId: metrics.benchmarkCompanyId,
+        company: benchmarkCompanies
+      })
+      .from(metrics)
+      .innerJoin(benchmarkCompanies, eq(metrics.benchmarkCompanyId, benchmarkCompanies.id))
+      .where(
+        and(
+          eq(metrics.sourceType, 'Benchmark'),
+          inArray(metrics.timePeriod, periodsToCheck)
+        )
+      )
+      .groupBy(metrics.benchmarkCompanyId, benchmarkCompanies.id, benchmarkCompanies.name, benchmarkCompanies.businessSize, benchmarkCompanies.industryVertical, benchmarkCompanies.websiteUrl, benchmarkCompanies.sourceVerified, benchmarkCompanies.active, benchmarkCompanies.createdAt);
+
+    if (companiesWithMetrics.length === 0) {
+      logger.info(`No benchmark companies have metrics for period ${period} or fallback periods - returning fallback to global averages`);
+      return allIndustryMetrics;
+    }
+
+    // Now apply filters to companies that have metrics
     const companyConditions = [];
     if (filters.businessSize && filters.businessSize !== "All") {
       companyConditions.push(eq(benchmarkCompanies.businessSize, filters.businessSize));
@@ -572,26 +595,31 @@ export class DatabaseStorage implements IStorage {
       companyConditions.push(eq(benchmarkCompanies.industryVertical, filters.industryVertical));
     }
     
-    // Get matching benchmark companies
-    const matchingCompanies = await db
-      .select()
-      .from(benchmarkCompanies)
-      .where(and(...companyConditions));
+    // Filter companies with metrics by the criteria
+    const matchingCompanies = companiesWithMetrics
+      .filter(({ company }) => {
+        if (filters.businessSize && filters.businessSize !== "All" && company.businessSize !== filters.businessSize) {
+          return false;
+        }
+        if (filters.industryVertical && filters.industryVertical !== "All" && company.industryVertical !== filters.industryVertical) {
+          return false;
+        }
+        return true;
+      })
+      .map(({ company }) => company);
     
     if (matchingCompanies.length === 0) {
       logger.info(`No benchmark companies found matching filters - returning fallback to global averages`);
       return allIndustryMetrics;
     }
     
-    logger.info(`Found ${matchingCompanies.length} matching benchmark companies: ${matchingCompanies.map(c => c.name).join(', ')}`);
-    
-    // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
+    logger.info(`Found ${matchingCompanies.length} filtered companies with metrics: ${matchingCompanies.map(c => c.name).join(', ')}`);
     
     // Calculate filtered industry averages from actual benchmark company metrics
     const matchingCompanyIds = matchingCompanies.map(c => c.id);
     
-    // Get actual metrics for filtered benchmark companies
-    const actualBenchmarkMetrics = await db
+    // Get actual metrics for filtered benchmark companies using fallback periods if needed
+    let actualBenchmarkMetrics = await db
       .select()
       .from(metrics)
       .where(
@@ -602,9 +630,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    logger.info(`Found ${actualBenchmarkMetrics.length} benchmark metrics for ${matchingCompanies.length} filtered companies in period ${period}`);
-    
-    // If no actual data for this period, try fallback to most recent available period  
+    // If no metrics found for exact period, use fallback periods
     let metricsToUse = actualBenchmarkMetrics;
     if (actualBenchmarkMetrics.length === 0) {
       const fallbackPeriods = ['2025-06', '2025-05', '2025-04', '2025-03'];
@@ -622,9 +648,12 @@ export class DatabaseStorage implements IStorage {
         
         if (fallbackMetrics.length > 0) {
           metricsToUse = fallbackMetrics.map(m => ({ ...m, timePeriod: period }));
+          logger.info(`Using fallback period ${fallbackPeriod} with ${fallbackMetrics.length} metrics for ${matchingCompanies.length} filtered companies`);
           break;
         }
       }
+    } else {
+      logger.info(`Found ${actualBenchmarkMetrics.length} benchmark metrics for ${matchingCompanies.length} filtered companies in period ${period}`);
     }
     
     // Group metrics by metric name and calculate averages
