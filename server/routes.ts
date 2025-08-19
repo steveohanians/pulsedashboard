@@ -1189,8 +1189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (company.industryVertical) industryVerticalsSet.add(company.industryVertical);
       });
       
-      // Convert to sorted arrays with 'All' option
-      const businessSizes = ['All', ...Array.from(businessSizesSet).sort()];
+      // Convert to sorted arrays with 'All' option - business sizes by size order, industries alphabetically
+      const businessSizes = sortBusinessSizes(['All', ...Array.from(businessSizesSet)]);
       const industryVerticals = ['All', ...Array.from(industryVerticalsSet).sort()];
       
       // Get time periods (same as regular filters endpoint)
@@ -1216,6 +1216,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Utility function to sort business sizes from smallest to largest
+  function sortBusinessSizes(sizes: string[]): string[] {
+    const sizeOrder: Record<string, number> = {
+      'All': 0,
+      'Small / Startup (25-100 employees)': 1,
+      'Small / Startup': 1, // Alternative naming
+      'Mid-Market (100-500 employees)': 2,
+      'Mid-Market (100-1000 employees)': 2, // Alternative range
+      'Mid-Market': 2,
+      'Large (500-1,000 employees)': 3,
+      'Large': 3,
+      'Enterprise (1,000-5,000 employees)': 4,
+      'Enterprise': 4,
+      'Global Enterprise (5,000+ employees)': 5,
+      'Global Enterprise': 5
+    };
+
+    return sizes.sort((a, b) => {
+      const orderA = sizeOrder[a] ?? 999; // Unknown sizes go to end
+      const orderB = sizeOrder[b] ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.localeCompare(b); // Fallback to alphabetical for unknowns
+    });
+  }
+
   // Smart filter combinations endpoint - returns valid combinations based on data
   app.get("/api/filters/combinations", requireAuth, async (req, res) => {
     try {
@@ -1231,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(company => company.industryVertical)
           .filter((value): value is string => value != null)
           .filter((value, index, self) => self.indexOf(value) === index)
-          .sort();
+          .sort(); // Alphabetical sort for industries
         
         return res.json({
           availableIndustryVerticals: ['All', ...availableIndustries],
@@ -1248,11 +1273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter(company => company.industryVertical === industryVertical)
           .map(company => company.businessSize)
           .filter((value): value is string => value != null)
-          .filter((value, index, self) => self.indexOf(value) === index)
-          .sort();
+          .filter((value, index, self) => self.indexOf(value) === index);
         
         return res.json({
-          availableBusinessSizes: ['All', ...availableBusinessSizes],
+          availableBusinessSizes: sortBusinessSizes(['All', ...availableBusinessSizes]),
           selectedIndustryVertical: industryVertical,
           disabledCount: {
             businessSizes: Math.max(0, new Set(companiesWithMetrics.map(c => c.businessSize).filter(Boolean)).size - availableBusinessSizes.length)
@@ -1264,17 +1288,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allBusinessSizes = companiesWithMetrics
         .map(company => company.businessSize)
         .filter((value): value is string => value != null)
-        .filter((value, index, self) => self.indexOf(value) === index)
-        .sort();
+        .filter((value, index, self) => self.indexOf(value) === index);
       
       const allIndustryVerticals = companiesWithMetrics
         .map(company => company.industryVertical)
         .filter((value): value is string => value != null)
         .filter((value, index, self) => self.indexOf(value) === index)
-        .sort();
+        .sort(); // Alphabetical sort for industries
 
       res.json({
-        availableBusinessSizes: ['All', ...allBusinessSizes],
+        availableBusinessSizes: sortBusinessSizes(['All', ...allBusinessSizes]),
         availableIndustryVerticals: ['All', ...allIndustryVerticals],
         totalCombinations: companiesWithMetrics.length
       });
