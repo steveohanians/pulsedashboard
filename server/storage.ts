@@ -561,6 +561,8 @@ export class DatabaseStorage implements IStorage {
       return allIndustryMetrics;
     }
     
+    logger.info(`Applying filters: businessSize="${filters.businessSize}", industryVertical="${filters.industryVertical}"`);
+    
     // Get benchmark companies that match the filters to determine which variations to use
     const companyConditions = [];
     if (filters.businessSize && filters.businessSize !== "All") {
@@ -577,9 +579,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...companyConditions));
     
     if (matchingCompanies.length === 0) {
-      // Debug logging disabled for performance - logger.debug(`No matching companies found for filters`);
-      return [];
+      logger.info(`No benchmark companies found matching filters - returning fallback to global averages`);
+      return allIndustryMetrics;
     }
+    
+    logger.info(`Found ${matchingCompanies.length} matching benchmark companies: ${matchingCompanies.map(c => c.name).join(', ')}`);
     
     // Debug logging disabled for performance - logger.debug(`Found ${matchingCompanies.length} matching companies:`, matchingCompanies.map(c => c.businessSize));
     
@@ -597,6 +601,8 @@ export class DatabaseStorage implements IStorage {
           inArray(metrics.benchmarkCompanyId, matchingCompanyIds)
         )
       );
+    
+    logger.info(`Found ${actualBenchmarkMetrics.length} benchmark metrics for ${matchingCompanies.length} filtered companies in period ${period}`);
     
     // If no actual data for this period, try fallback to most recent available period  
     let metricsToUse = actualBenchmarkMetrics;
@@ -627,7 +633,7 @@ export class DatabaseStorage implements IStorage {
       if (!metricGroups[metric.metricName]) {
         metricGroups[metric.metricName] = [];
       }
-      const numValue = parseFloat(metric.value);
+      const numValue = parseFloat(String(metric.value));
       if (!isNaN(numValue)) {
         metricGroups[metric.metricName].push(numValue);
       }
@@ -666,6 +672,7 @@ export class DatabaseStorage implements IStorage {
       filteredMetrics.push(...trafficChannelsFromDB);
     }
     
+    logger.info(`Returning ${filteredMetrics.length} filtered Industry_Avg metrics for period ${period} (filters: ${filters.businessSize}, ${filters.industryVertical})`);
     return filteredMetrics;
   }
 
@@ -1999,7 +2006,7 @@ export class DatabaseStorage implements IStorage {
       
       // Clear query optimizer cache
       try {
-        const queryOptimizer = await import('./utils/queryOptimizer');
+        const queryOptimizer = await import('./utils/query-optimization/queryOptimizer');
         const { clearCache } = queryOptimizer;
         clearCache();
       } catch (error) {
