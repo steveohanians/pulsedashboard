@@ -4,7 +4,7 @@ import { logger } from '@/utils/logger';
 const FALLBACK_PALETTE = {
   'hsl(var(--color-client))': '#3B82F6',        // Blue
   'hsl(var(--color-cd-avg))': '#10B981',        // Green 
-  'hsl(var(--color-industry-avg))': '#F59E0B',  // Orange
+  'hsl(var(--color-industry-avg))': '#6B7280',  // Grey
   'hsl(var(--color-competitor-1))': '#EF4444',  // Red
   'hsl(var(--color-competitor-2))': '#8B5CF6',  // Purple
   'hsl(var(--color-competitor-3))': '#EC4899',  // Pink
