@@ -63,14 +63,33 @@ export function generateComparisonData(
 
   // Industry comparison with data normalization
   if (industryAvg && industryAvg > 0) {
+    // Debug logging to see what data we're getting
+    console.log(`[DEBUG] Comparison data for ${metricName}:`, {
+      clientValue,
+      rawIndustryAvg: industryAvg,
+      isDecimal: industryAvg < 1 && industryAvg > 0
+    });
+    
     // Normalize Industry_Avg to match Client data format (both as percentages)
     // Convert decimal format (0.4934) to percentage format (49.34) if needed
     const normalizedIndustryAvg = industryAvg < 1 && industryAvg > 0
       ? industryAvg * 100
       : industryAvg;
       
+    console.log(`[DEBUG] After normalization:`, {
+      normalizedIndustryAvg,
+      willCalculate: `${clientValue} vs ${normalizedIndustryAvg}`
+    });
+      
     const industryDiff = calculatePercentageDifference(clientValue, normalizedIndustryAvg);
     const isOutperforming = isLowerBetter(metricName) ? industryDiff < 0 : industryDiff > 0;
+    
+    console.log(`[DEBUG] Final calculation:`, {
+      industryDiff,
+      rounded: Math.round(industryDiff),
+      isOutperforming
+    });
+    
     comparisons.industry = {
       percentage: Math.round(industryDiff),
       isOutperforming
