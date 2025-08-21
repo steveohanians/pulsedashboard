@@ -674,7 +674,7 @@ export class DatabaseStorage implements IStorage {
       let numValue;
       if (typeof metric.value === 'object' && metric.value !== null && 'value' in metric.value) {
         // Already parsed JSON object: {value: 0.5235, source: "semrush"}
-        numValue = parseFloat(metric.value.value);
+        numValue = parseFloat((metric.value as { value: any }).value);
         if (metric.metricName === 'Bounce Rate' && !metricGroups['Bounce Rate'].length) {
           logger.info(`BOUNCE RATE DEBUG - Object format, extracted: ${numValue}`);
         }

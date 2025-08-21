@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const industryAvgMetrics = await storage.getMetricsBySourceType('Industry_Avg');
       
       // Group by time period to see what periods have data
-      const periodCounts = {};
+      const periodCounts: Record<string, Record<string, number>> = {};
       industryAvgMetrics.forEach(metric => {
         if (!periodCounts[metric.timePeriod]) {
           periodCounts[metric.timePeriod] = {};
@@ -309,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(metrics.timePeriod));
       
       // Get unique periods
-      const uniquePeriods = [...new Set(industryAvgMetrics.map(m => m.timePeriod))].sort();
+      const uniquePeriods = Array.from(new Set(industryAvgMetrics.map(m => m.timePeriod))).sort();
       
       // Core metrics we expect
       const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build analysis by period
       const periodAnalysis = uniquePeriods.map(period => {
         const periodMetrics = industryAvgMetrics.filter(m => m.timePeriod === period);
-        const metricsInPeriod = [...new Set(periodMetrics.map(m => m.metricName))];
+        const metricsInPeriod = Array.from(new Set(periodMetrics.map(m => m.metricName)));
         
         return {
           period,
@@ -4113,7 +4113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Test GA4 connection using existing GA4AuthenticationService
-      let connectionTest = { success: false, error: null };
+      let connectionTest: { success: boolean; error: string | null } = { success: false, error: null };
       if (propertyAccess && serviceAccount) {
         try {
           const { GA4AuthenticationService } = await import('./services/ga4/GA4AuthenticationService');
@@ -4122,9 +4122,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           connectionTest = { 
             success: !!validAccess, 
             error: validAccess ? null : 'Unable to verify GA4 property access'
-          } as { success: boolean; error: string | null };
+          };
         } catch (error) {
-          connectionTest = { success: false, error: error instanceof Error ? error.message : String(error) } as { success: boolean; error: string | null };
+          connectionTest = { success: false, error: error instanceof Error ? error.message : String(error) };
         }
       }
       
@@ -4166,9 +4166,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error('Client has no GA4 property configured');
       }
       
-      // Get first active service account
-      const serviceAccounts = await storage.getGA4ServiceAccount();
-      const activeAccount = serviceAccounts?.find((sa: any) => sa.isActive);
+      // Get first active service account by querying database directly
+      const { db } = await import('./db');
+      const { ga4ServiceAccounts } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const serviceAccounts = await db.select().from(ga4ServiceAccounts).where(eq(ga4ServiceAccounts.active, true));
+      const activeAccount = serviceAccounts[0] || null;
       
       if (!activeAccount) {
         throw new Error('No active service account found');
@@ -4318,7 +4322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Get unique metric names
-      const uniqueMetrics = [...new Set(metrics.filter(m => m.sourceType === 'Client').map(m => m.metricName))];
+      const uniqueMetrics = Array.from(new Set(metrics.filter(m => m.sourceType === 'Client').map(m => m.metricName)));
       
       // Sample metrics for inspection
       const sampleMetrics = metrics.filter(m => m.sourceType === 'Client').slice(0, 5).map(m => ({

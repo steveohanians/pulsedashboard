@@ -10,14 +10,14 @@ import logger from './logging/logger';
  * Consolidates repeated database operation patterns
  */
 export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
-  constructor(private table: unknown, private entityName: string) {}
+  constructor(private table: any, private entityName: string) {}
 
   async findById(id: string): Promise<T | undefined> {
     try {
       const [entity] = await db.select().from(this.table).where(eq(this.table.id, id));
-      return entity || undefined;
+      return (entity as T) || undefined;
     } catch (error) {
-      logger.error(`Failed to find ${this.entityName} by ID`, { id, error: error.message });
+      logger.error(`Failed to find ${this.entityName} by ID`, { id, error: (error as Error).message });
       throw error;
     }
   }
@@ -31,11 +31,12 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
           eq(this.table[key], value)
         );
         if (conditions.length > 0) {
-          query = query.where(and(...conditions));
+          query = query.where(and(...conditions)) as any;
         }
       }
       
-      return await query;
+      const results = await query;
+      return results as T[];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to find all ${this.entityName}`, { filters, error: errorMessage });
@@ -45,12 +46,13 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
 
   async create(data: InsertT): Promise<T> {
     try {
-      const [entity] = await db
+      const result = await db
         .insert(this.table)
-        .values(data)
+        .values(data as any)
         .returning();
-      logger.info(`Created ${this.entityName}`, { id: entity.id });
-      return entity;
+      const [entity] = result as any[];
+      logger.info(`Created ${this.entityName}`, { id: (entity as any).id });
+      return entity as T;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to create ${this.entityName}`, { data, error: errorMessage });
@@ -62,7 +64,7 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
     try {
       const [entity] = await db
         .update(this.table)
-        .set(data)
+        .set(data as any)
         .where(eq(this.table.id, id))
         .returning();
       
@@ -72,7 +74,7 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
         logger.warn(`${this.entityName} not found for update`, { id });
       }
       
-      return entity || undefined;
+      return (entity as T) || undefined;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to update ${this.entityName}`, { id, data, error: errorMessage });
@@ -87,7 +89,7 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
         .where(eq(this.table.id, id))
         .returning();
       
-      const deleted = result.length > 0;
+      const deleted = (result as any).length > 0;
       if (deleted) {
         logger.info(`Deleted ${this.entityName}`, { id });
       } else {
@@ -126,7 +128,7 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
           eq(this.table[key], value)
         );
         if (conditions.length > 0) {
-          query = query.where(and(...conditions));
+          query = query.where(and(...conditions)) as any;
         }
       }
       
@@ -145,13 +147,13 @@ export class DatabaseRepository<T extends Record<string, unknown>, InsertT> {
  * Consolidates transaction handling patterns
  */
 export async function withTransaction<T>(
-  operation: (tx: typeof db) => Promise<T>,
+  operation: (tx: any) => Promise<T>,
   context: string = 'Database operation'
 ): Promise<T> {
   try {
     return await db.transaction(async (tx) => {
       logger.debug(`Starting transaction: ${context}`);
-      const result = await operation(tx);
+      const result = await operation(tx as any);
       logger.debug(`Transaction completed: ${context}`);
       return result;
     });
