@@ -1855,31 +1855,35 @@ export class DatabaseStorage implements IStorage {
     // Do NOT return the oldest row or an arbitrary row.
     // Do NOT derive hasContext from ai_insights.context_text.
     
-    const results = await db.execute(sql`
-      SELECT DISTINCT ON (ai.metric_name)
-        ai.id,
-        ai.client_id AS "clientId",
-        ai.time_period AS "timePeriod", 
-        ai.metric_name AS "metricName",
-        ai.context_text AS "contextText",
-        ai.insight_text AS "insightText",
-        ai.recommendation_text AS "recommendationText",
-        ai.status,
-        ai.created_at AS "createdAt",
+    // Use Drizzle's query builder for secure parameterization
+    return await db
+      .select({
+        id: aiInsights.id,
+        clientId: aiInsights.clientId,
+        timePeriod: aiInsights.timePeriod, 
+        metricName: aiInsights.metricName,
+        contextText: aiInsights.contextText,
+        insightText: aiInsights.insightText,
+        recommendationText: aiInsights.recommendationText,
+        status: aiInsights.status,
+        version: aiInsights.version,
+        createdAt: aiInsights.createdAt,
         /* computed boolean: hasContext via EXISTS */
-        EXISTS (
-          SELECT 1 FROM insight_contexts ic
-          WHERE ic.client_id = ai.client_id
-            AND ic.metric_name = ai.metric_name
+        hasContext: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${insightContexts} ic
+          WHERE ic.client_id = ${aiInsights.clientId}
+            AND ic.metric_name = ${aiInsights.metricName}
             AND length(trim(ic.user_context)) > 0
-        ) AS "hasContext"
-      FROM ai_insights ai
-      WHERE ai.client_id = ${clientId}
-        AND ai.time_period = ${period}
-      ORDER BY ai.metric_name, ai.created_at DESC NULLS LAST
-    `);
-    
-    return results.rows as (AIInsight & { hasContext: boolean })[];
+        )`
+      })
+      .from(aiInsights)
+      .where(
+        and(
+          eq(aiInsights.clientId, clientId),
+          eq(aiInsights.timePeriod, period)
+        )
+      )
+      .orderBy(aiInsights.metricName, desc(aiInsights.createdAt));
   }
 
   // Filter Options

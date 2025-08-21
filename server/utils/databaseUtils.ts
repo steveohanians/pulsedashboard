@@ -2,7 +2,7 @@
 // Consolidates common database patterns found across storage operations
 
 import { db } from '../db';
-import { eq, and, or, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, sql, SQL, inArray } from 'drizzle-orm';
 import logger from './logging/logger';
 
 /**
@@ -216,7 +216,7 @@ export class QueryBuilder {
 
   addInCondition(column: any, values: any[]): this {
     if (values && values.length > 0) {
-      this.conditions.push(sql`${column} IN ${values}`);
+      this.conditions.push(inArray(column, values));
     }
     return this;
   }
