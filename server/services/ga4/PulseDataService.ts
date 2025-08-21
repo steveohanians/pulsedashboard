@@ -539,8 +539,8 @@ export class GA4DataService {
    * Update service account tokens in database
    */
   private async updateServiceAccountTokens(serviceAccountId: string, accessToken: string, tokenExpiry: Date): Promise<void> {
-    const { db } = await import('../db');
-    const { ga4ServiceAccounts } = await import('../../shared/schema');
+    const { db } = await import('../../db');
+    const { ga4ServiceAccounts } = await import('../../../shared/schema');
     const { eq } = await import('drizzle-orm');
 
     await db.update(ga4ServiceAccounts)
