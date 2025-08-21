@@ -1,7 +1,7 @@
 # Pulse Dashboard™
 
 ## Overview
-Pulse Dashboard™ is a full-stack analytics benchmarking dashboard for Clear Digital's B2B clients. Its core purpose is to deliver AI-powered web analytics insights by benchmarking client performance against competitors, industry averages, and Clear Digital's portfolio. It integrates with Google Analytics 4 and other data sources to provide comprehensive web analytics, actionable recommendations, and aims to enhance client digital presence and performance through competitive benchmarking, ultimately supporting their business vision and market potential.
+Pulse Dashboard™ is a full-stack analytics benchmarking dashboard designed for Clear Digital's B2B clients. Its main purpose is to provide AI-powered web analytics insights by benchmarking client performance against competitors, industry averages, and Clear Digital's internal portfolio. It integrates with various data sources, including Google Analytics 4, to deliver comprehensive web analytics and actionable recommendations. The project aims to enhance clients' digital presence and performance through competitive benchmarking, supporting their business vision and market potential.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -16,7 +16,7 @@ Data integrity principles: NEVER show fake, sample, or fallback data under any c
 Architecture preference: Use enterprise-grade frontend service layer with automatic cache management. All API interactions should go through specialized service classes (clientService, userService, etc.) rather than direct apiRequest calls. Manual cache invalidation is deprecated in favor of automatic dependency-aware cache management.
 
 ## System Architecture
-Pulse Dashboard™ employs a modern full-stack architecture emphasizing performance, data integrity, and scalability, with clear separation between frontend, backend, and data layers.
+Pulse Dashboard™ utilizes a modern full-stack architecture prioritizing performance, data integrity, and scalability, with clear separation between frontend, backend, and data layers.
 
 **Frontend:**
 - **Framework**: React 18 with TypeScript
@@ -34,56 +34,56 @@ Pulse Dashboard™ employs a modern full-stack architecture emphasizing performa
 - **Primary Database**: PostgreSQL via Neon serverless
 - **ORM**: Drizzle ORM
 
-**Key Components and Design Patterns:**
+**Key Architectural Decisions and Features:**
 - **Authentication & Authorization**: JWT-based session authentication with role-based access control.
-- **Data Models**: Structured around Clients, CD Portfolio Companies, Benchmark Companies, Competitors, Users, Metrics, Benchmarks, and AIInsights.
+- **Data Models**: Structured around key entities like Clients, Benchmark Companies, and Metrics.
 - **API Architecture**: Segregated into Public, Admin, Data Ingestion, and AI Integration endpoints with Zod validation.
 - **Data Flow**: Automated ingestion, processing, normalization, and analytics pipeline with intelligent 15-month data fetching and daily-to-monthly coalescing.
-- **Security Features**: Robust session security, rate limiting, comprehensive security headers, structured authentication logging, Zod schema-based input validation, and Scrypt hashing.
-- **Production Readiness**: Health checks, structured logging, comprehensive error handling, templated email service integration, and environment-driven configuration.
+- **Security Features**: Robust session security, rate limiting, comprehensive security headers, structured authentication logging, Zod schema validation, and Scrypt hashing.
+- **Production Readiness**: Health checks, structured logging, comprehensive error handling, templated email service, and environment-driven configuration.
 - **White-Label Capability**: Designed for flexible deployment with centralized configuration and dynamic company branding.
-- **AI Prompt System**: Centralized AI prompt management with executive-optimized output formatting and server-side input sanitization, supporting a versioned AI insights architecture.
+- **AI Prompt System**: Centralized AI prompt management with executive-optimized output and server-side input sanitization, supporting versioned AI insights.
 - **GA4 Integration Architecture**: Clients provide GA4 Property ID and grant guest access; Clear Digital uses Google service account for API access. Automated ETL transforms GA4 data.
-- **Client Data Isolation Verification System**: Comprehensive client data verification in the admin interface showing metrics counts, source type breakdown, and sample data.
-- **Database Performance Optimization System**: Comprehensive performance enhancement with indexing, explicit SELECT column optimization, intelligent caching, parallelized queries, and connection pooling.
+- **Client Data Isolation Verification**: Admin interface for verifying client data metrics, source types, and sample data.
+- **Database Performance Optimization**: Indexing, explicit SELECT column optimization, intelligent caching, parallel queries, and connection pooling.
 - **Unified Device Model**: Standardized device distribution across GA4 and SEMrush to Desktop + Mobile.
 - **Portfolio Integration**: Enhanced portfolio averages calculation with robust error handling and historical data system.
-- **Company Management**: Comprehensive company deletion, creation, and validation including duplicate domain checking.
-- **Metrics Schema**: Overhauled with `cd_portfolio_company_id` and `benchmark_company_id` for proper three-way linking.
-- **Global Chart Data Processing Architecture**: Extracted fetching, parsing, fallback, and conversion logic into reusable utilities. Comprehensive Recharts hardening system prevents crashes.
-- **Unified Color Management System**: Centralized color assignment across all chart components ensuring consistency.
-- **Typewriter Animation System**: Complete sequential typewriter animation system for content generation, with robust state management.
-- **Rendering Optimization**: Elimination of infinite re-render loops and optimized CPU usage through `useMemo` and Set-based state management.
-- **Contract Testing**: Comprehensive "canary" contract tests using Zod schema validation.
-- **Time Period Canonicalization System**: Comprehensive canonical time period handling.
-- **Error Handling**: Standardized error handling system with UI banners and retry mechanisms.
-- **PDF Export System**: Complete client-side PDF export functionality using html2canvas + jsPDF with advanced reliability features.
-- **Centralized Period Management System**: Comprehensive PeriodService handling all date/period logic for GA4 and SEMrush data alignment, including time zone and data delay considerations.
-- **Centralized Data Source Configuration System**: Comprehensive `dataSourceConfig` organizing all data source characteristics and settings.
-- **Production-Safe Logging System**: Complete migration from `console.log` to centralized `debugLog` system with environment-controlled log levels.
-- **Metric Processing Service**: Extracted complex groupedMetrics logic into reusable `MetricProcessingService` singleton.
-- **Traffic Channel Service**: Comprehensive `TrafficChannelService` extracting complex traffic channel data processing logic into reusable singleton service.
-- **Device Distribution Service**: Complete `DeviceDistributionService` extracting device distribution data processing logic into singleton service architecture.
-- **Data Orchestrator Service**: Master coordination service providing unified API for all data processing operations, orchestrating period, metric, traffic, and device services. Features data quality assessment, performance tracking, data source transparency, and intelligent refresh detection.
-- **Data Source Transparency System**: Admin-only comprehensive data quality status banner providing detailed transparency about data source availability and completeness.
-- **Performance Optimization System**: Comprehensive performance tracking and optimization, including lazy-loaded admin panel queries and development server optimization scripts.
-- **Frontend API Service Layer**: Complete enterprise-grade frontend service abstraction layer mirroring backend API endpoints, featuring a BaseService abstract class and specialized service classes.
-- **Complete TypeScript Type Safety System**: Comprehensive elimination of all `any` types, with proper TypeScript interfaces, generics, and API type definitions for enterprise-grade compile-time type safety.
-- **Intelligent Cache Management System**: Comprehensive dependency-aware cache invalidation system replacing manual calls, featuring a CacheManager singleton with intelligent invalidation rules.
-- **Event-Driven Real-Time System**: Comprehensive EventBus architecture replacing polling with real-time event notifications for async operations, using TypeScript-safe event system and React hooks.
-- **Centralized Configuration Management System**: Complete centralized configuration system replacing all scattered hardcoded values with organized configuration files.
-- **Robust Error Handling System**: Comprehensive enterprise-grade error handling architecture featuring typed error classes, intelligent retry logic, React ErrorBoundary components, centralized error management, and query-level error states with fallback UI.
-- **Comprehensive Testing Infrastructure**: Complete enterprise-grade testing framework featuring Vitest unit tests, React Testing Library integration tests, Playwright E2E tests, mock service utilities, test data factories, and error handling test coverage.
-- **Industry Benchmark Integration System**: Complete benchmark integration system following the exact same architectural pattern as portfolio integration. Features SEMrush data processing for benchmark companies, industry average calculations, and comprehensive data processing pipeline.
-- **Unified Data Service Architecture**: All data processing centralized in `unifiedDataService.ts` for simplified maintenance, reducing dashboard complexity. Includes `useDashboardData.ts` custom hook for centralized data fetching. Achieves 4x faster load times (2.3s vs 9.8s).
-- **Enhanced Device Distribution Processing System**: Comprehensive device distribution data discovery with multi-source compatibility, including numeric device type conversion for Industry_Avg data and enhanced competitor data discovery.
-- **Complete Competitor Device Distribution Chart System**: Full resolution of competitor device data display with authentic SEMrush data acceptance, fresh data extraction at chart render time, and proper LollipopChart data structure transformation. Eliminates all fallback data in favor of real competitor metrics.
-- **Admin View-As Feature System**: Complete implementation of admin view-as functionality allowing administrators to switch dashboard views to any user's perspective, with proper authentication and real-time dashboard data switching.
-- **Share of Voice Production Integration System**: Complete production implementation of AI-powered competitive intelligence integrated into the main application architecture. Features full SovService with enterprise-grade TypeScript types, comprehensive API routes, proper authentication and authorization, validated input schemas, structured error handling, and production logging. Provides automated brand research, intelligent question generation, multi-platform AI querying, brand mention detection, and quantified Share of Voice calculations.
-- **Brand Signals UI Refactoring System**: Complete refactoring of brand-signals.tsx implementing a clean 3-state system (Idle → Running → Results) using existing Dashboard card components. Features a single "Pulse AI Analysis" card, dual analysis buttons, shared loading states, progress checklist, and structured results display.
-- **Benchmark Data Coverage Display System**: Complete resolution of benchmark companies data coverage and badge status display. Fixed database query issues in `getBenchmarkCompaniesWithMetrics()` by removing references to non-existent `updatedAt` field. System now correctly displays 4% data coverage (2/51 companies with metrics) and shows "Verified" badges for companies with actual metrics data instead of "Pending" status.
-- **Dynamic Filter System**: Complete resolution of industry/business size filter functionality. Fixed React Query caching issue by including businessSize and industryVertical in queryKey, enabling real-time chart updates when filters change. Implemented dynamic filter population via `/api/filters/dynamic` endpoint that only shows filter options for companies with actual metrics (Technology-SaaS, Technology-Cloud, Small/Startup, Global Enterprise), eliminating misleading empty filter categories. Frontend updated to use dynamic filtering for improved UX accuracy.
-- **Filtered Industry Averages System**: Complete implementation of authentic segment-specific industry average calculations. System identifies benchmark companies with actual metrics data across recent periods (2025-06, 2025-05, etc.), applies filter criteria to companies with data, and calculates filtered averages using fallback period logic when exact period data unavailable. Replaces global averages with authentic filtered calculations (e.g., 7 filtered metrics from MaestroQA for Technology-SaaS vs 13 global metrics). Preserves admin recalculation functionality while enabling real-time filtered industry comparisons based on user selections.
+- **Metrics Schema**: Overhauled for proper three-way linking using `cd_portfolio_company_id` and `benchmark_company_id`.
+- **Global Chart Data Processing**: Extracted fetching, parsing, and conversion logic into reusable utilities with Recharts hardening.
+- **Unified Color Management System**: Centralized color assignment across all chart components.
+- **Typewriter Animation System**: Sequential typewriter animation for content generation with robust state management.
+- **Rendering Optimization**: Elimination of infinite re-render loops and optimized CPU usage via `useMemo` and Set-based state management.
+- **Contract Testing**: "Canary" contract tests using Zod schema validation.
+- **Time Period Canonicalization**: Comprehensive handling of time periods.
+- **Error Handling**: Standardized error handling with UI banners and retry mechanisms.
+- **PDF Export System**: Client-side PDF export using html2canvas + jsPDF.
+- **Centralized Period Management System**: PeriodService handling all date/period logic for GA4 and SEMrush data alignment, including time zones and data delays.
+- **Centralized Data Source Configuration**: `dataSourceConfig` organizes data source characteristics and settings.
+- **Production-Safe Logging**: Migration from `console.log` to centralized `debugLog` system with environment-controlled log levels.
+- **Metric Processing Service**: Extracted complex `groupedMetrics` logic into reusable `MetricProcessingService` singleton.
+- **Traffic Channel Service**: Extracts complex traffic channel data processing logic into a reusable singleton.
+- **Device Distribution Service**: Extracts device distribution data processing logic into a singleton service.
+- **Data Orchestrator Service**: Master coordination service for all data processing operations, orchestrating period, metric, traffic, and device services, with data quality assessment and performance tracking.
+- **Data Source Transparency System**: Admin-only data quality status banner providing details on data source availability and completeness.
+- **Performance Optimization**: Lazy-loaded admin panel queries and development server optimization scripts.
+- **Frontend API Service Layer**: Enterprise-grade frontend service abstraction mirroring backend API endpoints, using BaseService and specialized service classes.
+- **Complete TypeScript Type Safety**: Elimination of all `any` types with proper TypeScript interfaces, generics, and API type definitions.
+- **Intelligent Cache Management System**: Dependency-aware cache invalidation system with a CacheManager singleton.
+- **Event-Driven Real-Time System**: EventBus architecture for real-time event notifications for async operations, using TypeScript-safe event system and React hooks.
+- **Centralized Configuration Management**: Replaces scattered hardcoded values with organized configuration files.
+- **Robust Error Handling**: Typed error classes, intelligent retry logic, React ErrorBoundary components, and query-level error states with fallback UI.
+- **Comprehensive Testing Infrastructure**: Vitest unit tests, React Testing Library integration tests, Playwright E2E tests, mock service utilities, test data factories, and error handling test coverage.
+- **Industry Benchmark Integration**: Follows portfolio integration pattern, with SEMrush data processing for benchmark companies and industry average calculations.
+- **Unified Data Service Architecture**: All data processing centralized in `unifiedDataService.ts` for simplified maintenance and faster load times. Includes `useDashboardData.ts` custom hook.
+- **Enhanced Device Distribution Processing**: Multi-source compatibility for device distribution data discovery.
+- **Complete Competitor Device Distribution Chart System**: Displays authentic SEMrush competitor device data without fallback data.
+- **Admin View-As Feature**: Allows administrators to switch dashboard views to any user's perspective.
+- **Share of Voice Production Integration**: AI-powered competitive intelligence with `SovService`, API routes, authentication, validated input schemas, error handling, and logging. Provides automated brand research and Share of Voice calculations.
+- **Brand Signals UI Refactoring**: Refactors `brand-signals.tsx` into a 3-state system (Idle → Running → Results) using existing Dashboard card components.
+- **Benchmark Data Coverage Display**: Correctly displays benchmark companies data coverage and badge status.
+- **Dynamic Filter System**: Industry/business size filter functionality with React Query caching and dynamic filter population from `/api/filters/dynamic`.
+- **Filtered Industry Averages System**: Calculates authentic segment-specific industry averages based on available metrics data and filter criteria.
+- **Comparison Chips System**: Implements performance comparison chips for key metrics, showing industry and best competitor performance comparisons with color-coded percentages and data normalization.
 
 ## External Dependencies
 **Core Infrastructure:**
