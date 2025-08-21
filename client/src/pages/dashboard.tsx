@@ -56,6 +56,8 @@ import { CompetitorModal } from "@/components/competitor-modal";
 import { Footer } from "@/components/Footer";
 import { ErrorBanner, useErrorBanner } from "@/components/ErrorBanner";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
+import ComparisonChip from "@/components/ComparisonChip";
+import { generateComparisonData } from "@/utils/comparisonUtils";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
@@ -862,16 +864,57 @@ export default function Dashboard() {
                     <CardTitle className="text-lg lg:text-xl">
                       {metricName}
                       {metricName !== "Traffic Channels" && metricName !== "Device Distribution" && (
-                        <span className="float-right text-2xl lg:text-3xl font-light text-primary">
-                          {metricData.Client
-                            ? `${Math.round(metricData.Client * 10) / 10}${
-                                metricName.includes("Rate") ? "%" : 
-                                metricName.includes("Session Duration") ? " min" :
-                                metricName.includes("Pages per Session") ? " pages" :
-                                metricName.includes("Sessions per User") ? " sessions" : ""
-                              }`
-                            : "N/A"}
-                        </span>
+                        <div className="float-right flex items-center gap-2">
+                          {(() => {
+                            // Only show comparison chips for target metrics
+                            const targetMetrics = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
+                            const showComparisons = targetMetrics.includes(metricName) && metricData.Client;
+                            
+                            if (showComparisons) {
+                              const competitors = getCompetitorChartData(metricName);
+                              const comparisonData = generateComparisonData(
+                                metricData.Client,
+                                metricData.Industry_Avg || 0,
+                                competitors,
+                                metricName
+                              );
+                              
+                              return (
+                                <div className="flex items-center gap-1">
+                                  {comparisonData.industry && (
+                                    <ComparisonChip
+                                      label="Industry"
+                                      percentage={comparisonData.industry.percentage}
+                                      isOutperforming={comparisonData.industry.isOutperforming}
+                                      className="text-xs"
+                                      data-testid={`industry-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
+                                    />
+                                  )}
+                                  {comparisonData.bestCompetitor && (
+                                    <ComparisonChip
+                                      label="Best Comp"
+                                      percentage={comparisonData.bestCompetitor.percentage}
+                                      isOutperforming={comparisonData.bestCompetitor.isOutperforming}
+                                      className="text-xs"
+                                      data-testid={`competitor-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          <span className="text-2xl lg:text-3xl font-light text-primary">
+                            {metricData.Client
+                              ? `${Math.round(metricData.Client * 10) / 10}${
+                                  metricName.includes("Rate") ? "%" : 
+                                  metricName.includes("Session Duration") ? " min" :
+                                  metricName.includes("Pages per Session") ? " pages" :
+                                  metricName.includes("Sessions per User") ? " sessions" : ""
+                                }`
+                              : "N/A"}
+                          </span>
+                        </div>
                       )}
                     </CardTitle>
                   </CardHeader>
