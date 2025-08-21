@@ -19,16 +19,19 @@ export const ComparisonChip: React.FC<ComparisonChipProps> = ({
   className = ""
 }) => {
   const sign = percentage > 0 ? "+" : "";
-  const colorClass = isOutperforming 
-    ? "bg-green-100 text-green-800 border-green-200" 
-    : "bg-red-100 text-red-800 border-red-200";
+  const percentageColorClass = isOutperforming 
+    ? "text-green-600" 
+    : "text-red-600";
 
   return (
     <span 
-      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colorClass} ${className}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 ${className}`}
       data-testid={`comparison-chip-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      {label} {sign}{percentage}%
+      <span>{label}</span>
+      <span className={`font-semibold ${percentageColorClass}`}>
+        {sign}{percentage}%
+      </span>
     </span>
   );
 };
