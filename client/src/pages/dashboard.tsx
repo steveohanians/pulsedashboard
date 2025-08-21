@@ -872,9 +872,14 @@ export default function Dashboard() {
                             
                             if (showComparisons) {
                               const competitors = getCompetitorChartData(metricName);
+                              // Normalize Industry_Avg to match Client data format (both as percentages)
+                              const normalizedIndustryAvg = metricData.Industry_Avg && metricData.Industry_Avg < 1 && metricData.Industry_Avg > 0
+                                ? metricData.Industry_Avg * 100  // Convert decimal to percentage
+                                : metricData.Industry_Avg || 0;
+                              
                               const comparisonData = generateComparisonData(
                                 metricData.Client,
-                                metricData.Industry_Avg || 0,
+                                normalizedIndustryAvg,
                                 competitors,
                                 metricName
                               );
@@ -883,7 +888,7 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-1">
                                   {comparisonData.industry && (
                                     <ComparisonChip
-                                      label="Industry"
+                                      label="Industry Avg"
                                       percentage={comparisonData.industry.percentage}
                                       isOutperforming={comparisonData.industry.isOutperforming}
                                       className="text-xs"
