@@ -5,6 +5,8 @@ Pulse Dashboard™ is a full-stack analytics benchmarking dashboard for Clear Di
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+SEO preferences: Noindex meta tag applied to prevent search engine crawling.
+Branding: Clear Digital favicon applied from company website.
 Filter ordering: Business sizes ordered small to large, industry verticals alphabetical.
 Dynamic filtering: Industry filters reference each other - selecting a business size filters available industry verticals and vice versa.
 Performance priority: Demands enterprise-grade performance with immediate loading capabilities to replace 22+ second load times.
