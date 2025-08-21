@@ -29,6 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 export default function BrandSignals() {
   const brandSignalsRef = useRef<HTMLDivElement>(null);
@@ -640,90 +641,95 @@ export default function BrandSignals() {
                             </p>
                           </CardHeader>
                           <CardContent>
-                            <div className="space-y-6">
-                              {["awareness", "consideration", "decision"].map(
-                                (stage) => {
-                                  const stageQuestions =
-                                    analysisResults.questionResults.filter(
-                                      (q: any) => q.stage === stage,
-                                    );
-                                  const brandName =
-                                    analysisResults.summary?.brand;
+                            <div className="h-80">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                  data={(() => {
+                                    // Transform data for stacked bars
+                                    return ["awareness", "consideration", "decision"].map((stage) => {
+                                      const stageQuestions = analysisResults.questionResults.filter(
+                                        (q: any) => q.stage === stage,
+                                      );
+                                      const brandName = analysisResults.summary?.brand;
 
-                                  // Calculate average SoV for this stage
-                                  const stageSoV =
-                                    stageQuestions.reduce(
-                                      (sum: number, q: any) => {
-                                        return sum + (q.sov?.[brandName] || 0);
-                                      },
-                                      0,
-                                    ) / (stageQuestions.length || 1);
+                                      // Calculate brand averages for this stage
+                                      const allBrands = new Set<string>();
+                                      stageQuestions.forEach((q: any) => {
+                                        Object.keys(q.sov || {}).forEach((brand) =>
+                                          allBrands.add(brand),
+                                        );
+                                      });
 
-                                  // Find stage leader
-                                  const allBrands = new Set<string>();
-                                  stageQuestions.forEach((q: any) => {
-                                    Object.keys(q.sov || {}).forEach((brand) =>
-                                      allBrands.add(brand),
-                                    );
-                                  });
+                                      const brandAverages = Array.from(allBrands).map((brand) => ({
+                                        brand,
+                                        avg: stageQuestions.reduce(
+                                          (sum: number, q: any) =>
+                                            sum + (q.sov?.[brand] || 0),
+                                          0,
+                                        ) / (stageQuestions.length || 1),
+                                      }));
 
-                                  const brandAverages = Array.from(
-                                    allBrands,
-                                  ).map((brand) => ({
-                                    brand,
-                                    avg:
-                                      stageQuestions.reduce(
-                                        (sum: number, q: any) =>
-                                          sum + (q.sov?.[brand] || 0),
-                                        0,
-                                      ) / (stageQuestions.length || 1),
-                                  }));
+                                      // Sort by average and separate client from competitors
+                                      const sorted = brandAverages.sort((a, b) => b.avg - a.avg);
+                                      const client = sorted.find(b => b.brand === brandName);
+                                      const competitors = sorted.filter(b => b.brand !== brandName);
+                                      
+                                      // Get top 2 competitors and aggregate the rest as "Others"
+                                      const topCompetitors = competitors.slice(0, 2);
+                                      const othersTotal = competitors.slice(2).reduce((sum, b) => sum + b.avg, 0);
 
-                                  const stageLeader = brandAverages.reduce(
-                                    (a, b) => (b.avg > a.avg ? b : a),
-                                    { brand: "None", avg: 0 },
-                                  );
-
-                                  return (
-                                    <div key={stage} className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium capitalize">
-                                            {stage}
-                                          </span>
-                                        </div>
-                                        <div className="text-sm text-slate-600">
-                                          Leader:{" "}
-                                          <span className="font-medium">
-                                            {stageLeader.brand}
-                                          </span>{" "}
-                                          ({Math.round(stageLeader.avg)}%)
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-4">
-                                        <span className="text-sm font-medium text-slate-700 w-20">
-                                          Your SoV:
-                                        </span>
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-200 rounded-full h-3">
-                                              <div
-                                                className="bg-primary h-3 rounded-full transition-all duration-500"
-                                                style={{
-                                                  width: `${Math.min(100, Math.round(stageSoV))}%`,
-                                                }}
-                                              />
-                                            </div>
-                                            <span className="text-sm font-thin text-slate-800 w-12 text-right">
-                                              {Math.round(stageSoV)}%
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                },
-                              )}
+                                      return {
+                                        stage: stage.charAt(0).toUpperCase() + stage.slice(1),
+                                        Client: Math.round(client?.avg || 0),
+                                        Competitor1: Math.round(topCompetitors[0]?.avg || 0),
+                                        Competitor2: Math.round(topCompetitors[1]?.avg || 0),
+                                        Others: Math.round(othersTotal),
+                                        // Store actual competitor names for tooltip
+                                        competitor1Name: topCompetitors[0]?.brand || 'Competitor 1',
+                                        competitor2Name: topCompetitors[1]?.brand || 'Competitor 2',
+                                      };
+                                    });
+                                  })()}
+                                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                >
+                                  <XAxis dataKey="stage" />
+                                  <YAxis label={{ value: 'Share of Voice (%)', angle: -90, position: 'insideLeft' }} />
+                                  <Tooltip 
+                                    formatter={(value: number, name: string, props: any) => {
+                                      // Use actual competitor names in tooltips
+                                      let displayName = name;
+                                      if (name === 'Competitor1' && props?.payload?.competitor1Name) {
+                                        displayName = props.payload.competitor1Name;
+                                      } else if (name === 'Competitor2' && props?.payload?.competitor2Name) {
+                                        displayName = props.payload.competitor2Name;
+                                      }
+                                      return [`${value}%`, displayName];
+                                    }}
+                                    labelFormatter={(label: string) => `${label} Stage`}
+                                  />
+                                  <Legend />
+                                  <Bar 
+                                    dataKey="Client" 
+                                    stackId="a" 
+                                    fill="hsl(var(--color-client))" 
+                                  />
+                                  <Bar 
+                                    dataKey="Competitor1" 
+                                    stackId="a" 
+                                    fill="hsl(var(--color-competitor-1))" 
+                                  />
+                                  <Bar 
+                                    dataKey="Competitor2" 
+                                    stackId="a" 
+                                    fill="hsl(var(--color-competitor-2))" 
+                                  />
+                                  <Bar 
+                                    dataKey="Others" 
+                                    stackId="a" 
+                                    fill="hsl(var(--color-industry-avg))" 
+                                  />
+                                </BarChart>
+                              </ResponsiveContainer>
                             </div>
                           </CardContent>
                         </Card>
