@@ -180,10 +180,18 @@ export class UnifiedDataService {
     const counts: Record<string, Record<string, number>> = {};
 
     // Filter metrics based on time period if needed
-    const singlePeriodTarget = timePeriod === "Last Month" ? periods.client : null;
-    const filteredMetrics = singlePeriodTarget 
-      ? metrics.filter(m => !m.timePeriod || m.timePeriod === singlePeriodTarget)
-      : metrics;
+    // For all time periods, we should use the most recent period's Industry_Avg and CD_Avg data
+    // because these are already pre-calculated averages, not raw data to be averaged again
+    const filteredMetrics = metrics.filter(m => {
+      // For pre-calculated averages, always use the most recent period's data
+      if (m.sourceType === 'Industry_Avg' || m.sourceType === 'CD_Avg') {
+        return !m.timePeriod || m.timePeriod === periods.client;
+      }
+      // For raw data (Client, Competitor, etc.), use all available data for multi-period aggregation
+      return timePeriod === "Last Month" 
+        ? (!m.timePeriod || m.timePeriod === periods.client)
+        : true;
+    });
     
     // De-duplicate metrics before processing
     // For CD_Avg and Industry_Avg, we only need one value per metric since they're pre-calculated
@@ -220,6 +228,7 @@ export class UnifiedDataService {
     for (const metricName in result) {
       for (const sourceType in result[metricName]) {
         // Don't re-average CD_Avg and Industry_Avg - they're already averaged
+        // These should always have count = 1 since we filtered to single period above
         if (sourceType !== 'CD_Avg' && sourceType !== 'Industry_Avg') {
           if (counts[metricName][sourceType] > 1) {
             result[metricName][sourceType] =
