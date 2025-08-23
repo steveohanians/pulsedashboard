@@ -26,6 +26,7 @@ import {
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { authLimiter, uploadLimiter, adminLimiter } from "./middleware/rateLimiter";
+import { ActivityTracker } from "./middleware/activityTracker";
 import logger from "./utils/logging/logger";
 import { generateDynamicPeriodMapping } from "./utils/dateUtils";
 import { getFiltersOptimized, getDashboardDataOptimized, getCachedData, setCachedData, clearCache, debugCacheKeys } from "./utils/query-optimization/queryOptimizer";
@@ -616,7 +617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard endpoint with intelligent caching
-  app.get("/api/dashboard/:clientId", requireAuth, async (req, res) => {
+  app.get("/api/dashboard/:clientId", requireAuth, ActivityTracker.trackPageView, async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -839,6 +840,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 🚀 AI Insights Handler - shared between canonical and legacy routes
   const handleAIInsights = async (req: any, res: any) => {
+    // Track AI insights usage
+    if (req.user?.id) {
+      try {
+        const user = await storage.getUser(req.user.id);
+        if (user) {
+          await storage.updateUser(req.user.id, {
+            aiInsightsCount: (user.aiInsightsCount || 0) + 1
+          });
+        }
+      } catch (error) {
+        // Log but don't fail the request
+        logger.warn('Failed to track AI insight usage', { userId: req.user.id, error });
+      }
+    }
     try {
       const { clientId } = req.params;
       

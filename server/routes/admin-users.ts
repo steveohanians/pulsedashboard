@@ -12,7 +12,7 @@ const router = Router();
  */
 router.get('/users', requireAuth, requireAdmin, async (req, res) => {
   try {
-    // Get all users with their client information
+    // Get all users with their client information and activity data
     const allUsers = await db
       .select({
         id: users.id,
@@ -20,6 +20,12 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
         email: users.email,
         clientId: users.clientId,
         role: users.role,
+        status: users.status,
+        lastLogin: users.lastLogin,
+        loginCount: users.loginCount,
+        pageViews: users.pageViews,
+        aiInsightsCount: users.aiInsightsCount,
+        brandSovCount: users.brandSovCount,
         clientName: clients.name,
       })
       .from(users)
@@ -34,6 +40,12 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
       clientId: user.clientId,
       clientName: user.clientName || 'No Client',
       role: user.role,
+      status: user.status,
+      lastLogin: user.lastLogin,
+      loginCount: user.loginCount,
+      pageViews: user.pageViews,
+      aiInsightsCount: user.aiInsightsCount,
+      brandSovCount: user.brandSovCount,
       label: `${user.name} (${user.clientName || 'No Client'})`
     }));
 

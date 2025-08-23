@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +23,7 @@ import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-fo
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
+import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
@@ -219,6 +220,10 @@ export default function AdminPanel() {
   const [showDataCheckDialog, setShowDataCheckDialog] = useState(false);
   const [dataCheckResults, setDataCheckResults] = useState<any>(null);
   const [isCheckingData, setIsCheckingData] = useState(false);
+  
+  // Activity tracking states
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
 
   // Query for fetching portfolio company data
   const companyDataQuery = useQuery({
@@ -1554,6 +1559,20 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
+                              
+                              {/* Activity Tracking Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setSelectedUserForActivity(user);
+                                  setActivityModalOpen(true);
+                                }}
+                                title="View User Activity"
+                              >
+                                <Activity className="h-3 w-3" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -4093,6 +4112,16 @@ export default function AdminPanel() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* User Activity Modal */}
+      <UserActivityModal 
+        user={selectedUserForActivity}
+        isOpen={activityModalOpen}
+        onClose={() => {
+          setActivityModalOpen(false);
+          setSelectedUserForActivity(null);
+        }}
+      />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, user: Partial<InsertUser & { lastLogin?: Date }>): Promise<User | undefined>;
+  updateUser(id: string, user: Partial<InsertUser & { lastLogin?: Date; loginCount?: number; pageViews?: number; aiInsightsCount?: number; brandSovCount?: number }>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   
   // Clients
@@ -201,7 +201,13 @@ export class DatabaseStorage implements IStorage {
     return await this.userRepo.findAll();
   }
 
-  async updateUser(id: string, updateUser: Partial<InsertUser & { lastLogin?: Date }>): Promise<User | undefined> {
+  async updateUser(id: string, updateUser: Partial<InsertUser & { 
+    lastLogin?: Date; 
+    loginCount?: number; 
+    pageViews?: number; 
+    aiInsightsCount?: number; 
+    brandSovCount?: number; 
+  }>): Promise<User | undefined> {
     return await this.userRepo.update(id, updateUser);
   }
 

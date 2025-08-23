@@ -93,6 +93,11 @@ export const users = pgTable("users", {
   role: roleEnum("role").default("User").notNull(),
   status: statusEnum("status").default("Active").notNull(),
   lastLogin: timestamp("last_login"),
+  // Activity tracking fields
+  loginCount: integer("login_count").default(0).notNull(),
+  pageViews: integer("page_views").default(0).notNull(),
+  aiInsightsCount: integer("ai_insights_count").default(0).notNull(),
+  brandSovCount: integer("brand_sov_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -386,6 +391,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   lastLogin: true,
+  loginCount: true,
+  pageViews: true,
+  aiInsightsCount: true,
+  brandSovCount: true,
 });
 
 export const insertCompetitorSchema = createInsertSchema(competitors).omit({

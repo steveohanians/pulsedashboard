@@ -166,8 +166,11 @@ export function setupAuth(app: Express) {
         logger.security("Failed login attempt", { email, ip: "unknown" });
         return done(null, false);
       } else {
-        // Update last login timestamp
-        await storage.updateUser(user.id, { lastLogin: new Date() });
+        // Update last login timestamp and increment login count
+        await storage.updateUser(user.id, { 
+          lastLogin: new Date(),
+          loginCount: (user.loginCount || 0) + 1 
+        });
         logger.info("Successful login", { userId: user.id, email: user.email });
         return done(null, user);
       }

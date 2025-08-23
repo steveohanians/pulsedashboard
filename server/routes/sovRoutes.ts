@@ -26,6 +26,21 @@ const SovAnalysisSchema = z.object({
  * Analyze Share of Voice for a brand against competitors
  */
 router.post('/analyze', requireAuth, async (req, res) => {
+  // Track SoV generation usage
+  if (req.user?.id) {
+    try {
+      const { storage } = await import('../storage');
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(req.user.id, {
+          brandSovCount: (user.brandSovCount || 0) + 1
+        });
+      }
+    } catch (error) {
+      // Log but don't fail the request
+      console.warn('Failed to track SoV generation', { userId: req.user.id, error });
+    }
+  }
   try {
     // Validate input
     const validatedInput = SovAnalysisSchema.parse(req.body);
