@@ -68,8 +68,8 @@ class ErrorHandler {
         duration: APP_CONFIG.toast.error,
       });
       // Optionally redirect to login
-      if (window.location.pathname !== '/login') {
-        setTimeout(() => window.location.href = '/login', 2000);
+      if (window.location.pathname !== '/auth') {
+        setTimeout(() => window.location.href = '/auth', 2000);
       }
     } else {
       toast({

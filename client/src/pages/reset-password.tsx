@@ -104,7 +104,7 @@ export default function ResetPassword() {
                   Request new reset link
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/auth">
                 <Button variant="link" className="w-full mt-2">
                   Back to login
                 </Button>
@@ -131,7 +131,7 @@ export default function ResetPassword() {
           </CardHeader>
           <CardContent>
             <div className="text-center">
-              <Link href="/login">
+              <Link href="/auth">
                 <Button className="w-full">
                   Sign in with new password
                 </Button>

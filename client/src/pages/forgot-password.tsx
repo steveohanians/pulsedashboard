@@ -70,7 +70,7 @@ export default function ForgotPassword() {
               <p className="text-sm text-gray-600 mb-4">
                 Didn't receive the email? Check your spam folder or try again.
               </p>
-              <Link href="/login">
+              <Link href="/auth">
                 <Button variant="outline" className="w-full">
                   Back to login
                 </Button>
@@ -110,7 +110,7 @@ export default function ForgotPassword() {
             </Button>
           </form>
           <div className="mt-4 text-center">
-            <Link href="/login">
+            <Link href="/auth">
               <Button variant="link" className="text-sm">
                 Back to login
               </Button>
