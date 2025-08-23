@@ -1,19 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartLine, TrendingUp, BarChart3, PieChart, Bug } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("login");
 
   // Redirect if already logged in - use timeout to avoid setting state during render
   useEffect(() => {
@@ -33,18 +31,7 @@ export default function AuthPage() {
     });
   };
 
-  const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    registerMutation.mutate({
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      clientId: import.meta.env.VITE_DEMO_CLIENT_ID || "demo-client-id", // Configurable demo client ID
-      role: "User",
-      status: "Active",
-    });
-  };
+
 
   const handleDebugLogin = (role: "Admin" | "User") => {
     loginMutation.mutate({
@@ -75,100 +62,48 @@ export default function AuthPage() {
 
           <Card>
             <CardHeader>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="register">Register</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <CardTitle>Sign In</CardTitle>
+              <CardDescription>Enter your credentials to access the dashboard</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsContent value="login">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                      <Label htmlFor="login-email">Email Address</Label>
-                      <Input
-                        id="login-email"
-                        name="email"
-                        type="email"
-                        required
-                        placeholder="Enter your email"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="login-password">Password</Label>
-                      <Input
-                        id="login-password"
-                        name="password"
-                        type="password"
-                        required
-                        placeholder="Enter your password"
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={loginMutation.isPending}
-                    >
-                      {loginMutation.isPending ? "Signing In..." : "Sign In"}
-                    </Button>
-                  </form>
-                  <div className="text-center mt-4">
-                    <Link href="/forgot-password">
-                      <Button variant="link" className="text-sm">
-                        Forgot your password?
-                      </Button>
-                    </Link>
-                  </div>
-                </TabsContent>
-                <TabsContent value="register">
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div>
-                      <Label htmlFor="register-name">Full Name</Label>
-                      <Input
-                        id="register-name"
-                        name="name"
-                        type="text"
-                        required
-                        placeholder="Enter your full name"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="register-email">Email Address</Label>
-                      <Input
-                        id="register-email"
-                        name="email"
-                        type="email"
-                        required
-                        placeholder="Enter your email"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="register-password">Password</Label>
-                      <Input
-                        id="register-password"
-                        name="password"
-                        type="password"
-                        required
-                        placeholder="Create a password"
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={registerMutation.isPending}
-                    >
-                      {registerMutation.isPending ? "Creating Account..." : "Create Account"}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <Label htmlFor="login-email">Email Address</Label>
+                  <Input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="Enter your email"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    required
+                    placeholder="Enter your password"
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loginMutation.isPending}
+                >
+                  {loginMutation.isPending ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+              <div className="text-center mt-4">
+                <Link href="/forgot-password">
+                  <Button variant="link" className="text-sm">
+                    Forgot your password?
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
 

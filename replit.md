@@ -14,6 +14,7 @@ Data management principles: Dashboard shows "Last Month" data only (not current 
 Learning principles: Follow established patterns and logic instead of creating new approaches. When modifying data, only touch the specific entities requested - never assume broader changes are needed.
 Data integrity principles: NEVER show fake, sample, or fallback data under any circumstances. Show empty states rather than synthetic data to maintain authentic data integrity. Completely eliminate all fallback data generators.
 Architecture preference: Use enterprise-grade frontend service layer with automatic cache management. All API interactions should go through specialized service classes (clientService, userService, etc.) rather than direct apiRequest calls. Manual cache invalidation is deprecated in favor of automatic dependency-aware cache management.
+User creation policy: Registration functionality completely removed from frontend. All user creation handled exclusively through admin panel backend interface.
 
 ## System Architecture
 Pulse Dashboard™ utilizes a modern full-stack architecture prioritizing performance, data integrity, and scalability, with clear separation between frontend, backend, and data layers.

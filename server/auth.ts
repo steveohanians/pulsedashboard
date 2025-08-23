@@ -180,30 +180,7 @@ export function setupAuth(app: Express) {
     done(null, user);
   });
 
-  app.post("/api/register", authLimiter, async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByEmail(req.body.email);
-      if (existingUser) {
-        logger.security("Registration attempt with existing email", { email: req.body.email });
-        return res.status(400).json({ message: "Email already exists" });
-      }
 
-      const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
-      });
-
-      logger.info("New user registered", { userId: user.id, email: user.email });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(user);
-      });
-    } catch (error) {
-      logger.error("Registration error", { error: (error as Error).message, email: req.body.email });
-      next(error);
-    }
-  });
 
   app.post("/api/login", authLimiter, passport.authenticate("local"), (req, res) => {
     const user = req.user;

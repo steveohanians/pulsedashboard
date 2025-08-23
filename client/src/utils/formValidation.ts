@@ -76,15 +76,7 @@ export const formSchemas = {
     password: z.string().min(1, "Password is required"),
   }),
 
-  register: z.object({
-    name: commonValidations.required,
-    email: commonValidations.email,
-    password: commonValidations.password,
-    confirmPassword: z.string(),
-  }).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  }),
+
 
   client: z.object({
     name: commonValidations.companyName,
