@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { VALIDATION_LIMITS } from './validationPatterns';
 
 /**
- * User registration and login schemas
- * Consolidates duplicate schemas from login/register components
+ * User login schemas
+ * Consolidates login validation logic
  */
 export const loginSchema = z.object({
   email: z.string()
@@ -18,12 +18,7 @@ export const loginSchema = z.object({
     .max(VALIDATION_LIMITS.MAX_PASSWORD_LENGTH, `Password must be less than ${VALIDATION_LIMITS.MAX_PASSWORD_LENGTH} characters`)
 });
 
-export const registerSchema = loginSchema.extend({
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+
 
 /**
  * Client management schemas
@@ -154,7 +149,6 @@ export const paginationSchema = z.object({
  * Type exports for consistent typing
  */
 export type LoginInput = z.infer<typeof loginSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
 export type ClientInput = z.infer<typeof clientSchema>;
 export type CompetitorInput = z.infer<typeof competitorSchema>;
 export type BenchmarkCompanyInput = z.infer<typeof benchmarkCompanySchema>;
