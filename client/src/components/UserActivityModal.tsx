@@ -74,7 +74,7 @@ export function UserActivityModal({ user, isOpen, onClose }: UserActivityModalPr
             <CardHeader>
               <CardTitle className="text-lg">User Overview</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
                 <p className="font-medium">{user.email}</p>
