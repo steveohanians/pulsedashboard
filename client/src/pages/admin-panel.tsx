@@ -1363,6 +1363,20 @@ export default function AdminPanel() {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            
+                            {/* Activity Tracking Button - Mobile */}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setSelectedUserForActivity(user);
+                                setActivityModalOpen(true);
+                              }}
+                              title="View User Activity"
+                            >
+                              <Activity className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
