@@ -108,7 +108,7 @@ export function UserActivityModal({ user, isOpen, onClose }: UserActivityModalPr
                     <p className="text-sm text-muted-foreground">Total Logins</p>
                     <p className="text-2xl font-bold">{user.loginCount || 0}</p>
                   </div>
-                  <Activity className="h-8 w-8 text-blue-500" />
+
                 </div>
                 <Badge variant={getActivityLevel(user.loginCount || 0).color as any} className="mt-2">
                   {getActivityLevel(user.loginCount || 0).level} Activity
@@ -123,7 +123,7 @@ export function UserActivityModal({ user, isOpen, onClose }: UserActivityModalPr
                     <p className="text-sm text-muted-foreground">Dashboard Views</p>
                     <p className="text-2xl font-bold">{user.pageViews || 0}</p>
                   </div>
-                  <BarChart3 className="h-8 w-8 text-green-500" />
+
                 </div>
                 <Badge variant={getActivityLevel(user.pageViews || 0).color as any} className="mt-2">
                   {getActivityLevel(user.pageViews || 0).level} Usage
@@ -138,7 +138,7 @@ export function UserActivityModal({ user, isOpen, onClose }: UserActivityModalPr
                     <p className="text-sm text-muted-foreground">AI Insights Generated</p>
                     <p className="text-2xl font-bold">{user.aiInsightsCount || 0}</p>
                   </div>
-                  <Brain className="h-8 w-8 text-purple-500" />
+
                 </div>
                 <Badge variant={getActivityLevel(user.aiInsightsCount || 0).color as any} className="mt-2">
                   {getActivityLevel(user.aiInsightsCount || 0).level} AI Usage
@@ -153,7 +153,7 @@ export function UserActivityModal({ user, isOpen, onClose }: UserActivityModalPr
                     <p className="text-sm text-muted-foreground">SoV Analyses</p>
                     <p className="text-2xl font-bold">{user.brandSovCount || 0}</p>
                   </div>
-                  <Target className="h-8 w-8 text-orange-500" />
+
                 </div>
                 <Badge variant={getActivityLevel(user.brandSovCount || 0).color as any} className="mt-2">
                   {getActivityLevel(user.brandSovCount || 0).level} Analysis

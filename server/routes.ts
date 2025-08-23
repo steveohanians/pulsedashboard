@@ -2100,7 +2100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // AI Insights GET endpoint with dual parameter support and server-computed hasContext
-  app.get("/api/ai-insights/:clientId", requireAuth, async (req, res) => {
+  app.get("/api/ai-insights/:clientId", requireAuth, ActivityTracker.trackAIInsight, async (req, res) => {
     try {
       const { clientId } = req.params;
       
