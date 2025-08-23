@@ -1328,7 +1328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate metric-specific insights
-  app.post("/api/generate-metric-insight/:clientId", requireAuth, async (req, res) => {
+  app.post("/api/generate-metric-insight/:clientId", requireAuth, ActivityTracker.trackAIInsight, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { metricName, timePeriod, metricData } = req.body;
@@ -1773,7 +1773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate metric insights with user context
-  app.post("/api/generate-metric-insight-with-context/:clientId", requireAuth, async (req, res) => {
+  app.post("/api/generate-metric-insight-with-context/:clientId", requireAuth, ActivityTracker.trackAIInsight, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { metricName, timePeriod, userContext } = req.body;
@@ -1971,7 +1971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced AI Insights generation endpoint
-  app.post("/api/generate-comprehensive-insights/:clientId", requireAuth, async (req, res) => {
+  app.post("/api/generate-comprehensive-insights/:clientId", requireAuth, ActivityTracker.trackAIInsight, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { period } = req.query;
@@ -2250,7 +2250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Insights generation endpoint
-  app.post("/api/generate-insights/:clientId", requireAuth, async (req, res) => {
+  app.post("/api/generate-insights/:clientId", requireAuth, ActivityTracker.trackAIInsight, async (req, res) => {
     try {
       const { clientId } = req.params;
       // CRITICAL: AI insights are ALWAYS based on last month data only, regardless of any query parameters
