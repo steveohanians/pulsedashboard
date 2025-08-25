@@ -200,21 +200,7 @@ export class InsightService {
     return apiRequest('GET', url);
   }
 
-  /**
-   * Generate insights (legacy)
-   */
-  async generate(
-    clientId: string,
-    data: {
-      metricName?: string;
-      period?: string;
-      context?: string;
-    } = {}
-  ): Promise<{ message: string; generated: number }> {
-    const result = await apiRequest('POST', `/api/generate-insights/${clientId}`, data);
-    cacheManager.invalidate('insight');
-    return result;
-  }
+
 
   /**
    * Clear all insights (debug)
