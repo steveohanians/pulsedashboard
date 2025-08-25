@@ -1621,11 +1621,8 @@ export default function AdminPanel() {
                           // Store results for dialog display
                           setDataCheckResults(data);
                           
-                          // Also log to console for debugging
-                          console.log('Client Data Check Results:', data);
                           
                         } catch (error) {
-                          console.error('Failed to check client data:', error);
                           toast({
                             title: "Check Failed",
                             description: "Could not retrieve client data.",
@@ -2009,11 +2006,7 @@ export default function AdminPanel() {
                                 className="w-10 h-10 rounded-lg object-contain border border-gray-200"
                                 style={{ backgroundColor: '#8C8C8C' }}
                                 onError={(e) => {
-                                  console.log('Icon failed to load:', editingItem.iconUrl);
                                   e.currentTarget.style.display = 'none';
-                                }}
-                                onLoad={() => {
-                                  console.log('Icon loaded successfully:', editingItem.iconUrl);
                                 }}
                               />
                               <div className="text-sm text-gray-600">Icon loaded</div>
@@ -2086,10 +2079,7 @@ export default function AdminPanel() {
                                   }
                                   
                                   const domain = new URL(websiteUrl).hostname.replace('www.', '');
-                                  console.log('Processing URL:', websiteUrl, '→ Domain:', domain);
                                   const response = await clientService.fetchIcon(editingItem.id, domain);
-                                  
-                                  console.log('Icon fetch response:', response);
                                   
                                   if (response.iconUrl) {
                                     setEditingItem((prev: Client | null) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);

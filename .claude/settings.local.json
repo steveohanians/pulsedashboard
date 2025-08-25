@@ -23,7 +23,12 @@
       "Bash(npm run build)",
       "Bash(git add server/auth.ts server/routes.ts server/storage.ts)",
       "Bash(git commit -m \"Fix SOV prompt template endpoints - add auto-creation and fix auth\n\n- Add createSOVPromptTemplate method to storage\n- Auto-create default template when none exists  \n- Fix requireAdmin to support development auto-login\n- Ensure SOV routes work in production\")",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(npx depcheck:*)",
+      "Bash(find:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run check:*)"
     ],
     "deny": [],
     "ask": []
