@@ -272,7 +272,6 @@ export const sovPromptTemplate = pgTable("sov_prompt_template", {
   name: text("name").notNull().unique().default("SOV Question Generation Template"),
   promptTemplate: text("prompt_template").notNull(),
   description: text("description"), // Help text for admin
-  variables: text("variables"), // JSON array of available variables
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   Dialog,
   DialogContent,
@@ -211,37 +212,50 @@ export function SOVPromptTemplateForm() {
 
   return (
     <>
-      <div className="space-y-4">
-        {/* Available Template Variables */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Available Template Variables</Label>
-          <div className="text-xs text-slate-600 space-y-1">
-            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{vertical}"}</code> - Industry vertical (e.g., "Technology Services")</div>
-            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{brandName}"}</code> - Client brand name</div>
-            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{competitors}"}</code> - Comma-separated competitor names</div>
-            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{brandContext}"}</code> - AI-generated brand research summary</div>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <Label htmlFor="template-name">Template Name</Label>
+          <Input
+            id="template-name"
+            value={currentTemplate?.name || "SOV Question Generation Template"}
+            readOnly
+            className="bg-slate-50 text-slate-600 cursor-not-allowed"
+          />
+          <p className="text-xs text-slate-500 mt-1">Template name is system-managed and cannot be changed</p>
         </div>
 
-        {/* Template Editor */}
-        <div className="space-y-2">
-          <Label htmlFor="promptTemplate" className="text-sm font-medium">
-            SOV Question Generation Template
-          </Label>
+        <div>
+          <Label htmlFor="template-description">Description</Label>
+          <Input
+            id="template-description"
+            value={currentTemplate?.description || ""}
+            readOnly
+            className="bg-slate-50 text-slate-600 cursor-not-allowed"
+            placeholder="Default template for generating Share of Voice buyer journey questions"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="template-prompt">SOV Question Generation Template</Label>
           <Textarea
-            id="promptTemplate"
+            id="template-prompt"
             value={template}
             onChange={(e) => handleTemplateChange(e.target.value)}
             placeholder="Enter your SOV question generation prompt template..."
-            className="min-h-[400px] font-mono text-sm"
+            rows={15}
+            className="font-mono text-sm"
+            required
             data-testid="textarea-sov-template"
           />
-          <p className="text-xs text-slate-500">
-            This template is used to generate buyer journey questions for Share of Voice analysis.
-          </p>
+          <div className="mt-2 text-xs text-slate-500 space-y-1">
+            <p><strong>Available placeholders:</strong></p>
+            <p>• {`{vertical}`} - Industry vertical (e.g., "Technology Services")</p>
+            <p>• {`{brandName}`} - Client brand name</p>
+            <p>• {`{competitors}`} - Comma-separated competitor names</p>
+            <p>• {`{brandContext}`} - AI-generated brand research summary</p>
+          </div>
         </div>
 
-        {/* Action Area */}
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex items-center space-x-2">
             {updateTemplateMutation.isSuccess && (
@@ -254,12 +268,6 @@ export function SOVPromptTemplateForm() {
               <div className="flex items-center text-red-600 text-sm">
                 <AlertCircle className="h-4 w-4 mr-1" />
                 Failed to save template
-              </div>
-            )}
-            {isDirty && !updateTemplateMutation.isSuccess && !updateTemplateMutation.isError && (
-              <div className="flex items-center text-amber-600 text-sm">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                You have unsaved changes
               </div>
             )}
           </div>
