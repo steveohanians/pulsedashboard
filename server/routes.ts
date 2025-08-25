@@ -3146,6 +3146,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug middleware to log ALL admin requests
+  app.use('/api/admin', (req, res, next) => {
+    logger.info(`Admin request intercepted: ${req.method} ${req.url}`, {
+      originalUrl: req.originalUrl,
+      path: req.path,
+      baseUrl: req.baseUrl,
+      userAgent: req.get('User-Agent'),
+      headers: Object.keys(req.headers)
+    });
+    next();
+  });
+
   // SOV Prompt Template routes
   logger.info("Registering SOV prompt template routes");
   
