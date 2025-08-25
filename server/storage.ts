@@ -130,6 +130,7 @@ export interface IStorage {
   
   // SOV Prompt Template
   getSOVPromptTemplate(): Promise<SOVPromptTemplate | undefined>;
+  createSOVPromptTemplate(template: InsertSOVPromptTemplate): Promise<SOVPromptTemplate>;
   updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined>;
   
   // Metric Prompts
@@ -1820,6 +1821,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sovPromptTemplate.isActive, true))
       .limit(1);
     return template || undefined;
+  }
+
+  async createSOVPromptTemplate(template: InsertSOVPromptTemplate): Promise<SOVPromptTemplate> {
+    const [newTemplate] = await db
+      .insert(sovPromptTemplate)
+      .values(template)
+      .returning();
+    return newTemplate;
   }
 
   async updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined> {

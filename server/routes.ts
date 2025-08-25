@@ -3152,11 +3152,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
     try {
       logger.info("SOV template GET request received");
-      const template = await storage.getSOVPromptTemplate();
+      let template = await storage.getSOVPromptTemplate();
+      
+      // Auto-create default template if none exists
       if (!template) {
-        logger.warn("SOV prompt template not found in database");
-        return res.status(404).json({ message: "SOV prompt template not found" });
+        logger.info("No SOV template found, creating default template");
+        const defaultTemplate = {
+          name: "SOV Question Generation Template",
+          promptTemplate: `Based on these competing brands in the {vertical} industry:
+{brandContext}
+
+Generate 15 questions following these guidelines:
+
+AWARENESS STAGE (5 questions)
+3 ORGANIC questions (brand-agnostic): Focus on broad categories, problems, outcomes.
+1 ORGANIC discovery question: Explicitly seek vendors, providers, or solutions (e.g., "What are the main providers for…?").
+1 PROMPTED question: Mention category leaders or "top providers."
+
+CONSIDERATION STAGE (5 questions)
+3 ORGANIC questions: Compare features, criteria, trade-offs without naming brands.
+2 PROMPTED questions: Direct brand comparisons (side-by-side).
+
+DECISION STAGE (5 questions)  
+2 ORGANIC questions: Pricing, implementation, support, practical concerns.
+3 PROMPTED questions: Head-to-head comparisons using these brands: {brandName}, {competitors}
+
+Requirements:
+Use natural buyer language.
+Cover features, cost, scalability, integration, ease of use, support, results.
+Ensure variety in question forms (who/what/how/why, lists, comparisons).
+Include services as well as platforms.
+Tag each question as [ORGANIC] or [PROMPTED].
+
+Output: Numbered list with tags.
+1. [ORGANIC] Question here  
+2. [PROMPTED] Question here`,
+          description: "Default template for generating Share of Voice buyer journey questions",
+          isActive: true
+        };
+        
+        try {
+          template = await storage.createSOVPromptTemplate(defaultTemplate);
+          logger.info("Default SOV template created successfully", { templateId: template.id });
+        } catch (createError) {
+          logger.error("Failed to create default SOV template", { error: (createError as Error).message });
+          return res.status(500).json({ message: "Failed to initialize SOV prompt template" });
+        }
       }
+      
       logger.info("SOV template found and returned successfully", { templateId: template.id });
       res.json(template);
     } catch (error) {

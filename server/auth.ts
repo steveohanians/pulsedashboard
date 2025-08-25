@@ -114,6 +114,59 @@ export function requireAuth(req: any, res: any, next: any) {
 }
 
 export function requireAdmin(req: any, res: any, next: any) {
+  logger.info('requireAdmin called', { 
+    endpoint: req.originalUrl, 
+    authenticated: req.isAuthenticated(),
+    nodeEnv: process.env.NODE_ENV 
+  });
+  
+  // Development mode: auto-authenticate admin user if no one is logged in
+  if (!req.isAuthenticated() && process.env.NODE_ENV === 'development') {
+    logger.info('Development auto-login attempted for admin route', { endpoint: req.originalUrl });
+    return storage.getUser('admin-user-id').then(async (adminUser) => {
+      if (adminUser) {
+        req.login(adminUser, (err: any) => {
+          if (err) {
+            logger.warn('Development auto-login failed in requireAdmin', { error: err.message });
+            return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
+          }
+          logger.info('Development auto-login successful in requireAdmin', { userId: adminUser.id });
+          // Check if user is admin after login
+          if (adminUser.role !== "Admin") {
+            return sendError(res, 403, "FORBIDDEN", "Admin access required");
+          }
+          return next();
+        });
+      } else {
+        // Create admin user if it doesn't exist in development
+        try {
+          logger.info('Creating admin user for development');
+          const newAdminUser = await storage.createUser({
+            email: 'admin@example.com',
+            password: await hashPassword('admin123'),
+            name: 'Admin User',
+            role: 'Admin' as const
+          });
+          
+          req.login(newAdminUser, (err: any) => {
+            if (err) {
+              logger.warn('Development auto-login failed after creating admin user', { error: err.message });
+              return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
+            }
+            logger.info('Development auto-login successful with new admin user', { userId: newAdminUser.id });
+            return next();
+          });
+        } catch (createError) {
+          logger.warn('Failed to create admin user in development', { error: (createError as Error).message });
+          return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
+        }
+      }
+    }).catch((error: Error) => {
+      logger.warn('Failed to auto-authenticate in requireAdmin', { error: error.message });
+      return sendError(res, 401, "UNAUTHENTICATED", "Authentication required");
+    });
+  }
+  
   if (!req.isAuthenticated()) {
     logger.warn('Unauthenticated admin access attempt', { 
       endpoint: req.originalUrl,
