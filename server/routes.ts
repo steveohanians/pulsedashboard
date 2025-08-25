@@ -3149,6 +3149,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SOV Prompt Template routes
   logger.info("Registering SOV prompt template routes");
   
+  // DIAGNOSTIC ROUTE - Testing if new routes deploy correctly
+  app.get("/api/diagnostic-test-route-never-existed-before", (req, res) => {
+    logger.info("DIAGNOSTIC ROUTE HIT: This confirms new routes deploy correctly");
+    res.json({ 
+      message: "DIAGNOSTIC SUCCESS: New routes are deploying correctly",
+      timestamp: new Date().toISOString(),
+      routeStatus: "working"
+    });
+  });
+  
   app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
     try {
       logger.info("SOV template GET request received");
