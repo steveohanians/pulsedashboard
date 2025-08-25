@@ -961,11 +961,8 @@ export class UnifiedDataService {
   }
 
   private getDisplayPeriod(timePeriod: string, ga4Date: Date, semrushDate: Date): string {
-    if (timePeriod === "Last Month") {
-      return ga4Date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    }
-    // Add other period types as needed
-    return timePeriod;
+    // Always return the actual data period being displayed (GA4 date)
+    return ga4Date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
   private cleanDomainName(domain: string): string {
