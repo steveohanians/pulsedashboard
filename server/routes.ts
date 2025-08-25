@@ -3153,20 +3153,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
       try {
         logger.info("SOV template GET request received");
-        res.json({ message: "SOV GET endpoint working", timestamp: new Date().toISOString() });
+        const template = await storage.getSOVPromptTemplate();
+        if (!template) {
+          logger.warn("SOV prompt template not found in database");
+          return res.status(404).json({ message: "SOV prompt template not found" });
+        }
+        logger.info("SOV template found and returned successfully", { templateId: template.id });
+        res.json(template);
       } catch (error) {
-        logger.error("Error in SOV GET", { error: (error as Error).message });
-        res.status(500).json({ message: "SOV GET error" });
+        logger.error("Error fetching SOV prompt template", { error: (error as Error).message, stack: (error as Error).stack });
+        res.status(500).json({ message: "Failed to fetch SOV prompt template" });
       }
     });
 
     app.put("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
       try {
-        logger.info("SOV template PUT request received");
-        res.json({ message: "SOV PUT endpoint working", timestamp: new Date().toISOString() });
+        logger.info("SOV template PUT request received", { bodyKeys: Object.keys(req.body) });
+        const validatedData = updateSOVPromptTemplateSchema.parse(req.body);
+        logger.info("SOV template data validated successfully", { dataKeys: Object.keys(validatedData) });
+        
+        const template = await storage.updateSOVPromptTemplate(validatedData);
+        
+        if (!template) {
+          logger.warn("SOV prompt template update failed - template not found");
+          return res.status(404).json({ message: "SOV prompt template not found" });
+        }
+        
+        logger.info("SOV template updated successfully", { templateId: template.id });
+        res.json(template);
       } catch (error) {
-        logger.error("Error in SOV PUT", { error: (error as Error).message });
-        res.status(500).json({ message: "SOV PUT error" });
+        logger.error("Error updating SOV prompt template", { error: (error as Error).message, stack: (error as Error).stack });
+        res.status(500).json({ message: "Failed to update SOV prompt template" });
       }
     });
     
