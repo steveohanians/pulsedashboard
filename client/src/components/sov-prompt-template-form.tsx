@@ -71,30 +71,13 @@ export function SOVPromptTemplateForm() {
   // Fetch current template
   const { data: currentTemplate, isLoading } = useQuery<SOVPromptTemplate>({
     queryKey: ['/api/admin/sov-prompt-template'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/sov-prompt-template');
-      if (!response.ok) {
-        throw new Error('Failed to fetch SOV prompt template');
-      }
-      return response.json();
-    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Update template mutation
   const updateTemplateMutation = useMutation({
     mutationFn: async (data: UpdateSOVPromptTemplate) => {
-      const response = await fetch('/api/admin/sov-prompt-template', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update SOV prompt template');
-      }
-      return response.json();
+      return await apiRequest('PUT', '/api/admin/sov-prompt-template', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sov-prompt-template'] });
@@ -119,17 +102,7 @@ export function SOVPromptTemplateForm() {
   // Preview generation mutation
   const previewMutation = useMutation({
     mutationFn: async (promptTemplate: string) => {
-      const response = await fetch('/api/admin/sov-prompt-template/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ promptTemplate }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to generate preview');
-      }
-      return response.json();
+      return await apiRequest('POST', '/api/admin/sov-prompt-template/preview', { promptTemplate });
     },
     onSuccess: (data: PreviewData) => {
       setPreviewData(data);
