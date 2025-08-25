@@ -765,19 +765,22 @@ export default function Dashboard() {
                   } else if (timePeriod === "Last Quarter") {
                     // Show the last 3 months based on display period
                     if (periods) {
-                      const endDate = new Date(periods.displayPeriod.includes('2025') 
-                        ? periods.displayPeriod.replace(' ', ' 01, ')  // "July 2025" -> "July 01, 2025"
-                        : periods.client + '-01');
+                      // Parse "July 2025" format properly
+                      const [monthName, year] = periods.displayPeriod.split(' ');
+                      const monthIndex = new Date(`${monthName} 1, 2000`).getMonth();
+                      const endDate = new Date(parseInt(year), monthIndex + 1, 0); // Last day of the month
                       const startDate = new Date(endDate);
                       startDate.setMonth(startDate.getMonth() - 2);
                       displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
                     }
                   } else if (timePeriod === "Last Year" && periods) {
-                    const endDate = new Date(periods.displayPeriod.includes('2025') 
-                      ? periods.displayPeriod.replace(' ', ' 01, ')  // "July 2025" -> "July 01, 2025"
-                      : periods.client + '-01');
+                    // Parse "July 2025" format properly for 12-month range
+                    const [monthName, year] = periods.displayPeriod.split(' ');
+                    const monthIndex = new Date(`${monthName} 1, 2000`).getMonth();
+                    const endDate = new Date(parseInt(year), monthIndex + 1, 0); // Last day of the month
                     const startDate = new Date(endDate);
                     startDate.setFullYear(startDate.getFullYear() - 1);
+                    startDate.setMonth(startDate.getMonth() + 1); // Start from next month of previous year
                     displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
                   }
 
