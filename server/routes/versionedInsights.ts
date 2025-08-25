@@ -130,28 +130,7 @@ export function createVersionedInsightsRoutes(storage: any, backgroundProcessor:
         adminUserId: req.user.id
       });
 
-      // Track AI insight generation when user explicitly regenerates
-      if (req.user?.id) {
-        try {
-          const { storage: storageInstance } = await import('../storage.js');
-          const user = await storageInstance.getUser(req.user.id);
-          if (user) {
-            await storageInstance.updateUser(req.user.id, {
-              aiInsightsCount: (user.aiInsightsCount || 0) + 1
-            });
-            logger.info('AI insight regeneration tracked', { 
-              userId: req.user.id, 
-              endpoint: req.originalUrl,
-              newCount: (user.aiInsightsCount || 0) + 1
-            });
-          }
-        } catch (error) {
-          logger.warn('Failed to track AI insight regeneration', { 
-            userId: req.user.id, 
-            error: error instanceof Error ? error.message : String(error) 
-          });
-        }
-      }
+
 
       // Force regenerate for the latest version
       const latestVersion = await versionService.forceRegenerate(clientId, body.timePeriod);

@@ -1071,7 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/v2/ai-insights/:clientId", requireAuth, versionedInsightsRoutes.getVersionedInsights);
   
   // Admin: Force regenerate insights for latest version
-  app.post("/api/v2/ai-insights/:clientId/regenerate", requireAuth, versionedInsightsRoutes.forceRegenerateInsights);
+  app.post("/api/v2/ai-insights/:clientId/regenerate", requireAuth, ActivityTracker.trackAIInsight, versionedInsightsRoutes.forceRegenerateInsights);
   
   // Get version status for polling
   app.get("/api/v2/ai-insights/:clientId/status", requireAuth, versionedInsightsRoutes.getVersionStatus);
