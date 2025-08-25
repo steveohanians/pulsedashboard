@@ -3149,17 +3149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SOV Prompt Template routes
   logger.info("Registering SOV prompt template routes");
   
-  // CATCH-ALL DEBUG ROUTE - This should catch any /api/admin/sov-prompt-template requests
-  app.all("/api/admin/sov-prompt-template*", (req, res, next) => {
-    logger.error(`🚨 CATCH-ALL SOV ROUTE HIT: ${req.method} ${req.url}`);
-    logger.error(`Headers: ${JSON.stringify(req.headers)}`);
-    logger.error(`Body: ${JSON.stringify(req.body)}`);
-    next(); // Continue to actual handler
-  });
-  
-  app.get("/api/admin/sov-prompt-template", async (req, res) => {
+  app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
     try {
-      logger.info("SOV template GET request received - NO AUTH");
+      logger.info("SOV template GET request received");
       const template = await storage.getSOVPromptTemplate();
       if (!template) {
         logger.warn("SOV prompt template not found in database");
@@ -3173,9 +3165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/sov-prompt-template", async (req, res) => {
+  app.put("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
     try {
-      logger.info("SOV template PUT request received - NO AUTH", { bodyKeys: Object.keys(req.body) });
+      logger.info("SOV template PUT request received", { bodyKeys: Object.keys(req.body) });
       const validatedData = updateSOVPromptTemplateSchema.parse(req.body);
       logger.info("SOV template data validated successfully", { dataKeys: Object.keys(validatedData) });
       
