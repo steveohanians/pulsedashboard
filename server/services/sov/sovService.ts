@@ -103,75 +103,106 @@ export class SovService extends EventEmitter {
     brandContext: string, 
     input: SovAnalysisInput
   ): Promise<Array<{ question: string; type: 'organic' | 'prompted' }>> {
+    // Get template from database or use default
+    const template = await this.getSOVPromptTemplate();
+    return this.generateQuestionsWithTemplate(template, input, brandContext);
+  }
+
+  /**
+   * Generate questions with a custom template (used for both normal operation and preview)
+   */
+  async generateQuestionsWithTemplate(
+    template: string,
+    input: SovAnalysisInput,
+    brandContext?: string
+  ): Promise<Array<{ question: string; type: 'organic' | 'prompted' }>> {
+    // If no brand context provided, research the brands first
+    if (!brandContext) {
+      brandContext = await this.researchBrands(input);
+    }
+
+    // Substitute template variables
+    const processedTemplate = this.substituteTemplateVariables(template, input, brandContext);
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [{
-        role: 'system',
-        content: `You are a B2B buyer-journey strategist and industry research expert. Your role is to generate realistic, high-quality questions that potential buyers would naturally ask when evaluating both products and services — including software platforms, technology solutions, professional services, agencies, and consulting firms.
-
-Your questions should:
-
-Reflect how real buyers at organizations (executives, managers, practitioners) search and compare options across Awareness, Consideration, and Decision stages.
-
-Cover both solutions and providers: not just features, but also services, pricing, implementation, support, scalability, and outcomes.
-
-Encourage variety in structure (who/what/how/why, lists, comparisons, trade-offs).
-
-Be phrased in natural buyer language that could realistically appear in search queries, market research, or analyst reports.`
-      }, {
         role: 'user',
-        content: `Based on these competing brands in the ${input.vertical} industry:
-${brandContext}
-
-Generate 15 questions following these guidelines:
-
-AWARENESS STAGE (5 questions)
-
-3 ORGANIC questions (brand-agnostic): Focus on broad categories, problems, outcomes.
-
-1 ORGANIC discovery question: Explicitly seek vendors, providers, or solutions (e.g., "What are the main providers for…?").
-
-1 PROMPTED question: Mention category leaders or "top providers."
-
-Examples: "What solutions exist for…?", "How do companies handle…?", "What are some well-known providers for…?"
-
-CONSIDERATION STAGE (5 questions)
-
-3 ORGANIC questions: Compare features, criteria, trade-offs without naming brands.
-
-2 PROMPTED questions: Direct brand comparisons (side-by-side).
-
-Vary structures: "Which platforms offer…," "How to choose between…," "Compare features of…"
-
-DECISION STAGE (5 questions)
-
-2 ORGANIC questions: Pricing, implementation, support, practical concerns.
-
-3 PROMPTED questions: Head-to-head comparisons using these brands: ${input.brand.name}, ${input.competitors.map(c => c.name).join(', ')}
-
-Examples: "${input.brand.name} vs ${input.competitors[0]?.name} for…," "Is ${input.brand.name} better than ${input.competitors[1]?.name} for…"
-
-Requirements:
-
-Use natural buyer language.
-
-Cover features, cost, scalability, integration, ease of use, support, results.
-
-Ensure variety in question forms (who/what/how/why, lists, comparisons).
-
-Include services as well as platforms.
-
-Tag each question as [ORGANIC] or [PROMPTED].
-
-Output: Numbered list with tags.
-
-1. [ORGANIC] Question here  
-2. [PROMPTED] Question here`
+        content: processedTemplate
       }],
       temperature: 0.7
     });
     
     const questionsText = response.choices[0].message.content || '';
+    return this.parseQuestions(questionsText);
+  }
+
+  /**
+   * Get SOV prompt template from database or return default
+   */
+  private async getSOVPromptTemplate(): Promise<string> {
+    try {
+      const { storage } = await import("../../storage");
+      const template = await storage.getSOVPromptTemplate();
+      return template?.promptTemplate || this.getDefaultTemplate();
+    } catch (error) {
+      logger.warn("Failed to fetch SOV prompt template, using default", { error: (error as Error).message });
+      return this.getDefaultTemplate();
+    }
+  }
+
+  /**
+   * Default SOV prompt template
+   */
+  private getDefaultTemplate(): string {
+    return `Based on these competing brands in the {vertical} industry:
+{brandContext}
+
+Generate 15 questions following these guidelines:
+
+AWARENESS STAGE (5 questions)
+3 ORGANIC questions (brand-agnostic): Focus on broad categories, problems, outcomes.
+1 ORGANIC discovery question: Explicitly seek vendors, providers, or solutions (e.g., "What are the main providers for…?").
+1 PROMPTED question: Mention category leaders or "top providers."
+
+CONSIDERATION STAGE (5 questions)
+3 ORGANIC questions: Compare features, criteria, trade-offs without naming brands.
+2 PROMPTED questions: Direct brand comparisons (side-by-side).
+
+DECISION STAGE (5 questions)  
+2 ORGANIC questions: Pricing, implementation, support, practical concerns.
+3 PROMPTED questions: Head-to-head comparisons using these brands: {brandName}, {competitors}
+
+Requirements:
+Use natural buyer language.
+Cover features, cost, scalability, integration, ease of use, support, results.
+Ensure variety in question forms (who/what/how/why, lists, comparisons).
+Include services as well as platforms.
+Tag each question as [ORGANIC] or [PROMPTED].
+
+Output: Numbered list with tags.
+1. [ORGANIC] Question here  
+2. [PROMPTED] Question here`;
+  }
+
+  /**
+   * Substitute template variables with actual values
+   */
+  private substituteTemplateVariables(
+    template: string,
+    input: SovAnalysisInput,
+    brandContext: string
+  ): string {
+    return template
+      .replace(/{vertical}/g, input.vertical)
+      .replace(/{brandName}/g, input.brand.name)
+      .replace(/{competitors}/g, input.competitors.map(c => c.name).join(', '))
+      .replace(/{brandContext}/g, brandContext);
+  }
+
+  /**
+   * Parse questions from AI response text
+   */
+  private parseQuestions(questionsText: string): Array<{ question: string; type: 'organic' | 'prompted' }> {
     return questionsText
       .split('\n')
       .filter(q => q.match(/^\d/))

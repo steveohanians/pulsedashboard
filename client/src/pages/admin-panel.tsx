@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
+import { SOVPromptTemplateForm } from "@/components/sov-prompt-template-form";
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
@@ -3709,6 +3710,22 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <GlobalPromptTemplateForm />
+                    </CardContent>
+                  </Card>
+
+                  {/* SOV Template Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        SOV Question Generation Template
+                      </CardTitle>
+                      <p className="text-xs text-slate-600">
+                        Configure the AI prompt template for Share of Voice question generation
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <SOVPromptTemplateForm />
                     </CardContent>
                   </Card>
 

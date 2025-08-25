@@ -267,6 +267,17 @@ export const metricPrompts = pgTable("metric_prompts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const sovPromptTemplate = pgTable("sov_prompt_template", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique().default("SOV Question Generation Template"),
+  promptTemplate: text("prompt_template").notNull(),
+  description: text("description"), // Help text for admin
+  variables: text("variables"), // JSON array of available variables
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insightContexts = pgTable("insight_contexts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
@@ -464,6 +475,18 @@ export const updateMetricPromptSchema = createInsertSchema(metricPrompts).omit({
   updatedAt: true,
 }).partial();
 
+export const insertSOVPromptTemplateSchema = createInsertSchema(sovPromptTemplate).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSOVPromptTemplateSchema = createInsertSchema(sovPromptTemplate).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
   id: true,
   createdAt: true,
@@ -549,6 +572,10 @@ export type UpdateGlobalPromptTemplate = z.infer<typeof updateGlobalPromptTempla
 export type MetricPrompt = typeof metricPrompts.$inferSelect;
 export type InsertMetricPrompt = z.infer<typeof insertMetricPromptSchema>;
 export type UpdateMetricPrompt = z.infer<typeof updateMetricPromptSchema>;
+
+export type SOVPromptTemplate = typeof sovPromptTemplate.$inferSelect;
+export type InsertSOVPromptTemplate = z.infer<typeof insertSOVPromptTemplateSchema>;
+export type UpdateSOVPromptTemplate = z.infer<typeof updateSOVPromptTemplateSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type InsightContext = typeof insightContexts.$inferSelect;

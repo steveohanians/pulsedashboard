@@ -15,7 +15,7 @@ import benchmarkAdminRouter from "./routes/benchmark-admin";
 import adminUsersRouter from "./routes/admin-users";
 import sovRoutes from "./routes/sovRoutes";
 import { z } from "zod";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import { 
   ErrorFactory, 
   PulseError, 
@@ -3143,6 +3143,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       logger.error("Error updating global prompt template", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to update global prompt template" });
+    }
+  });
+
+  // SOV Prompt Template routes
+  app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
+    try {
+      const template = await storage.getSOVPromptTemplate();
+      if (!template) {
+        return res.status(404).json({ message: "SOV prompt template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      logger.error("Error fetching SOV prompt template", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch SOV prompt template" });
+    }
+  });
+
+  app.put("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = updateSOVPromptTemplateSchema.parse(req.body);
+      const template = await storage.updateSOVPromptTemplate(validatedData);
+      
+      if (!template) {
+        return res.status(404).json({ message: "SOV prompt template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      logger.error("Error updating SOV prompt template", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to update SOV prompt template" });
+    }
+  });
+
+  // SOV Prompt Template Preview
+  app.post("/api/admin/sov-prompt-template/preview", requireAdmin, async (req, res) => {
+    try {
+      const { promptTemplate } = req.body;
+      
+      if (!promptTemplate || typeof promptTemplate !== 'string') {
+        return res.status(400).json({ message: "promptTemplate is required" });
+      }
+
+      // Get demo client data for preview
+      const client = await storage.getClient("demo-client-id");
+      const competitors = await storage.getCompetitorsByClient("demo-client-id");
+      
+      if (!client) {
+        return res.status(404).json({ message: "Demo client not found" });
+      }
+
+      // Format demo data for SOV analysis
+      const sovInput = {
+        brand: {
+          name: client.name,
+          url: client.websiteUrl
+        },
+        competitors: competitors.slice(0, 3).map(c => ({
+          name: c.domain.split('.')[0], // Extract name from domain
+          url: c.domain.startsWith('http') ? c.domain : `https://${c.domain}`
+        })),
+        vertical: client.industryVertical
+      };
+
+      // Import and use SOV service for preview
+      const { SovService } = await import("./services/sov/sovService");
+      const sovService = new SovService();
+      
+      // Generate preview questions using custom template
+      const questions = await sovService.generateQuestionsWithTemplate(
+        promptTemplate,
+        sovInput
+      );
+
+      res.json({
+        success: true,
+        questions,
+        previewData: {
+          brandName: sovInput.brand.name,
+          vertical: sovInput.vertical,
+          competitors: sovInput.competitors.map(c => c.name)
+        }
+      });
+    } catch (error) {
+      logger.error("Error generating SOV prompt preview", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to generate preview" });
     }
   });
 

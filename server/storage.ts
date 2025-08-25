@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -11,6 +11,7 @@ import {
   type PasswordResetToken, type InsertPasswordResetToken,
   type GlobalPromptTemplate, type InsertGlobalPromptTemplate, type UpdateGlobalPromptTemplate,
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
+  type SOVPromptTemplate, type InsertSOVPromptTemplate, type UpdateSOVPromptTemplate,
   type InsightContext, type InsertInsightContext, type UpdateInsightContext,
   type FilterOption, type InsertFilterOption, type UpdateFilterOption,
   type GA4PropertyAccess, type InsertGA4PropertyAccess,
@@ -126,6 +127,10 @@ export interface IStorage {
   // Global Prompt Template
   getGlobalPromptTemplate(): Promise<GlobalPromptTemplate | undefined>;
   updateGlobalPromptTemplate(template: UpdateGlobalPromptTemplate): Promise<GlobalPromptTemplate | undefined>;
+  
+  // SOV Prompt Template
+  getSOVPromptTemplate(): Promise<SOVPromptTemplate | undefined>;
+  updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined>;
   
   // Metric Prompts
   getMetricPrompts(): Promise<MetricPrompt[]>;
@@ -1803,6 +1808,25 @@ export class DatabaseStorage implements IStorage {
       .update(globalPromptTemplate)
       .set({ ...template, updatedAt: new Date() })
       .where(eq(globalPromptTemplate.isActive, true))
+      .returning();
+    return updatedTemplate || undefined;
+  }
+
+  // SOV Prompt Template
+  async getSOVPromptTemplate(): Promise<SOVPromptTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(sovPromptTemplate)
+      .where(eq(sovPromptTemplate.isActive, true))
+      .limit(1);
+    return template || undefined;
+  }
+
+  async updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(sovPromptTemplate)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(sovPromptTemplate.isActive, true))
       .returning();
     return updatedTemplate || undefined;
   }
