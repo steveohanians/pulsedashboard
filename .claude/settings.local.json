@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -I https://pulsedashboard.replit.app/api/admin/sov-prompt-template)",
+      "Bash(grep -n \"SOV prompt template routes registered\" /home/runner/workspace/server/routes.ts)",
+      "Bash(npm run dev)",
+      "Bash(curl -X POST https://pulsedashboard.replit.app/api/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"admin@example.com\"\",\"\"password\"\":\"\"admin123\"\"}' -c cookies.txt)",
+      "Bash(curl -X GET https://pulsedashboard.replit.app/api/admin/sov-prompt-template -H \"Cookie: \")",
+      "Bash(echo \"NODE_ENV=$NODE_ENV\")",
+      "Bash(grep NODE_ENV /home/runner/workspace/.env)",
+      "Bash(curl -X GET https://pulsedashboard.replit.app/api/admin/sov-prompt-template)",
+      "Bash(curl -X GET https://pulsedashboard.replit.app/api/admin/sov-prompt-template -v)",
+      "Bash(curl https://pulsedashboard.replit.app/api/admin/sov-prompt-template)",
+      "Bash(curl https://pulsedashboard.replit.app/api/admin/sov-prompt-template -v)",
+      "Bash(curl https://pulsedashboard.replit.app/api/diagnostic)",
+      "Bash(curl http://localhost:5000/api/admin/sov-prompt-template)",
+      "Bash(curl -X POST https://pulsedashboard.replit.app/api/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@pulsedashboard.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"cleardigital123\"\"\"\"}' -c replit-cookies.txt -v)",
+      "Bash(curl -X GET https://pulsedashboard.replit.app/api/admin/sov-prompt-template -b replit-cookies.txt)",
+      "Bash(grep DATABASE_URL /home/runner/workspace/.env)",
+      "Bash(env)",
+      "Bash(curl -X POST https://pulsedashboard.replit.app/api/admin/trigger-sov-create -b replit-cookies.txt)",
+      "Bash(git log --oneline -1 --date=short --pretty=format:'%h %ad %s' a797267)",
+      "Bash(npm run build)",
+      "Bash(git add server/auth.ts server/routes.ts server/storage.ts)",
+      "Bash(git commit -m \"Fix SOV prompt template endpoints - add auto-creation and fix auth\n\n- Add createSOVPromptTemplate method to storage\n- Auto-create default template when none exists  \n- Fix requireAdmin to support development auto-login\n- Ensure SOV routes work in production\")",
+      "Bash(git push)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
