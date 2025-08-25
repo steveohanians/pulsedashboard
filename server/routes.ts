@@ -3149,14 +3149,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SOV Prompt Template routes
   logger.info("Registering SOV prompt template routes");
   
-  // DIAGNOSTIC ROUTE - Testing if new routes deploy correctly
-  app.get("/api/diagnostic-test-route-never-existed-before", (req, res) => {
-    logger.info("DIAGNOSTIC ROUTE HIT: This confirms new routes deploy correctly");
-    res.json({ 
-      message: "DIAGNOSTIC SUCCESS: New routes are deploying correctly",
-      timestamp: new Date().toISOString(),
-      routeStatus: "working"
-    });
+  // CATCH-ALL DEBUG ROUTE - This should catch any /api/admin/sov-prompt-template requests
+  app.all("/api/admin/sov-prompt-template*", (req, res, next) => {
+    logger.error(`🚨 CATCH-ALL SOV ROUTE HIT: ${req.method} ${req.url}`);
+    logger.error(`Headers: ${JSON.stringify(req.headers)}`);
+    logger.error(`Body: ${JSON.stringify(req.body)}`);
+    next(); // Continue to actual handler
   });
   
   app.get("/api/admin/sov-prompt-template", async (req, res) => {
