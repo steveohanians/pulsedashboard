@@ -3147,15 +3147,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SOV Prompt Template routes
+  logger.info("Registering SOV prompt template routes");
   app.get("/api/admin/sov-prompt-template", requireAdmin, async (req, res) => {
     try {
+      logger.info("SOV template GET request received");
       const template = await storage.getSOVPromptTemplate();
       if (!template) {
+        logger.warn("SOV prompt template not found in database");
         return res.status(404).json({ message: "SOV prompt template not found" });
       }
+      logger.info("SOV template found and returned successfully");
       res.json(template);
     } catch (error) {
-      logger.error("Error fetching SOV prompt template", { error: (error as Error).message });
+      logger.error("Error fetching SOV prompt template", { error: (error as Error).message, stack: (error as Error).stack });
       res.status(500).json({ message: "Failed to fetch SOV prompt template" });
     }
   });
