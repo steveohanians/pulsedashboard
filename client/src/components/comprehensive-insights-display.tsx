@@ -76,14 +76,6 @@ export function ComprehensiveInsightsDisplay({
   const isGenerating = insightsResponse?.status === "generating" || 
                       (insights && insights.some && insights.some((x: any) => x.status === "generating"));
                       
-  console.info("[AI] ComprehensiveInsightsDisplay render", {
-    isLoading, 
-    isFetching, 
-    isGenerating, 
-    hasData: !!insightsResponse,
-    status: insightsResponse?.status,
-    insightsCount: insights?.length || 0
-  });
   
   // Provide refetch capability for compatibility
   const refetch = () => {

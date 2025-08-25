@@ -39,11 +39,6 @@ export const QueryKeys = {
   user: () => 
     ["/api/user"] as const,
 
-  /**
-   * Server boot time query key
-   */
-  serverBootTime: () => 
-    ["/api/server-boot-time"] as const,
 
   /**
    * Competitors query key

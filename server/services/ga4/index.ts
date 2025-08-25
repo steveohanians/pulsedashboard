@@ -16,7 +16,7 @@ export { GA4DataService } from './PulseDataService';
 export { GA4DataProcessor as PulseDataProcessor } from './PulseDataProcessor';
 export { ga4ServiceAccountManager } from './ServiceAccountManager';
 export { smartGA4DataFetcher } from './SmartDataFetcher';
-export { GA4IntegrationService } from './Integration';
+export { default as GA4IntegrationService } from './Integration';
 
 // Types
 export type {

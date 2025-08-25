@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { GA4DataManager } from '../services/ga4';
-import { isAuthenticated } from '../middleware/auth';
+import { requireAuth } from '../auth';
 import logger from '../utils/logging/logger';
 
 const router = Router();
@@ -9,7 +9,7 @@ const router = Router();
  * Smart 15-month GA4 data fetch endpoint
  * POST /api/ga4-data/smart-fetch/:clientId
  */
-router.post('/smart-fetch/:clientId', isAuthenticated, async (req, res) => {
+router.post('/smart-fetch/:clientId', requireAuth, async (req, res) => {
   try {
     const { clientId } = req.params;
     
@@ -66,10 +66,10 @@ router.post('/smart-fetch/:clientId', isAuthenticated, async (req, res) => {
 });
 
 /**
- * Check data status for 15-month periods
- * GET /api/ga4-data/status/:clientId
+ * Validate GA4 access for client
+ * GET /api/ga4-data/validate/:clientId
  */
-router.get('/status/:clientId', isAuthenticated, async (req, res) => {
+router.get('/validate/:clientId', requireAuth, async (req, res) => {
   try {
     const { clientId } = req.params;
     
@@ -98,11 +98,11 @@ router.get('/status/:clientId', isAuthenticated, async (req, res) => {
     });
     
   } catch (error) {
-    logger.error('Error checking GA4 data status:', error);
+    logger.error('Error validating GA4 access:', error);
     
     return res.status(500).json({
       success: false,
-      error: 'Failed to check data status',
+      error: 'Failed to validate GA4 access',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

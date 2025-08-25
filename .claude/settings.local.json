@@ -29,7 +29,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
       "Bash(npm run check:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

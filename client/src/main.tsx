@@ -102,4 +102,13 @@ if (originalAppendChild) {
   };
 }
 
+// Load Replit dev banner only in development
+if (import.meta.env.DEV) {
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://replit.com/public/js/replit-dev-banner.js';
+  script.async = true;
+  document.head.appendChild(script);
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

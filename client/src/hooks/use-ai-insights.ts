@@ -16,7 +16,6 @@ export function useAIInsights(clientId: string | undefined, period: string | und
   
   // Guard warning for disabled queries  
   if (!enabled && (clientId || period)) {
-    console.warn("[AI] query disabled", { clientId, period, canonicalPeriod });
   }
 
   return useQuery({
@@ -29,15 +28,12 @@ export function useAIInsights(clientId: string | undefined, period: string | und
     queryFn: async () => {
       const url = `/api/ai-insights/${encodeURIComponent(clientId!)}` +
                   `?period=${encodeURIComponent(canonicalPeriod!)}`;
-      console.info("[AI] fetch", { url, clientId, canonicalPeriod });
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         const text = await res.text();
-        console.error("[AI] fetch error", res.status, text);
         throw new Error(`AI insights ${res.status}`);
       }
       const data = await res.json();
-      console.info("[AI] data", data);
       return data;
     },
   });
