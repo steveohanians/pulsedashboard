@@ -246,8 +246,9 @@ export class SmartGA4DataFetcher {
             });
           }
 
+          let processed: any = null;
           try {
-            const processed = await fetchPromise;
+            processed = await fetchPromise;
             if (processed.success) {
               result.periodsProcessed++;
               if (processed.dataType === 'daily') {
@@ -260,7 +261,7 @@ export class SmartGA4DataFetcher {
             }
           } finally {
             // Always release lock after processing (if locks enabled)
-            if (GA4_LOCKS_ENABLED) {
+            if (GA4_LOCKS_ENABLED && processed) {
               releaseLock(lockKey, processed.success, processed.dataType, processed.error);
               acquiredLocks.delete(lockKey);
             }

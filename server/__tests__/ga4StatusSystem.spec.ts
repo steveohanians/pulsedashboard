@@ -135,8 +135,8 @@ describe('GA4 Status System', () => {
         (status as any).lastRefreshedAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       }
       
-      // Trigger cleanup
-      registry.cleanup();
+      // Trigger cleanup by calling private method via any cast
+      (registry as any).cleanupExpiredEntries();
       
       // Status should be removed
       const cleanedStatus = registry.getStatus(clientId, 'Last Month');

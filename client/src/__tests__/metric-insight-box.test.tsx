@@ -5,21 +5,22 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { vi } from 'vitest';
 import { MetricInsightBox } from '../components/metric-insight-box';
 
 // Mock the query client to capture invalidation calls
-const mockInvalidateQueries = jest.fn();
+const mockInvalidateQueries = vi.fn();
 const mockQueryClient = {
   invalidateQueries: mockInvalidateQueries,
-  getQueryData: jest.fn(),
-  setQueryData: jest.fn(),
+  getQueryData: vi.fn(),
+  setQueryData: vi.fn(),
 } as any;
 
-jest.mock('@tanstack/react-query', () => ({
-  ...jest.requireActual('@tanstack/react-query'),
+vi.mock('@tanstack/react-query', () => ({
+  ...vi.importActual('@tanstack/react-query'),
   useQueryClient: () => mockQueryClient,
   useQuery: () => ({ data: null, isLoading: false }),
-  useMutation: () => ({ mutate: jest.fn(), isPending: false })
+  useMutation: () => ({ mutate: vi.fn(), isPending: false })
 }));
 
 describe('MetricInsightBox Query Keys', () => {
@@ -43,8 +44,9 @@ describe('MetricInsightBox Query Keys', () => {
           clientId="test-client"
           metricName="Test Metric"
           timePeriod="Last Month"
-          preloadedInsight={null}
-          onStatusChange={jest.fn()}
+          metricData={{ metricName: 'Test Metric', clientValue: 100, industryAverage: 90, cdAverage: 95, competitorValues: [85, 92] }}
+          preloadedInsight={undefined}
+          onStatusChange={vi.fn()}
         />
       </TestWrapper>
     );
@@ -55,10 +57,10 @@ describe('MetricInsightBox Query Keys', () => {
   });
 
   test('Delete triggers correct query key invalidation', async () => {
-    const mockDeleteFn = jest.fn().mockResolvedValue({ ok: true, deleted: { insights: 1, contexts: 0 } });
+    const mockDeleteFn = vi.fn().mockResolvedValue({ ok: true, deleted: { insights: 1, contexts: 0 } });
     
     // Mock successful delete mutation
-    jest.spyOn(global, 'fetch').mockResolvedValue({
+    vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ ok: true, deleted: { insights: 1, contexts: 0 } })
     } as any);
@@ -75,14 +77,15 @@ describe('MetricInsightBox Query Keys', () => {
           clientId="test-client"
           metricName="Test Metric"
           timePeriod="2025-07"
+          metricData={{ metricName: 'Test Metric', clientValue: 200, industryAverage: 180, cdAverage: 195, competitorValues: [175, 192] }}
           preloadedInsight={{
             contextText: 'test context',
             insightText: 'test insight',
             recommendationText: 'test recommendation',
-            status: 'completed',
+            status: 'success',
             hasContext: true
           }}
-          onStatusChange={jest.fn()}
+          onStatusChange={vi.fn()}
         />
       </TestWrapper>
     );

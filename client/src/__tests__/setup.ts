@@ -5,19 +5,20 @@
  */
 
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock environment variables
 process.env.NODE_ENV = 'test';
 
 // Mock window.scrollTo for tests
 Object.defineProperty(window, 'scrollTo', {
-  value: jest.fn(),
+  value: vi.fn(),
   writable: true
 });
 
 // Mock window.open for tests
 Object.defineProperty(window, 'open', {
-  value: jest.fn(),
+  value: vi.fn(),
   writable: true
 });
 
@@ -40,8 +41,8 @@ afterAll(() => {
 });
 
 // Global test utilities
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }));

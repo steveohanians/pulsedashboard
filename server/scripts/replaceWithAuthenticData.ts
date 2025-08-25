@@ -1,6 +1,9 @@
 import { storage } from '../storage';
 import { GA4DataService } from '../services/ga4/PulseDataService';
 import logger from '../utils/logging/logger';
+import { db } from '../db';
+import { metrics } from '../../shared/schema';
+import { and, eq, not, like } from 'drizzle-orm';
 
 /**
  * Replace all synthetic data with authentic GA4 data for demo-client-id
@@ -12,10 +15,10 @@ async function replaceWithAuthenticData() {
     logger.info(`Starting replacement of synthetic data with authentic GA4 data for ${clientId}`);
     
     // Step 1: Clear all synthetic monthly data (keep daily July 2025 data)
-    await storage.db.delete(storage.metrics).where(
-      storage.and(
-        storage.eq(storage.metrics.clientId, clientId),
-        storage.not(storage.like(storage.metrics.timePeriod, '%-daily-%'))
+    await db.delete(metrics).where(
+      and(
+        eq(metrics.clientId, clientId),
+        not(like(metrics.timePeriod, '%-daily-%'))
       )
     );
     

@@ -39,9 +39,9 @@ export class CacheManager {
     this.invalidationRules.set('client', {
       entities: ['dashboard', 'filter'],
       queryKeys: [
-        AdminQueryKeys.clients,
-        AdminQueryKeys.ga4PropertyAccess,
-        AdminQueryKeys.allDashboards,
+        () => [...AdminQueryKeys.clients()],
+        () => [...AdminQueryKeys.ga4PropertyAccess()],
+        () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/filters']
       ]
     });
@@ -49,14 +49,14 @@ export class CacheManager {
     // When a user changes
     this.invalidationRules.set('user', {
       entities: [],
-      queryKeys: [AdminQueryKeys.users]
+      queryKeys: [() => [...AdminQueryKeys.users()]]
     });
 
     // When a competitor changes
     this.invalidationRules.set('competitor', {
       entities: ['dashboard'],
       queryKeys: [
-        AdminQueryKeys.allDashboards,
+        () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/dashboard']
       ]
     });
@@ -65,8 +65,8 @@ export class CacheManager {
     this.invalidationRules.set('benchmark', {
       entities: ['dashboard'],
       queryKeys: [
-        AdminQueryKeys.benchmarkCompanies,
-        AdminQueryKeys.allDashboards,
+        () => [...AdminQueryKeys.benchmarkCompanies()],
+        () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/filters']
       ]
     });
@@ -75,8 +75,8 @@ export class CacheManager {
     this.invalidationRules.set('portfolio', {
       entities: ['dashboard'],
       queryKeys: [
-        AdminQueryKeys.cdPortfolio,
-        AdminQueryKeys.allDashboards,
+        () => [...AdminQueryKeys.cdPortfolio()],
+        () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/filters']
       ]
     });
@@ -85,10 +85,10 @@ export class CacheManager {
     this.invalidationRules.set('filter', {
       entities: ['client', 'benchmark', 'portfolio'],
       queryKeys: [
-        AdminQueryKeys.filterOptions,
-        AdminQueryKeys.clients,
-        AdminQueryKeys.benchmarkCompanies,
-        AdminQueryKeys.cdPortfolio,
+        () => [...AdminQueryKeys.filterOptions()],
+        () => [...AdminQueryKeys.clients()],
+        () => [...AdminQueryKeys.benchmarkCompanies()],
+        () => [...AdminQueryKeys.cdPortfolio()],
         () => ['/api/filters'],
         () => ['/api/dashboard']
       ]
@@ -98,8 +98,8 @@ export class CacheManager {
     this.invalidationRules.set('ga4', {
       entities: ['dashboard'],
       queryKeys: [
-        AdminQueryKeys.ga4ServiceAccounts,
-        AdminQueryKeys.ga4PropertyAccess,
+        () => [...AdminQueryKeys.ga4ServiceAccounts()],
+        () => [...AdminQueryKeys.ga4PropertyAccess()],
         AdminQueryKeys.allDashboards
       ]
     });
@@ -117,7 +117,7 @@ export class CacheManager {
     this.invalidationRules.set('metric', {
       entities: ['dashboard', 'insight'],
       queryKeys: [
-        AdminQueryKeys.metricPrompts,
+        () => [...AdminQueryKeys.metricPrompts()],
         AdminQueryKeys.allDashboards
       ]
     });
@@ -126,7 +126,7 @@ export class CacheManager {
     this.invalidationRules.set('dashboard', {
       entities: [],
       queryKeys: [
-        AdminQueryKeys.allDashboards,
+        () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/dashboard'],
         () => ['/api/filters']
       ]
@@ -173,10 +173,10 @@ export class CacheManager {
     rule.queryKeys.forEach(keyOrFunc => {
       if (typeof keyOrFunc === 'function') {
         const keys = keyOrFunc();
-        keys.forEach(key => keysToInvalidate.add(key));
+        keys.forEach((key: string) => keysToInvalidate.add(key));
       } else {
         const keys = keyOrFunc();
-        keys.forEach(key => keysToInvalidate.add(key));
+        keys.forEach((key: string) => keysToInvalidate.add(key));
       }
     });
 

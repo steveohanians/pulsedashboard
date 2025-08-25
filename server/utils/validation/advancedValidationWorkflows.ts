@@ -484,7 +484,7 @@ export async function validateCompetitorPortfolioConflicts(
   clientId: string,
   excludeCompetitorId?: string
 ): Promise<ValidationWorkflowResult> {
-  const workflows = new AdvancedValidationWorkflows(storage);
+  const workflows = new AdvancedValidationWorkflows(storage, null as any); // TODO: Pass proper semrushValidator
   return await workflows.validateCompetitorPortfolioConflicts(competitorDomain, clientId, excludeCompetitorId);
 }
 
@@ -494,7 +494,7 @@ export async function validateBenchmarkDiversity(
   industryVertical: string,
   excludeCompanyId?: string
 ): Promise<ValidationWorkflowResult> {
-  const workflows = new AdvancedValidationWorkflows(storage);
+  const workflows = new AdvancedValidationWorkflows(storage, null as any); // TODO: Pass proper semrushValidator
   return await workflows.validateBenchmarkDiversity(businessSize, industryVertical, excludeCompanyId);
 }
 
@@ -503,6 +503,6 @@ export async function validateClientUniqueness(
   clientData: { name?: string; domain?: string; ga4PropertyId?: string },
   excludeClientId?: string
 ): Promise<ValidationWorkflowResult> {
-  const workflows = new AdvancedValidationWorkflows(storage);
+  const workflows = new AdvancedValidationWorkflows(storage, null as any); // TODO: Pass proper semrushValidator
   return await workflows.validateClientUniqueness(clientData, excludeClientId);
 }

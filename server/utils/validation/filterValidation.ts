@@ -1,7 +1,7 @@
 // Filter validation utilities to ensure data integrity
 // Validates that business sizes and industry verticals match filter_options table
 
-import type { IStorage } from '../storage.js';
+import type { IStorage } from '../storage';
 
 export interface FilterValidationResult {
   isValid: boolean;
@@ -19,8 +19,8 @@ export class FilterValidator {
     try {
       const filterOptions = await this.storage.getFilterOptions();
       const validBusinessSizes = filterOptions
-        .filter(option => option.category === 'businessSizes' && option.active)
-        .map(option => option.value);
+        .filter((option: any) => option.category === 'businessSizes' && option.active)
+        .map((option: any) => option.value);
 
       if (!validBusinessSizes.includes(businessSize)) {
         return {
@@ -42,8 +42,8 @@ export class FilterValidator {
     try {
       const filterOptions = await this.storage.getFilterOptions();
       const validIndustryVerticals = filterOptions
-        .filter(option => option.category === 'industryVerticals' && option.active)
-        .map(option => option.value);
+        .filter((option: any) => option.category === 'industryVerticals' && option.active)
+        .map((option: any) => option.value);
 
       if (!validIndustryVerticals.includes(industryVertical)) {
         return {

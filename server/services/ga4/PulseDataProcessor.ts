@@ -139,6 +139,10 @@ export class GA4DataProcessor {
         { channel: 'Paid Search', sessions: 617 },
         { channel: 'Email', sessions: 1169 },
       ],
+      deviceDistribution: [
+        { device: 'Desktop', sessions: 9252 },
+        { device: 'Mobile', sessions: 6168 }
+      ],
       timePeriod: '2025-07',
     };
 

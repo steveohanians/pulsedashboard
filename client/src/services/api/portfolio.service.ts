@@ -22,7 +22,7 @@ export class PortfolioService extends BaseService {
   }): Promise<any> {
     eventBus.emit('semrush.integration.started', { companyName: data.name });
     
-    const result = await super.create(data);
+    const result = await super.create<{ id: string; name: string }>(data);
     cacheManager.invalidate('portfolio');
     
     eventBus.emit('portfolio.company.added', { 
@@ -70,7 +70,7 @@ export class PortfolioService extends BaseService {
    * Resync SEMrush data for company
    */
   async resyncSemrush(id: string): Promise<{ message: string }> {
-    const result = await this.request('POST', `/${id}/resync-semrush`);
+    const result = await this.request<{ message: string }>('POST', `/${id}/resync-semrush`);
     cacheManager.invalidate('portfolio');
     return result;
   }
@@ -101,7 +101,7 @@ export class PortfolioService extends BaseService {
    * Fix portfolio averages (admin debug)
    */
   async fixPortfolioAverages(): Promise<{ message: string }> {
-    const result = await this.request('POST', '/api/admin/fix-portfolio-averages');
+    const result = await this.request<{ message: string }>('POST', '/api/admin/fix-portfolio-averages');
     cacheManager.invalidate('portfolio');
     return result;
   }

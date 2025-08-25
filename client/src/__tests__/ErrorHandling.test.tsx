@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBanner, useErrorBanner } from '@/components/ErrorBanner';
 import { APIError } from '@/lib/queryClient';
@@ -192,11 +193,11 @@ describe('Error Handling System', () => {
   describe('API Error Handling', () => {
     // Mock fetch for testing API error responses
     beforeEach(() => {
-      global.fetch = jest.fn();
+      global.fetch = vi.fn();
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it('handles standardized error responses correctly', async () => {
@@ -211,7 +212,7 @@ describe('Error Handling System', () => {
         timestamp: new Date().toISOString()
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 422,
         text: () => Promise.resolve(JSON.stringify(mockErrorResponse))
@@ -228,7 +229,7 @@ describe('Error Handling System', () => {
     });
 
     it('maps legacy HTTP status codes to error codes', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -245,7 +246,7 @@ describe('Error Handling System', () => {
     });
 
     it('handles network errors properly', async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
       try {
         await apiRequest('GET', '/api/test');
@@ -258,8 +259,8 @@ describe('Error Handling System', () => {
 
   describe('Error Banner Integration', () => {
     it('displays appropriate error banners for different scenarios', () => {
-      const mockRetry = jest.fn();
-      const mockDismiss = jest.fn();
+      const mockRetry = vi.fn();
+      const mockDismiss = vi.fn();
 
       // Test schema mismatch error
       const schemaError = new APIError(
@@ -316,7 +317,7 @@ describe('Error Handling with React Query', () => {
     });
 
     // Mock an API error response
-    global.fetch = jest.fn().mockResolvedValueOnce({
+    global.fetch = vi.fn().mockResolvedValueOnce({
       ok: false,
       status: 422,
       text: () => Promise.resolve(JSON.stringify({

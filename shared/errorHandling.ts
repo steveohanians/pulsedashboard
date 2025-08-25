@@ -199,19 +199,27 @@ export class ErrorRecovery {
  */
 export class ClientErrorHandler {
   static handleApiError(error: unknown): ApiError {
-    if (error.name === 'AbortError') {
-      return { message: 'Request was cancelled', code: 'CANCELLED' };
+    // Type guard for error objects
+    if (error && typeof error === 'object') {
+      const err = error as Record<string, any>;
+      
+      if (err.name === 'AbortError') {
+        return { message: 'Request was cancelled', code: 'CANCELLED' };
+      }
+      
+      if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+        return { message: 'Network connection failed', code: 'NETWORK_ERROR' };
+      }
+      
+      if (err.status) {
+        return this.handleHttpError(err.status, err.message);
+      }
+      
+      return { message: err.message || 'An unexpected error occurred', code: 'UNKNOWN' };
     }
     
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      return { message: 'Network connection failed', code: 'NETWORK_ERROR' };
-    }
-    
-    if (error.status) {
-      return this.handleHttpError(error.status, error.message);
-    }
-    
-    return { message: error.message || 'An unexpected error occurred', code: 'UNKNOWN' };
+    // Fallback for non-object errors
+    return { message: String(error) || 'An unexpected error occurred', code: 'UNKNOWN' };
   }
 
   private static handleHttpError(status: number, message?: string): ApiError {
@@ -238,15 +246,23 @@ export class ClientErrorHandler {
  */
 export class ServerErrorHandler {
   static handleDatabaseError(error: unknown): StandardError {
-    if (error.code === '23505') { // PostgreSQL unique violation
-      return ErrorFactory.validation('Resource already exists', { sqlCode: error.code });
+    // Type guard for database error objects
+    if (error && typeof error === 'object') {
+      const err = error as Record<string, any>;
+      
+      if (err.code === '23505') { // PostgreSQL unique violation
+        return ErrorFactory.validation('Resource already exists', { sqlCode: err.code });
+      }
+      
+      if (err.code === '23503') { // PostgreSQL foreign key violation
+        return ErrorFactory.validation('Referenced resource does not exist', { sqlCode: err.code });
+      }
+      
+      return ErrorFactory.database(err.message || 'Database error', { code: err.code });
     }
     
-    if (error.code === '23503') { // PostgreSQL foreign key violation
-      return ErrorFactory.validation('Referenced resource does not exist', { sqlCode: error.code });
-    }
-    
-    return ErrorFactory.database(error.message, { code: error.code });
+    // Fallback for non-object errors
+    return ErrorFactory.database(String(error) || 'Unknown database error');
   }
 
   static handleZodError(error: { errors?: Array<{ path: string[]; message: string }>; message: string }): StandardError {

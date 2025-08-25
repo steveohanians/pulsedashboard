@@ -271,8 +271,20 @@ export class ArrayTransformer {
         const aVal = sortFn(a);
         const bVal = sortFn(b);
         
-        if (aVal < bVal) return -1;
-        if (aVal > bVal) return 1;
+        // Safe comparison with type checking
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          if (aVal < bVal) return -1;
+          if (aVal > bVal) return 1;
+        } else if (typeof aVal === 'string' && typeof bVal === 'string') {
+          if (aVal < bVal) return -1;
+          if (aVal > bVal) return 1;
+        } else {
+          // Fallback to string comparison
+          const aStr = String(aVal);
+          const bStr = String(bVal);
+          if (aStr < bStr) return -1;
+          if (aStr > bStr) return 1;
+        }
       }
       return 0;
     });
