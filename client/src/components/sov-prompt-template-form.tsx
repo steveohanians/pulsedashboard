@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Eye, Info, Sparkles } from "lucide-react";
+import { Loader2, Save, Eye, Info, Sparkles, CheckCircle, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { SOVPromptTemplate, UpdateSOVPromptTemplate } from "@shared/schema";
 
@@ -212,33 +212,24 @@ export function SOVPromptTemplateForm() {
   return (
     <>
       <div className="space-y-4">
-        {/* Template Variables Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-blue-900 mb-1">Available Template Variables:</p>
-              <div className="grid grid-cols-2 gap-2 text-blue-700">
-                <div><code className="bg-blue-100 px-1 rounded">{"{vertical}"}</code> - Industry vertical</div>
-                <div><code className="bg-blue-100 px-1 rounded">{"{brandName}"}</code> - Client brand name</div>
-                <div><code className="bg-blue-100 px-1 rounded">{"{competitors}"}</code> - Competitor names</div>
-                <div><code className="bg-blue-100 px-1 rounded">{"{brandContext}"}</code> - AI research summary</div>
-              </div>
-            </div>
+        {/* Available Template Variables */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Available Template Variables</Label>
+          <div className="text-xs text-slate-600 space-y-1">
+            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{vertical}"}</code> - Industry vertical (e.g., "Technology Services")</div>
+            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{brandName}"}</code> - Client brand name</div>
+            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{competitors}"}</code> - Comma-separated competitor names</div>
+            <div><code className="bg-slate-100 px-1 py-0.5 rounded text-xs">{"{brandContext}"}</code> - AI-generated brand research summary</div>
           </div>
         </div>
 
         {/* Template Editor */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">SOV Question Generation Template</label>
-            {isDirty && (
-              <Badge variant="secondary" className="text-xs">
-                Unsaved changes
-              </Badge>
-            )}
-          </div>
+          <Label htmlFor="promptTemplate" className="text-sm font-medium">
+            SOV Question Generation Template
+          </Label>
           <Textarea
+            id="promptTemplate"
             value={template}
             onChange={(e) => handleTemplateChange(e.target.value)}
             placeholder="Enter your SOV question generation prompt template..."
@@ -250,57 +241,66 @@ export function SOVPromptTemplateForm() {
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={handleSave}
-            disabled={!isDirty || isSaving || isPreviewing}
-            className="flex-1"
-            data-testid="button-save-sov-template"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Template
-              </>
+        {/* Action Area */}
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center space-x-2">
+            {updateTemplateMutation.isSuccess && (
+              <div className="flex items-center text-green-600 text-sm">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Template saved successfully
+              </div>
             )}
-          </Button>
-
-          <Button
-            onClick={handlePreview}
-            disabled={!template.trim() || isSaving || isPreviewing}
-            variant="outline"
-            className="flex-1"
-            data-testid="button-preview-sov-template"
-          >
-            {isPreviewing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                Preview Questions
-              </>
+            {updateTemplateMutation.isError && (
+              <div className="flex items-center text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                Failed to save template
+              </div>
             )}
-          </Button>
-
-          {isDirty && (
+            {isDirty && !updateTemplateMutation.isSuccess && !updateTemplateMutation.isError && (
+              <div className="flex items-center text-amber-600 text-sm">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                You have unsaved changes
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
             <Button
-              onClick={handleCancel}
-              variant="ghost"
-              disabled={isSaving || isPreviewing}
-              data-testid="button-cancel-sov-template"
+              onClick={handlePreview}
+              disabled={!template.trim() || isSaving || isPreviewing}
+              variant="outline"
+              size="sm"
+              data-testid="button-preview-sov-template"
             >
-              Cancel
+              {isPreviewing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Questions
+                </>
+              )}
             </Button>
-          )}
+
+            <Button
+              onClick={handleSave}
+              disabled={!isDirty || isSaving || isPreviewing}
+              className="min-w-[120px]"
+              data-testid="button-save-sov-template"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Template'
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
