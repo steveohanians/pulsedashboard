@@ -1552,7 +1552,7 @@ export class DatabaseStorage implements IStorage {
       
       logger.info('🔍 AI INSIGHTS SEARCH', { clientId, timePeriod, searchPeriods });
       
-      // Use EXISTS-only logic for hasContext computation
+      // Use generatedWithContext field for accurate hasContext computation
       return await db
         .select({
           id: aiInsights.id,
@@ -1564,14 +1564,9 @@ export class DatabaseStorage implements IStorage {
           contextText: aiInsights.contextText,
           timePeriod: aiInsights.timePeriod,
           version: aiInsights.version,
+          generatedWithContext: aiInsights.generatedWithContext,
           createdAt: aiInsights.createdAt,
-          hasContext: sql<boolean>`EXISTS(
-            SELECT 1
-            FROM ${insightContexts} ic
-            WHERE ic.client_id = ${clientId}
-              AND ic.metric_name = ${aiInsights.metricName}
-              AND length(trim(ic.user_context)) > 0
-          )`,
+          hasContext: sql<boolean>`COALESCE(${aiInsights.generatedWithContext}, false)`,
         })
         .from(aiInsights)
         .where(
@@ -1859,7 +1854,7 @@ export class DatabaseStorage implements IStorage {
   async getInsightsWithContext(clientId: string, period: string): Promise<(AIInsight & { hasContext: boolean })[]> {
     // IMPORTANT: We must return the LATEST row per metricName.
     // Do NOT return the oldest row or an arbitrary row.
-    // Do NOT derive hasContext from ai_insights.context_text.
+    // Use the new generatedWithContext field to accurately track context usage.
     
     // Use Drizzle's query builder for secure parameterization
     return await db
@@ -1873,14 +1868,10 @@ export class DatabaseStorage implements IStorage {
         recommendationText: aiInsights.recommendationText,
         status: aiInsights.status,
         version: aiInsights.version,
+        generatedWithContext: aiInsights.generatedWithContext,
         createdAt: aiInsights.createdAt,
-        /* computed boolean: hasContext via EXISTS */
-        hasContext: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${insightContexts} ic
-          WHERE ic.client_id = ${aiInsights.clientId}
-            AND ic.metric_name = ${aiInsights.metricName}
-            AND length(trim(ic.user_context)) > 0
-        )`
+        /* Use the database field instead of EXISTS query for accuracy */
+        hasContext: sql<boolean>`COALESCE(${aiInsights.generatedWithContext}, false)`
       })
       .from(aiInsights)
       .where(

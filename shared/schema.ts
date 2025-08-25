@@ -233,6 +233,7 @@ export const aiInsights = pgTable("ai_insights", {
   insightText: text("insight_text"),
   recommendationText: text("recommendation_text"),
   status: text("status"), // success, needs_improvement, warning
+  generatedWithContext: boolean("generated_with_context").notNull().default(false), // Track if insight was generated using user context
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // Indexes for AI insights lookups

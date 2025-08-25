@@ -1630,6 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         insightText: normalizedInsights.insight,
         recommendationText: normalizedInsights.recommendation,
         status: normalizedInsights.status, // Include the status field from OpenAI
+        generatedWithContext: false, // This endpoint generates insights without user context
         createdAt: new Date()
       };
 
@@ -1944,6 +1945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         insightText: normalizedInsights.insight,
         recommendationText: normalizedInsights.recommendation,
         status: normalizedInsights.status,
+        generatedWithContext: true, // This endpoint generates insights WITH user context
         createdAt: new Date()
       };
 
