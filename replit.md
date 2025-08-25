@@ -80,6 +80,7 @@ Pulse Dashboard™ utilizes a modern full-stack architecture prioritizing perfor
 - **Complete Competitor Device Distribution Chart System**: Displays authentic SEMrush competitor device data without fallback data.
 - **Admin View-As Feature**: Allows administrators to switch dashboard views to any user's perspective.
 - **Share of Voice Production Integration**: AI-powered competitive intelligence with `SovService`, API routes, authentication, validated input schemas, error handling, and logging. Provides automated brand research and Share of Voice calculations.
+- **SOV Question Generation Prompt Management System**: Complete admin panel integration for managing Share of Voice question generation prompts. Features database-driven template storage, admin UI matching Global Prompt Template design, preview functionality, and seamless integration with SOV analysis "Run Analysis" buttons. Templates support dynamic placeholders ({vertical}, {brandName}, {competitors}, {brandContext}) and automatically fallback to defaults for reliability.
 - **Brand Signals UI Refactoring**: Refactors `brand-signals.tsx` into a 3-state system (Idle → Running → Results) using existing Dashboard card components.
 - **Benchmark Data Coverage Display**: Correctly displays benchmark companies data coverage and badge status.
 - **Dynamic Filter System**: Industry/business size filter functionality with React Query caching and dynamic filter population from `/api/filters/dynamic`.
