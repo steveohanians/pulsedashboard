@@ -489,6 +489,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         metricName={metricName}
         timePeriod={canonicalPeriod}
         metricData={metricData}
+        createdAt={metricInsight?.createdAt}
         onRegenerate={async () => {
           shouldAnimateRef.current = true;
           try {

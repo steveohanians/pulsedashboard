@@ -89,6 +89,7 @@ interface AIInsightsProps {
   };
   hasCustomContext?: boolean;
   onRegenerateWithContext?: (context: string) => void;
+  createdAt?: string;  // Add real timestamp from database
 }
 
 // ---------- Main Component ----------
@@ -106,6 +107,7 @@ export function AIInsights({
   metricData,
   hasCustomContext = false,
   onRegenerateWithContext,
+  createdAt,  // Add real timestamp parameter
 }: AIInsightsProps) {
 
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -125,18 +127,28 @@ export function AIInsights({
     setContentKey(Date.now());
   }, [context, insight, recommendation]);
 
-  const timestamp = useMemo(
-    () =>
-      new Date().toLocaleString("en-US", {
+  const timestamp = useMemo(() => {
+    if (createdAt) {
+      // Use real database timestamp
+      return new Date(createdAt).toLocaleString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
-      }),
-    []
-  );
+      });
+    }
+    // Fallback for insights without timestamp (shouldn't happen in normal use)
+    return new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }, [createdAt]);
 
   const handleCopy = async () => {
     try {
