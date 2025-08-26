@@ -350,11 +350,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                               <span className="text-sm font-medium text-slate-700">
                                 {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                               </span>
-                              <span className={cn(
-                                "text-sm font-semibold",
-                                score.score >= 8 ? "text-green-600" :
-                                score.score >= 6 ? "text-yellow-600" : "text-red-600"
-                              )}>
+                              <span className="text-sm font-thin text-black">
                                 {score.score}/10
                               </span>
                             </div>
