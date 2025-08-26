@@ -52,12 +52,22 @@ export class WebsiteEffectivenessScorer {
       // (Web Vitals are fetched by speed criterion from PageSpeed Insights API)
       let webVitalsToSave = context.webVitals; // Default to screenshot service vitals if any
       const speedResult = criterionResults.find(r => r.criterion === 'speed');
-      if (speedResult?.evidence?.details?.webVitals) {
+      
+      // Check if speed analysis has valid web vitals (not an error state)
+      if (speedResult?.evidence?.details?.webVitals && speedResult.evidence.details.apiStatus === 'success') {
         // Use Web Vitals from PageSpeed Insights (more reliable than screenshot service)
         webVitalsToSave = speedResult.evidence.details.webVitals as any;
         logger.info("Using Web Vitals from PageSpeed Insights", {
           websiteUrl,
           webVitals: webVitalsToSave
+        });
+      } else if (speedResult?.evidence?.details?.apiStatus === 'failed') {
+        // API failed - don't use misleading default values
+        webVitalsToSave = null;
+        logger.warn("PageSpeed API failed, Web Vitals unavailable", {
+          websiteUrl,
+          error: speedResult.evidence.details.error,
+          message: speedResult.evidence.details.message
         });
       }
       

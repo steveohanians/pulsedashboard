@@ -90,14 +90,50 @@ export async function scoreSpeed(
         });
 
       } catch (apiError) {
-        logger.warn("Failed to fetch PageSpeed data, using defaults", {
+        const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
+        logger.warn("Failed to fetch PageSpeed data", {
           url: context.websiteUrl,
-          error: apiError instanceof Error ? apiError.message : String(apiError)
+          error: errorMessage
         });
         
-        // Use default/estimated values
-        webVitals = { lcp: 4.0, cls: 0.15, fid: 100 };
-        performanceScore = 50; // Conservative estimate
+        // Determine the type of error
+        let errorType = 'unknown';
+        let userMessage = 'Unable to fetch performance data';
+        
+        if (errorMessage.includes('429')) {
+          errorType = 'quota_exceeded';
+          userMessage = 'PageSpeed API quota exceeded. Performance data unavailable.';
+        } else if (errorMessage.includes('403') || errorMessage.includes('401')) {
+          errorType = 'auth_error';
+          userMessage = 'PageSpeed API authentication failed. Check API key configuration.';
+        } else if (errorMessage.includes('timeout')) {
+          errorType = 'timeout';
+          userMessage = 'PageSpeed API request timed out. Try again later.';
+        } else if (errorMessage.includes('404')) {
+          errorType = 'not_found';
+          userMessage = 'Website could not be analyzed by PageSpeed API.';
+        }
+        
+        // Return error result instead of using misleading defaults
+        return {
+          criterion: 'speed',
+          score: 0,
+          evidence: {
+            description: userMessage,
+            details: {
+              error: errorType,
+              message: errorMessage,
+              performanceScore: null,
+              webVitals: null,
+              apiStatus: 'failed'
+            },
+            reasoning: `Performance analysis could not be completed: ${userMessage} Manual testing or alternative tools recommended.`
+          },
+          passes: {
+            passed: [],
+            failed: ['api_error']
+          }
+        };
       }
     } else {
       // Estimate performance score from web vitals
@@ -155,7 +191,8 @@ export async function scoreSpeed(
           thresholds: {
             lcp_limit: config.thresholds.lcp_limit,
             cls_limit: config.thresholds.cls_limit
-          }
+          },
+          apiStatus: 'success'
         },
         reasoning: generateSpeedInsights(performanceScore, webVitals, passes.passed, passes.failed)
       },
