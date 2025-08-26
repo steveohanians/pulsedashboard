@@ -214,9 +214,14 @@ export function ComprehensiveInsightsDisplay({
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center justify-between">
                         <span className="text-slate-800">{insight.metricName}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {insight.timePeriod}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="text-xs">
+                            {insight.timePeriod}
+                          </Badge>
+                          <div className="text-xs text-slate-500">
+                            {new Date(insight.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
@@ -241,18 +246,6 @@ export function ComprehensiveInsightsDisplay({
             </div>
           )}
 
-          {/* Generation timestamp */}
-          {hasInsights && (
-            <div className="text-xs text-slate-500 text-center pt-4 border-t border-slate-200">
-              {(() => {
-                // Find the most recent insight timestamp
-                const mostRecentInsight = insights.reduce((latest, current) => 
-                  new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
-                );
-                return `Insights generated on ${new Date(mostRecentInsight.createdAt).toLocaleDateString()} at ${new Date(mostRecentInsight.createdAt).toLocaleTimeString()}`;
-              })()}
-            </div>
-          )}
         </div>
       )}
     </div>
