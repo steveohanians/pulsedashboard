@@ -95,13 +95,17 @@ export async function scorePositioning(
       return count + (heroContent.toLowerCase().includes(word.toLowerCase()) ? 1 : 0);
     }, 0);
 
-    // Calculate score based on criteria
+    // Calculate score based on criteria and collect evidence
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
+    const evidenceDetails: Record<string, any> = {};
     
     if (analysis.audience_named) {
       score += 2.5;
       passes.passed.push('audience_named');
+      if (analysis.audience_evidence) {
+        evidenceDetails.audience_evidence = analysis.audience_evidence;
+      }
     } else {
       passes.failed.push('audience_named');
     }
@@ -109,6 +113,9 @@ export async function scorePositioning(
     if (analysis.outcome_present) {
       score += 2.5;
       passes.passed.push('outcome_present');
+      if (analysis.outcome_evidence) {
+        evidenceDetails.outcome_evidence = analysis.outcome_evidence;
+      }
     } else {
       passes.failed.push('outcome_present');
     }
@@ -116,6 +123,9 @@ export async function scorePositioning(
     if (analysis.capability_clear) {
       score += 2.5;
       passes.passed.push('capability_clear');
+      if (analysis.capability_evidence) {
+        evidenceDetails.capability_evidence = analysis.capability_evidence;
+      }
     } else {
       passes.failed.push('capability_clear');
     }
@@ -123,6 +133,9 @@ export async function scorePositioning(
     if (analysis.brevity_check) {
       score += 2.5;
       passes.passed.push('brevity_check');
+      if (analysis.brevity_evidence) {
+        evidenceDetails.brevity_evidence = analysis.brevity_evidence;
+      }
     } else {
       passes.failed.push('brevity_check');
     }
@@ -153,7 +166,8 @@ export async function scorePositioning(
           analysis,
           buzzwordCount,
           buzzwordPenalty,
-          wordCount: h1.split(' ').length
+          wordCount: h1.split(' ').length,
+          ...evidenceDetails // Include extracted evidence
         },
         reasoning: generatePositioningInsights(analysis, buzzwordCount, passes.passed, passes.failed)
       },

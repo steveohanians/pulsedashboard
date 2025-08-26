@@ -243,12 +243,26 @@ export function EvidenceDrawer({
                 <div className="mb-2">
                   <span className="text-sm font-medium text-green-600">Passed Checks</span>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {score.passes.passed.map((check, index) => (
-                    <Badge key={index} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                      {check.replace('_', ' ')}
-                    </Badge>
-                  ))}
+                <div className="space-y-2">
+                  {score.passes.passed.map((check, index) => {
+                    const evidenceKey = `${check.replace('_named', '_evidence').replace('_present', '_evidence').replace('_clear', '_evidence').replace('_check', '_evidence')}`;
+                    const evidence = score.evidence.details[evidenceKey];
+                    
+                    return (
+                      <div key={index} className="flex flex-col gap-1">
+                        <div className="flex items-start gap-2">
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                            {check.replace(/_/g, ' ')}
+                          </Badge>
+                          {evidence && (
+                            <span className="text-xs text-gray-600 italic">
+                              "{evidence}"
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -258,11 +272,16 @@ export function EvidenceDrawer({
                 <div className="mb-2">
                   <span className="text-sm font-medium text-red-600">Failed Checks</span>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="space-y-2">
                   {score.passes.failed.map((check, index) => (
-                    <Badge key={index} variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                      {check.replace('_', ' ')}
-                    </Badge>
+                    <div key={index} className="flex items-start gap-2">
+                      <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                        {check.replace(/_/g, ' ')}
+                      </Badge>
+                      <span className="text-xs text-gray-500 italic">
+                        Not found in content
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>

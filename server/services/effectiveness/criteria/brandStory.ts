@@ -132,14 +132,18 @@ export async function scoreBrandStory(
     const proofKeywords = ['case study', 'success story', 'testimonial', 'client', 'customer'];
     const hasProofProximity = proofKeywords.some(keyword => pageText.includes(keyword));
 
-    // Calculate score
+    // Calculate score and collect evidence
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
+    const evidenceDetails: Record<string, any> = {};
     
     // Point of view (25% of score - 2.5 points)
     if (analysis.pov_present) {
       score += 2.5;
       passes.passed.push('pov_present');
+      if (analysis.pov_evidence) {
+        evidenceDetails.pov_evidence = analysis.pov_evidence;
+      }
     } else {
       passes.failed.push('no_pov');
     }
@@ -148,6 +152,9 @@ export async function scoreBrandStory(
     if (analysis.mechanism_named) {
       score += 2.5;
       passes.passed.push('mechanism_named');
+      if (analysis.mechanism_evidence) {
+        evidenceDetails.mechanism_evidence = analysis.mechanism_evidence;
+      }
     } else {
       passes.failed.push('no_mechanism');
     }
@@ -156,9 +163,15 @@ export async function scoreBrandStory(
     if (analysis.outcomes_recent && (hasRecentOutcomes || hasQuantifiedOutcomes)) {
       score += 2.5;
       passes.passed.push('recent_outcomes');
+      if (analysis.outcomes_evidence) {
+        evidenceDetails.outcomes_evidence = analysis.outcomes_evidence;
+      }
     } else if (analysis.outcomes_recent || hasQuantifiedOutcomes) {
       score += 1.5;
       passes.passed.push('some_outcomes');
+      if (analysis.outcomes_evidence) {
+        evidenceDetails.outcomes_evidence = analysis.outcomes_evidence;
+      }
     } else {
       passes.failed.push('no_recent_outcomes');
     }
@@ -167,9 +180,15 @@ export async function scoreBrandStory(
     if (analysis.case_complete && hasProofProximity) {
       score += 2.5;
       passes.passed.push('complete_case_study');
+      if (analysis.case_evidence) {
+        evidenceDetails.case_evidence = analysis.case_evidence;
+      }
     } else if (analysis.case_complete || hasProofProximity) {
       score += 1.25;
       passes.passed.push('partial_case_study');
+      if (analysis.case_evidence) {
+        evidenceDetails.case_evidence = analysis.case_evidence;
+      }
     } else {
       passes.failed.push('no_case_study');
     }
@@ -197,6 +216,7 @@ export async function scoreBrandStory(
           analysis,
           hasRecentOutcomes,
           quantifiedResults: quantifiedResults.slice(0, 3),
+          ...evidenceDetails, // Include extracted evidence
           hasProofProximity,
           recentYears
         },

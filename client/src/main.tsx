@@ -109,6 +109,39 @@ if (import.meta.env.DEV) {
   script.src = 'https://replit.com/public/js/replit-dev-banner.js';
   script.async = true;
   document.head.appendChild(script);
+  
+  // Auto-detect server restarts in development
+  let healthCheckInterval: NodeJS.Timeout;
+  let wasOffline = false;
+  
+  const checkServerHealth = async () => {
+    try {
+      const response = await fetch('/api/health', { 
+        method: 'GET',
+        cache: 'no-cache'
+      });
+      
+      if (response.ok && wasOffline) {
+        // Server came back online after being offline
+        console.log('🔄 Server restarted - reloading page...');
+        window.location.reload();
+      }
+      wasOffline = false;
+    } catch (error) {
+      // Server is offline
+      wasOffline = true;
+    }
+  };
+  
+  // Start checking after 5 seconds (give initial load time)
+  setTimeout(() => {
+    healthCheckInterval = setInterval(checkServerHealth, 2000);
+  }, 5000);
+  
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    if (healthCheckInterval) clearInterval(healthCheckInterval);
+  });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

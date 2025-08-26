@@ -95,19 +95,34 @@ export const OPENAI_CLASSIFIERS: Record<string, OpenAIClassifier> = {
   HERO: {
     name: "Hero Content Analysis",
     prompt: `Analyze the hero section copy for these criteria. Return JSON only:
-    - audience_named: Is the target audience clearly identified?
-    - outcome_present: Is a specific outcome or benefit mentioned?
-    - capability_clear: Is what the company does clearly stated?
-    - brevity_check: Is the message concise (under 22 words for main headline)?
+    - audience_named: Is the target audience clearly identified? Include the actual audience mentioned.
+    - outcome_present: Is a specific outcome or benefit mentioned? Include the outcome text.
+    - capability_clear: Is what the company does clearly stated? Include the capability description.
+    - brevity_check: Is the message concise (under 22 words for main headline)? Include word count.
     
     Hero content: {content}
     
-    Return JSON: {"audience_named": boolean, "outcome_present": boolean, "capability_clear": boolean, "brevity_check": boolean, "confidence": 0-1}`,
+    Return JSON with both boolean checks and evidence:
+    {
+      "audience_named": boolean,
+      "audience_evidence": "exact text identifying audience or null",
+      "outcome_present": boolean,
+      "outcome_evidence": "exact text describing outcome or null",
+      "capability_clear": boolean,
+      "capability_evidence": "exact text describing capability or null",
+      "brevity_check": boolean,
+      "brevity_evidence": "word count and headline text or null",
+      "confidence": 0-1
+    }`,
     schema: {
       audience_named: "boolean",
-      outcome_present: "boolean", 
+      audience_evidence: "string|null",
+      outcome_present: "boolean",
+      outcome_evidence: "string|null",
       capability_clear: "boolean",
+      capability_evidence: "string|null",
       brevity_check: "boolean",
+      brevity_evidence: "string|null",
       confidence: "number"
     }
   },
@@ -115,19 +130,34 @@ export const OPENAI_CLASSIFIERS: Record<string, OpenAIClassifier> = {
   STORY: {
     name: "Brand Story Analysis", 
     prompt: `Analyze content for brand story elements. Return JSON only:
-    - pov_present: Is there a clear point of view or unique perspective?
-    - mechanism_named: Is the specific method/approach mentioned?
-    - outcomes_recent: Are there outcomes from the last 24 months mentioned?
-    - case_complete: Are there complete case studies or success stories?
+    - pov_present: Is there a clear point of view or unique perspective? Include the POV text.
+    - mechanism_named: Is the specific method/approach mentioned? Include the mechanism description.
+    - outcomes_recent: Are there outcomes from the last 24 months mentioned? Include the outcome examples.
+    - case_complete: Are there complete case studies or success stories? Include case study reference.
     
     Content: {content}
     
-    Return JSON: {"pov_present": boolean, "mechanism_named": boolean, "outcomes_recent": boolean, "case_complete": boolean, "confidence": 0-1}`,
+    Return JSON with both boolean checks and evidence:
+    {
+      "pov_present": boolean,
+      "pov_evidence": "exact text showing POV or null",
+      "mechanism_named": boolean,
+      "mechanism_evidence": "exact text describing mechanism or null",
+      "outcomes_recent": boolean,
+      "outcomes_evidence": "exact text of recent outcomes or null",
+      "case_complete": boolean,
+      "case_evidence": "case study description or null",
+      "confidence": 0-1
+    }`,
     schema: {
       pov_present: "boolean",
+      pov_evidence: "string|null",
       mechanism_named: "boolean",
-      outcomes_recent: "boolean", 
+      mechanism_evidence: "string|null",
+      outcomes_recent: "boolean",
+      outcomes_evidence: "string|null",
       case_complete: "boolean",
+      case_evidence: "string|null",
       confidence: "number"
     }
   },

@@ -43,7 +43,10 @@
       "Bash(chmod:*)",
       "Read(//tmp/**)",
       "Bash(SCREENSHOTONE_API_KEY=96F3sSo7pcPB2Q npm run dev)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(lsof:*)",
+      "Bash(ss:*)",
+      "Bash(./restart-server.sh:*)"
     ],
     "deny": [],
     "ask": [],
