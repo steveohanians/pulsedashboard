@@ -217,7 +217,14 @@ export function EvidenceDrawer({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
-              {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {(() => {
+                const formatted = score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                // Handle specific acronyms
+                return formatted
+                  .replace(/\bCtas\b/g, 'CTAs')
+                  .replace(/\bUx\b/g, 'UX')
+                  .replace(/\bSeo\b/g, 'SEO');
+              })()}
             </CardTitle>
             <div className="text-2xl lg:text-3xl font-light text-primary">
               {score.score}
