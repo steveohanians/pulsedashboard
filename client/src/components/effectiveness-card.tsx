@@ -190,11 +190,11 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg lg:text-xl">
-              Website Effectiveness
+              Website Effectiveness Engine™
             </CardTitle>
             {run && run.status === 'completed' && (
               <div className="text-2xl lg:text-3xl font-light text-primary">
-                {run.overallScore}/10
+                {run.overallScore}
               </div>
             )}
           </div>
@@ -359,7 +359,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 {/* Criteria Radar Chart */}
                 <Card className="h-fit">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Criteria Scores</CardTitle>
+                    <CardTitle className="text-base">Effectiveness Scores</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <EffectivenessRadarChart 
