@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw } from "lucide-react";
+import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
@@ -231,16 +231,23 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 No effectiveness data available
               </p>
               <Button onClick={handleRefresh} disabled={!canRefresh}>
-                Score Website
+                {refreshMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scoring Website...
+                  </>
+                ) : (
+                  "Score Website"
+                )}
               </Button>
             </div>
           )}
 
           {run && isAnalyzing && (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <div className="space-y-2">
-                <p className="text-muted-foreground font-medium">
+                <p className="text-muted-foreground font-medium flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   {run.status === 'initializing' && 'Preparing analysis...'}
                   {run.status === 'scraping' && 'Loading website...'}
                   {run.status === 'analyzing' && 'Scoring criteria...'}
@@ -262,8 +269,17 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 <p className="text-sm text-red-600 mb-4">{run.progress}</p>
               )}
               <Button onClick={handleRefresh} disabled={!canRefresh}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
+                {refreshMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scoring Website...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Try Again
+                  </>
+                )}
               </Button>
             </div>
           )}
