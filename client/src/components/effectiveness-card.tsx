@@ -388,9 +388,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               {/* View Evidence Button */}
               <div className="pt-2">
                 <Button
-                  variant="outline"
                   onClick={handleViewEvidence}
-                  className="w-full"
+                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white transition-all duration-200"
+                  size="default"
                 >
                   View Detailed Report
                 </Button>
