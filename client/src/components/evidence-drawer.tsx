@@ -219,15 +219,9 @@ export function EvidenceDrawer({
             <CardTitle className="text-lg">
               {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </CardTitle>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-lg font-semibold px-3 py-1",
-                getCriterionColor(score.score)
-              )}
-            >
-              {score.score}/10
-            </Badge>
+            <div className="text-2xl lg:text-3xl font-light text-primary">
+              {score.score}
+            </div>
           </div>
         </CardHeader>
         
@@ -292,7 +286,7 @@ export function EvidenceDrawer({
                   Website Effectiveness Report
                 </DrawerTitle>
                 <DrawerDescription className="text-left">
-                  Detailed analysis and evidence for {effectivenessData.overallScore}/10 score • {formatDate(effectivenessData.createdAt)}
+                  Detailed analysis and evidence for {effectivenessData.overallScore} score • {formatDate(effectivenessData.createdAt)}
                 </DrawerDescription>
               </div>
               <DrawerClose asChild>
