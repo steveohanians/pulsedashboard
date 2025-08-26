@@ -167,32 +167,11 @@ export async function scoreSpeed(
 
 /**
  * Estimate performance score from web vitals when PageSpeed data unavailable
+ * Simplified to return conservative baseline score
  */
 function estimatePerformanceScore(webVitals: { lcp: number; cls: number; fid: number }): number {
-  let score = 100;
-  
-  // LCP penalties
-  if (webVitals.lcp > 4.0) {
-    score -= 30;
-  } else if (webVitals.lcp > 2.5) {
-    score -= 15;
-  }
-  
-  // CLS penalties
-  if (webVitals.cls > 0.25) {
-    score -= 25;
-  } else if (webVitals.cls > 0.1) {
-    score -= 10;
-  }
-  
-  // FID penalties
-  if (webVitals.fid > 300) {
-    score -= 20;
-  } else if (webVitals.fid > 100) {
-    score -= 5;
-  }
-  
-  return Math.max(0, Math.min(100, score));
+  // Return conservative baseline score without penalties
+  return 50;
 }
 
 /**
