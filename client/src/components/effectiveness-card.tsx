@@ -267,7 +267,33 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                           const moderateCount = run.criterionScores.filter(s => s.score >= 6 && s.score < 8).length;
                           const weakCount = run.criterionScores.filter(s => s.score < 6).length;
                           
-                          return `Your website scored ${run.overallScore}/10 overall with ${strongCount} strong ${strongCount === 1 ? 'criterion' : 'criteria'}, ${moderateCount} moderate ${moderateCount === 1 ? 'area' : 'areas'}, and ${weakCount} ${weakCount === 1 ? 'area' : 'areas'} needing improvement.`;
+                          let text = `Your website scored ${run.overallScore}/10 overall. `;
+                          
+                          const parts = [];
+                          
+                          if (strongCount > 0) {
+                            parts.push(`${strongCount} ${strongCount === 1 ? 'area is' : 'areas are'} performing strongly`);
+                          }
+                          
+                          if (moderateCount > 0) {
+                            parts.push(`${moderateCount} ${moderateCount === 1 ? 'area has' : 'areas have'} moderate performance`);
+                          }
+                          
+                          if (weakCount > 0) {
+                            parts.push(`${weakCount} ${weakCount === 1 ? 'area needs' : 'areas need'} improvement`);
+                          }
+                          
+                          if (parts.length === 0) {
+                            text += "All areas are performing at baseline levels.";
+                          } else if (parts.length === 1) {
+                            text += parts[0] + ".";
+                          } else if (parts.length === 2) {
+                            text += parts[0] + " and " + parts[1] + ".";
+                          } else {
+                            text += parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1] + ".";
+                          }
+                          
+                          return text;
                         })()}
                       </p>
                     </div>
