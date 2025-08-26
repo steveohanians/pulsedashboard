@@ -76,7 +76,7 @@ export function EffectivenessRadarChart({ criterionScores, className }: Effectiv
 
   return (
     <div className={className}>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={322}>
         <RadarChart data={data}>
           <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis 
