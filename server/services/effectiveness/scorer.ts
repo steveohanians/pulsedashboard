@@ -58,7 +58,9 @@ export class WebsiteEffectivenessScorer {
         overallScore,
         criterionResults,
         screenshotUrl: context.screenshot,
-        webVitals: context.webVitals
+        webVitals: context.webVitals,
+        screenshotMethod: context.screenshotMethod || null,
+        screenshotError: context.screenshotError || null
       };
 
     } catch (error) {
@@ -194,7 +196,9 @@ export class WebsiteEffectivenessScorer {
         websiteUrl,
         html: html || '<html><body></body></html>', // Provide minimal HTML fallback
         screenshot: screenshotResult?.screenshotUrl || null,
-        webVitals: screenshotResult?.webVitals || null
+        webVitals: screenshotResult?.webVitals || null,
+        screenshotMethod: screenshotResult?.screenshotMethod || null,
+        screenshotError: screenshotResult?.error || null
       };
 
     } catch (error) {

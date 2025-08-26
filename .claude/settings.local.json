@@ -40,9 +40,13 @@
       "Bash(curl:*)",
       "Bash(node:*)",
       "Bash(kill:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Read(//tmp/**)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/tmp"
+    ]
   }
 }

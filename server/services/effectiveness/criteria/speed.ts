@@ -85,42 +85,34 @@ export async function scoreSpeed(
       performanceScore = estimatePerformanceScore(webVitals);
     }
 
-    // Calculate score based on performance and web vitals
+    // Calculate score directly from performance score (simplified)
     let score = performanceScore / 10; // Convert 0-100 to 0-10
 
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     
-    // LCP check (Good: <2.5s, Needs improvement: 2.5-4s, Poor: >4s)
+    // Track web vitals status for reference but don't apply penalties
     if (webVitals.lcp <= 2.5) {
       passes.passed.push('lcp_good');
     } else if (webVitals.lcp <= config.thresholds.lcp_limit) {
       passes.passed.push('lcp_acceptable');
-      score *= 0.8; // 20% penalty for acceptable but not good LCP
     } else {
       passes.failed.push('lcp_poor');
-      score *= 0.5; // 50% penalty for poor LCP
     }
 
-    // CLS check (Good: <0.1, Needs improvement: 0.1-0.25, Poor: >0.25)
     if (webVitals.cls <= 0.1) {
       passes.passed.push('cls_good');
     } else if (webVitals.cls <= config.thresholds.cls_limit) {
       passes.passed.push('cls_acceptable');
-      score *= 0.9; // 10% penalty for acceptable but not good CLS
     } else {
       passes.failed.push('cls_poor');
-      score *= 0.7; // 30% penalty for poor CLS
     }
 
-    // FID check (Good: <100ms, Needs improvement: 100-300ms, Poor: >300ms)
     if (webVitals.fid <= 100) {
       passes.passed.push('fid_good');
     } else if (webVitals.fid <= 300) {
       passes.passed.push('fid_acceptable');
-      score *= 0.95; // 5% penalty for acceptable FID
     } else {
       passes.failed.push('fid_poor');
-      score *= 0.8; // 20% penalty for poor FID
     }
 
     score = Math.min(10, Math.max(0, score));

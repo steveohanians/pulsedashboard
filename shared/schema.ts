@@ -320,6 +320,8 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   status: text("status").notNull().default("pending"), // pending, completed, failed
   progress: text("progress"), // Current progress message
   screenshotUrl: text("screenshot_url"), // URL to above-fold screenshot
+  screenshotMethod: text("screenshot_method"), // Method used: 'playwright', 'api', or null
+  screenshotError: text("screenshot_error"), // Error message if screenshot failed
   webVitals: jsonb("web_vitals"), // LCP, CLS, FID metrics
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({

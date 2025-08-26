@@ -181,13 +181,15 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           progress: 'Scoring website effectiveness criteria...'
         });
         
-        // Update run with results
+        // Update run with results and screenshot metadata
         await storage.updateEffectivenessRun(newRun.id, {
           overallScore: result.overallScore.toString(),
           status: 'completed',
           progress: 'Analysis completed successfully',
           screenshotUrl: result.screenshotUrl,
-          webVitals: result.webVitals
+          webVitals: result.webVitals,
+          screenshotMethod: result.screenshotMethod || null,
+          screenshotError: result.screenshotError || null
         });
 
         // Save criterion scores
@@ -286,14 +288,25 @@ router.get('/evidence/:clientId/:runId', requireAuth, async (req, res) => {
     // Get detailed criterion scores
     const criterionScores = await storage.getCriterionScores(runId);
     
+    // Add screenshot debugging info if available
+    const screenshotInfo = {
+      hasScreenshot: !!run.screenshotUrl && run.screenshotUrl !== '',
+      screenshotMethod: run.screenshotMethod || null,
+      screenshotError: run.screenshotError || null
+    };
+    
     const evidence = {
-      run,
+      run: {
+        ...run,
+        ...screenshotInfo
+      },
       criterionScores,
       summary: {
         overallScore: run.overallScore,
         criteriaCount: criterionScores.length,
         completedAt: run.createdAt,
-        status: run.status
+        status: run.status,
+        screenshot: screenshotInfo
       }
     };
 

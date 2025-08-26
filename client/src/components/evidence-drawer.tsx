@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Drawer,
@@ -57,6 +57,84 @@ interface EvidenceDrawerProps {
   clientId: string;
   runId: string;
   effectivenessData: EffectivenessData;
+}
+
+// Component to handle screenshot display with better error handling
+function ScreenshotDisplay({ url, runData }: { url: string; runData: any }) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+  }, [url]);
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
+  };
+
+  if (imageError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 bg-gray-50 min-h-[400px]">
+        <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+        <p className="text-lg font-medium text-gray-900 mb-2">
+          Screenshot Not Available
+        </p>
+        <p className="text-sm text-gray-600 text-center max-w-md mb-4">
+          The screenshot could not be loaded. This may be due to:
+        </p>
+        <ul className="text-sm text-gray-600 text-left space-y-1 mb-4">
+          <li>• Browser dependencies not installed on the server</li>
+          <li>• Network timeout when accessing the website</li>
+          <li>• Website blocking automated screenshots</li>
+        </ul>
+        {runData?.screenshotMethod && (
+          <p className="text-xs text-gray-500">
+            Method attempted: {runData.screenshotMethod}
+          </p>
+        )}
+        {runData?.screenshotError && (
+          <details className="mt-4 text-xs text-gray-500">
+            <summary className="cursor-pointer hover:text-gray-700">
+              Technical details
+            </summary>
+            <pre className="mt-2 p-2 bg-white rounded border text-xs overflow-x-auto max-w-md">
+              {runData.screenshotError}
+            </pre>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {imageLoading && (
+        <div className="flex items-center justify-center p-8 bg-gray-50 min-h-[400px]">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-sm text-gray-600">Loading screenshot...</p>
+          </div>
+        </div>
+      )}
+      <img
+        src={url}
+        alt="Website screenshot"
+        className={cn(
+          "w-full h-auto max-w-full",
+          imageLoading && "hidden"
+        )}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
+      />
+    </>
+  );
 }
 
 export function EvidenceDrawer({
@@ -245,30 +323,16 @@ export function EvidenceDrawer({
               <div className="mt-6">
                 <TabsContent value="screenshot">
                   <div className="space-y-4">
-                    {evidenceData?.run?.screenshotUrl ? (
+                    {evidenceData?.run?.screenshotUrl && evidenceData.run.screenshotUrl !== '' ? (
                       <div className="space-y-4">
                         <div className="rounded-lg border bg-white p-4">
                           <div className="text-sm font-medium text-gray-900 mb-3">
                             Above-the-fold Website Screenshot
                           </div>
                           <div className="relative border rounded-lg overflow-hidden bg-gray-50">
-                            <img
-                              src={evidenceData.run.screenshotUrl}
-                              alt="Website screenshot"
-                              className="w-full h-auto max-w-full"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  parent.innerHTML = `
-                                    <div class="text-center p-8">
-                                      <div class="text-red-500 text-sm">Screenshot failed to load</div>
-                                      <div class="text-xs text-muted-foreground mt-1">URL: ${evidenceData.run.screenshotUrl}</div>
-                                    </div>
-                                  `;
-                                }
-                              }}
+                            <ScreenshotDisplay 
+                              url={evidenceData.run.screenshotUrl}
+                              runData={evidenceData.run}
                             />
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
@@ -277,14 +341,38 @@ export function EvidenceDrawer({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-lg">
+                      <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
                         <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                          Screenshot not available for this analysis run
+                        <p className="text-lg font-medium text-gray-700 mb-2">
+                          No Screenshot Available
                         </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Screenshots are captured automatically during website effectiveness analysis
+                        <p className="text-sm text-gray-600 mb-4">
+                          A screenshot was not captured during this analysis.
                         </p>
+                        {evidenceData?.run?.status === 'failed' ? (
+                          <p className="text-xs text-red-600">
+                            The analysis may have encountered errors.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            Screenshots help visualize the analyzed website but are not required for scoring.
+                          </p>
+                        )}
+                        {evidenceData?.run?.screenshotError && (
+                          <details className="mt-4 text-xs text-gray-500">
+                            <summary className="cursor-pointer hover:text-gray-700">
+                              Why did this happen?
+                            </summary>
+                            <div className="mt-2 p-3 bg-white rounded border text-left max-w-md mx-auto">
+                              <p className="mb-2">Possible reasons:</p>
+                              <ul className="space-y-1 ml-4">
+                                <li>• Server missing screenshot dependencies</li>
+                                <li>• Website blocked automated access</li>
+                                <li>• Network timeout occurred</li>
+                              </ul>
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                   </div>
