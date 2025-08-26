@@ -4,10 +4,11 @@
  * Evaluates brand story: POV, outcomes within 24mo, mechanism, proof proximity
  */
 
-import { CriterionResult, ScoringContext, ScoringConfig, OPENAI_CLASSIFIERS } from "../types";
+import { CriterionResult, ScoringContext, ScoringConfig } from "../types";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
 import logger from "../../../utils/logging/logger";
+import { getEffectivenessPrompt } from "../promptManager";
 
 export async function scoreBrandStory(
   context: ScoringContext,
@@ -66,9 +67,13 @@ export async function scoreBrandStory(
       };
     }
 
-    // Use OpenAI to analyze brand story
-    const classifier = OPENAI_CLASSIFIERS.STORY;
-    const prompt = classifier.prompt.replace('{content}', storyContent);
+    // Get prompt from database or use default
+    const effectivenessPrompt = await getEffectivenessPrompt('brand_story');
+    if (!effectivenessPrompt) {
+      throw new Error('No prompt template available for brand_story criterion');
+    }
+    
+    const prompt = effectivenessPrompt.promptTemplate.replace('{content}', storyContent);
     
     const response = await openai.chat.completions.create({
       model: config.openai.model,
@@ -76,7 +81,7 @@ export async function scoreBrandStory(
       messages: [
         {
           role: 'system',
-          content: 'You are an expert brand strategist analyzing brand story elements. Return only valid JSON.'
+          content: effectivenessPrompt.systemPrompt
         },
         {
           role: 'user',

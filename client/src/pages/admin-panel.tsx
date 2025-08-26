@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
 import { SOVPromptTemplateForm } from "@/components/sov-prompt-template-form";
+import { EffectivenessPromptTemplateForm } from "@/components/effectiveness-prompt-template-form";
 import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
@@ -3716,6 +3717,22 @@ export default function AdminPanel() {
                     </CardHeader>
                     <CardContent>
                       <SOVPromptTemplateForm />
+                    </CardContent>
+                  </Card>
+
+                  {/* Effectiveness Scoring Prompts Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center">
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Effectiveness Scoring Templates
+                      </CardTitle>
+                      <p className="text-xs text-slate-600">
+                        Configure AI prompts for website effectiveness analysis
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <EffectivenessPromptTemplateForm />
                     </CardContent>
                   </Card>
 

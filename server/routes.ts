@@ -16,7 +16,7 @@ import adminUsersRouter from "./routes/admin-users";
 import sovRoutes from "./routes/sovRoutes";
 import effectivenessRoutes from "./routes/effectivenessRoutes";
 import { z } from "zod";
-import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
+import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema, updateEffectivenessPromptTemplateSchema } from "@shared/schema";
 import { 
   ErrorFactory, 
   PulseError, 
@@ -3283,6 +3283,104 @@ Output: Numbered list with tags.
       });
     } catch (error) {
       logger.error("Error generating SOV prompt preview", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to generate preview" });
+    }
+  });
+
+  // Effectiveness Prompt Templates (Admin only)
+  logger.info("Registering effectiveness prompt template routes");
+
+  // Initialize default templates on server start
+  storage.createDefaultEffectivenessPromptTemplates().catch((error) => {
+    logger.error("Failed to create default effectiveness prompt templates", { error });
+  });
+
+  app.get("/api/admin/effectiveness-prompt-templates", requireAdmin, async (req, res) => {
+    try {
+      const templates = await storage.getEffectivenessPromptTemplates();
+      res.json(templates);
+    } catch (error) {
+      logger.error("Error fetching effectiveness prompt templates", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch effectiveness prompt templates" });
+    }
+  });
+
+  app.get("/api/admin/effectiveness-prompt-template/:criterion", requireAdmin, async (req, res) => {
+    try {
+      const { criterion } = req.params;
+      const template = await storage.getEffectivenessPromptTemplate(criterion);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      logger.error("Error fetching effectiveness prompt template", { error: (error as Error).message });
+      res.status(500).json({ message: "Failed to fetch effectiveness prompt template" });
+    }
+  });
+
+  app.put("/api/admin/effectiveness-prompt-template/:criterion", requireAdmin, async (req, res) => {
+    try {
+      const { criterion } = req.params;
+      const validatedData = updateEffectivenessPromptTemplateSchema.parse(req.body);
+      
+      const template = await storage.updateEffectivenessPromptTemplate(criterion, validatedData);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      logger.info(`Effectiveness prompt template updated for ${criterion}`);
+      res.json(template);
+    } catch (error) {
+      logger.error("Error updating effectiveness prompt template", { 
+        error: (error as Error).message,
+        criterion: req.params.criterion 
+      });
+      res.status(500).json({ message: "Failed to update effectiveness prompt template" });
+    }
+  });
+
+  // Effectiveness Prompt Template Preview
+  app.post("/api/admin/effectiveness-prompt-template/preview", requireAdmin, async (req, res) => {
+    try {
+      const { promptTemplate, systemPrompt, sampleContent, criterion } = req.body;
+      
+      if (!promptTemplate || !systemPrompt || !sampleContent) {
+        return res.status(400).json({ 
+          message: "promptTemplate, systemPrompt, and sampleContent are required" 
+        });
+      }
+
+      // Use OpenAI to test the prompt
+      const openai = new OpenAIClient({
+        apiKey: process.env.OPENAI_API_KEY!
+      });
+
+      const prompt = promptTemplate.replace('{content}', sampleContent);
+      
+      const response = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || "gpt-4o",
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200
+      });
+
+      const result = response.choices[0]?.message?.content?.trim();
+      
+      res.json({
+        success: true,
+        preview: result,
+        criterion,
+        sampleContent
+      });
+    } catch (error) {
+      logger.error("Error generating effectiveness prompt preview", { error: (error as Error).message });
       res.status(500).json({ message: "Failed to generate preview" });
     }
   });

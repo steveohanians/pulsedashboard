@@ -4,7 +4,7 @@
  * Evaluates call-to-action effectiveness: above-fold presence, message match, dominance, secondary paths
  */
 
-import { CriterionResult, ScoringContext, ScoringConfig, OPENAI_CLASSIFIERS } from "../types";
+import { CriterionResult, ScoringContext, ScoringConfig } from "../types";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
 import logger from "../../../utils/logging/logger";

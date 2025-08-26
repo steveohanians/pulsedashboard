@@ -4,10 +4,11 @@
  * Evaluates hero section for audience clarity, outcome specificity, capability definition, and brevity
  */
 
-import { CriterionResult, ScoringContext, ScoringConfig, OPENAI_CLASSIFIERS } from "../types";
+import { CriterionResult, ScoringContext, ScoringConfig } from "../types";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
 import logger from "../../../utils/logging/logger";
+import { getEffectivenessPrompt } from "../promptManager";
 
 export async function scorePositioning(
   context: ScoringContext,
@@ -49,9 +50,13 @@ export async function scorePositioning(
       };
     }
 
-    // Use OpenAI to analyze hero content
-    const classifier = OPENAI_CLASSIFIERS.HERO;
-    const prompt = classifier.prompt.replace('{content}', heroContent);
+    // Get prompt from database or use default
+    const effectivenessPrompt = await getEffectivenessPrompt('positioning');
+    if (!effectivenessPrompt) {
+      throw new Error('No prompt template available for positioning criterion');
+    }
+    
+    const prompt = effectivenessPrompt.promptTemplate.replace('{content}', heroContent);
     
     const response = await openai.chat.completions.create({
       model: config.openai.model,
@@ -59,7 +64,7 @@ export async function scorePositioning(
       messages: [
         {
           role: 'system',
-          content: 'You are an expert copywriter analyzing website positioning. Return only valid JSON.'
+          content: effectivenessPrompt.systemPrompt
         },
         {
           role: 'user',

@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, effectivenessPromptTemplates, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -12,6 +12,7 @@ import {
   type GlobalPromptTemplate, type InsertGlobalPromptTemplate, type UpdateGlobalPromptTemplate,
   type MetricPrompt, type InsertMetricPrompt, type UpdateMetricPrompt,
   type SOVPromptTemplate, type InsertSOVPromptTemplate, type UpdateSOVPromptTemplate,
+  type EffectivenessPromptTemplate, type InsertEffectivenessPromptTemplate, type UpdateEffectivenessPromptTemplate,
   type InsightContext, type InsertInsightContext, type UpdateInsightContext,
   type FilterOption, type InsertFilterOption, type UpdateFilterOption,
   type GA4PropertyAccess, type InsertGA4PropertyAccess,
@@ -132,6 +133,13 @@ export interface IStorage {
   getSOVPromptTemplate(): Promise<SOVPromptTemplate | undefined>;
   createSOVPromptTemplate(template: InsertSOVPromptTemplate): Promise<SOVPromptTemplate>;
   updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined>;
+  
+  // Effectiveness Prompt Templates
+  getEffectivenessPromptTemplates(): Promise<EffectivenessPromptTemplate[]>;
+  getEffectivenessPromptTemplate(criterion: string): Promise<EffectivenessPromptTemplate | undefined>;
+  createEffectivenessPromptTemplate(template: InsertEffectivenessPromptTemplate): Promise<EffectivenessPromptTemplate>;
+  updateEffectivenessPromptTemplate(criterion: string, template: UpdateEffectivenessPromptTemplate): Promise<EffectivenessPromptTemplate | undefined>;
+  createDefaultEffectivenessPromptTemplates(): Promise<void>;
   
   // Metric Prompts
   getMetricPrompts(): Promise<MetricPrompt[]>;
@@ -1846,6 +1854,99 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sovPromptTemplate.isActive, true))
       .returning();
     return updatedTemplate || undefined;
+  }
+
+  // Effectiveness Prompt Templates
+  async getEffectivenessPromptTemplates(): Promise<EffectivenessPromptTemplate[]> {
+    const templates = await db
+      .select()
+      .from(effectivenessPromptTemplates)
+      .where(eq(effectivenessPromptTemplates.isActive, true))
+      .orderBy(effectivenessPromptTemplates.criterion);
+    return templates;
+  }
+
+  async getEffectivenessPromptTemplate(criterion: string): Promise<EffectivenessPromptTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(effectivenessPromptTemplates)
+      .where(
+        and(
+          eq(effectivenessPromptTemplates.criterion, criterion),
+          eq(effectivenessPromptTemplates.isActive, true)
+        )
+      )
+      .limit(1);
+    return template || undefined;
+  }
+
+  async createEffectivenessPromptTemplate(template: InsertEffectivenessPromptTemplate): Promise<EffectivenessPromptTemplate> {
+    const [newTemplate] = await db
+      .insert(effectivenessPromptTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateEffectivenessPromptTemplate(criterion: string, template: UpdateEffectivenessPromptTemplate): Promise<EffectivenessPromptTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(effectivenessPromptTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(
+        and(
+          eq(effectivenessPromptTemplates.criterion, criterion),
+          eq(effectivenessPromptTemplates.isActive, true)
+        )
+      )
+      .returning();
+    return updatedTemplate || undefined;
+  }
+
+  async createDefaultEffectivenessPromptTemplates(): Promise<void> {
+    // Import default templates from types
+    const { OPENAI_CLASSIFIERS } = await import('./services/effectiveness/types');
+    
+    const defaultTemplates = [
+      {
+        criterion: 'positioning',
+        classifierName: 'HERO',
+        promptTemplate: OPENAI_CLASSIFIERS.HERO.prompt,
+        systemPrompt: 'You are an expert copywriter analyzing website positioning. Return only valid JSON.',
+        schema: JSON.stringify(OPENAI_CLASSIFIERS.HERO.schema),
+        description: 'Analyzes hero section content for positioning effectiveness',
+        variables: JSON.stringify(['content']),
+        isActive: true
+      },
+      {
+        criterion: 'brand_story',
+        classifierName: 'STORY',
+        promptTemplate: OPENAI_CLASSIFIERS.STORY.prompt,
+        systemPrompt: 'You are an expert brand strategist analyzing website storytelling. Return only valid JSON.',
+        schema: JSON.stringify(OPENAI_CLASSIFIERS.STORY.schema),
+        description: 'Analyzes brand story elements and proof points',
+        variables: JSON.stringify(['content']),
+        isActive: true
+      },
+      {
+        criterion: 'ctas',
+        classifierName: 'CTA_MATCH',
+        promptTemplate: OPENAI_CLASSIFIERS.CTA_MATCH.prompt,
+        systemPrompt: 'You are an expert UX analyst evaluating CTA effectiveness. Return only valid JSON.',
+        schema: JSON.stringify(OPENAI_CLASSIFIERS.CTA_MATCH.schema),
+        description: 'Compares CTA text with destination page for message consistency',
+        variables: JSON.stringify(['cta_label', 'destination_content']),
+        isActive: true
+      }
+    ];
+
+    // Insert default templates if they don't exist
+    for (const template of defaultTemplates) {
+      const existing = await this.getEffectivenessPromptTemplate(template.criterion);
+      if (!existing) {
+        await this.createEffectivenessPromptTemplate(template);
+        logger.info(`Created default effectiveness prompt template for ${template.criterion}`);
+      }
+    }
   }
 
   // Insight Contexts

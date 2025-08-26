@@ -278,6 +278,20 @@ export const sovPromptTemplate = pgTable("sov_prompt_template", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const effectivenessPromptTemplates = pgTable("effectiveness_prompt_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  criterion: text("criterion").notNull().unique(), // 'positioning', 'brand_story', 'ctas'
+  classifierName: text("classifier_name").notNull(), // 'HERO', 'STORY', 'CTA_MATCH'
+  promptTemplate: text("prompt_template").notNull(),
+  systemPrompt: text("system_prompt").notNull(),
+  schema: text("schema").notNull(), // JSON string of expected response schema
+  description: text("description"), // Help text for admin
+  variables: text("variables"), // JSON array of available variables
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insightContexts = pgTable("insight_contexts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
@@ -543,6 +557,18 @@ export const updateSOVPromptTemplateSchema = createInsertSchema(sovPromptTemplat
   updatedAt: true,
 }).partial();
 
+export const insertEffectivenessPromptTemplateSchema = createInsertSchema(effectivenessPromptTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateEffectivenessPromptTemplateSchema = createInsertSchema(effectivenessPromptTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
   id: true,
   createdAt: true,
@@ -662,6 +688,11 @@ export type UpdateMetricPrompt = z.infer<typeof updateMetricPromptSchema>;
 export type SOVPromptTemplate = typeof sovPromptTemplate.$inferSelect;
 export type InsertSOVPromptTemplate = z.infer<typeof insertSOVPromptTemplateSchema>;
 export type UpdateSOVPromptTemplate = z.infer<typeof updateSOVPromptTemplateSchema>;
+
+export type EffectivenessPromptTemplate = typeof effectivenessPromptTemplates.$inferSelect;
+export type InsertEffectivenessPromptTemplate = z.infer<typeof insertEffectivenessPromptTemplateSchema>;
+export type UpdateEffectivenessPromptTemplate = z.infer<typeof updateEffectivenessPromptTemplateSchema>;
+
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type InsightContext = typeof insightContexts.$inferSelect;
