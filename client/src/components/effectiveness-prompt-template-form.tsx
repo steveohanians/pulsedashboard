@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Save, Eye, AlertCircle } from "lucide-react";
+import { Loader2, Eye, AlertCircle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 interface EffectivenessPromptTemplate {
   id: string;
@@ -22,6 +23,7 @@ interface EffectivenessPromptTemplate {
 
 export function EffectivenessPromptTemplateForm() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedCriterion, setSelectedCriterion] = useState('positioning');
   const [formData, setFormData] = useState({
     promptTemplate: '',
@@ -74,6 +76,17 @@ export function EffectivenessPromptTemplateForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['effectiveness-prompt-templates'] });
       setIsDirty(false);
+      toast({
+        title: "Template saved",
+        description: `${selectedCriterion} prompt template has been updated successfully.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving template",
+        description: error instanceof Error ? error.message : "Failed to update template",
+        variant: "destructive",
+      });
     }
   });
 
@@ -95,6 +108,17 @@ export function EffectivenessPromptTemplateForm() {
     },
     onSuccess: (data) => {
       setPreviewResult(data.preview);
+      toast({
+        title: "Preview generated",
+        description: "AI response preview is shown below.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Preview failed",
+        description: error instanceof Error ? error.message : "Failed to generate preview",
+        variant: "destructive",
+      });
     }
   });
 
@@ -224,12 +248,12 @@ export function EffectivenessPromptTemplateForm() {
                     </Alert>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex justify-end gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handlePreview}
-                      disabled={previewMutation.isPending || !isDirty}
+                      disabled={previewMutation.isPending}
                     >
                       {previewMutation.isPending ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -243,11 +267,10 @@ export function EffectivenessPromptTemplateForm() {
                       disabled={updateMutation.isPending || !isDirty}
                     >
                       {updateMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Save className="h-4 w-4 mr-2" />
+                        "Save Template"
                       )}
-                      Save Changes
                     </Button>
                   </div>
                 </form>
