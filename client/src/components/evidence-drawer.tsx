@@ -477,8 +477,7 @@ export function EvidenceDrawer({
                         </Card>
                       </div>
 
-                      {/* Speed criterion details */}
-                      {categorizedScores.performance.map(renderCriterionCard)}
+                      {/* Speed criterion details removed from Web Vitals tab */}
                     </div>
                   </ScrollArea>
                 </TabsContent>
