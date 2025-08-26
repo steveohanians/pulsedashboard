@@ -244,8 +244,13 @@ export function ComprehensiveInsightsDisplay({
           {/* Generation timestamp */}
           {hasInsights && (
             <div className="text-xs text-slate-500 text-center pt-4 border-t border-slate-200">
-              Insights generated on {new Date(insights[0].createdAt).toLocaleDateString()} at{' '}
-              {new Date(insights[0].createdAt).toLocaleTimeString()}
+              {(() => {
+                // Find the most recent insight timestamp
+                const mostRecentInsight = insights.reduce((latest, current) => 
+                  new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
+                );
+                return `Insights generated on ${new Date(mostRecentInsight.createdAt).toLocaleDateString()} at ${new Date(mostRecentInsight.createdAt).toLocaleTimeString()}`;
+              })()}
             </div>
           )}
         </div>
