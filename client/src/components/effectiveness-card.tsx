@@ -298,6 +298,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                       </p>
                     </div>
                     
+                    <hr className="border-slate-200" />
+                    
                     <div>
                       <h4 className="text-sm font-medium text-green-700 mb-1">Strengths:</h4>
                       <div className="text-xs text-slate-600">
