@@ -307,7 +307,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                           <ul className="list-disc list-inside space-y-1">
                             {run.criterionScores.filter(s => s.score >= 8).map(score => (
                               <li key={score.criterion}>
-                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score}/10)
+                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score})
                               </li>
                             ))}
                           </ul>
@@ -324,7 +324,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                           <ul className="list-disc list-inside space-y-1">
                             {run.criterionScores.filter(s => s.score < 6).map(score => (
                               <li key={score.criterion}>
-                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score}/10)
+                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score})
                               </li>
                             ))}
                           </ul>
@@ -351,7 +351,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                                 {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                               </span>
                               <span className="text-sm font-thin text-black">
-                                {score.score}/10
+                                {score.score}
                               </span>
                             </div>
                             <div className="w-full bg-slate-200 rounded-full h-2">
