@@ -64,7 +64,7 @@ function CustomTooltip({ active, payload, label }: any) {
  * Custom tick component for positioning labels further from the chart
  */
 function CustomTick({ payload, x, y, textAnchor, cx, cy }: any) {
-  const distance = 0.25; // Adjust this value to control how far labels appear from chart
+  const distance = 0.125; // Adjust this value to control how far labels appear from chart
   const adjustedX = x + (x - cx) * distance;
   const adjustedY = y + (y - cy) * distance;
   
