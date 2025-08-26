@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Eye, Clock, TrendingUp } from "lucide-react";
+import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
@@ -164,11 +164,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     return 'bg-red-100 text-red-800 border-red-300';
   };
 
-  // Format date for display
+  // Format date for display - matches AI insights timestamp format
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -275,21 +279,20 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               </div>
 
               {/* Date and Refresh Section */}
-              <div className="pt-3 border-t">
-                <div className="flex items-center justify-between text-sm text-muted-foreground pt-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>Scored {formatDate(run.createdAt)}</span>
-                  </div>
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                <div className="flex items-center space-x-2">
+                  <div className="text-xs text-slate-400">{formatDate(run.createdAt)}</div>
+                </div>
+                <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleRefresh}
                     disabled={!canRefresh}
-                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                    className="text-slate-500 hover:text-slate-700 h-7 px-2"
                   >
-                    <RefreshCw className={cn(
-                      "h-4 w-4", 
+                    <RotateCcw className={cn(
+                      "h-3 w-3", 
                       refreshMutation.isPending && "animate-spin"
                     )} />
                   </Button>
