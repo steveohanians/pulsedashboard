@@ -262,9 +262,13 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     <div>
                       <h4 className="text-sm font-medium text-slate-700 mb-1">At a glance story</h4>
                       <p className="text-xs text-slate-600">
-                        Your website scored {run.overallScore}/10 overall with {run.criterionScores.filter(s => s.score >= 8).length} strong criteria, 
-                        {run.criterionScores.filter(s => s.score >= 6 && s.score < 8).length} moderate areas, and 
-                        {run.criterionScores.filter(s => s.score < 6).length} areas needing improvement.
+                        {(() => {
+                          const strongCount = run.criterionScores.filter(s => s.score >= 8).length;
+                          const moderateCount = run.criterionScores.filter(s => s.score >= 6 && s.score < 8).length;
+                          const weakCount = run.criterionScores.filter(s => s.score < 6).length;
+                          
+                          return `Your website scored ${run.overallScore}/10 overall with ${strongCount} strong ${strongCount === 1 ? 'criterion' : 'criteria'}, ${moderateCount} moderate ${moderateCount === 1 ? 'area' : 'areas'}, and ${weakCount} ${weakCount === 1 ? 'area' : 'areas'} needing improvement.`;
+                        })()}
                       </p>
                     </div>
                     
