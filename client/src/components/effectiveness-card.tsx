@@ -181,7 +181,6 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg lg:text-xl flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
               Website Effectiveness
               {run && run.status === 'completed' && (
                 <div className="ml-auto flex items-center gap-2">
