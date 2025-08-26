@@ -361,7 +361,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Effectiveness Scores</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-full flex flex-col justify-center">
+                  <CardContent className="h-full flex flex-col">
                     <EffectivenessRadarChart 
                       criterionScores={run.criterionScores} 
                       className="w-full"
