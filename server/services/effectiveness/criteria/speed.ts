@@ -42,19 +42,38 @@ export async function scoreSpeed(
 
     if (!webVitals) {
       // Fetch from PageSpeed Insights API
-      const pageSpeedUrl = `https://www.googleapis.com/pagespeed/insights/v5/runPagespeed?url=${encodeURIComponent(context.websiteUrl)}&strategy=desktop`;
+      // Check for API key (can use PAGESPEED_API_KEY or GOOGLE_API_KEY)
+      const apiKey = process.env.PAGESPEED_API_KEY || process.env.GOOGLE_API_KEY || '';
+      const keyParam = apiKey ? `&key=${apiKey}` : '';
+      
+      const pageSpeedUrl = `https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(context.websiteUrl)}&strategy=desktop${keyParam}`;
       
       logger.info("Fetching PageSpeed Insights data", {
-        url: context.websiteUrl
+        url: context.websiteUrl,
+        hasApiKey: !!apiKey
       });
 
       try {
         const response = await fetch(pageSpeedUrl);
         if (!response.ok) {
+          const errorText = await response.text();
+          logger.warn("PageSpeed API error response", { 
+            status: response.status,
+            error: errorText.substring(0, 200)
+          });
           throw new Error(`PageSpeed API returned ${response.status}`);
         }
 
         const data = await response.json() as PageSpeedResult;
+        
+        // Check if we got valid data (API key might be required)
+        if (!data.lighthouseResult?.categories?.performance?.score) {
+          logger.warn("PageSpeed API returned incomplete data - API key may be required", {
+            url: context.websiteUrl,
+            hasScore: !!data.lighthouseResult?.categories?.performance?.score
+          });
+          throw new Error('PageSpeed API requires authentication - add PAGESPEED_API_KEY or GOOGLE_API_KEY');
+        }
         
         performanceScore = data.lighthouseResult.categories.performance.score * 100;
         
