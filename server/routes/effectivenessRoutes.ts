@@ -161,12 +161,31 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       try {
         logger.info('Starting effectiveness scoring', { clientId, runId: newRun.id });
         
+        // Update progress: Initializing
+        await storage.updateEffectivenessRun(newRun.id, {
+          status: 'initializing',
+          progress: 'Preparing website analysis...'
+        });
+        
+        // Update progress: Scraping website
+        await storage.updateEffectivenessRun(newRun.id, {
+          status: 'scraping',
+          progress: 'Loading website and capturing screenshot...'
+        });
+        
         const result = await scorer.scoreWebsite(client.websiteUrl);
+        
+        // Update progress: Analyzing criteria
+        await storage.updateEffectivenessRun(newRun.id, {
+          status: 'analyzing',
+          progress: 'Scoring website effectiveness criteria...'
+        });
         
         // Update run with results
         await storage.updateEffectivenessRun(newRun.id, {
           overallScore: result.overallScore.toString(),
           status: 'completed',
+          progress: 'Analysis completed successfully',
           screenshotUrl: result.screenshotUrl,
           webVitals: result.webVitals
         });
@@ -203,7 +222,8 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
         // Mark run as failed
         await storage.updateEffectivenessRun(newRun.id, {
-          status: 'failed'
+          status: 'failed',
+          progress: `Analysis failed: ${scoringError instanceof Error ? scoringError.message : String(scoringError)}`
         });
       }
     });
@@ -253,6 +273,15 @@ router.get('/evidence/:clientId/:runId', requireAuth, async (req, res) => {
         message: 'Effectiveness run not found'
       });
     }
+
+    // Debug log to check webVitals data
+    logger.info('Evidence API - run data', {
+      clientId,
+      runId,
+      hasWebVitals: !!run.webVitals,
+      webVitalsData: run.webVitals,
+      webVitalsType: typeof run.webVitals
+    });
 
     // Get detailed criterion scores
     const criterionScores = await storage.getCriterionScores(runId);

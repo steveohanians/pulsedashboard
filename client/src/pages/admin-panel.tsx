@@ -298,7 +298,7 @@ export default function AdminPanel() {
   const { data: metricPrompts, isLoading: metricPromptsLoading, isError: metricPromptsError, refetch: refetchMetricPrompts } = useQuery<MetricPrompt[]>({
     queryKey: AdminQueryKeys.metricPrompts(),
     queryFn: () => metricService.getPrompts(),
-    enabled: user?.role === "Admin" && activeTab === "prompts",
+    enabled: user?.role === "Admin",
   });
 
   // Mutations for client management

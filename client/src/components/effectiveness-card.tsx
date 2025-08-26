@@ -26,7 +26,8 @@ interface CriterionScore {
 interface EffectivenessRun {
   id: string;
   overallScore: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'initializing' | 'scraping' | 'analyzing' | 'completed' | 'failed';
+  progress?: string;
   createdAt: string;
   criterionScores: CriterionScore[];
 }
@@ -75,8 +76,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       return response.json();
     },
     refetchInterval: (query) => {
-      // Refetch every 10 seconds if status is pending
-      return query.state.data?.run?.status === 'pending' ? 10000 : false;
+      // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
+      const status = query.state.data?.run?.status;
+      return ['pending', 'initializing', 'scraping', 'analyzing'].includes(status) ? 5000 : false;
     },
     retry: (failureCount, error) => {
       // Don't retry on client errors (4xx) except for brief network issues
@@ -177,7 +179,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   const run = data?.run;
-  const canRefresh = run?.status !== 'pending' && !refreshMutation.isPending;
+  const isAnalyzing = ['pending', 'initializing', 'scraping', 'analyzing'].includes(run?.status);
+  const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
   return (
     <>
@@ -232,16 +235,31 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && run.status === 'pending' && (
+          {run && isAnalyzing && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Analyzing website effectiveness...</p>
+              <div className="space-y-2">
+                <p className="text-muted-foreground font-medium">
+                  {run.status === 'initializing' && 'Preparing analysis...'}
+                  {run.status === 'scraping' && 'Loading website...'}
+                  {run.status === 'analyzing' && 'Scoring criteria...'}
+                  {run.status === 'pending' && 'Starting analysis...'}
+                </p>
+                {run.progress && (
+                  <p className="text-sm text-muted-foreground">
+                    {run.progress}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
           {run && run.status === 'failed' && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">Scoring failed</p>
+              <p className="text-muted-foreground mb-2">Analysis failed</p>
+              {run.progress && (
+                <p className="text-sm text-red-600 mb-4">{run.progress}</p>
+              )}
               <Button onClick={handleRefresh} disabled={!canRefresh}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again

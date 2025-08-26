@@ -318,6 +318,7 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   clientId: varchar("client_id").references(() => clients.id).notNull(),
   overallScore: decimal("overall_score", { precision: 3, scale: 1 }), // e.g., 8.5 out of 10
   status: text("status").notNull().default("pending"), // pending, completed, failed
+  progress: text("progress"), // Current progress message
   screenshotUrl: text("screenshot_url"), // URL to above-fold screenshot
   webVitals: jsonb("web_vitals"), // LCP, CLS, FID metrics
   createdAt: timestamp("created_at").defaultNow().notNull(),

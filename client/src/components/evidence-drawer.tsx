@@ -25,6 +25,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Utility function to convert markdown bold (**text**) to HTML
+const formatMarkdown = (text: string) => {
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+};
+
 interface CriterionScore {
   id: string;
   criterion: string;
@@ -185,7 +190,12 @@ export function EvidenceDrawer({
             )}
             
             <div className="text-xs text-muted-foreground bg-gray-50 p-2 rounded">
-              <strong>Analysis:</strong> {score.evidence.reasoning}
+              <strong>Analysis:</strong>{" "}
+              <span 
+                dangerouslySetInnerHTML={{
+                  __html: formatMarkdown(score.evidence.reasoning)
+                }}
+              />
             </div>
           </div>
         </CardContent>
