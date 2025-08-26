@@ -231,7 +231,6 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 No effectiveness data available
               </p>
               <Button onClick={handleRefresh} disabled={!canRefresh}>
-                <TrendingUp className="h-4 w-4 mr-2" />
                 Score Website
               </Button>
             </div>
