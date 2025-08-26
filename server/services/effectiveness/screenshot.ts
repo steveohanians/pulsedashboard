@@ -139,7 +139,7 @@ export class ScreenshotService {
       apiUrl.searchParams.append('cache_ttl', '86400'); // 24 hour cache
       apiUrl.searchParams.append('block_ads', 'true');
       apiUrl.searchParams.append('block_cookie_banners', 'true');
-      apiUrl.searchParams.append('wait_until', 'networkidle'); // Wait for page to load
+      apiUrl.searchParams.append('wait_until', 'networkidle2'); // Wait for page to load (networkidle2 is valid)
       apiUrl.searchParams.append('delay', '2'); // 2 second delay for JS rendering
       
       // Fetch screenshot from API

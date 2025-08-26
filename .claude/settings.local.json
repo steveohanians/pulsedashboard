@@ -42,7 +42,8 @@
       "Bash(kill:*)",
       "Bash(chmod:*)",
       "Read(//tmp/**)",
-      "Bash(SCREENSHOTONE_API_KEY=96F3sSo7pcPB2Q npm run dev)"
+      "Bash(SCREENSHOTONE_API_KEY=96F3sSo7pcPB2Q npm run dev)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": [],
