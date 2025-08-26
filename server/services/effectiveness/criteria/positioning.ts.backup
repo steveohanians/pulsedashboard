@@ -18,101 +18,15 @@ export async function scorePositioning(
   try {
     const $ = cheerio.load(context.html);
     
-    // Extract hero content with improved logic for H2/H3
+    // Extract hero content (first H1, subheading, first paragraph)
     const h1 = $('h1').first().text().trim();
+    const subheading = $('h2, .subhead, .subtitle, p').first().text().trim();
+    const firstParagraph = $('p').first().text().trim();
     
-    // Try to find hero/banner section first for more targeted extraction
-    const heroSelectors = [
-      '.hero', '#hero', '[class*="hero"]',
-      '.banner', '#banner', '[class*="banner"]',
-      '.jumbotron', '.masthead', '.header-content',
-      'header section', 'main > section:first-child'
-    ];
-    
-    let heroSection = null;
-    for (const selector of heroSelectors) {
-      const section = $(selector);
-      if (section.length > 0) {
-        heroSection = section.first();
-        break;
-      }
-    }
-    
-    let subheading = '';
-    let firstParagraph = '';
-    let additionalContent = [];
-    
-    if (heroSection) {
-      // Extract from hero section specifically
-      const h2InHero = heroSection.find('h2').first().text().trim();
-      const h3InHero = heroSection.find('h3').first().text().trim();
-      const pInHero = heroSection.find('p').first().text().trim();
-      
-      subheading = h2InHero || h3InHero;
-      firstParagraph = pInHero || heroSection.find('p').eq(1).text().trim();
-      
-      // Get additional hero content
-      heroSection.find('h2, h3, .tagline, .value-prop').slice(0, 3).each((_, el) => {
-        const text = $(el).text().trim();
-        if (text && text.length > 10) additionalContent.push(text);
-      });
-    } else {
-      // Fallback: Smart extraction from whole page
-      // Get first meaningful H2 or H3 (skip navigation items)
-      const allH2s = $('h2').slice(0, 5);
-      const allH3s = $('h3').slice(0, 5);
-      
-      allH2s.each((_, el) => {
-        const text = $(el).text().trim();
-        if (!subheading && text.length > 10 && 
-            !text.match(/^(menu|navigation|footer|contact|copyright|resources|company|products?|solutions?|cookie|privacy)$/i)) {
-          subheading = text;
-          // Also get the paragraph after this H2
-          const nextP = $(el).nextAll('p').first().text().trim();
-          if (nextP && !firstParagraph) firstParagraph = nextP;
-        }
-      });
-      
-      if (!subheading) {
-        allH3s.each((_, el) => {
-          const text = $(el).text().trim();
-          if (!subheading && text.length > 10) {
-            subheading = text;
-          }
-        });
-      }
-      
-      // If still no subheading, fall back to original logic
-      if (!subheading) {
-        subheading = $('h2, .subhead, .subtitle, p').first().text().trim();
-      }
-      if (!firstParagraph) {
-        firstParagraph = $('p').first().text().trim();
-      }
-      
-      // Collect valuable H2/H3 content for analysis
-      $('h2, h3').slice(0, 4).each((_, el) => {
-        const text = $(el).text().trim();
-        if (text.length > 15 && !text.match(/^(cookie|privacy|terms|footer|contact)/i)) {
-          additionalContent.push(text);
-        }
-      });
-    }
-    
-    // Look for taglines and value propositions
-    $('.tagline, .value-prop, .headline, .slogan, [class*="tagline"]').slice(0, 2).each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10) additionalContent.push(text);
-    });
-    
-    // Build comprehensive hero content
-    const contentParts = [h1, subheading, firstParagraph, ...additionalContent]
-      .filter(text => text && text.length > 0)
-      .filter((text, index, self) => self.indexOf(text) === index); // Remove duplicates
-    
-    const heroContent = contentParts
+    const heroContent = [h1, subheading, firstParagraph]
+      .filter(text => text.length > 0)
       .join(' ')
-      .substring(0, 1500); // Increased limit for better analysis
+      .substring(0, 500); // Limit for API
     
     logger.info("Extracted hero content for positioning analysis", {
       url: context.websiteUrl,
@@ -142,12 +56,7 @@ export async function scorePositioning(
       throw new Error('No prompt template available for positioning criterion');
     }
     
-    // Replace all template variables
-    const prompt = effectivenessPrompt.promptTemplate
-      .replace('{h1}', h1)
-      .replace('{subheading}', subheading)
-      .replace('{firstParagraph}', firstParagraph)
-      .replace('{content}', heroContent);
+    const prompt = effectivenessPrompt.promptTemplate.replace('{content}', heroContent);
     
     const response = await openai.chat.completions.create({
       model: config.openai.model,

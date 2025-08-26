@@ -18,7 +18,7 @@ export async function scoreBrandStory(
   try {
     const $ = cheerio.load(context.html);
     
-    // Enhanced brand story content extraction
+    // Extract brand story content (first few paragraphs, about sections)
     const aboutSelectors = [
       'section[class*="about"]',
       '.about-us',
@@ -26,87 +26,25 @@ export async function scoreBrandStory(
       '.company-story',
       '[class*="story"]',
       '.mission',
-      '.vision',
-      '#about',
-      '[id*="about"]'
-    ];
-    
-    // Also look for headers that indicate story content
-    const storyHeaderSelectors = [
-      'h2:contains("about")',
-      'h2:contains("story")',
-      'h2:contains("mission")',
-      'h2:contains("who we")',
-      'h2:contains("why we")',
-      'h3:contains("our approach")',
-      'h3:contains("how we")',
-      'h3:contains("what we do")'
+      '.vision'
     ];
     
     let storyContent = '';
-    let contentParts = [];
-    
-    // First try dedicated sections
     for (const selector of aboutSelectors) {
-      const section = $(selector);
-      if (section.length > 0) {
-        const sectionText = section.text().trim();
-        if (sectionText && sectionText.length > 100) {
-          // Get more content from dedicated sections
-          storyContent = sectionText.substring(0, 2000);
-          break;
-        }
+      const sectionText = $(selector).text().trim();
+      if (sectionText && sectionText.length > 100) {
+        storyContent = sectionText;
+        break;
       }
     }
     
-    // If no dedicated section, look for story-related headers
-    if (!storyContent || storyContent.length < 200) {
-      for (const selector of storyHeaderSelectors) {
-        $(selector).each((_, el) => {
-          const heading = $(el).text().trim();
-          // Get the next few elements after this heading
-          const content = $(el).nextAll('p, ul, ol, blockquote').slice(0, 3)
-            .map((_, elem) => $(elem).text().trim())
-            .get()
-            .filter(text => text.length > 20)
-            .join(' ');
-          
-          if (heading && content) {
-            contentParts.push(`${heading}: ${content}`);
-          }
-        });
-      }
-      
-      if (contentParts.length > 0) {
-        storyContent = contentParts.join(' ').substring(0, 2000);
-      }
+    // Fallback to first few paragraphs if no dedicated about section
+    if (!storyContent) {
+      storyContent = $('p').slice(0, 5).map((_, el) => $(el).text().trim()).get().join(' ');
     }
     
-    // Enhanced fallback: get more comprehensive content
-    if (!storyContent || storyContent.length < 200) {
-      const paragraphs = $('p').slice(0, 8).map((_, el) => {
-        const text = $(el).text().trim();
-        // Filter out cookie notices, legal text, etc.
-        if (text.length > 50 && 
-            !text.match(/cookie|privacy policy|terms of service|copyright/i)) {
-          return text;
-        }
-        return '';
-      }).get().filter(t => t.length > 0);
-      
-      // Also get any testimonials or case study snippets
-      $('.testimonial, .case-study, [class*="testimonial"], [class*="success"]').slice(0, 2).each((_, el) => {
-        const text = $(el).text().trim();
-        if (text.length > 50 && text.length < 500) {
-          paragraphs.push(text);
-        }
-      });
-      
-      storyContent = paragraphs.join(' ');
-    }
-    
-    // Final limit for API (increased for better analysis)
-    storyContent = storyContent.substring(0, 2500);
+    // Limit content for API
+    storyContent = storyContent.substring(0, 800);
     
     logger.info("Extracted brand story content", {
       url: context.websiteUrl,

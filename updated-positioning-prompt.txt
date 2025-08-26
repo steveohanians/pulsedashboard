@@ -1,0 +1,63 @@
+INPUT (hero fields already extracted from HTML):
+{
+  "h1": "{h1}",
+  "subhead": "{subheading}",
+  "first_paragraph": "{firstParagraph}",
+  "joined_hero_500": "{content}"
+}
+
+TASK
+Decide whether the hero clearly communicates positioning. Evaluate only the INPUT. Do NOT infer from company name, logo, or your prior knowledge.
+
+NORMALIZE BEFORE CHECKING
+- Trim, collapse whitespace, remove ™ and ®, strip leading/trailing punctuation.
+- Ignore common CTAs/navigation words: ["get started","learn more","contact","pricing","sign in","log in","book a demo"].
+
+CRITERIA (strict, with examples and evidence extraction)
+1) audience_named (TRUE if the target is explicit)
+   - Look for explicit audience markers like "for", "to help", or noun phrases naming a role/industry/size:
+     e.g., "for CFOs", "for B2B marketers", "for hospitals", "for SMBs/enterprises", "for developers/IT teams".
+   - Vague words like "teams", "businesses", "companies" are FALSE unless qualified (e.g., "biotech companies").
+   - Extract the exact text identifying the audience (or null if none found).
+
+2) outcome_present (TRUE if a concrete benefit or result is stated)
+   - Presence of an outcome with a benefit verb (increase, reduce, save, accelerate, improve, grow, convert, secure)
+     and an object (revenue, cost, risk, time, leads, performance, uptime, compliance). Numbers strengthen but aren't required.
+   - Pure features ("AI-powered dashboard") without a benefit are FALSE.
+   - Extract the exact text describing the outcome/benefit (or null if none found).
+
+3) capability_clear (TRUE if what the company does is explicit)
+   - A recognizable product/service/category + domain, e.g., "analytics platform", "payments API", "cybersecurity software",
+     "web design agency", "logistics marketplace", "compliance consulting".
+   - Generic "solutions"/"platform" alone without domain or function is FALSE.
+   - Extract the exact text describing the capability (or null if none found).
+
+4) brevity_check (TRUE if the main headline is concise)
+   - Count words in h1 only (fallback to subhead if h1 empty). Tokenize by whitespace; treat hyphenated terms as one word.
+   - TRUE if count ≤ 22.
+   - Include the word count and the text that was counted.
+
+EDGE CASES
+- If h1, subhead, and first_paragraph are empty or generic ("Welcome", "Home"), set all four booleans FALSE, all evidence fields null, and confidence low.
+- If audience/outcome/capability appear only in boilerplate legal text or cookie notices, treat as NOT present.
+- If h1 missing but subhead clearly states audience/outcome/capability, those criteria may still be TRUE.
+
+CONFIDENCE (0–1)
+- Start with (# of TRUE criteria)/4.
+- Subtract 0.15 if any TRUE relied on weak/vague phrasing ("innovative solutions", "future-ready platform").
+- Subtract 0.15 if h1 is missing and you relied on subhead/paragraph for most signals.
+- Clamp to [0,1]. Round to two decimals.
+
+OUTPUT
+Return JSON ONLY with these keys in this order:
+{
+  "audience_named": <boolean>,
+  "audience_evidence": <string or null>,
+  "outcome_present": <boolean>,
+  "outcome_evidence": <string or null>,
+  "capability_clear": <boolean>,
+  "capability_evidence": <string or null>,
+  "brevity_check": <boolean>,
+  "brevity_evidence": <string with format "X words: [text]" or null>,
+  "confidence": <number>
+}
