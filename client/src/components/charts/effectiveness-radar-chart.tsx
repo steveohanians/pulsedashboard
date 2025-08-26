@@ -81,9 +81,9 @@ export function EffectivenessRadarChart({ criterionScores, className }: Effectiv
           <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis 
             dataKey="criterion" 
-            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))', dy: -8 }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
             className="text-xs"
-            radius={140}
+            radius={155}
           />
           <PolarRadiusAxis 
             angle={90}
