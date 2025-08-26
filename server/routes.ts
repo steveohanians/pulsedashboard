@@ -3355,7 +3355,8 @@ Output: Numbered list with tags.
       }
 
       // Use OpenAI to test the prompt
-      const openai = new OpenAIClient({
+      const { OpenAI } = await import('openai');
+      const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY!
       });
 
