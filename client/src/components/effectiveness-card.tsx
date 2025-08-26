@@ -289,7 +289,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               {/* Two-column layout */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 {/* Highlights Card */}
-                <Card className="h-full">
+                <Card className="h-full bg-slate-50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Highlights</CardTitle>
                   </CardHeader>
@@ -372,7 +372,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </Card>
 
                 {/* Criteria Radar Chart */}
-                <Card className="h-full">
+                <Card className="h-full bg-slate-50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Effectiveness Scores</CardTitle>
                   </CardHeader>
