@@ -221,21 +221,17 @@ export function EvidenceDrawer({
           <div className="p-4 pb-8">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="screenshot" className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
+                <TabsTrigger value="screenshot">
                   Screenshot
                 </TabsTrigger>
-                <TabsTrigger value="vitals" className="flex items-center gap-2">
-                  <Gauge className="h-4 w-4" />
+                <TabsTrigger value="vitals">
                   Web Vitals
                 </TabsTrigger>
-                <TabsTrigger value="onpage" className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
+                <TabsTrigger value="onpage">
                   On-page Signals
                 </TabsTrigger>
-                <TabsTrigger value="a11y-seo" className="flex items-center gap-2">
-                  <Accessibility className="h-4 w-4" />
-                  A11y/SEO
+                <TabsTrigger value="a11y-seo">
+                  Accessibility/SEO
                 </TabsTrigger>
               </TabsList>
 

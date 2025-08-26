@@ -180,36 +180,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       <Card className={cn("relative", className)}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg lg:text-xl flex items-center gap-2">
+            <CardTitle className="text-lg lg:text-xl">
               Website Effectiveness
-              {run && run.status === 'completed' && (
-                <div className="ml-auto flex items-center gap-2">
-                  <Badge variant="outline" className="text-2xl lg:text-3xl font-light px-3 py-1">
-                    {run.overallScore}/10
-                  </Badge>
-                </div>
-              )}
             </CardTitle>
+            {run && run.status === 'completed' && (
+              <div className="text-2xl lg:text-3xl font-light text-primary">
+                {run.overallScore}/10
+              </div>
+            )}
           </div>
-          
-          {run && run.status === 'completed' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Scored {formatDate(run.createdAt)}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={!canRefresh}
-                className="ml-auto h-8 px-2"
-              >
-                <RefreshCw className={cn(
-                  "h-4 w-4", 
-                  refreshMutation.isPending && "animate-spin"
-                )} />
-              </Button>
-            </div>
-          )}
         </CardHeader>
 
         <CardContent>
@@ -291,9 +270,30 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   onClick={handleViewEvidence}
                   className="w-full"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
                   View Detailed Evidence
                 </Button>
+              </div>
+
+              {/* Date and Refresh Section */}
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between text-sm text-muted-foreground pt-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Scored {formatDate(run.createdAt)}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={!canRefresh}
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className={cn(
+                      "h-4 w-4", 
+                      refreshMutation.isPending && "animate-spin"
+                    )} />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
