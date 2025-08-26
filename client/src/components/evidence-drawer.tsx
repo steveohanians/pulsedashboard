@@ -133,8 +133,7 @@ export function EvidenceDrawer({
       <Card key={score.id} className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Icon className="h-5 w-5" />
+            <CardTitle className="text-lg">
               {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </CardTitle>
             <Badge
@@ -157,8 +156,7 @@ export function EvidenceDrawer({
             
             {score.passes.passed.length > 0 && (
               <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                <div className="mb-2">
                   <span className="text-sm font-medium text-green-600">Passed Checks</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -173,8 +171,7 @@ export function EvidenceDrawer({
             
             {score.passes.failed.length > 0 && (
               <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                <div className="mb-2">
                   <span className="text-sm font-medium text-red-600">Failed Checks</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
