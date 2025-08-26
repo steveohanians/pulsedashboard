@@ -370,4 +370,63 @@ router.get('/admin/config', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/effectiveness/test-screenshot
+ * Test screenshot functionality (Admin only)
+ */
+router.get('/test-screenshot', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({
+        code: 'INVALID_URL',
+        message: 'URL parameter is required'
+      });
+    }
+
+    logger.info('Testing screenshot functionality', { url });
+
+    // Import screenshot service
+    const { screenshotService } = await import('../services/effectiveness/screenshot');
+    
+    // First test capabilities
+    const capabilities = await screenshotService.testScreenshotCapability();
+    
+    // Try to capture a screenshot
+    const result = await screenshotService.captureWebsiteScreenshot({
+      url,
+      outputDir: 'uploads/screenshots',
+      filename: `test_${Date.now()}.png`
+    });
+
+    // Check if file exists
+    const fs = await import('fs');
+    const fileExists = result.screenshotPath ? 
+      await fs.promises.access(result.screenshotPath).then(() => true).catch(() => false) : 
+      false;
+
+    res.json({
+      capabilities,
+      screenshotResult: {
+        ...result,
+        fileExists,
+        absolutePath: result.screenshotPath ? 
+          require('path').resolve(result.screenshotPath) : null
+      }
+    });
+
+  } catch (error) {
+    logger.error('Screenshot test failed', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+
+    res.status(500).json({
+      code: 'SCREENSHOT_TEST_FAILED',
+      message: 'Screenshot test failed',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export default router;
