@@ -48,17 +48,31 @@ export class WebsiteEffectivenessScorer {
       // Calculate overall score (weighted average)
       const overallScore = this.calculateOverallScore(criterionResults);
       
+      // Extract Web Vitals from speed criterion if available
+      // (Web Vitals are fetched by speed criterion from PageSpeed Insights API)
+      let webVitalsToSave = context.webVitals; // Default to screenshot service vitals if any
+      const speedResult = criterionResults.find(r => r.criterion === 'speed');
+      if (speedResult?.evidence?.details?.webVitals) {
+        // Use Web Vitals from PageSpeed Insights (more reliable than screenshot service)
+        webVitalsToSave = speedResult.evidence.details.webVitals as any;
+        logger.info("Using Web Vitals from PageSpeed Insights", {
+          websiteUrl,
+          webVitals: webVitalsToSave
+        });
+      }
+      
       logger.info("Completed website effectiveness scoring", {
         websiteUrl,
         overallScore,
-        criteriaCount: criterionResults.length
+        criteriaCount: criterionResults.length,
+        hasWebVitals: !!webVitalsToSave
       });
 
       return {
         overallScore,
         criterionResults,
         screenshotUrl: context.screenshot,
-        webVitals: context.webVitals,
+        webVitals: webVitalsToSave,
         screenshotMethod: context.screenshotMethod || null,
         screenshotError: context.screenshotError || null
       };
