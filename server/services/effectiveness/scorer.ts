@@ -307,7 +307,8 @@ export class WebsiteEffectivenessScorer {
           }
 
           // Apply timeout based on criterion type
-          const timeoutMs = criterion.requiresAI ? 30000 : 10000; // AI criteria get more time
+          // Speed criterion needs more time for PageSpeed API
+          const timeoutMs = criterion.requiresAI ? 30000 : criterion.name === 'speed' ? 30000 : 10000;
           
           const result = await Promise.race([
             criterion.fn(),
