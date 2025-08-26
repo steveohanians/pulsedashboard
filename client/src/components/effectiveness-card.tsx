@@ -386,7 +386,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               </div>
 
               {/* View Evidence Button */}
-              <div className="pt-2">
+              <div className="pt-2 flex justify-center">
                 <Button
                   onClick={handleViewEvidence}
                   className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white transition-all duration-200"
