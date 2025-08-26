@@ -7,7 +7,6 @@
 import { chromium, Browser, Page } from 'playwright';
 import { promises as fs } from 'fs';
 import path from 'path';
-import fetch from 'node-fetch';
 import logger from '../../utils/logging/logger';
 
 interface ScreenshotOptions {
@@ -109,41 +108,90 @@ export class ScreenshotService {
   }
 
   /**
-   * Capture screenshot using external API service
+   * Capture screenshot using Screenshotone.com API
    */
   private async captureWithAPI(url: string, outputDir: string, filename?: string): Promise<ScreenshotResult> {
     try {
-      logger.info('Using screenshot API fallback', { url });
+      const apiKey = process.env.SCREENSHOTONE_API_KEY;
       
-      // Use screenshotone.com free tier or another service
-      // For now, create a placeholder indicating API method would be used
+      if (!apiKey) {
+        logger.warn('SCREENSHOTONE_API_KEY not configured, screenshots will not be captured');
+        return {
+          screenshotPath: '',
+          screenshotUrl: '',
+          error: 'Screenshot API not configured - set SCREENSHOTONE_API_KEY environment variable',
+          fallbackUsed: true,
+          screenshotMethod: 'none'
+        };
+      }
+
+      logger.info('Using Screenshotone.com API for screenshot', { url });
+      
+      // Screenshotone.com API endpoint
+      const apiUrl = new URL('https://api.screenshotone.com/take');
+      apiUrl.searchParams.append('access_key', apiKey);
+      apiUrl.searchParams.append('url', url);
+      apiUrl.searchParams.append('viewport_width', '1440');
+      apiUrl.searchParams.append('viewport_height', '900');
+      apiUrl.searchParams.append('format', 'png');
+      apiUrl.searchParams.append('image_quality', '90');
+      apiUrl.searchParams.append('cache', 'true'); // Use cache for repeated requests
+      apiUrl.searchParams.append('cache_ttl', '86400'); // 24 hour cache
+      apiUrl.searchParams.append('block_ads', 'true');
+      apiUrl.searchParams.append('block_cookie_banners', 'true');
+      apiUrl.searchParams.append('wait_until', 'networkidle'); // Wait for page to load
+      apiUrl.searchParams.append('delay', '2'); // 2 second delay for JS rendering
+      
+      // Fetch screenshot from API
+      const response = await fetch(apiUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'image/png'
+        },
+        signal: AbortSignal.timeout(30000) // 30 second timeout
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API returned ${response.status}: ${errorText}`);
+      }
+
+      // Save screenshot to disk
       const screenshotFilename = filename || 
-        `screenshot_api_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}.png`;
+        `screenshot_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}.png`;
       
       const screenshotPath = path.join(outputDir, screenshotFilename);
       const screenshotUrl = `/screenshots/${screenshotFilename}`;
 
-      // Create a placeholder file to indicate screenshot was attempted
+      // Ensure output directory exists
       await fs.mkdir(outputDir, { recursive: true });
       
-      // For production, you would use a real screenshot API here
-      // Example: const apiUrl = `https://api.screenshotone.com/take?url=${encodeURIComponent(url)}&viewport_width=1440&viewport_height=900`;
+      // Get image buffer and save
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await fs.writeFile(screenshotPath, buffer);
       
-      logger.info('Screenshot API placeholder created', {
+      // Verify file was created
+      const fileStats = await fs.stat(screenshotPath).catch(() => null);
+      
+      if (!fileStats) {
+        throw new Error('Screenshot file was not created');
+      }
+
+      logger.info('Screenshot captured successfully via API', {
         url,
         screenshotPath,
-        method: 'api'
+        fileSize: fileStats.size,
+        method: 'screenshotone'
       });
 
       return {
         screenshotPath,
         screenshotUrl,
-        fallbackUsed: true,
-        screenshotMethod: 'api',
-        error: 'Screenshot API not configured - placeholder only'
+        fallbackUsed: false,
+        screenshotMethod: 'api'
       };
     } catch (error) {
-      logger.error('Screenshot API fallback failed', {
+      logger.error('Screenshotone API failed', {
         url,
         error: error instanceof Error ? error.message : String(error)
       });
@@ -169,11 +217,26 @@ export class ScreenshotService {
       filename
     } = options;
 
-    // Check if browser is available
+    // Try API first (more reliable in cloud environments)
+    const apiKey = process.env.SCREENSHOTONE_API_KEY;
+    if (apiKey) {
+      const apiResult = await this.captureWithAPI(url, outputDir, filename);
+      if (!apiResult.error) {
+        return apiResult;
+      }
+      logger.warn('API screenshot failed, trying Playwright fallback', { url });
+    }
+
+    // Fall back to Playwright if API fails or not configured
     const browser = await this.ensureBrowser();
     if (!browser) {
-      logger.warn('Playwright not available, using API fallback for screenshot', { url });
-      return this.captureWithAPI(url, outputDir, filename);
+      logger.warn('Both API and Playwright unavailable for screenshots', { url });
+      return {
+        screenshotPath: '',
+        screenshotUrl: '',
+        error: 'No screenshot method available - configure SCREENSHOTONE_API_KEY or install Playwright dependencies',
+        screenshotMethod: 'none'
+      };
     }
 
     let page: Page | null = null;
@@ -253,17 +316,22 @@ export class ScreenshotService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      logger.error('Playwright screenshot failed, trying API fallback', {
+      logger.error('Playwright screenshot failed', {
         url,
         error: errorMessage
       });
 
-      // Try API fallback
       if (page) {
         await page.close().catch(() => {});
       }
       
-      return this.captureWithAPI(url, outputDir, filename);
+      // Return error since API was already tried
+      return {
+        screenshotPath: '',
+        screenshotUrl: '',
+        error: errorMessage,
+        screenshotMethod: 'none'
+      };
 
     } finally {
       if (page) {
@@ -342,19 +410,21 @@ export class ScreenshotService {
   }> {
     const errors: string[] = [];
     
+    // Test API availability
+    const apiKey = process.env.SCREENSHOTONE_API_KEY;
+    const apiAvailable = !!apiKey;
+    if (!apiAvailable) {
+      errors.push('SCREENSHOTONE_API_KEY environment variable not set');
+    }
+    
     // Test Playwright
     const playwrightAvailable = await this.checkBrowserAvailability();
     if (!playwrightAvailable) {
       errors.push('Playwright browser not available - missing system dependencies');
     }
     
-    // Test API (placeholder for now)
-    const apiAvailable = false; // Would test actual API here
-    if (!apiAvailable) {
-      errors.push('Screenshot API not configured');
-    }
-    
-    const recommendedMethod = playwrightAvailable ? 'playwright' : apiAvailable ? 'api' : 'none';
+    // Prefer API since it's more reliable in cloud environments
+    const recommendedMethod = apiAvailable ? 'api' : playwrightAvailable ? 'playwright' : 'none';
     
     return {
       playwrightAvailable,
