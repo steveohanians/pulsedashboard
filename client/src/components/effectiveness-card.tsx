@@ -76,7 +76,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     },
     refetchInterval: (queryData) => {
       // Refetch every 10 seconds if status is pending
-      return queryData?.run?.status === 'pending' ? 10000 : false;
+      return queryData?.data?.run?.status === 'pending' ? 10000 : false;
     },
     retry: (failureCount, error) => {
       // Don't retry on client errors (4xx) except for brief network issues
@@ -251,20 +251,97 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
           {run && run.status === 'completed' && (
             <div className="space-y-4">
-              {/* Criterion Chips */}
-              <div className="flex flex-wrap gap-2">
-                {run.criterionScores.map((score) => (
-                  <Badge
-                    key={score.criterion}
-                    variant="outline"
-                    className={cn(
-                      "px-3 py-1 text-sm font-medium border",
-                      getCriterionColor(score.score)
-                    )}
-                  >
-                    {score.criterion}: {score.score}
-                  </Badge>
-                ))}
+              {/* Two-column layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Highlights Card */}
+                <Card className="h-fit">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Highlights</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-700 mb-1">At a glance story</h4>
+                      <p className="text-xs text-slate-600">
+                        Your website scored {run.overallScore}/10 overall with {run.criterionScores.filter(s => s.score >= 8).length} strong criteria, 
+                        {run.criterionScores.filter(s => s.score >= 6 && s.score < 8).length} moderate areas, and 
+                        {run.criterionScores.filter(s => s.score < 6).length} areas needing improvement.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-green-700 mb-1">Strengths:</h4>
+                      <div className="text-xs text-slate-600">
+                        {run.criterionScores.filter(s => s.score >= 8).length > 0 ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {run.criterionScores.filter(s => s.score >= 8).map(score => (
+                              <li key={score.criterion}>
+                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score}/10)
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-slate-500 italic">No areas scoring 8 or above</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-red-700 mb-1">Gaps:</h4>
+                      <div className="text-xs text-slate-600">
+                        {run.criterionScores.filter(s => s.score < 6).length > 0 ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {run.criterionScores.filter(s => s.score < 6).map(score => (
+                              <li key={score.criterion}>
+                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score}/10)
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-slate-500 italic">No critical gaps identified</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Criteria Scores Card */}
+                <Card className="h-fit">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Criteria Scores</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {run.criterionScores.map((score) => (
+                        <div key={score.criterion} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-slate-700">
+                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </span>
+                              <span className={cn(
+                                "text-sm font-semibold",
+                                score.score >= 8 ? "text-green-600" :
+                                score.score >= 6 ? "text-yellow-600" : "text-red-600"
+                              )}>
+                                {score.score}/10
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  "h-2 rounded-full transition-all duration-300",
+                                  score.score >= 8 ? "bg-green-500" :
+                                  score.score >= 6 ? "bg-yellow-500" : "bg-red-500"
+                                )}
+                                style={{ width: `${score.score * 10}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* View Evidence Button */}
@@ -274,7 +351,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   onClick={handleViewEvidence}
                   className="w-full"
                 >
-                  View Detailed Evidence
+                  View Detailed Report
                 </Button>
               </div>
 

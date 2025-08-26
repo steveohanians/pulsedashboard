@@ -204,7 +204,7 @@ export function EvidenceDrawer({
             <div className="flex items-center justify-between">
               <div>
                 <DrawerTitle className="text-left">
-                  Website Effectiveness Evidence
+                  Website Effectiveness Report
                 </DrawerTitle>
                 <DrawerDescription className="text-left">
                   Detailed analysis and evidence for {effectivenessData.overallScore}/10 score • {formatDate(effectivenessData.createdAt)}
