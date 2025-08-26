@@ -201,7 +201,14 @@ export const getQueryFn: <T>(options: {
     }
 
     await validateResponse(res);
-    return await res.json();
+    
+    // Handle 204 No Content responses
+    if (res.status === 204) {
+      return null;
+    }
+    
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   };
 
 // QueryKeys are now centralized in @/lib/queryKeys.ts to avoid conflicts
