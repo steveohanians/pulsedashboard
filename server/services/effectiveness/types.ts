@@ -85,7 +85,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     height: 900
   },
   openai: {
-    model: "gpt-4",
+    model: process.env.OPENAI_MODEL || "gpt-4o",
     temperature: 0.1
   }
 };

@@ -272,13 +272,13 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           {run && run.status === 'completed' && (
             <div className="space-y-4">
               {/* Two-column layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 {/* Highlights Card */}
-                <Card className="h-fit">
+                <Card className="h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Highlights</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 h-full flex flex-col">
                     <div>
                       <h4 className="text-sm font-medium text-slate-700 mb-1">At a glance story</h4>
                       <p className="text-xs text-slate-600">
@@ -357,11 +357,11 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </Card>
 
                 {/* Criteria Radar Chart */}
-                <Card className="h-fit">
+                <Card className="h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Effectiveness Scores</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-full flex flex-col justify-center">
                     <EffectivenessRadarChart 
                       criterionScores={run.criterionScores} 
                       className="w-full"
