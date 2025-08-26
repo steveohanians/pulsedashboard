@@ -74,9 +74,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       
       return response.json();
     },
-    refetchInterval: (queryData) => {
+    refetchInterval: (query) => {
       // Refetch every 10 seconds if status is pending
-      return queryData?.data?.run?.status === 'pending' ? 10000 : false;
+      return query.state.data?.run?.status === 'pending' ? 10000 : false;
     },
     retry: (failureCount, error) => {
       // Don't retry on client errors (4xx) except for brief network issues
