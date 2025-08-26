@@ -14,6 +14,7 @@ import exportPdfRouter from "./routes/exportPdfRoute";
 import benchmarkAdminRouter from "./routes/benchmark-admin";
 import adminUsersRouter from "./routes/admin-users";
 import sovRoutes from "./routes/sovRoutes";
+import effectivenessRoutes from "./routes/effectivenessRoutes";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema } from "@shared/schema";
 import { 
@@ -4432,6 +4433,9 @@ Output: Numbered list with tags.
 
   // Share of Voice routes
   app.use("/api/sov", sovRoutes);
+
+  // Website Effectiveness Scoring routes
+  app.use("/api/effectiveness", effectivenessRoutes);
 
   // Export routes - must come before generic cleanup route
   app.use("/api/export", exportPdfRouter);

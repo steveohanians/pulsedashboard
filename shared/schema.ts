@@ -76,6 +76,7 @@ export const clients = pgTable("clients", {
   iconUrl: text("icon_url"), // Brandfetch icon URL
   active: boolean("active").default(true).notNull(),
   lastGA4Sync: timestamp("last_ga4_sync"),
+  lastEffectivenessRun: timestamp("last_effectiveness_run"), // Website effectiveness scoring timestamp
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // Index for client filtering
@@ -311,6 +312,43 @@ export const filterOptions = pgTable("filter_options", {
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
+// Website Effectiveness Scoring Tables
+export const effectivenessRuns = pgTable("effectiveness_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  overallScore: decimal("overall_score", { precision: 3, scale: 1 }), // e.g., 8.5 out of 10
+  status: text("status").notNull().default("pending"), // pending, completed, failed
+  screenshotUrl: text("screenshot_url"), // URL to above-fold screenshot
+  webVitals: jsonb("web_vitals"), // LCP, CLS, FID metrics
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  clientIdIdx: index("idx_effectiveness_runs_client_id").on(table.clientId),
+  statusIdx: index("idx_effectiveness_runs_status").on(table.status),
+  clientCreatedIdx: index("idx_effectiveness_runs_client_created").on(table.clientId, table.createdAt),
+}));
+
+export const criterionScores = pgTable("criterion_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id").references(() => effectivenessRuns.id, { onDelete: "cascade" }).notNull(),
+  criterion: text("criterion").notNull(), // "positioning", "ux", "brand_story", "trust", "ctas", "speed", "accessibility", "seo"
+  score: decimal("score", { precision: 3, scale: 1 }).notNull(), // individual criterion score 0-10
+  evidence: jsonb("evidence"), // detailed evidence and reasoning
+  passes: jsonb("passes"), // what passed/failed for this criterion
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  runIdIdx: index("idx_criterion_scores_run_id").on(table.runId),
+  criterionIdx: index("idx_criterion_scores_criterion").on(table.criterion),
+  runCriterionIdx: index("idx_criterion_scores_run_criterion").on(table.runId, table.criterion),
+}));
+
+export const effectivenessConfig = pgTable("effectiveness_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: jsonb("value").notNull(),
+  description: text("description"), // Admin help text
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const clientsRelations = relations(clients, ({ many }) => ({
   users: many(users),
@@ -320,6 +358,7 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   insightContexts: many(insightContexts),
   ga4PropertyAccess: many(ga4PropertyAccess),
   metricVersions: many(metricVersions),
+  effectivenessRuns: many(effectivenessRuns),
 }));
 
 export const metricVersionsRelations = relations(metricVersions, ({ one }) => ({
@@ -389,6 +428,21 @@ export const insightContextsRelations = relations(insightContexts, ({ one }) => 
   client: one(clients, {
     fields: [insightContexts.clientId],
     references: [clients.id],
+  }),
+}));
+
+export const effectivenessRunsRelations = relations(effectivenessRuns, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [effectivenessRuns.clientId],
+    references: [clients.id],
+  }),
+  criterionScores: many(criterionScores),
+}));
+
+export const criterionScoresRelations = relations(criterionScores, ({ one }) => ({
+  run: one(effectivenessRuns, {
+    fields: [criterionScores.runId],
+    references: [effectivenessRuns.id],
   }),
 }));
 
@@ -538,6 +592,36 @@ export const updateInsightContextSchema = createInsertSchema(insightContexts).om
   updatedAt: true,
 }).partial();
 
+export const insertEffectivenessRunSchema = createInsertSchema(effectivenessRuns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateEffectivenessRunSchema = createInsertSchema(effectivenessRuns).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export const insertCriterionScoreSchema = createInsertSchema(criterionScores).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateCriterionScoreSchema = createInsertSchema(criterionScores).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export const insertEffectivenessConfigSchema = createInsertSchema(effectivenessConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const updateEffectivenessConfigSchema = createInsertSchema(effectivenessConfig).omit({
+  id: true,
+  updatedAt: true,
+}).partial();
+
 // Types
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -591,3 +675,15 @@ export type UpdateGA4ServiceAccount = z.infer<typeof updateGA4ServiceAccountSche
 export type GA4PropertyAccess = typeof ga4PropertyAccess.$inferSelect;
 export type InsertGA4PropertyAccess = z.infer<typeof insertGA4PropertyAccessSchema>;
 export type UpdateGA4PropertyAccess = z.infer<typeof updateGA4PropertyAccessSchema>;
+
+export type EffectivenessRun = typeof effectivenessRuns.$inferSelect;
+export type InsertEffectivenessRun = z.infer<typeof insertEffectivenessRunSchema>;
+export type UpdateEffectivenessRun = z.infer<typeof updateEffectivenessRunSchema>;
+
+export type CriterionScore = typeof criterionScores.$inferSelect;
+export type InsertCriterionScore = z.infer<typeof insertCriterionScoreSchema>;
+export type UpdateCriterionScore = z.infer<typeof updateCriterionScoreSchema>;
+
+export type EffectivenessConfig = typeof effectivenessConfig.$inferSelect;
+export type InsertEffectivenessConfig = z.infer<typeof insertEffectivenessConfigSchema>;
+export type UpdateEffectivenessConfig = z.infer<typeof updateEffectivenessConfigSchema>;

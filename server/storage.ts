@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -153,6 +153,14 @@ export interface IStorage {
   
   // GA4 Service Accounts
   getGA4ServiceAccount(serviceAccountId: string): Promise<any>;
+  
+  // Website Effectiveness Scoring
+  getLatestEffectivenessRun(clientId: string): Promise<any>;
+  getEffectivenessRun(runId: string): Promise<any>;
+  createEffectivenessRun(run: any): Promise<any>;
+  updateEffectivenessRun(runId: string, updates: any): Promise<any>;
+  getCriterionScores(runId: string): Promise<any[]>;
+  createCriterionScore(score: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2356,6 +2364,64 @@ export class DatabaseStorage implements IStorage {
       .from(benchmarkCompanies)
       .where(eq(benchmarkCompanies.id, companyId))
       .limit(1);
+    
+    return results[0];
+  }
+
+  // Website Effectiveness Scoring Methods
+  async getLatestEffectivenessRun(clientId: string): Promise<any> {
+    const results = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(eq(effectivenessRuns.clientId, clientId))
+      .orderBy(desc(effectivenessRuns.createdAt))
+      .limit(1);
+    
+    return results[0];
+  }
+
+  async getEffectivenessRun(runId: string): Promise<any> {
+    const results = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(eq(effectivenessRuns.id, runId))
+      .limit(1);
+    
+    return results[0];
+  }
+
+  async createEffectivenessRun(run: any): Promise<any> {
+    const results = await db
+      .insert(effectivenessRuns)
+      .values(run)
+      .returning();
+    
+    return results[0];
+  }
+
+  async updateEffectivenessRun(runId: string, updates: any): Promise<any> {
+    const results = await db
+      .update(effectivenessRuns)
+      .set(updates)
+      .where(eq(effectivenessRuns.id, runId))
+      .returning();
+    
+    return results[0];
+  }
+
+  async getCriterionScores(runId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(criterionScores)
+      .where(eq(criterionScores.runId, runId))
+      .orderBy(criterionScores.criterion);
+  }
+
+  async createCriterionScore(score: any): Promise<any> {
+    const results = await db
+      .insert(criterionScores)
+      .values(score)
+      .returning();
     
     return results[0];
   }

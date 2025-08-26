@@ -30,7 +30,15 @@
       "Bash(npm install:*)",
       "Bash(npm run check:*)",
       "Bash(grep:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(psql:*)",
+      "Bash(pkill:*)",
+      "Bash(NODE_ENV=development tsx server/index.ts)",
+      "Bash(npx playwright:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

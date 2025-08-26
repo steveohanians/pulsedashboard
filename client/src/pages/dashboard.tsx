@@ -3,6 +3,7 @@ import { useDashboardData, useDashboardFilters, useSmartFilterCombinations } fro
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EffectivenessCard } from "@/components/effectiveness-card";
 
 import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
@@ -215,7 +216,8 @@ export default function Dashboard() {
   };
 
   const metricNames = [
-    "Bounce Rate",
+    "Website Effectiveness",
+    "Bounce Rate", 
     "Session Duration",
     "Pages per Session",
     "Sessions per User",
@@ -855,6 +857,18 @@ export default function Dashboard() {
           {/* Metrics Grid - Simplified with processed data */}
           <div className="space-y-8 lg:space-y-16">
             {metricNames.map((metricName) => {
+              // Special handling for Website Effectiveness metric
+              if (metricName === "Website Effectiveness") {
+                return (
+                  <div
+                    key={metricName}
+                    id={`metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`}
+                  >
+                    <EffectivenessCard clientId={user?.clientId || ''} className="mb-8" />
+                  </div>
+                );
+              }
+
               const metricData = groupedMetrics[metricName] || {};
               const insight = insightsLookup[metricName];
 
@@ -866,7 +880,7 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="text-lg lg:text-xl">
                       {metricName}
-                      {metricName !== "Traffic Channels" && metricName !== "Device Distribution" && (
+                      {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
                         <div className="float-right flex items-center gap-2">
                           {(() => {
                             // Only show comparison chips for target metrics
