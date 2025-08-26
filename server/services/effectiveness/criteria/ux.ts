@@ -170,7 +170,16 @@ export async function scoreUX(
           hasAltTexts,
           ariaLabels
         },
-        reasoning: `Score based on heading structure (${hasProperHierarchy ? 'proper' : 'improper'}), line length (${Math.round(avgWordsPerLine)} words avg), interactivity (${interactiveElements} elements), responsive design (${hasViewportMeta ? 'present' : 'missing'}), framework usage (${hasFramework ? 'yes' : 'no'}), and accessibility features`
+        reasoning: generateUXInsights(passes.passed, passes.failed, {
+          headingsCount: headings.length,
+          avgWordsPerLine,
+          interactiveElements,
+          hasFramework,
+          hasNavigation,
+          hasViewportMeta,
+          hasAltTexts,
+          ariaLabels
+        })
       },
       passes
     };
@@ -195,4 +204,82 @@ export async function scoreUX(
       }
     };
   }
+}
+
+/**
+ * Generate actionable insights for UX analysis
+ */
+function generateUXInsights(passed: string[], failed: string[], details: {
+  headingsCount: number;
+  avgWordsPerLine: number;
+  interactiveElements: number;
+  hasFramework: boolean;
+  hasNavigation: boolean;
+  hasViewportMeta: boolean;
+  hasAltTexts: boolean;
+  ariaLabels: number;
+}): string {
+  const insights: string[] = [];
+  const recommendations: string[] = [];
+  
+  // Overall assessment
+  if (passed.length >= 5) {
+    insights.push("Your website delivers a strong user experience with well-structured content and good accessibility practices.");
+  } else if (passed.length >= 3) {
+    insights.push("Your UX foundation is solid but has opportunities for optimization to enhance user engagement.");
+  } else {
+    insights.push("Your website's user experience needs significant improvement to reduce bounce rates and increase conversions.");
+  }
+  
+  // Specific recommendations based on failed checks
+  if (failed.includes('improper_heading_hierarchy')) {
+    recommendations.push("**Fix heading structure** - Use a single H1 and logical H2-H6 progression to help users scan content");
+  }
+  
+  if (failed.includes('poor_line_length')) {
+    if (details.avgWordsPerLine > 20) {
+      recommendations.push("**Shorten text lines** - Break up long paragraphs for better readability");
+    } else {
+      recommendations.push("**Optimize text layout** - Adjust column widths for comfortable reading");
+    }
+  }
+  
+  if (failed.includes('poor_interactivity')) {
+    recommendations.push("**Add interactive elements** - Include more buttons, forms, or engaging components to guide user actions");
+  }
+  
+  if (failed.includes('no_responsive_design')) {
+    recommendations.push("**Implement responsive design** - Ensure your site works seamlessly across mobile, tablet, and desktop");
+  }
+  
+  if (failed.includes('no_css_framework')) {
+    recommendations.push("**Adopt a CSS framework** - Use Bootstrap, Tailwind, or similar for consistent, professional styling");
+  }
+  
+  if (failed.includes('no_accessibility_features')) {
+    recommendations.push("**Improve accessibility** - Add alt text for images and ARIA labels for screen readers");
+  }
+  
+  if (failed.includes('no_navigation')) {
+    recommendations.push("**Add clear navigation** - Include a primary navigation menu to help users find content");
+  }
+  
+  // Positive reinforcement for good practices
+  const strengths: string[] = [];
+  if (passed.includes('proper_heading_hierarchy')) strengths.push("clear content hierarchy");
+  if (passed.includes('optimal_line_length')) strengths.push("readable text formatting");
+  if (passed.includes('rich_interactivity')) strengths.push("engaging interactive elements");
+  if (passed.includes('responsive_design')) strengths.push("mobile optimization");
+  if (passed.includes('accessibility_features')) strengths.push("accessibility compliance");
+  
+  // Combine insights and recommendations
+  let result = insights[0];
+  if (strengths.length > 0) {
+    result += ` Strengths: ${strengths.join(', ')}.`;
+  }
+  if (recommendations.length > 0) {
+    result += ` Priority improvements: ${recommendations.join('; ')}.`;
+  }
+  
+  return result;
 }

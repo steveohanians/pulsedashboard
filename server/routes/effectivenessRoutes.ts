@@ -131,8 +131,8 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       });
     }
 
-    // Check cooldown (24 hours) unless forced
-    if (!force && client.lastEffectivenessRun) {
+    // Check cooldown (24 hours) unless forced or user is admin
+    if (!force && req.user?.role !== 'Admin' && client.lastEffectivenessRun) {
       const cooldownHours = 24;
       const timeSinceLastRun = Date.now() - new Date(client.lastEffectivenessRun).getTime();
       const cooldownMs = cooldownHours * 60 * 60 * 1000;

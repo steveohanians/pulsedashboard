@@ -146,7 +146,7 @@ export async function scoreSpeed(
             cls_limit: config.thresholds.cls_limit
           }
         },
-        reasoning: `Score derived from PageSpeed performance (${performanceScore}%) with penalties applied for Core Web Vitals: LCP ${webVitals.lcp}s ${webVitals.lcp <= 2.5 ? '(good)' : webVitals.lcp <= 4.0 ? '(needs improvement)' : '(poor)'}, CLS ${webVitals.cls} ${webVitals.cls <= 0.1 ? '(good)' : webVitals.cls <= 0.25 ? '(needs improvement)' : '(poor)'}`
+        reasoning: generateSpeedInsights(performanceScore, webVitals, passes.passed, passes.failed)
       },
       passes
     };
@@ -201,4 +201,65 @@ function estimatePerformanceScore(webVitals: { lcp: number; cls: number; fid: nu
   }
   
   return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Generate actionable insights for speed analysis
+ */
+function generateSpeedInsights(performanceScore: number, webVitals: { lcp: number; cls: number; fid: number }, passed: string[], failed: string[]): string {
+  const insights: string[] = [];
+  const recommendations: string[] = [];
+  
+  // Overall assessment based on performance score
+  if (performanceScore >= 90) {
+    insights.push("Your website delivers excellent performance with fast loading times that enhance user experience and SEO rankings.");
+  } else if (performanceScore >= 50) {
+    insights.push("Your website performance is moderate but has room for optimization to improve user engagement and search rankings.");
+  } else {
+    insights.push("Your website performance is significantly impacting user experience and search rankings, requiring immediate optimization.");
+  }
+  
+  // Core Web Vitals specific insights and recommendations
+  if (failed.includes('lcp_poor')) {
+    recommendations.push(`**Optimize Largest Contentful Paint** - Your LCP of ${webVitals.lcp.toFixed(1)}s is poor (>4s). Optimize images, reduce server response times, and minimize render-blocking resources`);
+  } else if (passed.includes('lcp_acceptable')) {
+    recommendations.push(`**Improve Largest Contentful Paint** - Your LCP of ${webVitals.lcp.toFixed(1)}s needs improvement. Target under 2.5s by optimizing critical resources`);
+  }
+  
+  if (failed.includes('cls_poor')) {
+    recommendations.push(`**Fix Cumulative Layout Shift** - Your CLS of ${webVitals.cls.toFixed(2)} causes visual instability. Add size attributes to images and reserve space for dynamic content`);
+  } else if (passed.includes('cls_acceptable')) {
+    recommendations.push(`**Reduce Layout Shift** - Your CLS of ${webVitals.cls.toFixed(2)} can be improved. Prevent unexpected layout changes during page load`);
+  }
+  
+  if (failed.includes('fid_poor')) {
+    recommendations.push(`**Improve Interactivity** - Your FID of ${Math.round(webVitals.fid)}ms delays user interactions. Minimize JavaScript execution time and use web workers for heavy tasks`);
+  } else if (passed.includes('fid_acceptable')) {
+    recommendations.push(`**Optimize Interactivity** - Your FID of ${Math.round(webVitals.fid)}ms can be faster. Optimize JavaScript and reduce main thread blocking`);
+  }
+  
+  // Performance-based recommendations
+  if (performanceScore < 50) {
+    recommendations.push("**Enable compression** - Implement Gzip/Brotli compression and optimize images with modern formats (WebP/AVIF)");
+    recommendations.push("**Minimize resources** - Remove unused CSS/JavaScript and implement code splitting");
+  } else if (performanceScore < 90) {
+    recommendations.push("**Optimize caching** - Implement browser caching and CDN for static assets");
+  }
+  
+  // Positive reinforcement for good metrics
+  const strengths: string[] = [];
+  if (passed.includes('lcp_good')) strengths.push(`fast loading (LCP: ${webVitals.lcp.toFixed(1)}s)`);
+  if (passed.includes('cls_good')) strengths.push(`stable layout (CLS: ${webVitals.cls.toFixed(2)})`);
+  if (passed.includes('fid_good')) strengths.push(`responsive interactions (FID: ${Math.round(webVitals.fid)}ms)`);
+  
+  // Combine insights and recommendations
+  let result = insights[0];
+  if (strengths.length > 0) {
+    result += ` Strengths: ${strengths.join(', ')}.`;
+  }
+  if (recommendations.length > 0) {
+    result += ` Priority optimizations: ${recommendations.join('; ')}.`;
+  }
+  
+  return result;
 }

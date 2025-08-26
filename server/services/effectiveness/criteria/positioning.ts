@@ -150,7 +150,7 @@ export async function scorePositioning(
           buzzwordPenalty,
           wordCount: h1.split(' ').length
         },
-        reasoning: `Score based on audience clarity (${analysis.audience_named ? 'pass' : 'fail'}), outcome specificity (${analysis.outcome_present ? 'pass' : 'fail'}), capability definition (${analysis.capability_clear ? 'pass' : 'fail'}), and brevity (${analysis.brevity_check ? 'pass' : 'fail'}). ${buzzwordCount > 0 ? `Reduced by ${buzzwordPenalty} points for ${buzzwordCount} buzzwords.` : ''}`
+        reasoning: generatePositioningInsights(analysis, buzzwordCount, passes.passed, passes.failed)
       },
       passes
     };
@@ -175,4 +175,51 @@ export async function scorePositioning(
       }
     };
   }
+}
+
+/**
+ * Generate actionable insights for positioning analysis
+ */
+function generatePositioningInsights(analysis: any, buzzwordCount: number, passed: string[], failed: string[]): string {
+  const insights: string[] = [];
+  
+  // Overall assessment
+  if (passed.length >= 3) {
+    insights.push("Your hero section effectively communicates your value proposition with clear positioning elements.");
+  } else if (passed.length >= 2) {
+    insights.push("Your positioning has solid foundations but needs refinement to maximize visitor conversion.");
+  } else {
+    insights.push("Your hero section requires significant optimization to clearly communicate your value to visitors.");
+  }
+  
+  // Specific recommendations
+  const recommendations: string[] = [];
+  
+  if (failed.includes('audience_named')) {
+    recommendations.push("**Define your target audience** - Be specific about who you serve rather than using generic terms");
+  }
+  
+  if (failed.includes('outcome_present')) {
+    recommendations.push("**Clarify the outcome** - Visitors should immediately understand what result they'll achieve by working with you");
+  }
+  
+  if (failed.includes('capability_clear')) {
+    recommendations.push("**Specify your capabilities** - Explain exactly how you deliver results, not just what you do");
+  }
+  
+  if (failed.includes('brevity_check')) {
+    recommendations.push("**Simplify your message** - Hero content should be concise and immediately scannable");
+  }
+  
+  if (buzzwordCount > 0) {
+    recommendations.push(`**Reduce buzzwords** - Replace ${buzzwordCount} generic terms with specific, results-focused language`);
+  }
+  
+  // Combine insights and recommendations
+  let result = insights[0];
+  if (recommendations.length > 0) {
+    result += ` Key improvements: ${recommendations.join('; ')}.`;
+  }
+  
+  return result;
 }

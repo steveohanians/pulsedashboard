@@ -235,15 +235,48 @@ export function EvidenceDrawer({
               <div className="mt-6">
                 <TabsContent value="screenshot">
                   <div className="space-y-4">
-                    <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-lg">
-                      <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        Above-fold screenshot capture will be implemented with Playwright integration
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        This will show the website as visitors first see it with annotations for key elements
-                      </p>
-                    </div>
+                    {evidenceData?.run?.screenshotUrl ? (
+                      <div className="space-y-4">
+                        <div className="rounded-lg border bg-white p-4">
+                          <div className="text-sm font-medium text-gray-900 mb-3">
+                            Above-the-fold Website Screenshot
+                          </div>
+                          <div className="relative border rounded-lg overflow-hidden bg-gray-50">
+                            <img
+                              src={evidenceData.run.screenshotUrl}
+                              alt="Website screenshot"
+                              className="w-full h-auto max-w-full"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="text-center p-8">
+                                      <div class="text-red-500 text-sm">Screenshot failed to load</div>
+                                      <div class="text-xs text-muted-foreground mt-1">URL: ${evidenceData.run.screenshotUrl}</div>
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Captured on {formatDate(evidenceData.run.createdAt)} • Shows website as visitors first see it
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-lg">
+                        <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          Screenshot not available for this analysis run
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Screenshots are captured automatically during website effectiveness analysis
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -259,15 +292,54 @@ export function EvidenceDrawer({
                             <div className="space-y-3">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">Largest Contentful Paint</span>
-                                <Badge variant="outline">Not available</Badge>
+                                {evidenceData?.run?.webVitals?.lcp ? (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      evidenceData.run.webVitals.lcp <= 2.5 ? "text-green-600 border-green-200" :
+                                      evidenceData.run.webVitals.lcp <= 4.0 ? "text-yellow-600 border-yellow-200" : 
+                                      "text-red-600 border-red-200"
+                                    )}
+                                  >
+                                    {evidenceData.run.webVitals.lcp.toFixed(1)}s
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">Not available</Badge>
+                                )}
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">Cumulative Layout Shift</span>
-                                <Badge variant="outline">Not available</Badge>
+                                {evidenceData?.run?.webVitals?.cls !== undefined ? (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      evidenceData.run.webVitals.cls <= 0.1 ? "text-green-600 border-green-200" :
+                                      evidenceData.run.webVitals.cls <= 0.25 ? "text-yellow-600 border-yellow-200" : 
+                                      "text-red-600 border-red-200"
+                                    )}
+                                  >
+                                    {evidenceData.run.webVitals.cls.toFixed(2)}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">Not available</Badge>
+                                )}
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">First Input Delay</span>
-                                <Badge variant="outline">Not available</Badge>
+                                {evidenceData?.run?.webVitals?.fid !== undefined ? (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      evidenceData.run.webVitals.fid <= 100 ? "text-green-600 border-green-200" :
+                                      evidenceData.run.webVitals.fid <= 300 ? "text-yellow-600 border-yellow-200" : 
+                                      "text-red-600 border-red-200"
+                                    )}
+                                  >
+                                    {Math.round(evidenceData.run.webVitals.fid)}ms
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">Not available</Badge>
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -278,9 +350,31 @@ export function EvidenceDrawer({
                             <CardTitle className="text-lg">Performance Score</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <p className="text-sm text-muted-foreground">
-                              Performance metrics will be populated from PageSpeed Insights API integration
-                            </p>
+                            {categorizedScores.performance.length > 0 && categorizedScores.performance[0].evidence?.details?.performanceScore ? (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm">PageSpeed Score</span>
+                                  <Badge 
+                                    variant="outline"
+                                    className={cn(
+                                      "text-lg font-semibold px-3 py-1",
+                                      categorizedScores.performance[0].evidence.details.performanceScore >= 80 ? "text-green-600 border-green-200" :
+                                      categorizedScores.performance[0].evidence.details.performanceScore >= 50 ? "text-yellow-600 border-yellow-200" : 
+                                      "text-red-600 border-red-200"
+                                    )}
+                                  >
+                                    {Math.round(categorizedScores.performance[0].evidence.details.performanceScore)}/100
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Based on PageSpeed Insights analysis
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                Performance metrics will be populated from PageSpeed Insights API integration
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       </div>
