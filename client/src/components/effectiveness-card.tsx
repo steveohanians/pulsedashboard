@@ -7,6 +7,7 @@ import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
+import { EffectivenessRadarChart } from "./charts/effectiveness-radar-chart";
 
 interface CriterionScore {
   id: string;
@@ -78,7 +79,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     refetchInterval: (query) => {
       // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
       const status = query.state.data?.run?.status;
-      return ['pending', 'initializing', 'scraping', 'analyzing'].includes(status) ? 5000 : false;
+      return status && ['pending', 'initializing', 'scraping', 'analyzing'].includes(status) ? 5000 : false;
     },
     retry: (failureCount, error) => {
       // Don't retry on client errors (4xx) except for brief network issues
@@ -167,7 +168,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   // Format date for display - matches AI insights timestamp format
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Unknown date';
     return new Date(dateString).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -179,7 +181,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   const run = data?.run;
-  const isAnalyzing = ['pending', 'initializing', 'scraping', 'analyzing'].includes(run?.status);
+  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
   return (
@@ -354,38 +356,16 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   </CardContent>
                 </Card>
 
-                {/* Criteria Scores Card */}
+                {/* Criteria Radar Chart */}
                 <Card className="h-fit">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Criteria Scores</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {run.criterionScores.map((score) => (
-                        <div key={score.criterion} className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium text-slate-700">
-                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                              </span>
-                              <span className="text-sm font-thin text-black">
-                                {score.score}
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-200 rounded-full h-2">
-                              <div 
-                                className={cn(
-                                  "h-2 rounded-full transition-all duration-300",
-                                  score.score >= 8 ? "bg-green-500" :
-                                  score.score >= 6 ? "bg-yellow-500" : "bg-red-500"
-                                )}
-                                style={{ width: `${score.score * 10}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <EffectivenessRadarChart 
+                      criterionScores={run.criterionScores} 
+                      className="w-full"
+                    />
                   </CardContent>
                 </Card>
               </div>
