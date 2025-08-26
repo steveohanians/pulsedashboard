@@ -864,7 +864,7 @@ export default function Dashboard() {
                     key={metricName}
                     id={`metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`}
                   >
-                    <EffectivenessCard clientId={user?.clientId || ''} className="mb-8" />
+                    <EffectivenessCard clientId={effectiveClientId || ''} className="mb-8" />
                   </div>
                 );
               }
