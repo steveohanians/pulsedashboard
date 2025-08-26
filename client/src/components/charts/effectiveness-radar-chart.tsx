@@ -97,7 +97,7 @@ export function EffectivenessRadarChart({ criterionScores, className }: Effectiv
             fill="hsl(var(--primary))"
             fillOpacity={0.1}
             strokeWidth={2}
-            dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+            dot={{ fill: 'hsl(var(--primary))', stroke: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
           />
           <Tooltip content={<CustomTooltip />} />
         </RadarChart>
