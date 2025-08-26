@@ -97,7 +97,7 @@ export function EffectivenessRadarChart({ criterionScores, className }: Effectiv
   const data = transformDataForRadar(criterionScores);
 
   return (
-    <div className={`${className} bg-white rounded-lg`}>
+    <div className={className}>
       <ResponsiveContainer width="100%" height={322}>
         <RadarChart data={data} style={{ backgroundColor: 'white' }}>
           <PolarGrid stroke="hsl(var(--border))" />
