@@ -61,6 +61,28 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 /**
+ * Custom tick component for positioning labels further from the chart
+ */
+function CustomTick({ payload, x, y, textAnchor, cx, cy }: any) {
+  const distance = 0.25; // Adjust this value to control how far labels appear from chart
+  const adjustedX = x + (x - cx) * distance;
+  const adjustedY = y + (y - cy) * distance;
+  
+  return (
+    <text 
+      x={adjustedX} 
+      y={adjustedY} 
+      textAnchor={textAnchor}
+      fill="hsl(var(--foreground))"
+      fontSize="12"
+      className="text-xs"
+    >
+      {payload.value}
+    </text>
+  );
+}
+
+/**
  * Radar chart component for displaying website effectiveness criteria scores
  */
 export function EffectivenessRadarChart({ criterionScores, className }: EffectivenessRadarChartProps) {
@@ -81,9 +103,7 @@ export function EffectivenessRadarChart({ criterionScores, className }: Effectiv
           <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis 
             dataKey="criterion" 
-            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-            className="text-xs"
-            radius={155}
+            tick={<CustomTick />}
           />
           <PolarRadiusAxis 
             angle={90}
