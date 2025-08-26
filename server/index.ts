@@ -35,6 +35,9 @@ app.use('/api', generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// Serve screenshot files statically
+app.use('/screenshots', express.static('uploads/screenshots'));
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
