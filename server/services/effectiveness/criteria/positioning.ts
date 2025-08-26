@@ -149,6 +149,16 @@ export async function scorePositioning(
       .replace('{firstParagraph}', firstParagraph)
       .replace('{content}', heroContent);
     
+    // Log what we're sending to OpenAI
+    logger.info("Positioning prompt content being sent to OpenAI", {
+      url: context.websiteUrl,
+      h1: h1.substring(0, 100),
+      subheading: subheading.substring(0, 100),
+      firstParagraph: firstParagraph.substring(0, 100),
+      contentLength: heroContent.length,
+      contentPreview: heroContent.substring(0, 200) + '...'
+    });
+    
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       temperature: config.openai.temperature,

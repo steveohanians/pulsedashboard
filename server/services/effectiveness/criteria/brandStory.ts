@@ -137,6 +137,13 @@ export async function scoreBrandStory(
     
     const prompt = effectivenessPrompt.promptTemplate.replace('{content}', storyContent);
     
+    // Log what we're sending to OpenAI
+    logger.info("Brand story prompt content being sent to OpenAI", {
+      url: context.websiteUrl,
+      contentLength: storyContent.length,
+      contentPreview: storyContent.substring(0, 300) + '...'
+    });
+    
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       temperature: config.openai.temperature,
