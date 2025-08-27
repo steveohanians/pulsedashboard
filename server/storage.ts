@@ -1948,7 +1948,7 @@ export class DatabaseStorage implements IStorage {
         systemPrompt: 'You are an expert digital strategist analyzing website effectiveness. Generate personalized insights based on real data. Return only valid JSON.',
         schema: JSON.stringify(OPENAI_CLASSIFIERS.INSIGHTS.schema),
         description: 'Generates personalized AI insights based on effectiveness analysis results',
-        variables: JSON.stringify(['clientName', 'websiteUrl', 'overallScore', 'criteriaData', 'evidenceSummary']),
+        variables: JSON.stringify(['clientName', 'websiteUrl', 'overallScore', 'criteriaData', 'evidenceSummary', 'industryVertical', 'businessSize']),
         isActive: true
       }
     ];

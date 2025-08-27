@@ -179,7 +179,7 @@ export const OPENAI_CLASSIFIERS: Record<string, OpenAIClassifier> = {
   
   INSIGHTS: {
     name: "Effectiveness Insights Generation",
-    prompt: `Analyze website effectiveness data and generate personalized insights for {clientName}.
+    prompt: `Analyze website effectiveness data and generate actionable insights for {clientName} in the {industryVertical} industry ({businessSize} business).
 
 Website URL: {websiteUrl}
 Overall Score: {overallScore}/10
@@ -190,28 +190,70 @@ Criterion Performance:
 Evidence Summary:
 {evidenceSummary}
 
-Generate a personalized key insight that:
-1. Identifies the main pattern in the data (what's working vs what's not)
-2. Explains WHY this pattern exists based on the specific evidence
-3. Provides 3-4 specific, actionable recommendations based on actual gaps found
-4. Uses the client's actual website context and business focus
+ANALYSIS FRAMEWORK:
+Provide a structured analysis that identifies interconnected issues and focuses on ROI potential. Avoid generic advice like "improve user experience" or "update content regularly."
 
-Format your response as:
-Key Insight for {clientName}:
-[Your analysis of the main pattern and why it exists]
+INSTRUCTIONS:
+1. **Primary Issue Identification**: What is the main effectiveness problem based on the data?
+2. **Root Cause Analysis**: Why does this problem exist? (technical, strategic, content, or UX factors)
+3. **Business Impact Assessment**: How does this affect {clientName}'s {industryVertical} business goals?
+4. **Industry Context**: Consider {industryVertical} industry standards and competitive landscape
 
-This suggests an opportunity to:
-1. [Specific action based on actual evidence]
-2. [Specific action based on actual evidence] 
-3. [Specific action based on actual evidence]
-4. [Optional fourth action if warranted]
+AVOID:
+- Generic recommendations like "improve SEO" or "add more content"
+- One-size-fits-all advice that could apply to any website
+- Suggestions without clear connection to the evidence provided
+- Technical jargon without business context
 
-Focus on authentic insights from real data, not generic advice.`,
+FOCUS ON:
+- Interconnected issues that compound effectiveness problems
+- Industry-specific competitive advantages for {industryVertical} companies
+- Resource allocation and ROI considerations for {businessSize} businesses
+- Evidence-based actions tied directly to the score gaps identified
+
+FORMAT RESPONSE AS JSON:
+{
+  "primary_issue": "Main effectiveness problem identified from the data",
+  "root_cause": "Why this problem exists based on evidence",
+  "business_impact": "How this affects {clientName}'s {industryVertical} business goals and competitive position",
+  "key_insight": "Synthesized analysis connecting the dots between issues",
+  "quick_wins": [
+    {
+      "action": "Specific actionable step",
+      "priority": "High|Medium|Low",
+      "effort": "Low|Medium|High", 
+      "expected_impact": "Specific measurable outcome",
+      "rationale": "Evidence-based reasoning tied to criteria scores",
+      "timeline": "Immediate|2-4 weeks|1-3 months"
+    }
+  ],
+  "strategic_initiatives": [
+    {
+      "action": "Larger strategic change",
+      "priority": "High|Medium|Low",
+      "effort": "Medium|High",
+      "expected_impact": "Long-term business outcome",
+      "rationale": "Evidence-based reasoning tied to criteria scores", 
+      "timeline": "3-6 months|6+ months",
+      "roi_potential": "High|Medium|Low"
+    }
+  ],
+  "interconnected_benefits": "How implementing multiple recommendations creates compound effectiveness gains",
+  "industry_considerations": "Specific factors relevant to {industryVertical} industry and {businessSize} business constraints",
+  "confidence": 0.0-1.0
+}
+
+Generate insights that would specifically help a {industryVertical} {businessSize} business improve their competitive position through website effectiveness.`,
     schema: {
-      insight: "string",
-      recommendations: "array",
-      confidence: "number",
-      key_pattern: "string"
+      primary_issue: "string",
+      root_cause: "string", 
+      business_impact: "string",
+      key_insight: "string",
+      quick_wins: "array",
+      strategic_initiatives: "array",
+      interconnected_benefits: "string",
+      industry_considerations: "string",
+      confidence: "number"
     }
   }
 };
