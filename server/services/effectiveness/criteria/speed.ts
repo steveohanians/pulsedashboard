@@ -114,25 +114,16 @@ export async function scoreSpeed(
           userMessage = 'Website could not be analyzed by PageSpeed API.';
         }
         
-        // Return error result instead of using misleading defaults
+        // Return neutral data, not a failure
         return {
           criterion: 'speed',
-          score: 0,
+          score: -1, // Signal to scorer.ts to skip this criterion
           evidence: {
-            description: userMessage,
-            details: {
-              error: errorType,
-              message: errorMessage,
-              performanceScore: null,
-              webVitals: null,
-              apiStatus: 'failed'
-            },
-            reasoning: `Performance analysis could not be completed: ${userMessage} Manual testing or alternative tools recommended.`
+            description: 'Performance metrics unavailable',
+            details: { apiStatus: 'failed' },
+            reasoning: 'Unable to measure - excluded from scoring'
           },
-          passes: {
-            passed: [],
-            failed: ['api_error']
-          }
+          passes: { passed: [], failed: [] }
         };
       }
     } else {

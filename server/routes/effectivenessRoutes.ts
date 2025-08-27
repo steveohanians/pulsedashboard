@@ -450,146 +450,37 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
   try {
     const { clientId, runId } = req.params;
     
-    // Verify user has access to this client
-    if (req.user?.role !== 'Admin' && req.user?.clientId !== clientId) {
-      return res.status(403).json({ 
-        code: 'UNAUTHORIZED', 
-        message: 'Access denied' 
-      });
-    }
+    // Import and create insights service
+    const { createInsightsService, ErrorClassifier } = await import('../services/effectiveness');
+    const insightsService = createInsightsService(storage);
 
-    logger.info('Generating effectiveness insights', { clientId, runId });
+    // Generate insights using the service
+    const result = await insightsService.generateInsights(
+      clientId,
+      runId,
+      req.user?.clientId,
+      req.user?.role
+    );
 
-    // Get effectiveness data
-    const effectivenessData = await storage.getEffectivenessRun(runId);
-    if (!effectivenessData || effectivenessData.clientId !== clientId) {
-      return res.status(404).json({
-        code: 'RUN_NOT_FOUND',
-        message: 'Effectiveness run not found'
-      });
-    }
-
-    // Get client info
-    const client = await storage.getClient(clientId);
-    if (!client) {
-      return res.status(404).json({
-        code: 'CLIENT_NOT_FOUND', 
-        message: 'Client not found'
-      });
-    }
-
-    // Get criterion scores
-    const criterionScores = await storage.getCriterionScores(runId);
-    if (!criterionScores || criterionScores.length === 0) {
-      return res.status(404).json({
-        code: 'NO_SCORES_FOUND',
-        message: 'No criterion scores found for this run'
-      });
-    }
-
-    // Create CMO-focused insights based on effectiveness scores
-    const overallScore = parseFloat(effectivenessData.overallScore) || 0;
-    const strengths = criterionScores.filter(c => parseFloat(c.score) >= 8);
-    const improvements = criterionScores.filter(c => parseFloat(c.score) < 7);
-    
-    // Map internal criterion names to business-friendly terms
-    const criterionNames = {
-      positioning: 'Brand Positioning',
-      brand_story: 'Brand Storytelling',
-      ctas: 'Call-to-Action Optimization',
-      accessibility: 'Website Accessibility',
-      seo: 'Search Engine Optimization',
-      speed: 'Page Load Performance',
-      trust: 'Trust & Credibility',
-      ux: 'User Experience',
-      no_third_party_proof: 'Third-Party Validation',
-      poor_mobile_experience: 'Mobile User Experience',
-      missing_security_badges: 'Security & Trust Signals'
-    };
-
-    const getFriendlyName = (criterion: string) => criterionNames[criterion] || criterion.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-    // Generate executive summary and actionable recommendations
-    const topStrength = strengths.length > 0 ? getFriendlyName(strengths[0].criterion) : null;
-    const mainWeakness = improvements.length > 0 ? getFriendlyName(improvements[0].criterion) : null;
-
-    let insight = `**${client.name}'s website scores ${overallScore} overall**, demonstrating `;
-    if (overallScore >= 8) {
-      insight += `**strong digital effectiveness** across most areas. `;
-    } else if (overallScore >= 6) {
-      insight += `**solid performance** with key opportunities for improvement. `;
-    } else {
-      insight += `**significant potential** that can be unlocked through focused improvements. `;
-    }
-
-    if (topStrength) {
-      insight += `**${topStrength}** stands out as a key strength. `;
-    }
-    if (mainWeakness) {
-      insight += `**${mainWeakness}** presents the biggest opportunity for immediate impact.`;
-    }
-
-    const recommendations = [];
-    
-    // Generate agency-specific, actionable recommendations tied to Clear Digital's services
-    improvements.slice(0, 3).forEach((item, index) => {
-      const friendlyName = getFriendlyName(item.criterion);
-      const score = parseFloat(item.score);
-      
-      if (item.criterion === 'positioning') {
-        recommendations.push(`**Develop brand positioning strategy** - Work with our strategists to define your unique market position and messaging framework`);
-      } else if (item.criterion === 'brand_story') {
-        recommendations.push(`**Craft compelling brand narrative** - Partner with our content team to develop authentic storytelling that resonates with your audience`);
-      } else if (item.criterion === 'trust') {
-        recommendations.push(`**Redesign trust elements** - Let our design team create credible testimonial layouts, security badges, and social proof sections`);
-      } else if (item.criterion === 'seo') {
-        recommendations.push(`**Implement content strategy** - Our content specialists can optimize your messaging for both users and search engines`);
-      } else if (item.criterion === 'speed') {
-        recommendations.push(`**Optimize website performance** - Our developers can rebuild key pages for faster load times and better user retention`);
-      } else if (item.criterion === 'ctas') {
-        recommendations.push(`**Redesign conversion elements** - Partner with our UX team to create high-converting buttons and action-focused page layouts`);
-      } else if (item.criterion === 'ux') {
-        recommendations.push(`**Enhance user experience design** - Our design team can rebuild your navigation and mobile experience for better engagement`);
-      } else if (item.criterion === 'accessibility') {
-        recommendations.push(`**Implement accessible design** - Let our developers ensure your site meets accessibility standards and reaches all users`);
-      } else {
-        recommendations.push(`**Custom solution for ${friendlyName}** - Our team can create interactive tools, videos, or custom content to address this area`);
-      }
-    });
-
-    // Add a service-focused recommendation based on score
-    if (recommendations.length < 4) {
-      if (overallScore >= 7) {
-        recommendations.push(`**Create interactive content** - Build on your solid foundation with custom calculators, videos, or dynamic tools to engage visitors`);
-      } else {
-        recommendations.push(`**Full website redesign consultation** - Schedule a strategy session to identify which areas will deliver the biggest impact for your business`);
-      }
-    }
-
-    const insights = {
-      insight: insight.trim(),
-      recommendations: recommendations.slice(0, 4),
-      confidence: 0.9,
-      key_pattern: 'effectiveness_analysis'
-    };
-
-    res.json({
-      success: true,
-      insights,
-      clientName: client.name,
-      overallScore: effectivenessData.overallScore,
-      runId
-    });
+    res.json(result);
 
   } catch (error) {
+    // Import error handling after the import of services
+    const { ErrorClassifier } = await import('../services/effectiveness');
+    
     logger.error('Error generating effectiveness insights', { 
       error: error instanceof Error ? error.message : String(error),
       clientId: req.params.clientId,
       runId: req.params.runId
     });
-    res.status(500).json({
-      code: 'INSIGHTS_GENERATION_FAILED',
-      message: 'Failed to generate effectiveness insights'
+
+    // Use error classifier to determine appropriate response
+    const statusCode = ErrorClassifier.getStatusCode(error as Error);
+    const userMessage = ErrorClassifier.getUserMessage(error as Error);
+    
+    res.status(statusCode).json({
+      code: (error as any)?.code || 'INSIGHTS_GENERATION_FAILED',
+      message: userMessage
     });
   }
 });

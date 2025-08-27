@@ -300,24 +300,29 @@ export async function scorePositioning(
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     const evidenceDetails: Record<string, any> = {};
     
+    // Remove the arbitrary 22-word limit and fix evidence extraction
+    const wordCount = heroContent.split(/\s+/).length;
+    const brevityPass = wordCount <= 30; // More realistic than 22
+    
+    // Equal weight for each element
     if (analysis.audience_named) {
       score += 2.5;
-      passes.passed.push('audience_named');
+      passes.passed.push('audience_identified');
       if (analysis.audience_evidence) {
         evidenceDetails.audience_evidence = analysis.audience_evidence;
       }
     } else {
-      passes.failed.push('audience_named');
+      passes.failed.push('no_target_audience');
     }
     
     if (analysis.outcome_present) {
       score += 2.5;
-      passes.passed.push('outcome_present');
+      passes.passed.push('value_stated');
       if (analysis.outcome_evidence) {
         evidenceDetails.outcome_evidence = analysis.outcome_evidence;
       }
     } else {
-      passes.failed.push('outcome_present');
+      passes.failed.push('no_specific_value');
     }
     
     if (analysis.capability_clear) {
@@ -327,17 +332,15 @@ export async function scorePositioning(
         evidenceDetails.capability_evidence = analysis.capability_evidence;
       }
     } else {
-      passes.failed.push('capability_clear');
+      passes.failed.push('no_capability_clear');
     }
     
-    if (analysis.brevity_check) {
+    if (brevityPass) {
       score += 2.5;
-      passes.passed.push('brevity_check');
-      if (analysis.brevity_evidence) {
-        evidenceDetails.brevity_evidence = analysis.brevity_evidence;
-      }
+      passes.passed.push('concise_messaging');
     } else {
-      passes.failed.push('brevity_check');
+      // Don't fail for word count, just don't add points
+      // This is subjective and shouldn't penalize
     }
 
     // Reduce score for buzzwords

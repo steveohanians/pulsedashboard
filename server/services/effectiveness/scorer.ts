@@ -435,81 +435,35 @@ export class WebsiteEffectivenessScorer {
    * Calculate weighted overall score from criterion results
    */
   private calculateOverallScore(criterionResults: CriterionResult[]): number {
-    // Define weights for each criterion (should sum to 1.0)
     const weights = {
-      positioning: 0.15,  // 15% - Most important for first impression
-      ux: 0.15,          // 15% - Critical for user experience
-      brand_story: 0.125, // 12.5% - Important for differentiation
-      trust: 0.125,      // 12.5% - Important for conversion
-      ctas: 0.125,       // 12.5% - Important for action
-      speed: 0.125,      // 12.5% - Important for user experience
-      accessibility: 0.075, // 7.5% - Important but less visible
-      seo: 0.075         // 7.5% - Important but less immediate
+      positioning: 0.20,
+      trust: 0.15,
+      ctas: 0.15,
+      ux: 0.125,
+      brand_story: 0.125,
+      speed: 0.10,
+      seo: 0.10,
+      accessibility: 0.075
     };
 
     let weightedSum = 0;
-    let totalPossibleWeight = 0;
     let actualWeight = 0;
-    const failedCriteria: string[] = [];
-    const partialCriteria: string[] = [];
 
     for (const result of criterionResults) {
-      const criterionWeight = weights[result.criterion as keyof typeof weights] || 0.125;
-      totalPossibleWeight += criterionWeight;
-
-      if (result.score > 0) {
-        // Successful scoring
-        weightedSum += result.score * criterionWeight;
-        actualWeight += criterionWeight;
-      } else {
-        // Failed scoring
-        failedCriteria.push(result.criterion);
-        // For failed criteria, we still want to count them in the denominator
-        // to avoid artificially inflating scores when some criteria fail
-        actualWeight += criterionWeight; // Include the weight but with 0 score
+      const criterionWeight = weights[result.criterion as keyof typeof weights];
+      
+      // Skip failed API calls entirely
+      if (result.evidence?.details?.apiStatus === 'failed' || 
+          result.evidence?.details?.error?.includes('timeout') ||
+          result.score === -1) {
+        continue;
       }
-
-      // Check for partial scoring (low scores might indicate data quality issues)
-      if (result.score > 0 && result.score < 2) {
-        partialCriteria.push(result.criterion);
-      }
+      
+      weightedSum += result.score * criterionWeight;
+      actualWeight += criterionWeight;
     }
 
-    // Calculate the final score
-    let finalScore = 0;
-    if (actualWeight > 0) {
-      finalScore = weightedSum / actualWeight;
-    }
-
-    // Apply penalty for missing criteria to prevent inflated scores
-    const missingCriteriaCount = Math.max(0, 8 - criterionResults.length);
-    if (missingCriteriaCount > 0) {
-      // Reduce score by 5% for each completely missing criterion
-      const missingPenalty = missingCriteriaCount * 0.05;
-      finalScore = finalScore * (1 - missingPenalty);
-    }
-
-    // Log scoring quality metrics
-    const successfulCriteria = criterionResults.filter(r => r.score > 0).length;
-    const averageScore = criterionResults.length > 0 ? 
-      criterionResults.reduce((sum, r) => sum + r.score, 0) / criterionResults.length : 0;
-
-    logger.info("Overall score calculation", {
-      finalScore: Math.round(finalScore * 10) / 10,
-      totalCriteria: criterionResults.length,
-      successfulCriteria,
-      failedCriteria: failedCriteria.length,
-      averageIndividualScore: Math.round(averageScore * 10) / 10,
-      weightCoverage: Math.round((actualWeight / totalPossibleWeight) * 100),
-      hasPartialFailures: partialCriteria.length > 0,
-      partialCriteria,
-      missingCriteriaCount
-    });
-
-    // Ensure score is within valid range
-    finalScore = Math.min(10, Math.max(0, finalScore));
-    
-    return Math.round(finalScore * 10) / 10; // Round to 1 decimal place
+    return actualWeight > 0 ? (weightedSum / actualWeight) * 10 : 0;
   }
 }
 
