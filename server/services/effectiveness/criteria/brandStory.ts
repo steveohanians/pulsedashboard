@@ -343,102 +343,114 @@ export async function scoreBrandStory(
       throw new Error('Invalid JSON response from brand story analysis');
     }
 
-    // Additional checks for recent outcomes and proof proximity
+    // Brand Story Scoring Logic - Updated for typical B2B content
     const currentYear = new Date().getFullYear();
     const recentYears = [currentYear, currentYear - 1, currentYear - 2];
-    
-    // Look for specific outcomes with dates
-    const outcomeKeywords = ['increased', 'grew', 'achieved', 'delivered', 'improved', 'generated', 'saved', 'reduced'];
-    const pageText = storyContent.toLowerCase();
-    
-    const hasRecentOutcomes = recentYears.some(year => {
-      const yearStr = year.toString();
-      return pageText.includes(yearStr) && outcomeKeywords.some(keyword => 
-        pageText.includes(keyword) && 
-        Math.abs(pageText.indexOf(keyword) - pageText.indexOf(yearStr)) < 100
-      );
-    });
 
-    // Look for quantified results
-    const numberPattern = /(\d{1,3}[,.]?\d{0,3})\s*(%|percent|million|billion|thousand|times|x)/gi;
+    // Look for quantified results (more common in B2B than case studies)
+    const numberPattern = /(\d{1,3}[,.]?\d{0,3})\s*(%|percent|million|billion|thousand|times|x|years?|clients?|customers?|companies|projects?)/gi;
     const quantifiedResults = storyContent.match(numberPattern) || [];
-    const hasQuantifiedOutcomes = quantifiedResults.length >= 2;
+    const hasQuantifiedOutcomes = quantifiedResults.length >= 1; // Lowered threshold
 
-    // Check for case study proximity (proof near outcomes)
-    const proofKeywords = ['case study', 'success story', 'testimonial', 'client', 'customer'];
-    const hasProofProximity = proofKeywords.some(keyword => pageText.includes(keyword));
+    // Check for proof elements (replacing case study focus)
+    const proofKeywords = ['trusted by', 'working with', 'partnered with', 'clients include', 'award', 'recognized', 'certified', 'years of experience', 'founded', 'since'];
+    const hasProofElements = proofKeywords.some(keyword => 
+      storyContent.toLowerCase().includes(keyword)
+    );
 
     // Calculate score and collect evidence
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     const evidenceDetails: Record<string, any> = {};
-    
-    // Point of view (25% of score - 2.5 points)
+
+    // 1. Point of View (25% - 2.5 points)
     if (analysis.pov_present) {
       score += 2.5;
       passes.passed.push('pov_present');
-      if (analysis.pov_evidence) {
-        evidenceDetails.pov_evidence = analysis.pov_evidence;
+      if (analysis.pov_evidence && analysis.pov_evidence !== 'none found') {
+        evidenceDetails.pov = analysis.pov_evidence;
       }
     } else {
-      passes.failed.push('no_pov');
-    }
-    
-    // Mechanism named (25% of score - 2.5 points)  
-    if (analysis.mechanism_named) {
-      score += 2.5;
-      passes.passed.push('mechanism_named');
-      if (analysis.mechanism_evidence) {
-        evidenceDetails.mechanism_evidence = analysis.mechanism_evidence;
-      }
-    } else {
-      passes.failed.push('no_mechanism');
-    }
-    
-    // Recent outcomes (25% of score - 2.5 points)
-    if (analysis.outcomes_recent && (hasRecentOutcomes || hasQuantifiedOutcomes)) {
-      score += 2.5;
-      passes.passed.push('recent_outcomes');
-      if (analysis.outcomes_evidence) {
-        evidenceDetails.outcomes_evidence = analysis.outcomes_evidence;
-      }
-    } else if (analysis.outcomes_recent || hasQuantifiedOutcomes) {
-      score += 1.5;
-      passes.passed.push('some_outcomes');
-      if (analysis.outcomes_evidence) {
-        evidenceDetails.outcomes_evidence = analysis.outcomes_evidence;
-      }
-    } else {
-      passes.failed.push('no_recent_outcomes');
-    }
-    
-    // Complete case study (25% of score - 2.5 points)
-    if (analysis.case_complete && hasProofProximity) {
-      score += 2.5;
-      passes.passed.push('complete_case_study');
-      if (analysis.case_evidence) {
-        evidenceDetails.case_evidence = analysis.case_evidence;
-      }
-    } else if (analysis.case_complete || hasProofProximity) {
-      score += 1.25;
-      passes.passed.push('partial_case_study');
-      if (analysis.case_evidence) {
-        evidenceDetails.case_evidence = analysis.case_evidence;
-      }
-    } else {
-      passes.failed.push('no_case_study');
+      passes.failed.push('no_clear_pov');
     }
 
-    // Apply confidence factor
-    score = score * (analysis.confidence || 0.8);
+    // 2. Mechanism/Approach (25% - 2.5 points)
+    if (analysis.mechanism_named) {
+      score += 2.5;
+      passes.passed.push('mechanism_described');
+      if (analysis.mechanism_evidence && analysis.mechanism_evidence !== 'none found') {
+        evidenceDetails.mechanism = analysis.mechanism_evidence;
+      }
+    } else {
+      passes.failed.push('no_clear_approach');
+    }
+
+    // 3. Outcomes Stated (25% - 2.5 points)
+    // Updated: outcomes_stated instead of outcomes_recent
+    if (analysis.outcomes_stated) {
+      if (hasQuantifiedOutcomes) {
+        score += 2.5;
+        passes.passed.push('quantified_outcomes');
+        evidenceDetails.outcomes_quantified = quantifiedResults.slice(0, 3).join(', ');
+      } else {
+        score += 1.75; // Partial credit for non-quantified outcomes
+        passes.passed.push('outcomes_mentioned');
+      }
+      if (analysis.outcomes_evidence && analysis.outcomes_evidence !== 'none found') {
+        evidenceDetails.outcomes = analysis.outcomes_evidence;
+      }
+    } else {
+      passes.failed.push('no_outcomes_stated');
+    }
+
+    // 4. Proof Elements (25% - 2.5 points)
+    // Replaced case_complete with proof_elements
+    if (analysis.proof_elements) {
+      if (hasProofElements && hasQuantifiedOutcomes) {
+        score += 2.5;
+        passes.passed.push('strong_proof_elements');
+      } else if (analysis.proof_elements || hasProofElements) {
+        score += 1.75;
+        passes.passed.push('some_proof_elements');
+      }
+      if (analysis.proof_evidence && analysis.proof_evidence !== 'none found') {
+        evidenceDetails.proof = analysis.proof_evidence;
+      }
+    } else {
+      passes.failed.push('no_proof_elements');
+    }
+
+    // Bonus points for B2B-specific quality indicators
+    let bonusPoints = 0;
+
+    // Check for industry/vertical focus (common in B2B)
+    const industryKeywords = ['enterprise', 'B2B', 'SaaS', 'financial services', 'healthcare', 'manufacturing', 'technology'];
+    if (industryKeywords.some(keyword => storyContent.toLowerCase().includes(keyword))) {
+      bonusPoints += 0.5;
+      passes.passed.push('industry_focus');
+    }
+
+    // Check for capability breadth (B2B companies often list multiple capabilities)
+    const capabilityKeywords = ['strategy', 'consulting', 'implementation', 'support', 'solutions', 'services', 'expertise'];
+    const capabilityCount = capabilityKeywords.filter(keyword => 
+      storyContent.toLowerCase().includes(keyword)
+    ).length;
+    if (capabilityCount >= 3) {
+      bonusPoints += 0.5;
+      passes.passed.push('capability_breadth');
+    }
+
+    // Apply confidence factor and bonuses
+    score = (score + bonusPoints) * (analysis.confidence || 0.75);
     score = Math.min(10, Math.max(0, score));
 
     logger.info("Completed brand story analysis", {
       url: context.websiteUrl,
       score,
-      hasRecentOutcomes,
+      bonusPoints,
+      hasQuantifiedOutcomes,
       quantifiedResults: quantifiedResults.length,
-      hasProofProximity,
+      hasProofElements,
       confidence: analysis.confidence
     });
 
@@ -446,17 +458,17 @@ export async function scoreBrandStory(
       criterion: 'brand_story',
       score: Math.round(score * 10) / 10,
       evidence: {
-        description: `Brand story analysis: ${passes.passed.length}/4 elements present with ${quantifiedResults.length} quantified results`,
+        description: `Brand story analysis: ${passes.passed.length}/4+ elements present with ${quantifiedResults.length} quantified results`,
         details: {
           storyContent: storyContent.substring(0, 300) + '...',
           analysis,
-          hasRecentOutcomes,
+          hasQuantifiedOutcomes,
           quantifiedResults: quantifiedResults.slice(0, 3),
-          ...evidenceDetails, // Include extracted evidence
-          hasProofProximity,
-          recentYears
+          hasProofElements,
+          bonusPoints,
+          ...evidenceDetails // Include extracted evidence
         },
-        reasoning: `Score based on point of view (${analysis.pov_present ? 'present' : 'missing'}), mechanism explanation (${analysis.mechanism_named ? 'present' : 'missing'}), recent outcomes (${hasRecentOutcomes || hasQuantifiedOutcomes ? 'found' : 'missing'}), and complete case studies (${analysis.case_complete && hasProofProximity ? 'complete' : 'partial/missing'})`
+        reasoning: `Score based on point of view (${analysis.pov_present ? 'present' : 'missing'}), mechanism explanation (${analysis.mechanism_named ? 'present' : 'missing'}), outcomes stated (${analysis.outcomes_stated ? 'found' : 'missing'}), and proof elements (${analysis.proof_elements || hasProofElements ? 'present' : 'missing'}). Bonus points: ${bonusPoints}`
       },
       passes
     };
