@@ -206,18 +206,18 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </CardTitle>
             {run && run.status === 'completed' && (
               <div className="flex items-center gap-2">
-                <div className="text-2xl lg:text-3xl font-light text-primary">
-                  {run.overallScore}
-                </div>
                 <span 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600"
                   data-testid="effectiveness-status-chip"
                 >
-                  <span>Effectiveness is</span>
+                  <span>Your Website is</span>
                   <span className={`font-semibold ${getEffectivenessStatus(run.overallScore).color}`}>
                     {getEffectivenessStatus(run.overallScore).text}
                   </span>
                 </span>
+                <div className="text-2xl lg:text-3xl font-light text-primary">
+                  {run.overallScore}
+                </div>
               </div>
             )}
           </div>
