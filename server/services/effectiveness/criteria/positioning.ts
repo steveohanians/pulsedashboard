@@ -18,21 +18,6 @@ export async function scorePositioning(
   try {
     const $ = cheerio.load(context.html);
     
-    // Extract hero content with improved logic for all heading levels
-    let h1 = $('h1').first().text().trim();
-    
-    // Enhanced hero section detection with modern patterns
-    const heroSelectors = [
-      '.hero', '#hero', '[class*="hero"]',
-      '.banner', '#banner', '[class*="banner"]',
-      '.jumbotron', '.masthead', '.header-content',
-      '[class*="masthead"]', '[class*="jumbotron"]',
-      'header section', 'main > section:first-child',
-      'section:first-of-type', 'main > *:first-child',
-      '[role="banner"]', '.intro', '[class*="intro"]',
-      '.landing', '[class*="landing"]'
-    ];
-    
     // Utility function to check for boilerplate content
     const isBoilerplate = (text: string): boolean => {
       const boilerplatePatterns = [
@@ -41,160 +26,197 @@ export async function scorePositioning(
         /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, // Emails
         /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Dates
         /^(mon|tue|wed|thu|fri|sat|sun)/i, // Days
-        /^(all rights reserved|©|\®|\™)/i
+        /^(all rights reserved|©|\®|\™)/i,
+        /cookie|privacy policy|terms of service|copyright/i
       ];
       
       return boilerplatePatterns.some(pattern => pattern.test(text)) || 
              text.length < 10 || 
              text.length > 500;
     };
-    
-    let heroSection = null;
-    for (const selector of heroSelectors) {
-      const section = $(selector);
-      if (section.length > 0) {
-        heroSection = section.first();
-        break;
-      }
-    }
-    
-    let subheading = '';
-    let firstParagraph = '';
-    const additionalContent: string[] = [];
-    
-    if (heroSection) {
-      // Extract all heading levels from hero section
-      const headings = heroSection.find('h1, h2, h3, h4, h5, h6, [class*="eyebrow"], [class*="subtitle"], [class*="tagline"]');
-      headings.each((_, el) => {
-        const text = $(el).text().trim();
-        if (!subheading && text !== h1 && text.length > 5 && !isBoilerplate(text)) {
-          subheading = text;
-          return false; // break
-        }
-      });
-      
-      // Get first meaningful paragraph
-      heroSection.find('p').each((_, el) => {
-        const text = $(el).text().trim();
-        if (!firstParagraph && text.length > 20 && !isBoilerplate(text)) {
-          firstParagraph = text;
-          return false; // break
-        }
-      });
-      
-      // Get additional hero content from various elements
-      heroSection.find('h2, h3, h4, h5, .tagline, .value-prop, .subtitle, [class*="value"], [class*="benefit"]')
-        .slice(0, 5).each((_, el) => {
-        const text = $(el).text().trim();
-        if (text && text.length > 10 && text !== h1 && text !== subheading && !isBoilerplate(text)) {
-          additionalContent.push(text);
-        }
-      });
-    } else {
-      // Enhanced fallback strategy for sites without clear hero sections
-      const mainContent = $('main, [role="main"], #main, .main-content').first();
-      const firstSection = mainContent.find('section, article, [class*="section"]').first();
-      
-      if (firstSection.length) {
-        // Extract from first content section
-        h1 = h1 || firstSection.find('h1').first().text().trim();
-        subheading = firstSection.find('h2, h3, h4, h5').first().text().trim();
-        firstParagraph = firstSection.find('p').first().text().trim();
-      }
-      
-      // If still nothing, try visible text near top of page
-      if (!subheading) {
-        $('h2, h3, h4, h5, p').slice(0, 10).each((_, el) => {
-          const $el = $(el);
-          const text = $el.text().trim();
-          
-          // Check if element is likely visible and meaningful
-          if (!isBoilerplate(text) && 
-              !$el.closest('nav, header > *, footer').length &&
-              $el.parents().length < 10) { // Not deeply nested
-            
-            if (!subheading && el.tagName.match(/^h[2-5]$/i)) {
-              subheading = text;
-            } else if (!firstParagraph && el.tagName.toLowerCase() === 'p') {
-              firstParagraph = text;
-            }
-          }
-        });
-      }
-      
-      // Collect valuable heading content for analysis
-      $('h2, h3, h4, h5').slice(0, 6).each((_, el) => {
-        const text = $(el).text().trim();
-        if (text.length > 15 && !isBoilerplate(text) && text !== subheading) {
-          additionalContent.push(text);
-        }
-      });
-    }
-    
-    // Look for value proposition sections beyond hero
-    const valuePropSelectors = [
-      '.value-proposition', '[class*="value"]',
-      '[class*="intro"]', '[class*="about"]',
-      'section:nth-child(2)', '[class*="features"]',
-      '[class*="benefits"]', '.description', '[class*="description"]'
+
+    // 1. Expand Hero Section Detection with flexible patterns
+    const heroSelectors = [
+      '[class*="hero"]',  // Catches hero, hero__, hero--
+      '[class*="banner"]',
+      '[class*="masthead"]',
+      'section:first-child',
+      'main > section:first-child',
+      '.intro, [class*="intro"]',
+      'header + section',  // First section after header
+      '[data-section="hero"]',
+      '.jumbotron', '.header-content',
+      'section:first-of-type', 'main > *:first-child',
+      '[role="banner"]', '.landing', '[class*="landing"]'
     ];
 
+    // 2. Extract ALL Heading Levels (h1-h6) including eyebrow text
+    const headings = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    let extractedHeadings: { [key: string]: string[] } = {};
+
+    headings.forEach(tag => {
+      $(tag).slice(0, 3).each((_, el) => {
+        const text = $(el).text().trim();
+        // Skip navigation/footer
+        if (!$(el).closest('nav, footer').length && text.length > 3 && !isBoilerplate(text)) {
+          if (!extractedHeadings[tag]) extractedHeadings[tag] = [];
+          extractedHeadings[tag].push(text);
+        }
+      });
+    });
+
+    // Use H5/H6 if they appear before H1 (common pattern for eyebrow text)
+    const eyebrowText = extractedHeadings.h5?.[0] || extractedHeadings.h6?.[0] || '';
+    const mainHeadline = extractedHeadings.h1?.[0] || '';
+    const subheading = extractedHeadings.h2?.[0] || extractedHeadings.h3?.[0] || '';
+
+    // 3. Find Value Proposition Sections
+    const valuePropSelectors = [
+      '.intro, [class*="intro"]',
+      '[class*="value"]',
+      '[class*="about"]',
+      'section:nth-child(2)',  // Second section often has value props
+      'section:nth-child(3)',
+      '[class*="features"]',
+      '[class*="benefits"]',
+      '[class*="services"]'
+    ];
+
+    let valuePropContent: string[] = [];
     valuePropSelectors.forEach(selector => {
       const section = $(selector).first();
-      if (section.length) {
-        section.find('h2, h3, h4, p').slice(0, 5).each((_, el) => {
+      if (section.length && !section.closest('footer').length) {
+        // Get all text content from this section
+        section.find('h2, h3, h4, h5, p').slice(0, 8).each((_, el) => {
           const text = $(el).text().trim();
-          if (text.length > 20 && text.length < 200 && !isBoilerplate(text)) {
-            additionalContent.push(text);
+          if (text.length > 10 && text.length < 300 && !isBoilerplate(text)) {
+            valuePropContent.push(text);
           }
         });
       }
     });
-    
-    // Enhanced tagline and value prop detection
-    $('.tagline, .value-prop, .headline, .slogan, [class*="tagline"], [class*="slogan"], [class*="headline"]')
-      .slice(0, 3).each((_, el) => {
+
+    // 4. Extract Differentiators and Proof Points
+    const differentiatorPatterns = [
+      /\d+\s*(year|client|project|company|brand)/i,  // "20+ years", "500+ clients"
+      /award[- ]winning/i,
+      /trusted by/i,
+      /recognized/i,
+      /leading|leader/i,
+      /expert|expertise/i,
+      /proven/i,
+      /results/i
+    ];
+
+    const additionalContent: string[] = [];
+
+    // Find elements containing these patterns
+    $('p, h2, h3, h4, h5, li').each((_, el) => {
       const text = $(el).text().trim();
-      if (text && text.length > 10 && !isBoilerplate(text)) {
+      if (differentiatorPatterns.some(pattern => pattern.test(text)) && 
+          text.length > 10 && text.length < 200 && !isBoilerplate(text)) {
         additionalContent.push(text);
       }
     });
-    
-    // Final content assembly with improved deduplication
-    const contentParts = [
-      h1,
-      subheading,
-      firstParagraph,
-      ...additionalContent
-    ]
-    .filter(text => text && text.trim().length > 0)
-    .map(text => text.replace(/\s+/g, ' ').trim()) // Clean whitespace
-    .filter((text, index, self) => {
-      // Remove duplicates and near-duplicates
-      return self.findIndex(t => 
-        t === text || 
-        (t.includes(text) && t.length < text.length * 1.2)
-      ) === index;
-    });
 
-    // If we have too little content, be more aggressive in collection
-    if (contentParts.join(' ').length < 200) {
-      $('p').slice(0, 5).each((_, el) => {
-        const text = $(el).text().trim();
-        if (!isBoilerplate(text)) {
-          contentParts.push(text);
+    // 5. Get List-Based Value Props
+    $('ul, ol').each((_, list) => {
+      const $list = $(list);
+      // Skip navigation
+      if ($list.closest('nav, header, footer').length) return;
+      
+      const items = $list.find('li').slice(0, 6);
+      const listItems: string[] = [];
+      
+      items.each((_, li) => {
+        const text = $(li).text().trim();
+        // Look for value prop patterns
+        if (text.match(/approach|performance|excellence|collaborative|expertise|solution/i) &&
+            text.length > 15 && text.length < 150 && !isBoilerplate(text)) {
+          listItems.push(text);
         }
       });
+      
+      if (listItems.length >= 2) {
+        additionalContent.push(...listItems);
+      }
+    });
+
+    // 6. Smart Content Assembly
+    const contentParts: string[] = [];
+
+    // 1. Eyebrow/intro text (if exists)
+    if (eyebrowText && eyebrowText !== mainHeadline) {
+      contentParts.push(eyebrowText);
     }
-    
-    const heroContent = contentParts
+
+    // 2. Main headline
+    if (mainHeadline) {
+      contentParts.push(mainHeadline);
+    }
+
+    // 3. Subheading (if different from main)
+    if (subheading && subheading !== mainHeadline) {
+      contentParts.push(subheading);
+    }
+
+    // 4. Value prop content
+    contentParts.push(...valuePropContent);
+
+    // 5. Additional differentiators
+    contentParts.push(...additionalContent);
+
+    // Remove duplicates and clean
+    const uniqueParts = [...new Set(contentParts)]
+      .filter(text => text && text.length > 5)
+      .map(text => text.replace(/\s+/g, ' ').trim());
+
+    // 7. Fallback Enhancement - If content is thin, expand search
+    if (uniqueParts.join(' ').length < 300) {
+      // Get first 3 sections of content
+      $('section').slice(0, 3).each((_, section) => {
+        $(section).find('h2, h3, p').slice(0, 3).each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length > 20 && text.length < 200 &&
+              !text.match(/cookie|privacy|copyright/i) && !isBoilerplate(text)) {
+            uniqueParts.push(text);
+          }
+        });
+      });
+    }
+
+    // If still missing content, use proximity-based extraction
+    if (uniqueParts.join(' ').length < 200) {
+      const mainElement = $('main, [role="main"]').first();
+      if (mainElement.length) {
+        // Get everything from top of main content
+        const topContent: string[] = [];
+        mainElement.children().slice(0, 3).each((_, child) => {
+          $(child).find('h1, h2, h3, h4, h5, p').slice(0, 5).each((_, el) => {
+            const text = $(el).text().trim();
+            if (text.length > 10 && !$(el).closest('nav').length && !isBoilerplate(text)) {
+              topContent.push(text);
+            }
+          });
+        });
+        
+        uniqueParts.push(...topContent);
+      }
+    }
+
+    const heroContent = uniqueParts
+      .filter((text, index, self) => self.indexOf(text) === index)
       .join(' ')
-      .substring(0, 1500); // Maintain limit for API efficiency
+      .substring(0, 1500)
     
-    logger.info("Extracted hero content for positioning analysis", {
+    logger.info("Extracted comprehensive positioning content", {
       url: context.websiteUrl,
-      h1Length: h1.length,
-      contentLength: heroContent.length
+      mainHeadlineLength: mainHeadline.length,
+      eyebrowTextLength: eyebrowText.length,
+      subheadingLength: subheading.length,
+      valuePropParts: valuePropContent.length,
+      differentiatorParts: additionalContent.length,
+      totalContentLength: heroContent.length
     });
 
     if (!heroContent) {
@@ -202,8 +224,8 @@ export async function scorePositioning(
         criterion: 'positioning',
         score: 0,
         evidence: {
-          description: 'No hero content found',
-          details: { h1, subheading, firstParagraph },
+          description: 'No positioning content found',
+          details: { mainHeadline, subheading, eyebrowText },
           reasoning: 'Unable to evaluate positioning without hero content'
         },
         passes: {
@@ -219,19 +241,19 @@ export async function scorePositioning(
       throw new Error('No prompt template available for positioning criterion');
     }
     
-    // Replace all template variables
+    // Replace template variables - use comprehensive content instead of individual pieces
     const prompt = effectivenessPrompt.promptTemplate
-      .replace('{h1}', h1)
+      .replace('{content}', heroContent)
+      .replace('{h1}', mainHeadline)
       .replace('{subheading}', subheading)
-      .replace('{firstParagraph}', firstParagraph)
-      .replace('{content}', heroContent);
+      .replace('{firstParagraph}', valuePropContent[0] || '');
     
     // Log what we're sending to OpenAI
-    logger.info("Positioning prompt content being sent to OpenAI", {
+    logger.info("Comprehensive positioning content sent to OpenAI", {
       url: context.websiteUrl,
-      h1: h1.substring(0, 100),
+      mainHeadline: mainHeadline.substring(0, 100),
       subheading: subheading.substring(0, 100),
-      firstParagraph: firstParagraph.substring(0, 100),
+      eyebrowText: eyebrowText.substring(0, 100),
       contentLength: heroContent.length,
       contentPreview: heroContent.substring(0, 200) + '...'
     });
@@ -344,7 +366,12 @@ export async function scorePositioning(
           analysis,
           buzzwordCount,
           buzzwordPenalty,
-          wordCount: h1.split(' ').length,
+          wordCount: mainHeadline.split(' ').length,
+          mainHeadline,
+          subheading,
+          eyebrowText,
+          valuePropPartsCount: valuePropContent.length,
+          differentiatorPartsCount: additionalContent.length,
           ...evidenceDetails // Include extracted evidence
         },
         reasoning: generatePositioningInsights(analysis, buzzwordCount, passes.passed, passes.failed)
