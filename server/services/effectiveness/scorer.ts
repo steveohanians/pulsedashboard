@@ -463,7 +463,7 @@ export class WebsiteEffectivenessScorer {
       actualWeight += criterionWeight;
     }
 
-    return actualWeight > 0 ? (weightedSum / actualWeight) * 10 : 0;
+    return actualWeight > 0 ? (weightedSum / actualWeight) : 0;
   }
 }
 
