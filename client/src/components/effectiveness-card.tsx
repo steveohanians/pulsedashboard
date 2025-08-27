@@ -211,7 +211,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   data-testid="effectiveness-status-chip"
                 >
                   <span>Your Website is</span>
-                  <span className={`font-semibold ${getEffectivenessStatus(run.overallScore).color}`}>
+                  <span className={getEffectivenessStatus(run.overallScore).color}>
                     {getEffectivenessStatus(run.overallScore).text}
                   </span>
                 </span>
