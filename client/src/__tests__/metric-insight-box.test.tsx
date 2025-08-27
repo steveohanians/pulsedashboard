@@ -44,7 +44,7 @@ describe('MetricInsightBox Query Keys', () => {
           clientId="test-client"
           metricName="Test Metric"
           timePeriod="Last Month"
-          metricData={{ metricName: 'Test Metric', clientValue: 100, industryAverage: 90, cdAverage: 95, competitorValues: [85, 92] }}
+          metricData={{ metricName: 'Test Metric', clientValue: 100, industryAverage: 90, cdAverage: 95, competitorValues: [85, 92], competitorNames: ['Competitor A', 'Competitor B'] }}
           preloadedInsight={undefined}
           onStatusChange={vi.fn()}
         />
@@ -77,7 +77,7 @@ describe('MetricInsightBox Query Keys', () => {
           clientId="test-client"
           metricName="Test Metric"
           timePeriod="2025-07"
-          metricData={{ metricName: 'Test Metric', clientValue: 200, industryAverage: 180, cdAverage: 195, competitorValues: [175, 192] }}
+          metricData={{ metricName: 'Test Metric', clientValue: 200, industryAverage: 180, cdAverage: 195, competitorValues: [175, 192], competitorNames: ['Competitor A', 'Competitor B'] }}
           preloadedInsight={{
             contextText: 'test context',
             insightText: 'test insight',

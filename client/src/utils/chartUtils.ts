@@ -30,6 +30,10 @@ let cssVariableWarningLogged = false;
 /**
  * Validates CSS variable availability and provides fallback colors
  */
+export function validateCSSColor(cssVarColor: string): string {
+  return validateAndGetColor(cssVarColor);
+}
+
 function validateAndGetColor(cssVarColor: string): string {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') {
@@ -293,7 +297,7 @@ export function calculateYAxisDomain(data: any[], dataKey: string): [number, num
  */
 
 // Base entity colors used across multiple charts with CSS variable validation
-const BASE_ENTITY_COLORS = {
+export const BASE_ENTITY_COLORS = {
   client: () => validateAndGetColor('hsl(var(--color-client))'),
   cdAvg: () => validateAndGetColor('hsl(var(--color-cd-avg))'),
   industryAvg: () => validateAndGetColor('hsl(var(--color-industry-avg))'),

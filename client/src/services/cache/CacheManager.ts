@@ -100,7 +100,7 @@ export class CacheManager {
       queryKeys: [
         () => [...AdminQueryKeys.ga4ServiceAccounts()],
         () => [...AdminQueryKeys.ga4PropertyAccess()],
-        AdminQueryKeys.allDashboards
+        () => [...AdminQueryKeys.allDashboards()]
       ]
     });
 
@@ -118,7 +118,7 @@ export class CacheManager {
       entities: ['dashboard', 'insight'],
       queryKeys: [
         () => [...AdminQueryKeys.metricPrompts()],
-        AdminQueryKeys.allDashboards
+        () => [...AdminQueryKeys.allDashboards()]
       ]
     });
 
@@ -171,9 +171,8 @@ export class CacheManager {
 
     // Add query keys for this entity
     rule.queryKeys.forEach(keyOrFunc => {
-      if (typeof keyOrFunc === 'function') {
-        const keys = keyOrFunc();
-        keys.forEach((key: string) => keysToInvalidate.add(key));
+      if (typeof keyOrFunc === 'string') {
+        keysToInvalidate.add(keyOrFunc);
       } else {
         const keys = keyOrFunc();
         keys.forEach((key: string) => keysToInvalidate.add(key));

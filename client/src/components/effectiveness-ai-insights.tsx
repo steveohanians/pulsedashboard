@@ -6,7 +6,7 @@ interface EffectivenessAIInsightsProps {
   clientId: string;
   runId: string;
   clientName: string;
-  overallScore: string;
+  overallScore: number;
   className?: string;
 }
 
@@ -19,7 +19,7 @@ interface InsightsResponse {
     key_pattern: string;
   };
   clientName: string;
-  overallScore: string;
+  overallScore: number;
   runId: string;
 }
 
