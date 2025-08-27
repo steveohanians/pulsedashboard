@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Loader2 } from "lucide-react";
+import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
 import { EffectivenessRadarChart } from "./charts/effectiveness-radar-chart";
+import { EffectivenessAIInsights } from "./effectiveness-ai-insights";
 
 interface CriterionScore {
   id: string;
@@ -288,86 +289,22 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             <div className="space-y-4">
               {/* Two-column layout */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {/* Highlights Card */}
+                {/* AI Insights Card */}
                 <Card className="h-full bg-slate-50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Highlights</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-blue-500" />
+                      Key Insight for {data.client.name}
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 h-full flex flex-col">
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-700 mb-1">At a glance story</h4>
-                      <p className="text-xs text-slate-600">
-                        {(() => {
-                          const strongCount = run.criterionScores.filter(s => s.score >= 8).length;
-                          const moderateCount = run.criterionScores.filter(s => s.score >= 6 && s.score < 8).length;
-                          const weakCount = run.criterionScores.filter(s => s.score < 6).length;
-                          
-                          let text = `Your website scored ${run.overallScore}/10 overall. `;
-                          
-                          const parts = [];
-                          
-                          if (strongCount > 0) {
-                            parts.push(`${strongCount} ${strongCount === 1 ? 'area is' : 'areas are'} performing strongly`);
-                          }
-                          
-                          if (moderateCount > 0) {
-                            parts.push(`${moderateCount} ${moderateCount === 1 ? 'area has' : 'areas have'} moderate performance`);
-                          }
-                          
-                          if (weakCount > 0) {
-                            parts.push(`${weakCount} ${weakCount === 1 ? 'area needs' : 'areas need'} improvement`);
-                          }
-                          
-                          if (parts.length === 0) {
-                            text += "All areas are performing at baseline levels.";
-                          } else if (parts.length === 1) {
-                            text += parts[0] + ".";
-                          } else if (parts.length === 2) {
-                            text += parts[0] + " and " + parts[1] + ".";
-                          } else {
-                            text += parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1] + ".";
-                          }
-                          
-                          return text;
-                        })()}
-                      </p>
-                    </div>
-                    
-                    <hr className="border-slate-200" />
-                    
-                    <div>
-                      <h4 className="text-sm font-medium text-green-700 mb-1">Strengths:</h4>
-                      <div className="text-xs text-slate-600">
-                        {run.criterionScores.filter(s => s.score >= 8).length > 0 ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            {run.criterionScores.filter(s => s.score >= 8).map(score => (
-                              <li key={score.criterion}>
-                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score})
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-slate-500 italic">No areas scoring 8 or above</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="text-sm font-medium text-red-700 mb-1">Gaps:</h4>
-                      <div className="text-xs text-slate-600">
-                        {run.criterionScores.filter(s => s.score < 6).length > 0 ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            {run.criterionScores.filter(s => s.score < 6).map(score => (
-                              <li key={score.criterion}>
-                                {score.criterion.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} ({score.score})
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-slate-500 italic">No critical gaps identified</p>
-                        )}
-                      </div>
-                    </div>
+                  <CardContent className="h-full flex flex-col">
+                    <EffectivenessAIInsights
+                      clientId={clientId}
+                      runId={run.id}
+                      clientName={data.client.name}
+                      overallScore={parseFloat(run.overallScore)}
+                      className="flex-1"
+                    />
                   </CardContent>
                 </Card>
 

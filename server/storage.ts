@@ -169,6 +169,10 @@ export interface IStorage {
   updateEffectivenessRun(runId: string, updates: any): Promise<any>;
   getCriterionScores(runId: string): Promise<any[]>;
   createCriterionScore(score: any): Promise<any>;
+  
+  // Effectiveness Insights
+  getEffectivenessInsights(clientId: string, runId: string): Promise<any>;
+  createEffectivenessInsights(insights: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1936,6 +1940,16 @@ export class DatabaseStorage implements IStorage {
         description: 'Compares CTA text with destination page for message consistency',
         variables: JSON.stringify(['cta_label', 'destination_content']),
         isActive: true
+      },
+      {
+        criterion: 'insights',
+        classifierName: 'INSIGHTS',
+        promptTemplate: OPENAI_CLASSIFIERS.INSIGHTS.prompt,
+        systemPrompt: 'You are an expert digital strategist analyzing website effectiveness. Generate personalized insights based on real data. Return only valid JSON.',
+        schema: JSON.stringify(OPENAI_CLASSIFIERS.INSIGHTS.schema),
+        description: 'Generates personalized AI insights based on effectiveness analysis results',
+        variables: JSON.stringify(['clientName', 'websiteUrl', 'overallScore', 'criteriaData', 'evidenceSummary']),
+        isActive: true
       }
     ];
 
@@ -2525,6 +2539,19 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return results[0];
+  }
+
+  // Effectiveness Insights
+  async getEffectivenessInsights(clientId: string, runId: string): Promise<any> {
+    // For now, return null since we'll generate insights on-demand
+    // Later we could add a table to store insights if needed
+    return null;
+  }
+
+  async createEffectivenessInsights(insights: any): Promise<any> {
+    // For now, just return the insights since we're not persisting them
+    // Later we could add a table to store insights if needed
+    return insights;
   }
 }
 

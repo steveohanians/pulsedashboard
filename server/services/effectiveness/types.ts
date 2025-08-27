@@ -175,5 +175,43 @@ export const OPENAI_CLASSIFIERS: Record<string, OpenAIClassifier> = {
       confidence: "number",
       reasoning: "string"
     }
+  },
+  
+  INSIGHTS: {
+    name: "Effectiveness Insights Generation",
+    prompt: `Analyze website effectiveness data and generate personalized insights for {clientName}.
+
+Website URL: {websiteUrl}
+Overall Score: {overallScore}/10
+
+Criterion Performance:
+{criteriaData}
+
+Evidence Summary:
+{evidenceSummary}
+
+Generate a personalized key insight that:
+1. Identifies the main pattern in the data (what's working vs what's not)
+2. Explains WHY this pattern exists based on the specific evidence
+3. Provides 3-4 specific, actionable recommendations based on actual gaps found
+4. Uses the client's actual website context and business focus
+
+Format your response as:
+Key Insight for {clientName}:
+[Your analysis of the main pattern and why it exists]
+
+This suggests an opportunity to:
+1. [Specific action based on actual evidence]
+2. [Specific action based on actual evidence] 
+3. [Specific action based on actual evidence]
+4. [Optional fourth action if warranted]
+
+Focus on authentic insights from real data, not generic advice.`,
+    schema: {
+      insight: "string",
+      recommendations: "array",
+      confidence: "number",
+      key_pattern: "string"
+    }
   }
 };

@@ -63,7 +63,7 @@
     "jspdf": "^3.0.1",
     "lucide-react": "^0.453.0",
     "multer": "^2.0.2",
-    "openai": "^5.11.0",
+    "openai": "^5.16.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "playwright": "^1.55.0",
