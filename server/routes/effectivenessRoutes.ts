@@ -531,34 +531,38 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
 
     const recommendations = [];
     
-    // Generate specific, actionable recommendations
+    // Generate agency-specific, actionable recommendations tied to Clear Digital's services
     improvements.slice(0, 3).forEach((item, index) => {
       const friendlyName = getFriendlyName(item.criterion);
       const score = parseFloat(item.score);
       
       if (item.criterion === 'positioning') {
-        recommendations.push(`**Strengthen brand positioning** - Clarify your unique value proposition and competitive differentiation`);
+        recommendations.push(`**Develop brand positioning strategy** - Work with our strategists to define your unique market position and messaging framework`);
+      } else if (item.criterion === 'brand_story') {
+        recommendations.push(`**Craft compelling brand narrative** - Partner with our content team to develop authentic storytelling that resonates with your audience`);
       } else if (item.criterion === 'trust') {
-        recommendations.push(`**Build trust signals** - Add customer testimonials, security badges, and industry certifications`);
+        recommendations.push(`**Redesign trust elements** - Let our design team create credible testimonial layouts, security badges, and social proof sections`);
       } else if (item.criterion === 'seo') {
-        recommendations.push(`**Optimize for search** - Improve meta descriptions, page titles, and site structure for better visibility`);
+        recommendations.push(`**Implement content strategy** - Our content specialists can optimize your messaging for both users and search engines`);
       } else if (item.criterion === 'speed') {
-        recommendations.push(`**Accelerate page performance** - Optimize images and reduce load times to improve user retention`);
+        recommendations.push(`**Optimize website performance** - Our developers can rebuild key pages for faster load times and better user retention`);
       } else if (item.criterion === 'ctas') {
-        recommendations.push(`**Enhance call-to-actions** - Make buttons more prominent and messaging more compelling`);
+        recommendations.push(`**Redesign conversion elements** - Partner with our UX team to create high-converting buttons and action-focused page layouts`);
       } else if (item.criterion === 'ux') {
-        recommendations.push(`**Refine user experience** - Simplify navigation and improve mobile responsiveness`);
+        recommendations.push(`**Enhance user experience design** - Our design team can rebuild your navigation and mobile experience for better engagement`);
+      } else if (item.criterion === 'accessibility') {
+        recommendations.push(`**Implement accessible design** - Let our developers ensure your site meets accessibility standards and reaches all users`);
       } else {
-        recommendations.push(`**Improve ${friendlyName}** - Focus on this area to drive better business outcomes`);
+        recommendations.push(`**Custom solution for ${friendlyName}** - Our team can create interactive tools, videos, or custom content to address this area`);
       }
     });
 
-    // Add a growth-focused recommendation
+    // Add a service-focused recommendation based on score
     if (recommendations.length < 4) {
       if (overallScore >= 7) {
-        recommendations.push(`**Leverage your strengths** - Use your ${overallScore} score as a competitive advantage in marketing materials`);
+        recommendations.push(`**Create interactive content** - Build on your solid foundation with custom calculators, videos, or dynamic tools to engage visitors`);
       } else {
-        recommendations.push(`**Quick wins available** - Focus on the lowest-scoring areas first for maximum ROI improvement`);
+        recommendations.push(`**Full website redesign consultation** - Schedule a strategy session to identify which areas will deliver the biggest impact for your business`);
       }
     }
 
