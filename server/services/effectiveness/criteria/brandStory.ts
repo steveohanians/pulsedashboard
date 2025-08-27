@@ -18,312 +18,266 @@ export async function scoreBrandStory(
   try {
     const $ = cheerio.load(context.html);
     
-    // Utility function to check for boilerplate content
-    const isBoilerplate = (text: string): boolean => {
-      const boilerplatePatterns = [
-        /^(menu|nav|footer|contact|copyright|privacy|terms|cookie|login|sign|search)/i,
-        /^[\d\s\-\(\)]+$/, // Phone numbers
-        /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, // Emails
-        /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Dates
-        /^(mon|tue|wed|thu|fri|sat|sun)/i, // Days
-        /^(all rights reserved|©|\®|\™)/i,
-        /cookie|privacy policy|terms of service|copyright/i
-      ];
-      
-      return boilerplatePatterns.some(pattern => pattern.test(text)) || 
-             text.length < 30 || 
-             text.length > 500;
-    };
-
-    // Utility function to check if text is a testimonial
-    const isTestimonial = (text: string, $el: any): boolean => {
-      // Check for quote marks or attribution
-      const hasQuotes = Boolean(text.match(/[""].*[""]/)) || text.includes('"');
-      const hasAttribution = Boolean(text.match(/\- .+, (CEO|President|Director|Manager)/i));
-      const inTestimonialElement = $el.closest('.testimonial, [class*="testimonial"], blockquote').length > 0;
-      
-      return hasQuotes || hasAttribution || inTestimonialElement;
-    };
-
-    // 1. Identify Brand Story Sections First
-    const storySelectors = [
-      // Explicit story sections
-      '[class*="about"]',
-      '[class*="story"]',
-      '[class*="history"]',
-      '[class*="mission"]',
-      '[class*="vision"]',
-      '[class*="values"]',
-      '[class*="founder"]',
-      '[class*="journey"]',
-      
-      // Common story locations
-      '#about',
-      '.company-info'
+    // Brand story INCLUDES:
+    const brandStoryIndicators = [
+      /who we are|what we do|why we exist/i,
+      /years of (experience|success|expertise)/i,
+      /founded|established|since \d{4}/i,
+      /our (mission|vision|purpose|goal)/i,
+      /committed to|dedicated to|passionate about/i,
+      /our approach|our philosophy|our values/i,
+      /what makes us different|sets us apart/i
     ];
 
-    let storySection = null;
-    let dedicatedStoryContent = '';
+    // Brand story EXCLUDES:
+    const notBrandStory = [
+      /guide to|tips for|how to|trends in|best practices/i,
+      /our services include|services we offer/i,
+      /case study|client story|testimonial|said/i,
+      /click here|learn more|see more|read more/i,
+      /\d{4}\s+(trends|guide|strategy|tips)/i,
+      /blog|article|post|whitepaper/i,
+      /©|copyright|privacy|cookie|terms/i
+    ];
 
-    for (const selector of storySelectors) {
-      const section = $(selector).first();
-      if (section.length && section.text().length > 100 && !isBoilerplate(section.text().trim())) {
-        storySection = section;
-        dedicatedStoryContent = section.text().trim().substring(0, 2000);
-        break;
+    // Filter function
+    function isBrandStoryContent(text: string): boolean {
+      // Exclude if matches non-story patterns
+      if (notBrandStory.some(pattern => pattern.test(text))) {
+        return false;
       }
+      // Include if matches story patterns OR is in right location
+      return brandStoryIndicators.some(pattern => pattern.test(text)) ||
+             (text.length > 50 && text.length < 300);
     }
 
-    // 2. Look for Brand Positioning & Story Content (more inclusive)
-    const brandContentPatterns = [
-      // Origin stories
-      /founded|began|started|established|since \d{4}/i,
-      /journey|evolution|grew|transformed/i,
+    // Smart Section Detection
+    function extractBrandStory($: cheerio.CheerioAPI): string[] {
+      let brandStoryContent: string[] = [];
       
-      // Mission/purpose
-      /our mission|we believe|we exist|our purpose/i,
-      /dedicated to|committed to|passionate about/i,
+      // Priority 1: Look for dedicated brand sections
+      const primarySelectors = [
+        '.intro, [class*="intro"]:not([class*="service"])',
+        '[class*="about"]:not([class*="service"])',
+        '[class*="story"]',
+        '[class*="mission"]',
+        '[class*="value"]:not([class*="service"])',
+        'section:nth-child(2)', // Often contains brand story
+        'section:nth-child(3)'
+      ];
       
-      // Values/philosophy  
-      /our approach|our philosophy|we value|our values/i,
-      /principles|core belief|culture/i,
-      
-      // Differentiators (but not features)
-      /what sets us apart|what makes us different|why choose/i,
-      /unlike others|we're not just|more than just/i,
-      
-      // Company positioning (more inclusive)
-      /we (help|work|partner|collaborate|focus|specialize)/i,
-      /our (team|expertise|experience|clients|work)/i,
-      /years of experience|award.winning|industry.leading/i,
-      /trusted by|recognized|proven|results/i,
-      /we're|we are|at \w+, we/i,
-      
-      // Value propositions
-      /deliver|provide|create|build|develop|design/i,
-      /solution|service|strategy|innovation|expertise/i,
-      /performance|success|growth|outcomes|impact/i
-    ];
-
-    // Extract paragraphs matching these patterns (more inclusive)
-    const storyParagraphs: string[] = [];
-    $('p, h2, h3, h4, h5').each((_, el) => {
-      const $el = $(el);
-      const text = $el.text().trim();
-      
-      // Skip navigation and footer content
-      if ($el.closest('nav, footer, header').length > 0) return;
-      
-      if (brandContentPatterns.some(pattern => pattern.test(text)) &&
-          text.length > 20 && text.length < 800 && !isBoilerplate(text) &&
-          !isTestimonial(text, $el)) {
-        storyParagraphs.push(text);
-      }
-    });
-
-    // 3. Separate Story from Pure Service Lists - Less restrictive filtering
-    const nonStoryPatterns = [
-      /pricing|packages|plans|cost|fee\$/i,
-      /click here|learn more|get started|sign up|contact us/i,
-      /step 1|step 2|step 3|how it works/i,
-      /features:|benefits:|includes:|what's included/i
-      // Removed overly restrictive patterns like "we offer" and "solutions"
-    ];
-
-    const filteredStory = storyParagraphs.filter(text => 
-      !nonStoryPatterns.some(pattern => pattern.test(text))
-    );
-
-    console.log('Found story sections:', storySection?.length || 0);
-    console.log('Story paragraphs found:', storyParagraphs.length);
-    console.log('After filtering:', filteredStory.length);
-    
-    // 3.5. Look for additional content in common positioning areas
-    const additionalContent: string[] = [];
-    
-    // Look in specific sections that often contain brand content
-    const brandSectionSelectors = [
-      '.intro, [class*="intro"]',
-      '[class*="value"]', '[class*="about"]',
-      'section:nth-child(2)', 'section:nth-child(3)',
-      '[class*="why"]', '[class*="difference"]',
-      '.container > p', '.content > p',
-      'main > section p', 'main > p'
-    ];
-    
-    brandSectionSelectors.forEach(selector => {
-      $(selector).slice(0, 8).each((_, el) => {
-        const $el = $(el);
-        const text = $el.text().trim();
-        
-        // Skip if already captured or if navigation/footer
-        if ($el.closest('nav, footer, header').length > 0) return;
-        if (storyParagraphs.includes(text) || filteredStory.includes(text)) return;
-        
-        // Look for brand-relevant content
-        if ((text.match(/\b(we|our|us)\b/gi) || []).length >= 2 && // Multiple company references
-            text.length > 30 && text.length < 600 && 
-            !isBoilerplate(text) && !isTestimonial(text, $el)) {
-          additionalContent.push(text);
+      // Try each selector until we find good content
+      for (const selector of primarySelectors) {
+        const section = $(selector).first();
+        if (section.length && !section.closest('nav, footer').length) {
+          const texts = section.find('h2, h3, h4, h5, p').slice(0, 6)
+            .map((_, el) => $(el).text().trim())
+            .get()
+            .filter(text => isBrandStoryContent(text));
+          
+          if (texts.length >= 2) {
+            brandStoryContent.push(...texts);
+            break; // Found good content, stop looking
+          }
         }
-      });
-    });
-    
-    console.log('Additional content found:', additionalContent.length);
-
-    // 4. Extract Company Credentials
-    const credentialPatterns = [
-      /(\d+)\+?\s*years/i,  // "20+ years"
-      /since (\d{4})/i,      // "since 2003"
-      /(\d+)\+?\s*clients/i, // "500+ clients"
-      /award[- ]winning/i,
-      /recognized|certified|accredited/i,
-      /trusted by/i
-    ];
-
-    const credentials: string[] = [];
-    $('p, li, h3, h4').each((_, el) => {
-      const $el = $(el);
-      const text = $el.text().trim();
-      if (credentialPatterns.some(pattern => pattern.test(text)) &&
-          text.length < 150 && !isBoilerplate(text) &&
-          !isTestimonial(text, $el)) {
-        credentials.push(text);
       }
-    });
-
-    // 6. Look for Team/Culture Content
-    const teamCultureSelectors = [
-      '[class*="team"]',
-      '[class*="culture"]',
-      '[class*="people"]'
-    ];
-
-    const teamCultureContent: string[] = [];
-    teamCultureSelectors.forEach(selector => {
-      const section = $(selector).first();
-      if (section.length) {
-        section.find('p').slice(0, 2).each((_, el) => {
+      
+      // Priority 2: If no dedicated section, look for scattered brand elements
+      if (brandStoryContent.length < 3) {
+        $('h2, h3, h4, h5, p').slice(0, 20).each((_, el) => {
           const $el = $(el);
           const text = $el.text().trim();
-          if (text.length > 50 && text.length < 500 && !isBoilerplate(text) &&
-              !isTestimonial(text, $el)) {
-            teamCultureContent.push(text);
+          
+          // Skip if in navigation or footer
+          if ($el.closest('nav, header, footer, aside').length) return;
+          
+          // Check if it's brand story content
+          if (isBrandStoryContent(text)) {
+            brandStoryContent.push(text);
           }
         });
       }
-    });
-
-    // 7. Construct Coherent Narrative - Organize content by story type
-    const storyElements = {
-      origin: [] as string[],      // Founded, history
-      mission: [] as string[],     // Why we exist
-      approach: [] as string[],    // How we work
-      values: [] as string[],      // What we believe
-      impact: [] as string[],      // Results, difference we make
-      credentials: [] as string[], // Years, clients, awards
-      positioning: [] as string[]  // General company positioning
-    };
-
-    // Categorize extracted content from filtered story
-    filteredStory.forEach(text => {
-      if (/founded|began|started|since \d{4}/i.test(text)) {
-        storyElements.origin.push(text);
-      } else if (/mission|purpose|exist|believe/i.test(text)) {
-        storyElements.mission.push(text);
-      } else if (/approach|how we|process|method/i.test(text)) {
-        storyElements.approach.push(text);
-      } else if (/value|principle|culture|philosophy/i.test(text)) {
-        storyElements.values.push(text);
-      } else if (/result|impact|achieve|deliver/i.test(text)) {
-        storyElements.impact.push(text);
-      } else {
-        storyElements.positioning.push(text); // General brand positioning
-      }
-    });
-
-    // Add additional content to positioning
-    storyElements.positioning.push(...additionalContent);
-
-    // Add team/culture and credentials
-    storyElements.values.push(...teamCultureContent);
-    storyElements.credentials = credentials;
-
-    // Build narrative in logical order - include positioning content
-    const narrative = [
-      ...storyElements.origin,
-      ...storyElements.mission,
-      ...storyElements.values,
-      ...storyElements.approach,
-      ...storyElements.positioning, // Include general positioning
-      ...storyElements.impact,
-      ...storyElements.credentials
-    ].filter(text => text && text.length > 20);
-
-    // Remove duplicates while preserving order
-    const uniqueNarrative = [...new Set(narrative)];
-    
-    console.log('Final narrative elements:', uniqueNarrative.length);
-    
-    let storyContent = uniqueNarrative.join(' ');
-
-    // Use dedicated story content if we found a comprehensive section
-    if (dedicatedStoryContent.length > storyContent.length && dedicatedStoryContent.length > 300) {
-      storyContent = dedicatedStoryContent;
+      
+      return brandStoryContent;
     }
 
-    // 8. Fallback for Minimal Sites
-    if (storyContent.length < 200) {
-      // Look for "why us" or differentiator content
-      const differentiators: string[] = [];
+    // Aggressive Deduplication
+    function deduplicateContent(content: string[]): string[] {
+      const cleaned: string[] = [];
+      const fingerprints = new Set<string>();
       
-      $('h2, h3, h4').each((_, el) => {
-        const $el = $(el);
-        const heading = $el.text().trim();
-        if (heading.match(/why|different|unique|about us/i)) {
-          // Get content after this heading
-          let content = '';
-          let current = $el.next();
+      content.forEach(text => {
+        // Create multiple fingerprints for better duplicate detection
+        const fingerprint1 = text.substring(0, 50).toLowerCase().replace(/\s+/g, '');
+        const fingerprint2 = text.substring(0, 30).toLowerCase().replace(/\s+/g, '');
+        
+        // Check if we've seen this before
+        if (!fingerprints.has(fingerprint1) && !fingerprints.has(fingerprint2)) {
+          // Also check if this is a substring of existing content
+          const isDuplicate = cleaned.some(existing => {
+            const similarity = existing.includes(text) || 
+                              text.includes(existing) ||
+                              (existing.substring(0, 30) === text.substring(0, 30));
+            return similarity;
+          });
           
-          while (current.length && !current.is('h2, h3, h4') && differentiators.length < 3) {
-            if (current.is('p, ul, ol')) {
-              const text = current.text().trim();
-              if (text.length > 50 && !isBoilerplate(text) && !isTestimonial(text, current)) {
-                content += text + ' ';
-              }
-            }
-            current = current.next();
-          }
-          
-          if (content.trim().length > 50) {
-            differentiators.push(content.trim().substring(0, 300));
+          if (!isDuplicate) {
+            fingerprints.add(fingerprint1);
+            fingerprints.add(fingerprint2);
+            cleaned.push(text);
           }
         }
       });
       
-      // Look for meta description as last resort
-      const metaDesc = $('meta[name="description"]').attr('content') || '';
-      
-      storyContent = [...differentiators, metaDesc].join(' ');
+      return cleaned;
     }
 
-    // Final limit for API
-    storyContent = storyContent.substring(0, 2500)
+    // Extract Company Credentials
+    function extractCredentials($: cheerio.CheerioAPI): string[] {
+      const credentials: string[] = [];
+      const credentialPatterns = [
+        /(\d+)\+?\s*years?\s*(of|in)?\s*(experience|business|success)?/i,
+        /since\s+\d{4}/i,
+        /founded\s+(in\s+)?\d{4}/i,
+        /(\d+)\+?\s*(clients|customers|companies|brands)/i,
+        /award[- ]winning/i,
+        /recognized|certified|trusted\s+by/i
+      ];
+      
+      // Look specifically for credential content
+      $('*').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text.length < 150 && credentialPatterns.some(p => p.test(text))) {
+          // Avoid duplicates from nested elements
+          const tagName = (el as any).tagName || (el as any).name || '';
+          if (!$(el).children().length || tagName.match(/^(p|h[2-6]|li)$/i)) {
+            credentials.push(text);
+          }
+        }
+      });
+      
+      return [...new Set(credentials)].slice(0, 3); // Max 3 credentials
+    }
+
+    // Build Labeled Narrative Structure
+    function buildLabeledNarrative(contentPieces: string[], credentials: string[]): string[] {
+      const narrative = {
+        FOUNDATION: [] as string[],      // Founded/Established/Years
+        IDENTITY: [] as string[],        // Who we are
+        MISSION: [] as string[],         // Why we exist
+        APPROACH: [] as string[],        // How we work
+        VALUES: [] as string[],          // What we believe
+        DIFFERENTIATORS: [] as string[], // What sets us apart
+        PROOF: [] as string[],           // Credentials/Trust
+        IMPACT: [] as string[]           // Results we deliver
+      };
+      
+      // Add credentials to PROOF
+      narrative.PROOF = credentials;
+      
+      // Categorize content with improved patterns
+      contentPieces.forEach(text => {
+        const lowerText = text.toLowerCase();
+        
+        if (/\b(founded|established|began|started|since)\b/i.test(text)) {
+          narrative.FOUNDATION.push(text);
+        } 
+        else if (/^(we are|as a|our team|we're a)/i.test(text)) {
+          narrative.IDENTITY.push(text);
+        } 
+        else if (/(our mission|we exist|purpose|dedicated to|committed to)/i.test(text)) {
+          narrative.MISSION.push(text);
+        } 
+        else if (/(our approach|how we|process|method|we work)/i.test(text)) {
+          narrative.APPROACH.push(text);
+        } 
+        else if (/(we believe|our values|philosophy|principles)/i.test(text)) {
+          narrative.VALUES.push(text);
+        } 
+        else if (/(unlike|different|unique|sets us apart|why choose)/i.test(text)) {
+          narrative.DIFFERENTIATORS.push(text);
+        } 
+        else if (/(results|outcomes|impact|achieve|deliver|help)/i.test(text)) {
+          narrative.IMPACT.push(text);
+        }
+        // Default categorization based on content
+        else if (lowerText.includes('we') || lowerText.includes('our')) {
+          if (text.length < 100) {
+            narrative.VALUES.push(text);
+          } else {
+            narrative.APPROACH.push(text);
+          }
+        }
+      });
+      
+      // Build labeled output
+      const labeledStory: string[] = [];
+      
+      Object.entries(narrative).forEach(([label, content]) => {
+        if (content.length > 0) {
+          // Take best/first item from each category
+          const bestContent = content
+            .filter(text => text && text.length > 20)
+            .sort((a, b) => b.length - a.length)[0];
+          
+          if (bestContent) {
+            labeledStory.push(`${label}: ${bestContent}`);
+          }
+        }
+      });
+      
+      return labeledStory;
+    }
+
+    // Complete Extraction Function
+    function extractCompleteBrandStory($: cheerio.CheerioAPI): string {
+      // Step 1: Extract brand story content
+      const storyContent = extractBrandStory($);
+      
+      // Step 2: Extract credentials separately
+      const credentials = extractCredentials($);
+      
+      // Step 3: Combine and deduplicate
+      const allContent = [...storyContent, ...credentials];
+      const deduplicated = deduplicateContent(allContent);
+      
+      // Step 4: Build labeled narrative
+      const labeledNarrative = buildLabeledNarrative(
+        deduplicated.filter(text => !credentials.includes(text)),
+        credentials
+      );
+      
+      // Step 5: Format output
+      if (labeledNarrative.length >= 3) {
+        return labeledNarrative.join('\n');
+      }
+      
+      // Step 6: Fallback if insufficient content
+      if (labeledNarrative.length < 3) {
+        const metaDesc = $('meta[name="description"]').attr('content') || '';
+        const ogDesc = $('meta[property="og:description"]').attr('content') || '';
+        
+        labeledNarrative.push(`IDENTITY: ${metaDesc}`);
+        if (ogDesc && ogDesc !== metaDesc) {
+          labeledNarrative.push(`MISSION: ${ogDesc}`);
+        }
+      }
+      
+      // Return labeled story (max 2500 chars)
+      return labeledNarrative
+        .filter(line => line.split(': ')[1]?.length > 10) // Ensure content after label
+        .slice(0, 8) // Max 8 labeled sections
+        .join('\n')
+        .substring(0, 2500);
+    }
+
+    // Main execution
+    const storyContent = extractCompleteBrandStory($);
     
-    logger.info("Extracted comprehensive brand story content", {
+    logger.info("Extracted labeled brand story content", {
       url: context.websiteUrl,
       contentLength: storyContent.length,
-      storyElementsFound: {
-        origin: storyElements.origin.length,
-        mission: storyElements.mission.length,
-        values: storyElements.values.length,
-        approach: storyElements.approach.length,
-        impact: storyElements.impact.length,
-        credentials: storyElements.credentials.length
-      },
-      narrativeParagraphs: storyParagraphs.length,
-      filteredAfterServiceRemoval: filteredStory.length,
-      dedicatedSectionFound: dedicatedStoryContent.length > 0
+      sectionsFound: (storyContent.match(/\n/g) || []).length + 1
     });
 
     if (!storyContent || storyContent.length < 100) {
@@ -494,7 +448,7 @@ export async function scoreBrandStory(
       evidence: {
         description: `Brand story analysis: ${passes.passed.length}/4 elements present with ${quantifiedResults.length} quantified results`,
         details: {
-          storyContent: storyContent.substring(0, 200) + '...',
+          storyContent: storyContent.substring(0, 300) + '...',
           analysis,
           hasRecentOutcomes,
           quantifiedResults: quantifiedResults.slice(0, 3),
