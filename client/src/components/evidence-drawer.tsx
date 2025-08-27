@@ -245,8 +245,35 @@ export function EvidenceDrawer({
                 </div>
                 <div className="space-y-2">
                   {score.passes.passed.map((check, index) => {
-                    const evidenceKey = `${check.replace('_named', '_evidence').replace('_present', '_evidence').replace('_clear', '_evidence').replace('_check', '_evidence')}`;
-                    const evidence = score.evidence.details[evidenceKey];
+                    // Updated evidence key mapping for new brand story logic
+                    let evidenceKey = '';
+                    let evidence = null;
+                    
+                    // Brand story specific mappings
+                    if (score.criterion === 'brand_story') {
+                      const evidenceMapping: Record<string, string> = {
+                        'pov_present': 'pov',
+                        'mechanism_described': 'mechanism', 
+                        'mechanism_named': 'mechanism',
+                        'quantified_outcomes': 'outcomes_quantified',
+                        'outcomes_mentioned': 'outcomes',
+                        'strong_proof_elements': 'proof',
+                        'some_proof_elements': 'proof',
+                        'industry_focus': 'bonusPoints',
+                        'capability_breadth': 'bonusPoints'
+                      };
+                      evidenceKey = evidenceMapping[check] || check;
+                      evidence = score.evidence.details[evidenceKey];
+                      
+                      // Special handling for bonus points
+                      if (check === 'industry_focus' || check === 'capability_breadth') {
+                        evidence = `Bonus points awarded: +${score.evidence.details.bonusPoints || 0}`;
+                      }
+                    } else {
+                      // Legacy evidence key transformation for other criteria
+                      evidenceKey = `${check.replace('_named', '_evidence').replace('_present', '_evidence').replace('_clear', '_evidence').replace('_check', '_evidence')}`;
+                      evidence = score.evidence.details[evidenceKey];
+                    }
                     
                     return (
                       <div key={index} className="flex flex-col gap-1">
