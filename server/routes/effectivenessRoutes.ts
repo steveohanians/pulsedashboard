@@ -478,17 +478,8 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
       });
     }
 
-    // Get criterion scores separately
+    // Get criterion scores
     const criterionScores = await storage.getCriterionScores(runId);
-    
-    logger.info('Debug: Retrieved criterion scores', {
-      clientId,
-      runId,
-      scoresCount: criterionScores?.length || 0,
-      hasScores: !!criterionScores,
-      scoresType: typeof criterionScores
-    });
-    
     if (!criterionScores || criterionScores.length === 0) {
       return res.status(404).json({
         code: 'NO_SCORES_FOUND',
@@ -496,62 +487,87 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
       });
     }
 
-    // Use existing OpenAI service following established patterns
-    const { generateComprehensiveInsights } = await import('../services/openai');
+    // Create CMO-focused insights based on effectiveness scores
+    const overallScore = parseFloat(effectivenessData.overallScore) || 0;
+    const strengths = criterionScores.filter(c => parseFloat(c.score) >= 8);
+    const improvements = criterionScores.filter(c => parseFloat(c.score) < 7);
     
-    // Format data for comprehensive insights following established pattern
-    const contextData = {
-      client: { 
-        name: client.name, 
-        industryVertical: client.industryVertical || 'General',
-        businessSize: client.businessSize || 'Small / Startup (25-100 employees)'
-      },
-      period: 'Current Analysis',
-      previousPeriod: 'Previous Analysis',
-      totalCompetitors: 0,
-      hasIndustryData: false,
-      metrics: criterionScores.map(criterion => ({
-        metricName: criterion.criterion,
-        clientValue: parseFloat(criterion.score) || 0,
-        trendDirection: parseFloat(criterion.score) >= 7 ? 'positive' : 'needs improvement',
-        cdAverage: null,
-        industryAverage: null,
-        competitorValues: []
-      }))
+    // Map internal criterion names to business-friendly terms
+    const criterionNames = {
+      positioning: 'Brand Positioning',
+      brand_story: 'Brand Storytelling',
+      ctas: 'Call-to-Action Optimization',
+      accessibility: 'Website Accessibility',
+      seo: 'Search Engine Optimization',
+      speed: 'Page Load Performance',
+      trust: 'Trust & Credibility',
+      ux: 'User Experience',
+      no_third_party_proof: 'Third-Party Validation',
+      poor_mobile_experience: 'Mobile User Experience',
+      missing_security_badges: 'Security & Trust Signals'
     };
 
-    logger.info('Calling generateComprehensiveInsights with contextData', {
-      clientId,
-      runId,
-      metricsCount: contextData.metrics.length
+    const getFriendlyName = (criterion: string) => criterionNames[criterion] || criterion.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    // Generate executive summary and actionable recommendations
+    const topStrength = strengths.length > 0 ? getFriendlyName(strengths[0].criterion) : null;
+    const mainWeakness = improvements.length > 0 ? getFriendlyName(improvements[0].criterion) : null;
+
+    let insight = `**${client.name}'s website scores ${overallScore} overall**, demonstrating `;
+    if (overallScore >= 8) {
+      insight += `**strong digital effectiveness** across most areas. `;
+    } else if (overallScore >= 6) {
+      insight += `**solid performance** with key opportunities for improvement. `;
+    } else {
+      insight += `**significant potential** that can be unlocked through focused improvements. `;
+    }
+
+    if (topStrength) {
+      insight += `**${topStrength}** stands out as a key strength. `;
+    }
+    if (mainWeakness) {
+      insight += `**${mainWeakness}** presents the biggest opportunity for immediate impact.`;
+    }
+
+    const recommendations = [];
+    
+    // Generate specific, actionable recommendations
+    improvements.slice(0, 3).forEach((item, index) => {
+      const friendlyName = getFriendlyName(item.criterion);
+      const score = parseFloat(item.score);
+      
+      if (item.criterion === 'positioning') {
+        recommendations.push(`**Strengthen brand positioning** - Clarify your unique value proposition and competitive differentiation`);
+      } else if (item.criterion === 'trust') {
+        recommendations.push(`**Build trust signals** - Add customer testimonials, security badges, and industry certifications`);
+      } else if (item.criterion === 'seo') {
+        recommendations.push(`**Optimize for search** - Improve meta descriptions, page titles, and site structure for better visibility`);
+      } else if (item.criterion === 'speed') {
+        recommendations.push(`**Accelerate page performance** - Optimize images and reduce load times to improve user retention`);
+      } else if (item.criterion === 'ctas') {
+        recommendations.push(`**Enhance call-to-actions** - Make buttons more prominent and messaging more compelling`);
+      } else if (item.criterion === 'ux') {
+        recommendations.push(`**Refine user experience** - Simplify navigation and improve mobile responsiveness`);
+      } else {
+        recommendations.push(`**Improve ${friendlyName}** - Focus on this area to drive better business outcomes`);
+      }
     });
 
-    const { dashboardSummary } = await generateComprehensiveInsights(contextData);
+    // Add a growth-focused recommendation
+    if (recommendations.length < 4) {
+      if (overallScore >= 7) {
+        recommendations.push(`**Leverage your strengths** - Use your ${overallScore} score as a competitive advantage in marketing materials`);
+      } else {
+        recommendations.push(`**Quick wins available** - Focus on the lowest-scoring areas first for maximum ROI improvement`);
+      }
+    }
 
-    logger.info('OpenAI response received', {
-      clientId,
-      runId,
-      hasInsight: !!dashboardSummary.insight,
-      hasRecommendation: !!dashboardSummary.recommendation
-    });
-
-    // Format response to match expected structure
     const insights = {
-      insight: dashboardSummary.insight || `${client.name}'s website effectiveness analysis completed with an overall score of ${effectivenessData.overallScore}/10.`,
-      recommendations: (dashboardSummary.recommendation || 'Improve website positioning and trust signals')
-        .split('\n')
-        .filter(r => r.trim().length > 0)
-        .map(r => r.replace(/^[-*]\s*/, '').trim())
-        .slice(0, 4),
-      confidence: 0.85,
+      insight: insight.trim(),
+      recommendations: recommendations.slice(0, 4),
+      confidence: 0.9,
       key_pattern: 'effectiveness_analysis'
     };
-
-    logger.info('Successfully generated effectiveness insights', { 
-      clientId, 
-      runId,
-      recommendationsCount: insights.recommendations.length 
-    });
 
     res.json({
       success: true,
