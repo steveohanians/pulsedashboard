@@ -13,34 +13,10 @@ interface EffectivenessAIInsightsProps {
 interface InsightsResponse {
   success: boolean;
   insights: {
-    primary_issue?: string;
-    root_cause?: string;
-    business_impact?: string;
-    key_insight?: string;
-    quick_wins?: Array<{
-      action: string;
-      priority: string;
-      effort: string;
-      expected_impact: string;
-      rationale: string;
-      timeline: string;
-    }>;
-    strategic_initiatives?: Array<{
-      action: string;
-      priority: string;
-      effort: string;
-      expected_impact: string;
-      rationale: string;
-      timeline: string;
-      roi_potential: string;
-    }>;
-    interconnected_benefits?: string;
-    industry_considerations?: string;
+    insight: string;
+    recommendations: string[];
     confidence: number;
-    // Fallback fields for backwards compatibility
-    insight?: string;
-    recommendations?: string[];
-    key_pattern?: string;
+    key_pattern: string;
   };
   clientName: string;
   overallScore: string;
@@ -96,63 +72,20 @@ export function EffectivenessAIInsights({
   }
 
   const { insights } = insightsData;
-  
-  // Handle both new structured format and legacy format
-  const mainInsight = insights.key_insight || insights.insight || '';
-  const recommendations = [];
-  
-  // Combine quick wins and strategic initiatives into recommendations
-  if (insights.quick_wins) {
-    insights.quick_wins.forEach(item => {
-      recommendations.push(`**${item.action}** (${item.priority} priority, ${item.effort} effort) - ${item.expected_impact}`);
-    });
-  }
-  
-  if (insights.strategic_initiatives) {
-    insights.strategic_initiatives.forEach(item => {
-      recommendations.push(`**${item.action}** (${item.priority} priority, ${item.effort} effort, ${item.roi_potential} ROI) - ${item.expected_impact}`);
-    });
-  }
-  
-  // Fallback to legacy recommendations format
-  if (recommendations.length === 0 && insights.recommendations) {
-    recommendations.push(...insights.recommendations);
-  }
 
   return (
     <div className={`space-y-3 ${className || ''}`}>
-      {/* Primary Issue */}
-      {insights.primary_issue && (
-        <div className="text-sm text-slate-600 leading-relaxed">
-          <div className="font-medium text-slate-700 mb-1">Primary Issue:</div>
-          <div dangerouslySetInnerHTML={{ 
-            __html: insights.primary_issue.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
-          }} />
-        </div>
-      )}
-
-      {/* Main Insight */}
+      {/* Main Insight - match AI insights font size */}
       <div className="text-sm text-slate-600 leading-relaxed">
         <div dangerouslySetInnerHTML={{ 
-          __html: mainInsight.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
+          __html: insights.insight.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
         }} />
       </div>
 
-      {/* Business Impact */}
-      {insights.business_impact && (
-        <div className="text-sm text-slate-600 leading-relaxed">
-          <div className="font-medium text-slate-700 mb-1">Business Impact:</div>
-          <div dangerouslySetInnerHTML={{ 
-            __html: insights.business_impact.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
-          }} />
-        </div>
-      )}
-
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
+      {/* Recommendations - match AI insights style exactly */}
+      {insights.recommendations && insights.recommendations.length > 0 && (
         <div className="space-y-3">
-          <div className="font-medium text-slate-700 text-sm">Recommended Actions:</div>
-          {recommendations.map((rec, index) => (
+          {insights.recommendations.map((rec, index) => (
             <div key={index} className="text-sm text-slate-600 flex items-start gap-1">
               <span className="text-primary font-medium mt-0.5">{index + 1}.</span>
               <div 
@@ -161,16 +94,6 @@ export function EffectivenessAIInsights({
               />
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Industry Considerations */}
-      {insights.industry_considerations && (
-        <div className="text-sm text-slate-600 leading-relaxed">
-          <div className="font-medium text-slate-700 mb-1">Industry Considerations:</div>
-          <div dangerouslySetInnerHTML={{ 
-            __html: insights.industry_considerations.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
-          }} />
         </div>
       )}
 

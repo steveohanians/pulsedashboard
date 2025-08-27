@@ -487,114 +487,91 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
       });
     }
 
-    // Use AI-powered insights with the enhanced prompt template
-    const { getEffectivenessPrompt } = await import('../services/effectiveness/promptManager');
-    const promptTemplate = await getEffectivenessPrompt('insights');
+    // Create CMO-focused insights based on effectiveness scores
+    const overallScore = parseFloat(effectivenessData.overallScore) || 0;
+    const strengths = criterionScores.filter(c => parseFloat(c.score) >= 8);
+    const improvements = criterionScores.filter(c => parseFloat(c.score) < 7);
     
-    if (!promptTemplate) {
-      throw new Error('No insights prompt template available');
+    // Map internal criterion names to business-friendly terms
+    const criterionNames = {
+      positioning: 'Brand Positioning',
+      brand_story: 'Brand Storytelling',
+      ctas: 'Call-to-Action Optimization',
+      accessibility: 'Website Accessibility',
+      seo: 'Search Engine Optimization',
+      speed: 'Page Load Performance',
+      trust: 'Trust & Credibility',
+      ux: 'User Experience',
+      no_third_party_proof: 'Third-Party Validation',
+      poor_mobile_experience: 'Mobile User Experience',
+      missing_security_badges: 'Security & Trust Signals'
+    };
+
+    const getFriendlyName = (criterion: string) => criterionNames[criterion] || criterion.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    // Generate executive summary and actionable recommendations
+    const topStrength = strengths.length > 0 ? getFriendlyName(strengths[0].criterion) : null;
+    const mainWeakness = improvements.length > 0 ? getFriendlyName(improvements[0].criterion) : null;
+
+    let insight = `**${client.name}'s website scores ${overallScore} overall**, demonstrating `;
+    if (overallScore >= 8) {
+      insight += `**strong digital effectiveness** across most areas. `;
+    } else if (overallScore >= 6) {
+      insight += `**solid performance** with key opportunities for improvement. `;
+    } else {
+      insight += `**significant potential** that can be unlocked through focused improvements. `;
     }
 
-    // Prepare criterion data and evidence summary for AI
-    const criteriaData = criterionScores.map(c => {
-      const score = parseFloat(c.score);
-      const status = score >= 8 ? 'Strong' : score >= 6 ? 'Good' : score < 4 ? 'Needs Urgent Attention' : 'Needs Improvement';
-      return `- ${c.criterion.replace(/_/g, ' ')}: ${score}/10 (${status})`;
-    }).join('\n');
+    if (topStrength) {
+      insight += `**${topStrength}** stands out as a key strength. `;
+    }
+    if (mainWeakness) {
+      insight += `**${mainWeakness}** presents the biggest opportunity for immediate impact.`;
+    }
 
-    const evidenceSummary = criterionScores.map(c => {
-      const evidenceDetails = typeof c.evidence === 'string' ? JSON.parse(c.evidence) : c.evidence;
-      return `${c.criterion}: ${evidenceDetails?.description || 'Analysis completed'}`;
-    }).join('\n');
-
-    // Substitute variables in the prompt template  
-    const prompt = promptTemplate.promptTemplate
-      .replace(/\{clientName\}/g, client.name)
-      .replace(/\{websiteUrl\}/g, effectivenessData.websiteUrl)
-      .replace(/\{overallScore\}/g, effectivenessData.overallScore)
-      .replace(/\{criteriaData\}/g, criteriaData)
-      .replace(/\{evidenceSummary\}/g, evidenceSummary)
-      .replace(/\{industryVertical\}/g, client.industryVertical || 'Technology')
-      .replace(/\{businessSize\}/g, client.businessSize || 'Medium Business');
-
-    // Generate AI insights using OpenAI
-    const { OpenAI } = await import('openai');
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY!
-    });
-
-    const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-      temperature: 0.1,
-      messages: [
-        { 
-          role: 'system', 
-          content: `${promptTemplate.systemPrompt} You MUST respond with the exact JSON schema specified in the prompt. Do not deviate from the required fields: primary_issue, root_cause, business_impact, key_insight, quick_wins, strategic_initiatives, interconnected_benefits, industry_considerations, and confidence.` 
-        },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 2000
-    });
-
-    const aiResult = response.choices[0]?.message?.content?.trim();
-    let insights;
+    const recommendations = [];
     
-    try {
-      insights = JSON.parse(aiResult || '{}');
+    // Generate agency-specific, actionable recommendations tied to Clear Digital's services
+    improvements.slice(0, 3).forEach((item, index) => {
+      const friendlyName = getFriendlyName(item.criterion);
+      const score = parseFloat(item.score);
       
-      // Validate the response has the expected structure
-      if (!insights.primary_issue || !insights.key_insight) {
-        logger.warn('AI response missing required fields, reformatting response', { 
-          hasRequiredFields: {
-            primary_issue: !!insights.primary_issue,
-            key_insight: !!insights.key_insight,
-            quick_wins: Array.isArray(insights.quick_wins),
-            strategic_initiatives: Array.isArray(insights.strategic_initiatives)
-          }
-        });
-        
-        // If response is in old format, try to restructure it
-        if (insights['Key Insight for Clear Digital'] || insights['This suggests an opportunity to']) {
-          insights = {
-            primary_issue: `Website effectiveness opportunities identified from ${criteriaData.split('\n').filter(line => line.includes('Needs')).length} areas needing improvement`,
-            root_cause: "Analysis indicates gaps in positioning, trust signals, or user experience elements that affect conversion potential",
-            business_impact: `For ${client.name} in the ${client.industryVertical || 'technology'} industry, these effectiveness gaps may reduce lead generation and competitive positioning`,
-            key_insight: insights['Key Insight for Clear Digital'] || `${client.name}'s website shows strong performance in several areas but has opportunities for enhanced effectiveness`,
-            quick_wins: insights['This suggests an opportunity to'] ? insights['This suggests an opportunity to'].map((rec: string, index: number) => ({
-              action: rec.replace(/^\d+\.\s*/, ''),
-              priority: "High",
-              effort: "Medium", 
-              expected_impact: "Improved user engagement and conversion rates",
-              rationale: "Based on effectiveness scoring analysis",
-              timeline: "2-4 weeks"
-            })) : [],
-            strategic_initiatives: [],
-            interconnected_benefits: "Implementing multiple recommendations will create compound effectiveness improvements across user experience and conversion optimization",
-            industry_considerations: `Specific factors relevant to ${client.industryVertical || 'technology'} industry positioning and competitive landscape`,
-            confidence: insights.confidence || 0.8
-          };
-        }
+      if (item.criterion === 'positioning') {
+        recommendations.push(`**Develop brand positioning strategy** - Work with our strategists to define your unique market position and messaging framework`);
+      } else if (item.criterion === 'brand_story') {
+        recommendations.push(`**Craft compelling brand narrative** - Partner with our content team to develop authentic storytelling that resonates with your audience`);
+      } else if (item.criterion === 'trust') {
+        recommendations.push(`**Redesign trust elements** - Let our design team create credible testimonial layouts, security badges, and social proof sections`);
+      } else if (item.criterion === 'seo') {
+        recommendations.push(`**Implement content strategy** - Our content specialists can optimize your messaging for both users and search engines`);
+      } else if (item.criterion === 'speed') {
+        recommendations.push(`**Optimize website performance** - Our developers can rebuild key pages for faster load times and better user retention`);
+      } else if (item.criterion === 'ctas') {
+        recommendations.push(`**Redesign conversion elements** - Partner with our UX team to create high-converting buttons and action-focused page layouts`);
+      } else if (item.criterion === 'ux') {
+        recommendations.push(`**Enhance user experience design** - Our design team can rebuild your navigation and mobile experience for better engagement`);
+      } else if (item.criterion === 'accessibility') {
+        recommendations.push(`**Implement accessible design** - Let our developers ensure your site meets accessibility standards and reaches all users`);
+      } else {
+        recommendations.push(`**Custom solution for ${friendlyName}** - Our team can create interactive tools, videos, or custom content to address this area`);
       }
-      
-    } catch (parseError) {
-      logger.error('Failed to parse AI insights response', { 
-        aiResult, 
-        parseError: parseError instanceof Error ? parseError.message : String(parseError) 
-      });
-      // Fallback to ensure we return valid structure
-      insights = {
-        primary_issue: "Website effectiveness analysis completed",
-        root_cause: "Multiple factors may be affecting overall site effectiveness",
-        business_impact: `For ${client.name}, website effectiveness improvements could enhance competitive positioning and lead generation`,
-        key_insight: `${client.name}'s website effectiveness analysis has been completed with an overall score of ${effectivenessData.overallScore}/10.`,
-        quick_wins: [],
-        strategic_initiatives: [],
-        interconnected_benefits: "Systematic improvements will create compound effectiveness gains",
-        industry_considerations: `Recommendations tailored for ${client.industryVertical || 'technology'} industry standards`,
-        confidence: 0.8
-      };
+    });
+
+    // Add a service-focused recommendation based on score
+    if (recommendations.length < 4) {
+      if (overallScore >= 7) {
+        recommendations.push(`**Create interactive content** - Build on your solid foundation with custom calculators, videos, or dynamic tools to engage visitors`);
+      } else {
+        recommendations.push(`**Full website redesign consultation** - Schedule a strategy session to identify which areas will deliver the biggest impact for your business`);
+      }
     }
+
+    const insights = {
+      insight: insight.trim(),
+      recommendations: recommendations.slice(0, 4),
+      confidence: 0.9,
+      key_pattern: 'effectiveness_analysis'
+    };
 
     res.json({
       success: true,
