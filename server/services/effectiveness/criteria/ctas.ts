@@ -232,7 +232,7 @@ export async function scoreCTAs(
           
           const cta: any = {
             text,
-            tag: element.tagName.toLowerCase(),
+            tag: (element as any).tagName?.toLowerCase() || 'unknown',
             href: $el.attr('href') || $el.attr('data-href') || '#',
             classes: $el.attr('class') || '',
             location
@@ -375,66 +375,52 @@ export async function scoreCTAs(
     const hasVisualHierarchy = primaryCTAs.length >= 1 && primaryCTAs.length <= 3;
     const hasSecondaryPaths = secondaryCTAs.length >= 1 || tertiaryCTAs.length >= 1;
 
-    // Enhanced form CTA detection
-    const formCTAs = processedCTAs.filter(cta => cta.isFormCTA);
-    const hasFormCTAs = formCTAs.length > 0;
-    const forms = $('form').length;
 
     // Calculate score
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
 
-    // Above-fold CTA presence (30% of score - 3 points)
+    // Above-fold CTA presence (33% of score - 3.33 points)
     if (aboveFoldCTAs.length >= 2) {
-      score += 3.0;
+      score += 3.33;
       passes.passed.push('multiple_above_fold_ctas');
     } else if (aboveFoldCTAs.length >= 1) {
-      score += 2.0;
+      score += 2.22;
       passes.passed.push('above_fold_cta_present');
     } else {
       passes.failed.push('no_above_fold_cta');
     }
 
-    // CTA dominance and hierarchy (25% of score - 2.5 points)
+    // CTA dominance and hierarchy (28% of score - 2.78 points)
     if (hasVisualHierarchy && primaryCTAs.length >= 1) {
-      score += 2.5;
+      score += 2.78;
       passes.passed.push('clear_cta_hierarchy');
     } else if (primaryCTAs.length >= 1) {
-      score += 1.5;
+      score += 1.67;
       passes.passed.push('primary_cta_present');
     } else {
       passes.failed.push('no_clear_hierarchy');
     }
 
-    // Secondary paths (20% of score - 2 points)
+    // Secondary paths (22% of score - 2.22 points)
     if (hasSecondaryPaths) {
-      score += 2.0;
+      score += 2.22;
       passes.passed.push('secondary_paths_available');
     } else {
       passes.failed.push('no_secondary_paths');
     }
 
-    // Message match (15% of score - 1.5 points)
+    // Message match (17% of score - 1.67 points)
     if (messageMatchChecks > 0 && messageMatchScore > 0) {
-      score += 1.5;
+      score += 1.67;
       passes.passed.push('message_match_verified');
     } else if (uniqueCTAs.length > 0) {
-      score += 0.75; // Partial credit for having CTAs
+      score += 0.83; // Partial credit for having CTAs
       passes.passed.push('ctas_present');
     } else {
-      passes.failed.push('no_message_match');
+      passes.failed.push('message_mismatch');
     }
 
-    // Form integration (10% of score - 1 point)
-    if (hasFormCTAs) {
-      score += 1.0;
-      passes.passed.push('form_ctas_present');
-    } else if (forms > 0) {
-      score += 0.5;
-      passes.passed.push('forms_present');
-    } else {
-      passes.failed.push('no_form_integration');
-    }
 
     score = Math.min(10, Math.max(0, score));
 
@@ -446,7 +432,6 @@ export async function scoreCTAs(
       primaryCTAs: primaryCTAs.length,
       secondaryCTAs: secondaryCTAs.length,
       tertiaryCTAs: tertiaryCTAs.length,
-      hasFormCTAs,
       ctasByLocation: {
         hero: ctasByLocation.hero.length,
         header: ctasByLocation.header.length,
@@ -483,16 +468,13 @@ export async function scoreCTAs(
             location: cta.location 
           })).slice(0, 3),
           hasVisualHierarchy,
-          hasFormCTAs,
-          forms: forms,
-          formCTAs: formCTAs.length,
           messageMatchScore,
           messageMatchChecks,
           modernCTAsDetected: processedCTAs.filter(cta => 
             cta.hasClickHandler || cta.classes.includes('btn') || cta.classes.includes('button')
           ).length
         },
-        reasoning: `Enhanced score based on above-fold presence (${aboveFoldCTAs.length} CTAs across hero/header/sticky), visual hierarchy (${hasVisualHierarchy ? 'clear' : 'unclear'} with ${primaryCTAs.length} primary CTAs), secondary paths (${hasSecondaryPaths ? 'available' : 'missing'} with ${secondaryCTAs.length + tertiaryCTAs.length} secondary/tertiary CTAs), message consistency (${Math.round(messageMatchScore * 100)}% of top CTAs), and form integration (${hasFormCTAs ? 'present' : 'absent'})`
+        reasoning: `Enhanced score based on above-fold presence (${aboveFoldCTAs.length} CTAs across hero/header/sticky), visual hierarchy (${hasVisualHierarchy ? 'clear' : 'unclear'} with ${primaryCTAs.length} primary CTAs), secondary paths (${hasSecondaryPaths ? 'available' : 'missing'} with ${secondaryCTAs.length + tertiaryCTAs.length} secondary/tertiary CTAs), and message consistency (${Math.round(messageMatchScore * 100)}% of top CTAs)`
       },
       passes
     };

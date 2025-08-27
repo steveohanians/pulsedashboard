@@ -49,7 +49,6 @@ const getFailedCheckMessage = (check: string): string => {
     no_proof_elements: 'Credibility indicators or proof points missing',
     
     // CTAs checks
-    no_form_integration: 'Contact forms not integrated with CTA buttons',
     few_above_fold_ctas: 'Insufficient call-to-action buttons above the fold',
     no_primary_cta: 'Primary call-to-action not clearly identified',
     no_secondary_paths: 'Alternative engagement options not available',
