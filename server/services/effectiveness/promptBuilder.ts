@@ -207,7 +207,7 @@ TASK: Generate insights that:
 
 RESPONSE FORMAT (JSON only):
 {
-  "insight": "One concise paragraph (2-3 sentences max). Start with 'With a score of X/10', identify the primary gap and its impact. Use **semibold** for key metrics, important terms, and critical findings. Never use technical variable names - use clear, contextual English instead.",
+  "insight": "One concise paragraph (2-3 sentences max). Start with 'With a score of X.X', identify the primary gap and its impact. Use **semibold** for key metrics, important terms, and critical findings. Never use technical variable names - use clear, contextual English instead. Never add '/10' to scores - just use the decimal number.",
   "recommendations": [
     "Direct, specific action without explanatory clauses. Use **semibold** for key action items.",
     "Second priority action, concise and actionable", 
