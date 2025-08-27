@@ -1159,8 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timePeriods: [
           "Last Month",
           "Last Quarter", 
-          "Last Year",
-          "Custom Date Range"
+          "Last Year"
         ]
       };
       
@@ -1213,8 +1212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const timePeriods = [
         "Last Month",
         "Last Quarter", 
-        "Last Year",
-        "Custom Date Range"
+        "Last Year"
       ];
       
       res.json({

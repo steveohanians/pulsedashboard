@@ -69,7 +69,6 @@ export default function Dashboard() {
 
   // State management
   const [timePeriod, setTimePeriod] = useState("Last Month");
-  const [customDateRange, setCustomDateRange] = useState("");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
   const [viewAsClientId, setViewAsClientId] = useState<string | null>(null);
@@ -77,9 +76,6 @@ export default function Dashboard() {
   const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
   const [viewAsUser, setViewAsUser] = useState<any>(null);
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
@@ -102,12 +98,6 @@ export default function Dashboard() {
     clearError: clearDashboardError,
   } = useErrorBanner();
 
-  // Use custom date range if selected
-  const effectiveTimePeriod =
-    timePeriod === "Custom Date Range" && customDateRange
-      ? customDateRange
-      : timePeriod;
-
   // Use the new unified data hook
   const {
     data: dashboardData,
@@ -126,7 +116,7 @@ export default function Dashboard() {
     periods,
     dataQuality,
   } = useDashboardData({
-    timePeriod: effectiveTimePeriod,
+    timePeriod,
     businessSize,
     industryVertical,
     clientId: viewAsClientId || user?.clientId || '',
@@ -743,14 +733,7 @@ export default function Dashboard() {
               <CardContent>
                 <NativeSelect
                   value={timePeriod}
-                  onChange={(e) => {
-                    if (e.target.value === "Custom Date Range") {
-                      setShowDatePicker(true);
-                    } else {
-                      setTimePeriod(e.target.value);
-                      setCustomDateRange("");
-                    }
-                  }}
+                  onChange={(e) => setTimePeriod(e.target.value)}
                   options={timePeriods
                     .filter((period) => period !== "Year")
                     .map((period) => ({ value: period, label: period }))}
@@ -759,9 +742,7 @@ export default function Dashboard() {
                 {/* Display time period details below dropdown */}
                 {(() => {
                   let displayText = "";
-                  if (timePeriod === "Custom Date Range" && customDateRange) {
-                    displayText = customDateRange;
-                  } else if (timePeriod === "Last Month" && periods) {
+                  if (timePeriod === "Last Month" && periods) {
                     // Use the display period designed for user-facing presentation
                     displayText = periods.displayPeriod;
                   } else if (timePeriod === "Last Quarter") {

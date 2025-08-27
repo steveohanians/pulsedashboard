@@ -57,8 +57,14 @@ interface DailyMetric {
   timePeriod: string;
   sessions?: number;
   users?: number;
-  channel?: string;
+  channel?: string | null;
   competitorId?: string;
+  id?: string;
+  createdAt?: Date;
+  clientId?: string | null;
+  deviceCategory?: string | null;
+  businessSize?: string | null;
+  industryVertical?: string | null;
 }
 
 interface AggregatedMetric {
@@ -321,7 +327,7 @@ export async function getFiltersOptimized() {
   const data = {
     businessSizes: ["All", ...sortedBusinessSizes, ...unknownBusinessSizes],
     industryVerticals: ["All", ...availableIndustryVerticals.sort()],
-    timePeriods: ["Last Month", "Last Quarter", "Last Year", "Custom Date Range"]
+    timePeriods: ["Last Month", "Last Quarter", "Last Year"]
   };
   
   setCachedData(cacheKey, data, 5 * 60 * 1000);

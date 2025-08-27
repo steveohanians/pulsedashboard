@@ -13,7 +13,7 @@ import { z } from 'zod';
 export const TimePeriodSchema = z.object({
   granularity: z.enum(['month', 'day']),
   months: z.number().positive(),
-  type: z.enum(['last_month', 'last_quarter', 'last_year', 'custom_range']),
+  type: z.enum(['last_month', 'last_quarter', 'last_year']),
   customStart: z.string().optional(), // YYYY-MM-DD format for custom ranges
   customEnd: z.string().optional(),   // YYYY-MM-DD format for custom ranges
 });
@@ -44,8 +44,7 @@ export interface Ga4Range {
 export const LEGACY_LABELS = [
   'Last Month',
   'Last Quarter', 
-  'Last Year',
-  'Custom Date Range'
+  'Last Year'
 ] as const;
 
 let deprecationWarningShown = false;
@@ -77,40 +76,6 @@ export function parseUILabel(label: string): TimePeriod {
     logDeprecationWarning(trimmedLabel);
   }
 
-  // Handle custom date range format: "4/30/2025 to 7/31/2025"
-  if (trimmedLabel.includes(' to ')) {
-    const [startStr, endStr] = trimmedLabel.split(' to ').map(s => s.trim());
-    
-    try {
-      const startDate = new Date(startStr);
-      const endDate = new Date(endStr);
-      
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        throw new Error('Invalid date format in custom range');
-      }
-      
-      if (startDate > endDate) {
-        throw new Error('Start date must be before end date');
-      }
-      
-      // Calculate months between start and end
-      const months = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
-      
-      return {
-        granularity: 'month',
-        months: Math.max(1, months),
-        type: 'custom_range',
-        customStart: startDate.toISOString().split('T')[0],
-        customEnd: endDate.toISOString().split('T')[0]
-      };
-    } catch (error) {
-      // Re-throw specific validation errors
-      if ((error as Error).message === 'Start date must be before end date') {
-        throw error;
-      }
-      throw new Error(`Invalid custom date range format: ${trimmedLabel}`);
-    }
-  }
 
   // Handle standard labels (case-insensitive with flexible separators)
   const normalizedLabel = trimmedLabel.toLowerCase().replace(/[_\s]+/g, ' ');
@@ -146,16 +111,8 @@ export function parseUILabel(label: string): TimePeriod {
         type: 'last_year'
       };
       
-    case 'custom date range':
-      // Default to last month for empty custom range
-      return {
-        granularity: 'month',
-        months: 1,
-        type: 'custom_range'
-      };
-      
     default:
-      throw new Error(`Unsupported time period label: ${trimmedLabel}. Supported: Last Month, Last 3 Months, Last 6 Months, Last Year, Custom Date Range`);
+      throw new Error(`Unsupported time period label: ${trimmedLabel}. Supported: Last Month, Last 3 Months, Last 6 Months, Last Year`);
   }
 }
 
@@ -172,16 +129,6 @@ export function toDbRange(canonical: TimePeriod, now: Date = new Date()): DbRang
     throw new Error(`Invalid canonical time period: ${validation.error.message}`);
   }
 
-  // Handle custom ranges
-  if (canonical.type === 'custom_range' && canonical.customStart && canonical.customEnd) {
-    const startDate = new Date(canonical.customStart);
-    const endDate = new Date(canonical.customEnd);
-    
-    return {
-      startMonth: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`,
-      endMonth: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`
-    };
-  }
 
   // Calculate period range based on current date (UTC)
   // Always use last complete month as the ending point
@@ -210,13 +157,6 @@ export function toGa4Range(canonical: TimePeriod, now: Date = new Date()): Ga4Ra
     throw new Error(`Invalid canonical time period: ${validation.error.message}`);
   }
 
-  // Handle custom ranges
-  if (canonical.type === 'custom_range' && canonical.customStart && canonical.customEnd) {
-    return {
-      startDate: canonical.customStart,
-      endDate: canonical.customEnd
-    };
-  }
 
   // Calculate GA4 date range based on current date (UTC)
   // Always use last complete month as the ending point
