@@ -74,8 +74,8 @@ export async function scoreBrandStory(
       }
     }
 
-    // 2. Look for Narrative Patterns
-    const narrativePatterns = [
+    // 2. Look for Brand Positioning & Story Content (more inclusive)
+    const brandContentPatterns = [
       // Origin stories
       /founded|began|started|established|since \d{4}/i,
       /journey|evolution|grew|transformed/i,
@@ -90,33 +90,86 @@ export async function scoreBrandStory(
       
       // Differentiators (but not features)
       /what sets us apart|what makes us different|why choose/i,
-      /unlike others|we're not just|more than just/i
+      /unlike others|we're not just|more than just/i,
+      
+      // Company positioning (more inclusive)
+      /we (help|work|partner|collaborate|focus|specialize)/i,
+      /our (team|expertise|experience|clients|work)/i,
+      /years of experience|award.winning|industry.leading/i,
+      /trusted by|recognized|proven|results/i,
+      /we're|we are|at \w+, we/i,
+      
+      // Value propositions
+      /deliver|provide|create|build|develop|design/i,
+      /solution|service|strategy|innovation|expertise/i,
+      /performance|success|growth|outcomes|impact/i
     ];
 
-    // Extract paragraphs matching these patterns
+    // Extract paragraphs matching these patterns (more inclusive)
     const storyParagraphs: string[] = [];
-    $('p, h2, h3').each((_, el) => {
+    $('p, h2, h3, h4, h5').each((_, el) => {
       const $el = $(el);
       const text = $el.text().trim();
-      if (narrativePatterns.some(pattern => pattern.test(text)) &&
-          text.length > 30 && text.length < 500 && !isBoilerplate(text) &&
+      
+      // Skip navigation and footer content
+      if ($el.closest('nav, footer, header').length > 0) return;
+      
+      if (brandContentPatterns.some(pattern => pattern.test(text)) &&
+          text.length > 20 && text.length < 800 && !isBoilerplate(text) &&
           !isTestimonial(text, $el)) {
         storyParagraphs.push(text);
       }
     });
 
-    // 3. Separate Story from Services - Filter OUT service/feature descriptions
+    // 3. Separate Story from Pure Service Lists - Less restrictive filtering
     const nonStoryPatterns = [
-      /services include|we offer|our solutions/i,
-      /features:|benefits:|includes:/i,
-      /pricing|packages|plans/i,
-      /click here|learn more|get started/i,
-      /step 1|step 2|how it works/i
+      /pricing|packages|plans|cost|fee\$/i,
+      /click here|learn more|get started|sign up|contact us/i,
+      /step 1|step 2|step 3|how it works/i,
+      /features:|benefits:|includes:|what's included/i
+      // Removed overly restrictive patterns like "we offer" and "solutions"
     ];
 
     const filteredStory = storyParagraphs.filter(text => 
       !nonStoryPatterns.some(pattern => pattern.test(text))
     );
+
+    console.log('Found story sections:', storySection?.length || 0);
+    console.log('Story paragraphs found:', storyParagraphs.length);
+    console.log('After filtering:', filteredStory.length);
+    
+    // 3.5. Look for additional content in common positioning areas
+    const additionalContent: string[] = [];
+    
+    // Look in specific sections that often contain brand content
+    const brandSectionSelectors = [
+      '.intro, [class*="intro"]',
+      '[class*="value"]', '[class*="about"]',
+      'section:nth-child(2)', 'section:nth-child(3)',
+      '[class*="why"]', '[class*="difference"]',
+      '.container > p', '.content > p',
+      'main > section p', 'main > p'
+    ];
+    
+    brandSectionSelectors.forEach(selector => {
+      $(selector).slice(0, 8).each((_, el) => {
+        const $el = $(el);
+        const text = $el.text().trim();
+        
+        // Skip if already captured or if navigation/footer
+        if ($el.closest('nav, footer, header').length > 0) return;
+        if (storyParagraphs.includes(text) || filteredStory.includes(text)) return;
+        
+        // Look for brand-relevant content
+        if ((text.match(/\b(we|our|us)\b/gi) || []).length >= 2 && // Multiple company references
+            text.length > 30 && text.length < 600 && 
+            !isBoilerplate(text) && !isTestimonial(text, $el)) {
+          additionalContent.push(text);
+        }
+      });
+    });
+    
+    console.log('Additional content found:', additionalContent.length);
 
     // 4. Extract Company Credentials
     const credentialPatterns = [
@@ -168,10 +221,11 @@ export async function scoreBrandStory(
       approach: [] as string[],    // How we work
       values: [] as string[],      // What we believe
       impact: [] as string[],      // Results, difference we make
-      credentials: [] as string[]  // Years, clients, awards
+      credentials: [] as string[], // Years, clients, awards
+      positioning: [] as string[]  // General company positioning
     };
 
-    // Categorize extracted content
+    // Categorize extracted content from filtered story
     filteredStory.forEach(text => {
       if (/founded|began|started|since \d{4}/i.test(text)) {
         storyElements.origin.push(text);
@@ -183,25 +237,33 @@ export async function scoreBrandStory(
         storyElements.values.push(text);
       } else if (/result|impact|achieve|deliver/i.test(text)) {
         storyElements.impact.push(text);
+      } else {
+        storyElements.positioning.push(text); // General brand positioning
       }
     });
+
+    // Add additional content to positioning
+    storyElements.positioning.push(...additionalContent);
 
     // Add team/culture and credentials
     storyElements.values.push(...teamCultureContent);
     storyElements.credentials = credentials;
 
-    // Build narrative in logical order
+    // Build narrative in logical order - include positioning content
     const narrative = [
       ...storyElements.origin,
       ...storyElements.mission,
       ...storyElements.values,
       ...storyElements.approach,
+      ...storyElements.positioning, // Include general positioning
       ...storyElements.impact,
       ...storyElements.credentials
     ].filter(text => text && text.length > 20);
 
     // Remove duplicates while preserving order
     const uniqueNarrative = [...new Set(narrative)];
+    
+    console.log('Final narrative elements:', uniqueNarrative.length);
     
     let storyContent = uniqueNarrative.join(' ');
 
