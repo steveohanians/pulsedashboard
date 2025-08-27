@@ -18,16 +18,36 @@ export async function scorePositioning(
   try {
     const $ = cheerio.load(context.html);
     
-    // Extract hero content with improved logic for H2/H3
-    const h1 = $('h1').first().text().trim();
+    // Extract hero content with improved logic for all heading levels
+    let h1 = $('h1').first().text().trim();
     
-    // Try to find hero/banner section first for more targeted extraction
+    // Enhanced hero section detection with modern patterns
     const heroSelectors = [
       '.hero', '#hero', '[class*="hero"]',
       '.banner', '#banner', '[class*="banner"]',
       '.jumbotron', '.masthead', '.header-content',
-      'header section', 'main > section:first-child'
+      '[class*="masthead"]', '[class*="jumbotron"]',
+      'header section', 'main > section:first-child',
+      'section:first-of-type', 'main > *:first-child',
+      '[role="banner"]', '.intro', '[class*="intro"]',
+      '.landing', '[class*="landing"]'
     ];
+    
+    // Utility function to check for boilerplate content
+    const isBoilerplate = (text: string): boolean => {
+      const boilerplatePatterns = [
+        /^(menu|nav|footer|contact|copyright|privacy|terms|cookie|login|sign|search)/i,
+        /^[\d\s\-\(\)]+$/, // Phone numbers
+        /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, // Emails
+        /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Dates
+        /^(mon|tue|wed|thu|fri|sat|sun)/i, // Days
+        /^(all rights reserved|©|\®|\™)/i
+      ];
+      
+      return boilerplatePatterns.some(pattern => pattern.test(text)) || 
+             text.length < 10 || 
+             text.length > 500;
+    };
     
     let heroSection = null;
     for (const selector of heroSelectors) {
@@ -40,79 +60,136 @@ export async function scorePositioning(
     
     let subheading = '';
     let firstParagraph = '';
-    let additionalContent = [];
+    const additionalContent: string[] = [];
     
     if (heroSection) {
-      // Extract from hero section specifically
-      const h2InHero = heroSection.find('h2').first().text().trim();
-      const h3InHero = heroSection.find('h3').first().text().trim();
-      const pInHero = heroSection.find('p').first().text().trim();
-      
-      subheading = h2InHero || h3InHero;
-      firstParagraph = pInHero || heroSection.find('p').eq(1).text().trim();
-      
-      // Get additional hero content
-      heroSection.find('h2, h3, .tagline, .value-prop').slice(0, 3).each((_, el) => {
+      // Extract all heading levels from hero section
+      const headings = heroSection.find('h1, h2, h3, h4, h5, h6, [class*="eyebrow"], [class*="subtitle"], [class*="tagline"]');
+      headings.each((_, el) => {
         const text = $(el).text().trim();
-        if (text && text.length > 10) additionalContent.push(text);
-      });
-    } else {
-      // Fallback: Smart extraction from whole page
-      // Get first meaningful H2 or H3 (skip navigation items)
-      const allH2s = $('h2').slice(0, 5);
-      const allH3s = $('h3').slice(0, 5);
-      
-      allH2s.each((_, el) => {
-        const text = $(el).text().trim();
-        if (!subheading && text.length > 10 && 
-            !text.match(/^(menu|navigation|footer|contact|copyright|resources|company|products?|solutions?|cookie|privacy)$/i)) {
+        if (!subheading && text !== h1 && text.length > 5 && !isBoilerplate(text)) {
           subheading = text;
-          // Also get the paragraph after this H2
-          const nextP = $(el).nextAll('p').first().text().trim();
-          if (nextP && !firstParagraph) firstParagraph = nextP;
+          return false; // break
         }
       });
       
+      // Get first meaningful paragraph
+      heroSection.find('p').each((_, el) => {
+        const text = $(el).text().trim();
+        if (!firstParagraph && text.length > 20 && !isBoilerplate(text)) {
+          firstParagraph = text;
+          return false; // break
+        }
+      });
+      
+      // Get additional hero content from various elements
+      heroSection.find('h2, h3, h4, h5, .tagline, .value-prop, .subtitle, [class*="value"], [class*="benefit"]')
+        .slice(0, 5).each((_, el) => {
+        const text = $(el).text().trim();
+        if (text && text.length > 10 && text !== h1 && text !== subheading && !isBoilerplate(text)) {
+          additionalContent.push(text);
+        }
+      });
+    } else {
+      // Enhanced fallback strategy for sites without clear hero sections
+      const mainContent = $('main, [role="main"], #main, .main-content').first();
+      const firstSection = mainContent.find('section, article, [class*="section"]').first();
+      
+      if (firstSection.length) {
+        // Extract from first content section
+        h1 = h1 || firstSection.find('h1').first().text().trim();
+        subheading = firstSection.find('h2, h3, h4, h5').first().text().trim();
+        firstParagraph = firstSection.find('p').first().text().trim();
+      }
+      
+      // If still nothing, try visible text near top of page
       if (!subheading) {
-        allH3s.each((_, el) => {
-          const text = $(el).text().trim();
-          if (!subheading && text.length > 10) {
-            subheading = text;
+        $('h2, h3, h4, h5, p').slice(0, 10).each((_, el) => {
+          const $el = $(el);
+          const text = $el.text().trim();
+          
+          // Check if element is likely visible and meaningful
+          if (!isBoilerplate(text) && 
+              !$el.closest('nav, header > *, footer').length &&
+              $el.parents().length < 10) { // Not deeply nested
+            
+            if (!subheading && el.tagName.match(/^h[2-5]$/i)) {
+              subheading = text;
+            } else if (!firstParagraph && el.tagName.toLowerCase() === 'p') {
+              firstParagraph = text;
+            }
           }
         });
       }
       
-      // If still no subheading, fall back to original logic
-      if (!subheading) {
-        subheading = $('h2, .subhead, .subtitle, p').first().text().trim();
-      }
-      if (!firstParagraph) {
-        firstParagraph = $('p').first().text().trim();
-      }
-      
-      // Collect valuable H2/H3 content for analysis
-      $('h2, h3').slice(0, 4).each((_, el) => {
+      // Collect valuable heading content for analysis
+      $('h2, h3, h4, h5').slice(0, 6).each((_, el) => {
         const text = $(el).text().trim();
-        if (text.length > 15 && !text.match(/^(cookie|privacy|terms|footer|contact)/i)) {
+        if (text.length > 15 && !isBoilerplate(text) && text !== subheading) {
           additionalContent.push(text);
         }
       });
     }
     
-    // Look for taglines and value propositions
-    $('.tagline, .value-prop, .headline, .slogan, [class*="tagline"]').slice(0, 2).each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10) additionalContent.push(text);
+    // Look for value proposition sections beyond hero
+    const valuePropSelectors = [
+      '.value-proposition', '[class*="value"]',
+      '[class*="intro"]', '[class*="about"]',
+      'section:nth-child(2)', '[class*="features"]',
+      '[class*="benefits"]', '.description', '[class*="description"]'
+    ];
+
+    valuePropSelectors.forEach(selector => {
+      const section = $(selector).first();
+      if (section.length) {
+        section.find('h2, h3, h4, p').slice(0, 5).each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length > 20 && text.length < 200 && !isBoilerplate(text)) {
+            additionalContent.push(text);
+          }
+        });
+      }
     });
     
-    // Build comprehensive hero content
-    const contentParts = [h1, subheading, firstParagraph, ...additionalContent]
-      .filter(text => text && text.length > 0)
-      .filter((text, index, self) => self.indexOf(text) === index); // Remove duplicates
+    // Enhanced tagline and value prop detection
+    $('.tagline, .value-prop, .headline, .slogan, [class*="tagline"], [class*="slogan"], [class*="headline"]')
+      .slice(0, 3).each((_, el) => {
+      const text = $(el).text().trim();
+      if (text && text.length > 10 && !isBoilerplate(text)) {
+        additionalContent.push(text);
+      }
+    });
+    
+    // Final content assembly with improved deduplication
+    const contentParts = [
+      h1,
+      subheading,
+      firstParagraph,
+      ...additionalContent
+    ]
+    .filter(text => text && text.trim().length > 0)
+    .map(text => text.replace(/\s+/g, ' ').trim()) // Clean whitespace
+    .filter((text, index, self) => {
+      // Remove duplicates and near-duplicates
+      return self.findIndex(t => 
+        t === text || 
+        (t.includes(text) && t.length < text.length * 1.2)
+      ) === index;
+    });
+
+    // If we have too little content, be more aggressive in collection
+    if (contentParts.join(' ').length < 200) {
+      $('p').slice(0, 5).each((_, el) => {
+        const text = $(el).text().trim();
+        if (!isBoilerplate(text)) {
+          contentParts.push(text);
+        }
+      });
+    }
     
     const heroContent = contentParts
       .join(' ')
-      .substring(0, 1500); // Increased limit for better analysis
+      .substring(0, 1500); // Maintain limit for API efficiency
     
     logger.info("Extracted hero content for positioning analysis", {
       url: context.websiteUrl,

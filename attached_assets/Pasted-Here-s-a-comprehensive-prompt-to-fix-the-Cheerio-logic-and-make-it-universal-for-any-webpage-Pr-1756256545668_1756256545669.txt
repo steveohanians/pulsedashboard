@@ -1,0 +1,159 @@
+Here's a comprehensive prompt to fix the Cheerio logic and make it universal for any webpage:
+
+## Prompt for Replit:
+
+"Fix the content extraction logic to handle modern webpage structures more effectively. The current code is missing important content because it's too rigid. Here are the requirements:
+
+### 1. Expand Hero Section Detection
+Add more flexible selectors that catch modern naming patterns:
+```javascript
+const heroSelectors = [
+  // Existing selectors...
+  '[class*="hero"]', // Catches any class containing "hero"
+  '[class*="banner"]',
+  '[class*="masthead"]',
+  '[class*="jumbotron"]',
+  'section:first-of-type',
+  'main > *:first-child',
+  '[role="banner"]',
+  '.intro, [class*="intro"]'
+];
+```
+
+### 2. Extract All Heading Levels
+Don't just look for H2/H3. Many sites use H4, H5, H6 for subtitles:
+```javascript
+// In hero section
+const headings = heroSection.find('h1, h2, h3, h4, h5, h6, [class*="eyebrow"], [class*="subtitle"], [class*="tagline"]');
+let subheading = '';
+headings.each((i, el) => {
+  const text = $(el).text().trim();
+  if (!subheading && text !== h1 && text.length > 5) {
+    subheading = text;
+    return false; // break
+  }
+});
+```
+
+### 3. Smarter Content Collection
+Look beyond just the hero section for value propositions:
+```javascript
+// After hero extraction, look for value prop sections
+const valuePropSelectors = [
+  '.value-proposition',
+  '[class*="value"]',
+  '[class*="intro"]',
+  '[class*="about"]',
+  'section:nth-child(2)',
+  '[class*="features"]',
+  '[class*="benefits"]'
+];
+
+valuePropSelectors.forEach(selector => {
+  const section = $(selector).first();
+  if (section.length) {
+    section.find('h2, h3, h4, p').slice(0, 5).each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 20 && text.length < 200) {
+        additionalContent.push(text);
+      }
+    });
+  }
+});
+```
+
+### 4. Better Text Filtering
+Improve the exclusion logic to be more comprehensive:
+```javascript
+const isBoilerplate = (text) => {
+  const boilerplatePatterns = [
+    /^(menu|nav|footer|contact|copyright|privacy|terms|cookie|login|sign|search)/i,
+    /^[\d\s\-\(\)]+$/, // Phone numbers
+    /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, // Emails
+    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Dates
+    /^(mon|tue|wed|thu|fri|sat|sun)/i, // Days
+    /^(all rights reserved|©|\®|\™)/i
+  ];
+  
+  return boilerplatePatterns.some(pattern => pattern.test(text)) || 
+         text.length < 10 || 
+         text.length > 500;
+};
+
+// Use when filtering
+.filter(text => !isBoilerplate(text))
+```
+
+### 5. Fallback Strategy
+If hero detection fails, use a more intelligent fallback:
+```javascript
+if (!heroSection || !subheading) {
+  // Get the first content section after any navigation
+  const mainContent = $('main, [role="main"], #main, .main-content').first();
+  const firstSection = mainContent.find('section, article, [class*="section"]').first();
+  
+  if (firstSection.length) {
+    // Extract from first content section
+    h1 = h1 || firstSection.find('h1').first().text().trim();
+    subheading = firstSection.find('h2, h3, h4, h5').first().text().trim();
+    firstParagraph = firstSection.find('p').first().text().trim();
+  }
+  
+  // If still nothing, try visible text near top of page
+  if (!subheading) {
+    $('h2, h3, h4, h5, p').slice(0, 10).each((_, el) => {
+      const $el = $(el);
+      const text = $el.text().trim();
+      
+      // Check if element is likely visible and meaningful
+      if (!isBoilerplate(text) && 
+          !$el.closest('nav, header > *, footer').length &&
+          $el.parents().length < 10) { // Not deeply nested
+        
+        if (!subheading && el.tagName.match(/^h[2-5]$/i)) {
+          subheading = text;
+        } else if (!firstParagraph && el.tagName === 'p') {
+          firstParagraph = text;
+        }
+      }
+    });
+  }
+}
+```
+
+### 6. Final Assembly
+Ensure we get meaningful content:
+```javascript
+const contentParts = [
+  h1,
+  subheading,
+  firstParagraph,
+  ...additionalContent
+]
+.filter(text => text && text.trim().length > 0)
+.map(text => text.replace(/\s+/g, ' ').trim()) // Clean whitespace
+.filter((text, index, self) => {
+  // Remove duplicates and near-duplicates
+  return self.findIndex(t => 
+    t === text || 
+    (t.includes(text) && t.length < text.length * 1.2)
+  ) === index;
+});
+
+// If we have too little content, be more aggressive
+if (contentParts.join(' ').length < 200) {
+  // Get more paragraph content
+  $('p').slice(0, 5).each((_, el) => {
+    const text = $(el).text().trim();
+    if (!isBoilerplate(text)) {
+      contentParts.push(text);
+    }
+  });
+}
+
+const heroContent = contentParts
+  .join(' ')
+  .substring(0, 1500);
+```
+
+This approach will work better across different website structures by being more flexible with selectors, looking at multiple content areas, and having better fallback strategies."
