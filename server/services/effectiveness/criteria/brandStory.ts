@@ -311,6 +311,11 @@ export async function scoreBrandStory(
       contentPreview: storyContent.substring(0, 300) + '...'
     });
     
+    // Log the full content for debugging
+    console.log("\n========== BRAND STORY CONTENT SENT TO OPENAI ==========");
+    console.log(storyContent);
+    console.log("========== END BRAND STORY CONTENT ==========\n");
+    
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       temperature: config.openai.temperature,
