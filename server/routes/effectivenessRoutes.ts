@@ -442,4 +442,136 @@ router.get('/test-screenshot', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/effectiveness/insights/:clientId/:runId
+ * Generate AI insights for effectiveness scoring results
+ */
+router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
+  try {
+    const { clientId, runId } = req.params;
+    
+    // Verify user has access to this client
+    if (req.user?.role !== 'Admin' && req.user?.clientId !== clientId) {
+      return res.status(403).json({ 
+        code: 'UNAUTHORIZED', 
+        message: 'Access denied' 
+      });
+    }
+
+    logger.info('Generating effectiveness insights', { clientId, runId });
+
+    // Get effectiveness data
+    const effectivenessData = await storage.getEffectivenessRun(runId);
+    if (!effectivenessData || effectivenessData.clientId !== clientId) {
+      return res.status(404).json({
+        code: 'RUN_NOT_FOUND',
+        message: 'Effectiveness run not found'
+      });
+    }
+
+    // Get client info
+    const client = await storage.getClient(clientId);
+    if (!client) {
+      return res.status(404).json({
+        code: 'CLIENT_NOT_FOUND', 
+        message: 'Client not found'
+      });
+    }
+
+    // Get criterion scores separately
+    const criterionScores = await storage.getCriterionScores(runId);
+    
+    logger.info('Debug: Retrieved criterion scores', {
+      clientId,
+      runId,
+      scoresCount: criterionScores?.length || 0,
+      hasScores: !!criterionScores,
+      scoresType: typeof criterionScores
+    });
+    
+    if (!criterionScores || criterionScores.length === 0) {
+      return res.status(404).json({
+        code: 'NO_SCORES_FOUND',
+        message: 'No criterion scores found for this run'
+      });
+    }
+
+    // Use existing OpenAI service following established patterns
+    const { generateComprehensiveInsights } = await import('../services/openai');
+    
+    // Format data for comprehensive insights following established pattern
+    const contextData = {
+      client: { 
+        name: client.name, 
+        industryVertical: client.industryVertical || 'General',
+        businessSize: client.businessSize || 'Small / Startup (25-100 employees)'
+      },
+      period: 'Current Analysis',
+      previousPeriod: 'Previous Analysis',
+      totalCompetitors: 0,
+      hasIndustryData: false,
+      metrics: criterionScores.map(criterion => ({
+        metricName: criterion.criterion,
+        clientValue: parseFloat(criterion.score) || 0,
+        trendDirection: parseFloat(criterion.score) >= 7 ? 'positive' : 'needs improvement',
+        cdAverage: null,
+        industryAverage: null,
+        competitorValues: []
+      }))
+    };
+
+    logger.info('Calling generateComprehensiveInsights with contextData', {
+      clientId,
+      runId,
+      metricsCount: contextData.metrics.length
+    });
+
+    const { dashboardSummary } = await generateComprehensiveInsights(contextData);
+
+    logger.info('OpenAI response received', {
+      clientId,
+      runId,
+      hasInsight: !!dashboardSummary.insight,
+      hasRecommendation: !!dashboardSummary.recommendation
+    });
+
+    // Format response to match expected structure
+    const insights = {
+      insight: dashboardSummary.insight || `${client.name}'s website effectiveness analysis completed with an overall score of ${effectivenessData.overallScore}/10.`,
+      recommendations: (dashboardSummary.recommendation || 'Improve website positioning and trust signals')
+        .split('\n')
+        .filter(r => r.trim().length > 0)
+        .map(r => r.replace(/^[-*]\s*/, '').trim())
+        .slice(0, 4),
+      confidence: 0.85,
+      key_pattern: 'effectiveness_analysis'
+    };
+
+    logger.info('Successfully generated effectiveness insights', { 
+      clientId, 
+      runId,
+      recommendationsCount: insights.recommendations.length 
+    });
+
+    res.json({
+      success: true,
+      insights,
+      clientName: client.name,
+      overallScore: effectivenessData.overallScore,
+      runId
+    });
+
+  } catch (error) {
+    logger.error('Error generating effectiveness insights', { 
+      error: error instanceof Error ? error.message : String(error),
+      clientId: req.params.clientId,
+      runId: req.params.runId
+    });
+    res.status(500).json({
+      code: 'INSIGHTS_GENERATION_FAILED',
+      message: 'Failed to generate effectiveness insights'
+    });
+  }
+});
+
 export default router;
