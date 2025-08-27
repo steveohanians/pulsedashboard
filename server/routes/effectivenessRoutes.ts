@@ -527,11 +527,14 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
       model: process.env.OPENAI_MODEL || "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
       temperature: 0.1,
       messages: [
-        { role: 'system', content: promptTemplate.systemPrompt },
+        { 
+          role: 'system', 
+          content: `${promptTemplate.systemPrompt} You MUST respond with the exact JSON schema specified in the prompt. Do not deviate from the required fields: primary_issue, root_cause, business_impact, key_insight, quick_wins, strategic_initiatives, interconnected_benefits, industry_considerations, and confidence.` 
+        },
         { role: 'user', content: prompt }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 1500
+      max_tokens: 2000
     });
 
     const aiResult = response.choices[0]?.message?.content?.trim();
@@ -539,6 +542,41 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
     
     try {
       insights = JSON.parse(aiResult || '{}');
+      
+      // Validate the response has the expected structure
+      if (!insights.primary_issue || !insights.key_insight) {
+        logger.warn('AI response missing required fields, reformatting response', { 
+          hasRequiredFields: {
+            primary_issue: !!insights.primary_issue,
+            key_insight: !!insights.key_insight,
+            quick_wins: Array.isArray(insights.quick_wins),
+            strategic_initiatives: Array.isArray(insights.strategic_initiatives)
+          }
+        });
+        
+        // If response is in old format, try to restructure it
+        if (insights['Key Insight for Clear Digital'] || insights['This suggests an opportunity to']) {
+          insights = {
+            primary_issue: `Website effectiveness opportunities identified from ${criteriaData.split('\n').filter(line => line.includes('Needs')).length} areas needing improvement`,
+            root_cause: "Analysis indicates gaps in positioning, trust signals, or user experience elements that affect conversion potential",
+            business_impact: `For ${client.name} in the ${client.industryVertical || 'technology'} industry, these effectiveness gaps may reduce lead generation and competitive positioning`,
+            key_insight: insights['Key Insight for Clear Digital'] || `${client.name}'s website shows strong performance in several areas but has opportunities for enhanced effectiveness`,
+            quick_wins: insights['This suggests an opportunity to'] ? insights['This suggests an opportunity to'].map((rec: string, index: number) => ({
+              action: rec.replace(/^\d+\.\s*/, ''),
+              priority: "High",
+              effort: "Medium", 
+              expected_impact: "Improved user engagement and conversion rates",
+              rationale: "Based on effectiveness scoring analysis",
+              timeline: "2-4 weeks"
+            })) : [],
+            strategic_initiatives: [],
+            interconnected_benefits: "Implementing multiple recommendations will create compound effectiveness improvements across user experience and conversion optimization",
+            industry_considerations: `Specific factors relevant to ${client.industryVertical || 'technology'} industry positioning and competitive landscape`,
+            confidence: insights.confidence || 0.8
+          };
+        }
+      }
+      
     } catch (parseError) {
       logger.error('Failed to parse AI insights response', { 
         aiResult, 
@@ -546,10 +584,14 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
       });
       // Fallback to ensure we return valid structure
       insights = {
-        primary_issue: "Analysis completed",
+        primary_issue: "Website effectiveness analysis completed",
+        root_cause: "Multiple factors may be affecting overall site effectiveness",
+        business_impact: `For ${client.name}, website effectiveness improvements could enhance competitive positioning and lead generation`,
         key_insight: `${client.name}'s website effectiveness analysis has been completed with an overall score of ${effectivenessData.overallScore}/10.`,
         quick_wins: [],
         strategic_initiatives: [],
+        interconnected_benefits: "Systematic improvements will create compound effectiveness gains",
+        industry_considerations: `Recommendations tailored for ${client.industryVertical || 'technology'} industry standards`,
         confidence: 0.8
       };
     }
