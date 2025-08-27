@@ -181,6 +181,17 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     });
   };
 
+  // Get effectiveness status based on score
+  const getEffectivenessStatus = (score: number) => {
+    if (score > 7.99) {
+      return { text: "Very Effective", color: "text-green-600" };
+    } else if (score > 3.99) {
+      return { text: "Somewhat Effective", color: "text-orange-600" };
+    } else {
+      return { text: "Not Effective", color: "text-red-600" };
+    }
+  };
+
   const run = data?.run;
   const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
@@ -194,8 +205,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               Website Effectiveness Engine™ Audit
             </CardTitle>
             {run && run.status === 'completed' && (
-              <div className="text-2xl lg:text-3xl font-light text-primary">
-                {run.overallScore}
+              <div className="flex items-center gap-2">
+                <div className="text-2xl lg:text-3xl font-light text-primary">
+                  {run.overallScore}
+                </div>
+                <span 
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600"
+                  data-testid="effectiveness-status-chip"
+                >
+                  <span>Effectiveness is</span>
+                  <span className={`font-semibold ${getEffectivenessStatus(run.overallScore).color}`}>
+                    {getEffectivenessStatus(run.overallScore).text}
+                  </span>
+                </span>
               </div>
             )}
           </div>
