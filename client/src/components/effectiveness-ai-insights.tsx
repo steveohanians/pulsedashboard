@@ -84,19 +84,16 @@ export function EffectivenessAIInsights({
 
       {/* Recommendations - match AI insights style exactly */}
       {insights.recommendations && insights.recommendations.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-medium text-slate-700">Key Actions:</h4>
-          <div className="space-y-1">
-            {insights.recommendations.map((rec, index) => (
-              <div key={index} className="text-sm text-slate-600 flex items-start gap-1">
-                <span className="text-primary font-medium mt-0.5">{index + 1}.</span>
-                <div 
-                  className="flex-1"
-                  dangerouslySetInnerHTML={{ __html: rec.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="space-y-3">
+          {insights.recommendations.map((rec, index) => (
+            <div key={index} className="text-sm text-slate-600 flex items-start gap-1">
+              <span className="text-primary font-medium mt-0.5">{index + 1}.</span>
+              <div 
+                className="flex-1"
+                dangerouslySetInnerHTML={{ __html: rec.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+              />
+            </div>
+          ))}
         </div>
       )}
 
