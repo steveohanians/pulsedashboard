@@ -34,227 +34,234 @@ export async function scoreBrandStory(
              text.length < 30 || 
              text.length > 500;
     };
-    
-    // Comprehensive section detection beyond just "about"
-    const aboutSelectors = [
-      'section[class*="about"]', '.about-us', '.our-story', '.company-story',
-      '[class*="story"]', '.mission', '.vision', '#about', '[id*="about"]',
-      // Modern naming patterns
-      '[class*="intro"]', '[class*="value"]', '[class*="approach"]',
-      '[class*="services"]', '[class*="what-we-do"]', '[class*="why-we"]',
-      '[class*="difference"]', 'section:nth-of-type(2)', 'section:nth-of-type(3)',
-      '.container h2 + p', '[class*="content"] h2 + p'
-    ];
-    
-    let storyContent = '';
-    const contentParts: string[] = [];
-    
-    // 1. First try dedicated sections
-    for (const selector of aboutSelectors) {
-      const section = $(selector);
-      if (section.length > 0) {
-        const sectionText = section.text().trim();
-        if (sectionText && sectionText.length > 100 && !isBoilerplate(sectionText)) {
-          storyContent = sectionText.substring(0, 2000);
-          break;
-        }
-      }
-    }
-    
-    // 2. Look for value proposition patterns
-    if (!storyContent || storyContent.length < 300) {
-      const valuePatterns = [
-        /we (help|provide|deliver|create|build|offer)/i,
-        /our (approach|mission|goal|vision|commitment)/i,
-        /years of experience/i,
-        /trusted by/i,
-        /working with/i,
-        /specializ(e|ing) in/i,
-        /focus(ed)? on/i,
-        /dedicated to/i
-      ];
 
-      // Find paragraphs containing these patterns
-      $('p, h2, h3, h4, li').each((_, el) => {
-        const text = $(el).text().trim();
-        if (valuePatterns.some(pattern => pattern.test(text)) && 
-            text.length > 40 && text.length < 500 && !isBoilerplate(text)) {
-          contentParts.push(text);
-        }
-      });
-    }
-    
-    // 3. Extract structured content lists
-    $('ul, ol').each((_, list) => {
-      const $list = $(list);
-      // Check if this list is likely content (not navigation)
-      if (!$list.closest('nav, header, footer').length) {
-        const items = $list.find('li').slice(0, 6);
-        const listContent: string[] = [];
-        
-        items.each((_, li) => {
-          const text = $(li).text().trim();
-          if (text.length > 20 && text.length < 200 && 
-              !text.match(/^(home|about|contact|blog|careers|privacy)/i) &&
-              !isBoilerplate(text)) {
-            listContent.push(text);
-          }
-        });
-        
-        if (listContent.length >= 3) {
-          contentParts.push(listContent.join('. '));
-        }
-      }
-    });
-    
-    // 4. Smart header + content pairing
-    $('h2, h3, h4').each((_, heading) => {
-      const $heading = $(heading);
-      const headingText = $heading.text().trim();
+    // Utility function to check if text is a testimonial
+    const isTestimonial = (text: string, $el: any): boolean => {
+      // Check for quote marks or attribution
+      const hasQuotes = Boolean(text.match(/[""].*[""]/)) || text.includes('"');
+      const hasAttribution = Boolean(text.match(/\- .+, (CEO|President|Director|Manager)/i));
+      const inTestimonialElement = $el.closest('.testimonial, [class*="testimonial"], blockquote').length > 0;
       
-      // Skip navigation/footer headings
-      if ($heading.closest('nav, header, footer').length) return;
+      return hasQuotes || hasAttribution || inTestimonialElement;
+    };
+
+    // 1. Identify Brand Story Sections First
+    const storySelectors = [
+      // Explicit story sections
+      '[class*="about"]',
+      '[class*="story"]',
+      '[class*="history"]',
+      '[class*="mission"]',
+      '[class*="vision"]',
+      '[class*="values"]',
+      '[class*="founder"]',
+      '[class*="journey"]',
       
-      // Look for brand-relevant headings
-      const relevantPatterns = [
-        /who we|what we|why we|how we/i,
-        /our (story|mission|approach|values|team|expertise)/i,
-        /about|story|mission|vision/i,
-        /services|solutions|capabilities/i,
-        /difference|different|unique|why choose/i
-      ];
-      
-      if (relevantPatterns.some(p => p.test(headingText))) {
-        // Get next siblings until next heading
-        const content: string[] = [];
-        let current = $heading.next();
-        
-        while (current.length && !current.is('h1, h2, h3, h4')) {
-          if (current.is('p, ul, ol, blockquote')) {
-            const text = current.text().trim();
-            if (!isBoilerplate(text)) {
-              content.push(text);
-            }
-          }
-          current = current.next();
-        }
-        
-        if (content.length > 0) {
-          contentParts.push(`${headingText}: ${content.join(' ')}`);
-        }
-      }
-    });
-    
-    // 5. Extract from feature/service cards
-    const cardSelectors = [
-      '[class*="card"]',
-      '[class*="feature"]',
-      '[class*="service"]',
-      '[class*="grid"] > div',
-      '[class*="col-"] > div'
+      // Common story locations
+      '#about',
+      '.company-info'
     ];
 
-    cardSelectors.forEach(selector => {
-      $(selector).slice(0, 6).each((_, card) => {
-        const $card = $(card);
-        const title = $card.find('h3, h4, h5').first().text().trim();
-        const desc = $card.find('p').first().text().trim();
-        
-        if (title && desc && desc.length > 30 && !isBoilerplate(desc)) {
-          contentParts.push(`${title}: ${desc}`);
-        }
-      });
-    });
-    
-    // 6. Improved fallback strategy
-    if (contentParts.length < 3) {
-      // Get main content area
-      const mainContent = $('main, [role="main"], #content, .content').first();
+    let storySection = null;
+    let dedicatedStoryContent = '';
+
+    for (const selector of storySelectors) {
+      const section = $(selector).first();
+      if (section.length && section.text().length > 100 && !isBoilerplate(section.text().trim())) {
+        storySection = section;
+        dedicatedStoryContent = section.text().trim().substring(0, 2000);
+        break;
+      }
+    }
+
+    // 2. Look for Narrative Patterns
+    const narrativePatterns = [
+      // Origin stories
+      /founded|began|started|established|since \d{4}/i,
+      /journey|evolution|grew|transformed/i,
       
-      if (mainContent.length) {
-        // Get all text nodes from main content
-        mainContent.find('h2, h3, p').slice(0, 10).each((_, el) => {
+      // Mission/purpose
+      /our mission|we believe|we exist|our purpose/i,
+      /dedicated to|committed to|passionate about/i,
+      
+      // Values/philosophy  
+      /our approach|our philosophy|we value|our values/i,
+      /principles|core belief|culture/i,
+      
+      // Differentiators (but not features)
+      /what sets us apart|what makes us different|why choose/i,
+      /unlike others|we're not just|more than just/i
+    ];
+
+    // Extract paragraphs matching these patterns
+    const storyParagraphs: string[] = [];
+    $('p, h2, h3').each((_, el) => {
+      const $el = $(el);
+      const text = $el.text().trim();
+      if (narrativePatterns.some(pattern => pattern.test(text)) &&
+          text.length > 30 && text.length < 500 && !isBoilerplate(text) &&
+          !isTestimonial(text, $el)) {
+        storyParagraphs.push(text);
+      }
+    });
+
+    // 3. Separate Story from Services - Filter OUT service/feature descriptions
+    const nonStoryPatterns = [
+      /services include|we offer|our solutions/i,
+      /features:|benefits:|includes:/i,
+      /pricing|packages|plans/i,
+      /click here|learn more|get started/i,
+      /step 1|step 2|how it works/i
+    ];
+
+    const filteredStory = storyParagraphs.filter(text => 
+      !nonStoryPatterns.some(pattern => pattern.test(text))
+    );
+
+    // 4. Extract Company Credentials
+    const credentialPatterns = [
+      /(\d+)\+?\s*years/i,  // "20+ years"
+      /since (\d{4})/i,      // "since 2003"
+      /(\d+)\+?\s*clients/i, // "500+ clients"
+      /award[- ]winning/i,
+      /recognized|certified|accredited/i,
+      /trusted by/i
+    ];
+
+    const credentials: string[] = [];
+    $('p, li, h3, h4').each((_, el) => {
+      const $el = $(el);
+      const text = $el.text().trim();
+      if (credentialPatterns.some(pattern => pattern.test(text)) &&
+          text.length < 150 && !isBoilerplate(text) &&
+          !isTestimonial(text, $el)) {
+        credentials.push(text);
+      }
+    });
+
+    // 6. Look for Team/Culture Content
+    const teamCultureSelectors = [
+      '[class*="team"]',
+      '[class*="culture"]',
+      '[class*="people"]'
+    ];
+
+    const teamCultureContent: string[] = [];
+    teamCultureSelectors.forEach(selector => {
+      const section = $(selector).first();
+      if (section.length) {
+        section.find('p').slice(0, 2).each((_, el) => {
           const $el = $(el);
           const text = $el.text().trim();
-          
-          // Score the text for relevance
-          let score = 0;
-          
-          // Positive indicators
-          if (text.length > 50 && text.length < 300) score++;
-          if (/we|our|us/i.test(text)) score++;
-          if (/help|provide|deliver|solution|service/i.test(text)) score++;
-          if (/year|experience|expert|leader/i.test(text)) score++;
-          
-          // Negative indicators
-          if (isBoilerplate(text)) score -= 2;
-          if ($el.closest('aside, .sidebar').length) score--;
-          
-          if (score > 0) {
-            contentParts.push(text);
+          if (text.length > 50 && text.length < 500 && !isBoilerplate(text) &&
+              !isTestimonial(text, $el)) {
+            teamCultureContent.push(text);
           }
         });
       }
-    }
-    
-    // Get testimonials and case studies
-    $('.testimonial, .case-study, [class*="testimonial"], [class*="success"], [class*="client"]')
-      .slice(0, 3).each((_, el) => {
-      const text = $(el).text().trim();
-      if (text.length > 50 && text.length < 500 && !isBoilerplate(text)) {
-        contentParts.push(text);
+    });
+
+    // 7. Construct Coherent Narrative - Organize content by story type
+    const storyElements = {
+      origin: [] as string[],      // Founded, history
+      mission: [] as string[],     // Why we exist
+      approach: [] as string[],    // How we work
+      values: [] as string[],      // What we believe
+      impact: [] as string[],      // Results, difference we make
+      credentials: [] as string[]  // Years, clients, awards
+    };
+
+    // Categorize extracted content
+    filteredStory.forEach(text => {
+      if (/founded|began|started|since \d{4}/i.test(text)) {
+        storyElements.origin.push(text);
+      } else if (/mission|purpose|exist|believe/i.test(text)) {
+        storyElements.mission.push(text);
+      } else if (/approach|how we|process|method/i.test(text)) {
+        storyElements.approach.push(text);
+      } else if (/value|principle|culture|philosophy/i.test(text)) {
+        storyElements.values.push(text);
+      } else if (/result|impact|achieve|deliver/i.test(text)) {
+        storyElements.impact.push(text);
       }
     });
+
+    // Add team/culture and credentials
+    storyElements.values.push(...teamCultureContent);
+    storyElements.credentials = credentials;
+
+    // Build narrative in logical order
+    const narrative = [
+      ...storyElements.origin,
+      ...storyElements.mission,
+      ...storyElements.values,
+      ...storyElements.approach,
+      ...storyElements.impact,
+      ...storyElements.credentials
+    ].filter(text => text && text.length > 20);
+
+    // Remove duplicates while preserving order
+    const uniqueNarrative = [...new Set(narrative)];
     
-    // 7. Deduplication and assembly
-    if (storyContent.length < 300) {
-      // Remove duplicates and clean up
-      const cleanedParts = contentParts
-        .filter((text, index, self) => {
-          // Remove exact duplicates
-          if (self.indexOf(text) !== index) return false;
-          
-          // Remove if it's a substring of another part
-          const isSubstring = self.some((other, otherIndex) => 
-            otherIndex !== index && 
-            other.includes(text) && 
-            other.length > text.length
-          );
-          
-          return !isSubstring;
-        })
-        .map(text => text.replace(/\s+/g, ' ').trim())
-        .filter(text => text.length > 30); // Minimum length
+    let storyContent = uniqueNarrative.join(' ');
 
-      // Prioritize quality content
-      cleanedParts.sort((a, b) => {
-        // Prioritize content with "we/our" language
-        const aScore = (a.match(/\b(we|our|us)\b/gi) || []).length;
-        const bScore = (b.match(/\b(we|our|us)\b/gi) || []).length;
-        return bScore - aScore;
-      });
-
-      // Take best content up to limit
-      storyContent = cleanedParts.slice(0, 10).join(' ');
+    // Use dedicated story content if we found a comprehensive section
+    if (dedicatedStoryContent.length > storyContent.length && dedicatedStoryContent.length > 300) {
+      storyContent = dedicatedStoryContent;
     }
-    
-    // If still too little, expand search
-    if (storyContent.length < 300) {
-      const additionalContent = $('section p').slice(0, 8)
-        .map((_, el) => $(el).text().trim())
-        .get()
-        .filter(text => text.length > 50 && text.length < 400 && !isBoilerplate(text))
-        .join(' ');
+
+    // 8. Fallback for Minimal Sites
+    if (storyContent.length < 200) {
+      // Look for "why us" or differentiator content
+      const differentiators: string[] = [];
       
-      storyContent = (storyContent + ' ' + additionalContent);
+      $('h2, h3, h4').each((_, el) => {
+        const $el = $(el);
+        const heading = $el.text().trim();
+        if (heading.match(/why|different|unique|about us/i)) {
+          // Get content after this heading
+          let content = '';
+          let current = $el.next();
+          
+          while (current.length && !current.is('h2, h3, h4') && differentiators.length < 3) {
+            if (current.is('p, ul, ol')) {
+              const text = current.text().trim();
+              if (text.length > 50 && !isBoilerplate(text) && !isTestimonial(text, current)) {
+                content += text + ' ';
+              }
+            }
+            current = current.next();
+          }
+          
+          if (content.trim().length > 50) {
+            differentiators.push(content.trim().substring(0, 300));
+          }
+        }
+      });
+      
+      // Look for meta description as last resort
+      const metaDesc = $('meta[name="description"]').attr('content') || '';
+      
+      storyContent = [...differentiators, metaDesc].join(' ');
     }
+
+    // Final limit for API
+    storyContent = storyContent.substring(0, 2500)
     
-    // Final limit for API (increased for better analysis)
-    storyContent = storyContent.substring(0, 2500);
-    
-    logger.info("Extracted brand story content", {
+    logger.info("Extracted comprehensive brand story content", {
       url: context.websiteUrl,
-      contentLength: storyContent.length
+      contentLength: storyContent.length,
+      storyElementsFound: {
+        origin: storyElements.origin.length,
+        mission: storyElements.mission.length,
+        values: storyElements.values.length,
+        approach: storyElements.approach.length,
+        impact: storyElements.impact.length,
+        credentials: storyElements.credentials.length
+      },
+      narrativeParagraphs: storyParagraphs.length,
+      filteredAfterServiceRemoval: filteredStory.length,
+      dedicatedSectionFound: dedicatedStoryContent.length > 0
     });
 
     if (!storyContent || storyContent.length < 100) {
