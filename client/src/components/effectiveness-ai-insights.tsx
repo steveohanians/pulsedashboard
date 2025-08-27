@@ -76,7 +76,7 @@ export function EffectivenessAIInsights({
   return (
     <div className={`space-y-3 ${className || ''}`}>
       {/* Main Insight - match AI insights font size */}
-      <div className="text-xs text-slate-700 leading-relaxed">
+      <div className="text-sm text-slate-700 leading-relaxed">
         <div dangerouslySetInnerHTML={{ 
           __html: insights.insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
         }} />
@@ -88,7 +88,7 @@ export function EffectivenessAIInsights({
           <h4 className="text-xs font-medium text-slate-700">Key Actions:</h4>
           <div className="space-y-1">
             {insights.recommendations.map((rec, index) => (
-              <div key={index} className="text-xs text-slate-600 flex items-start gap-1">
+              <div key={index} className="text-sm text-slate-600 flex items-start gap-1">
                 <span className="text-primary font-medium mt-0.5">{index + 1}.</span>
                 <div 
                   className="flex-1"
