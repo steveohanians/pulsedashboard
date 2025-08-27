@@ -76,9 +76,9 @@ export function EffectivenessAIInsights({
   return (
     <div className={`space-y-3 ${className || ''}`}>
       {/* Main Insight - match AI insights font size */}
-      <div className="text-sm text-slate-700 leading-relaxed">
+      <div className="text-sm text-slate-600 leading-relaxed">
         <div dangerouslySetInnerHTML={{ 
-          __html: insights.insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+          __html: insights.insight.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') 
         }} />
       </div>
 
@@ -90,7 +90,7 @@ export function EffectivenessAIInsights({
               <span className="text-primary font-medium mt-0.5">{index + 1}.</span>
               <div 
                 className="flex-1"
-                dangerouslySetInnerHTML={{ __html: rec.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+                dangerouslySetInnerHTML={{ __html: rec.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-slate-800">$1</span>') }}
               />
             </div>
           ))}
