@@ -293,8 +293,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 <Card className="h-full bg-slate-50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-blue-500" />
-                      Key Insight for {data.client.name}
+                      <Sparkles className="h-4 w-4 text-gray-900" />
+                      Pulse AI Insights for {data.client.name}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="h-full flex flex-col">
@@ -302,7 +302,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                       clientId={clientId}
                       runId={run.id}
                       clientName={data.client.name}
-                      overallScore={parseFloat(run.overallScore)}
+                      overallScore={run.overallScore}
                       className="flex-1"
                     />
                   </CardContent>
