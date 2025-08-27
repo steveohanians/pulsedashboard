@@ -30,6 +30,75 @@ const formatMarkdown = (text: string) => {
   return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 };
 
+// Generate appropriate messages for failed checks instead of generic "Not found in content"
+const getFailedCheckMessage = (check: string): string => {
+  const messages: Record<string, string> = {
+    // Accessibility checks
+    no_skip_links: 'Skip navigation links not implemented',
+    no_aria_attributes: 'ARIA attributes missing or insufficient',
+    poor_alt_text_coverage: 'Images missing descriptive alt text',
+    poor_heading_structure: 'Heading hierarchy not properly structured',
+    no_language_declared: 'Page language not declared in HTML',
+    no_accessibility_tools: 'Accessibility enhancement tools not detected',
+    poor_focus_management: 'Keyboard navigation focus not properly managed',
+    
+    // Brand Story checks
+    no_clear_pov: 'Company point of view or stance not clearly expressed',
+    no_clear_approach: 'Methodology or approach not explained',
+    no_outcomes_stated: 'Results or achievements not mentioned',
+    no_proof_elements: 'Credibility indicators or proof points missing',
+    
+    // CTAs checks
+    no_form_integration: 'Contact forms not integrated with CTA buttons',
+    few_above_fold_ctas: 'Insufficient call-to-action buttons above the fold',
+    no_primary_cta: 'Primary call-to-action not clearly identified',
+    no_secondary_paths: 'Alternative engagement options not available',
+    message_mismatch: 'CTA messaging inconsistent across the page',
+    
+    // Positioning checks
+    brevity_check: 'Value proposition too lengthy or unclear',
+    no_audience_named: 'Target audience not clearly identified',
+    no_outcome_present: 'Expected outcome or benefit not stated',
+    no_capability_clear: 'Core capabilities or services not clearly defined',
+    
+    // SEO checks  
+    no_sitemap: 'XML sitemap not found or accessible',
+    no_structured_data: 'Schema markup or structured data missing',
+    poor_title_optimization: 'Page title not optimized for search engines',
+    poor_meta_description: 'Meta description missing or not optimized',
+    no_unique_h1: 'H1 heading missing or not unique',
+    no_canonical_present: 'Canonical URL not specified',
+    blocks_indexing: 'Page blocks search engine indexing',
+    poor_url_structure: 'URL structure not SEO-friendly',
+    poor_social_optimization: 'Open Graph or social media tags incomplete',
+    poor_content_optimization: 'Content not optimized for target keywords',
+    poor_page_structure: 'Page structure not optimized for SEO',
+    
+    // Trust checks
+    no_third_party_proof: 'Third-party endorsements or testimonials missing',
+    weak_trust_language: 'Trust-building language insufficient',
+    insufficient_logos: 'Not enough client or partner logos displayed',
+    no_recent_proof: 'Recent success stories or case studies missing',
+    few_case_stories: 'Limited case studies or client examples',
+    
+    // Speed checks
+    lcp_poor: 'Largest Contentful Paint loading time too slow',
+    cls_poor: 'Cumulative Layout Shift causing visual instability',
+    fid_poor: 'First Input Delay causing interaction delays',
+    
+    // UX checks
+    poor_heading_hierarchy: 'Heading structure doesn\'t follow proper hierarchy',
+    poor_line_length: 'Text line length not optimized for readability',
+    limited_interactivity: 'Interactive elements insufficient or missing',
+    not_responsive: 'Design not optimized for mobile devices',
+    no_css_framework: 'Modern CSS framework not implemented',
+    limited_accessibility: 'Accessibility features insufficient',
+    no_navigation: 'Navigation structure unclear or missing',
+  };
+  
+  return messages[check] || 'Requirement not met on this page';
+};
+
 interface CriterionScore {
   id: string;
   criterion: string;
@@ -306,7 +375,7 @@ export function EvidenceDrawer({
                         {check.replace(/_/g, ' ')}
                       </Badge>
                       <span className="text-xs text-gray-500 italic">
-                        Not found in content
+                        {getFailedCheckMessage(check)}
                       </span>
                     </div>
                   ))}
