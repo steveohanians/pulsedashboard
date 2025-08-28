@@ -698,6 +698,10 @@ export async function scoreBrandStory(
       passes.failed.push('no_proof_elements');
     }
 
+    // Handle additional database template fields gracefully
+    const contentQuality = analysis.content_quality || 'complete';
+    const extractionIssues = analysis.extraction_issues || [];
+    
     // Bonus points for B2B-specific quality indicators
     let bonusPoints = 0;
 
@@ -718,6 +722,13 @@ export async function scoreBrandStory(
       passes.passed.push('capability_breadth');
     }
 
+    // Adjust score based on content quality if provided
+    if (contentQuality === 'fragment' || contentQuality === 'invalid') {
+      score *= 0.75; // Reduce score for poor content quality
+    } else if (contentQuality === 'partial') {
+      score *= 0.9;
+    }
+    
     // Apply confidence factor and bonuses
     score = (score + bonusPoints) * (analysis.confidence || 0.75);
     score = Math.min(10, Math.max(0, score));
@@ -744,6 +755,8 @@ export async function scoreBrandStory(
           quantifiedResults: quantifiedResults.slice(0, 3),
           hasProofElements,
           bonusPoints,
+          contentQuality,
+          extractionIssues,
           ...evidenceDetails // Include extracted evidence
         },
         reasoning: `Score based on point of view (${analysis.pov_present ? 'present' : 'missing'}), mechanism explanation (${analysis.mechanism_named ? 'present' : 'missing'}), outcomes stated (${analysis.outcomes_stated ? 'found' : 'missing'}), and proof elements (${analysis.proof_elements || hasProofElements ? 'present' : 'missing'}). Bonus points: ${bonusPoints}`
