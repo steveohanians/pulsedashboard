@@ -55,7 +55,7 @@ export async function scorePositioning(
     let extractedHeadings: { [key: string]: string[] } = {};
 
     headings.forEach(tag => {
-      $(tag).slice(0, 3).each((_, el) => {
+      $(tag).slice(0, 2).each((_, el) => { // Reduced from 3 to 2 for efficiency
         const text = $(el).text().trim();
         // Skip navigation/footer
         if (!$(el).closest('nav, footer').length && text.length > 3 && !isBoilerplate(text)) {
@@ -84,10 +84,13 @@ export async function scorePositioning(
 
     let valuePropContent: string[] = [];
     valuePropSelectors.forEach(selector => {
+      // Early exit if we have enough content
+      if (valuePropContent.length >= 10) return; // Stop after 10 value prop items
+      
       const section = $(selector).first();
       if (section.length && !section.closest('footer').length) {
-        // Get all text content from this section
-        section.find('h2, h3, h4, h5, p').slice(0, 8).each((_, el) => {
+        // Get all text content from this section - LIMITED
+        section.find('h2, h3, h4, h5, p').slice(0, 5).each((_, el) => { // Reduced from 8 to 5
           const text = $(el).text().trim();
           if (text.length > 10 && text.length < 300 && !isBoilerplate(text)) {
             valuePropContent.push(text);
@@ -109,9 +112,12 @@ export async function scorePositioning(
     ];
 
     const additionalContent: string[] = [];
+    const MAX_DIFFERENTIATOR_ELEMENTS = 50; // Limit processing for performance
 
-    // Find elements containing these patterns
+    // Find elements containing these patterns - LIMITED PROCESSING
+    let processedDiffElements = 0;
     $('p, h2, h3, h4, h5, li').each((_, el) => {
+      if (processedDiffElements++ >= MAX_DIFFERENTIATOR_ELEMENTS) return false;
       const text = $(el).text().trim();
       if (differentiatorPatterns.some(pattern => pattern.test(text)) && 
           text.length > 10 && text.length < 200 && !isBoilerplate(text)) {
@@ -119,8 +125,11 @@ export async function scorePositioning(
       }
     });
 
-    // 5. Get List-Based Value Props
+    // 5. Get List-Based Value Props - LIMITED PROCESSING  
+    let processedLists = 0;
+    const MAX_LISTS = 8; // Limit list processing
     $('ul, ol').each((_, list) => {
+      if (processedLists++ >= MAX_LISTS) return false; // Stop after 8 lists
       const $list = $(list);
       // Skip navigation
       if ($list.closest('nav, header, footer').length) return;
@@ -170,12 +179,20 @@ export async function scorePositioning(
     const uniqueParts = [...new Set(contentParts)]
       .filter(text => text && text.length > 5)
       .map(text => text.replace(/\s+/g, ' ').trim());
+      
+    // Early content sufficiency check - avoid expensive fallback processing
+    const currentContentLength = uniqueParts.join(' ').length;
+    const hasEnoughContent = currentContentLength >= 400 && uniqueParts.length >= 4;
 
-    // 7. Fallback Enhancement - If content is thin, expand search
-    if (uniqueParts.join(' ').length < 300) {
+    // 7. Fallback Enhancement - If content is thin, expand search - LIMITED
+    if (!hasEnoughContent && currentContentLength < 300) {
+      let fallbackElements = 0;
+      const MAX_FALLBACK_ELEMENTS = 20; // Limit fallback processing
+      
       // Get first 3 sections of content
       $('section').slice(0, 3).each((_, section) => {
-        $(section).find('h2, h3, p').slice(0, 3).each((_, el) => {
+        $(section).find('h2, h3, p').slice(0, 2).each((_, el) => { // Reduced from 3 to 2
+          if (fallbackElements++ >= MAX_FALLBACK_ELEMENTS) return false;
           const text = $(el).text().trim();
           if (text.length > 20 && text.length < 200 &&
               !text.match(/cookie|privacy|copyright/i) && !isBoilerplate(text)) {
@@ -185,14 +202,18 @@ export async function scorePositioning(
       });
     }
 
-    // If still missing content, use proximity-based extraction
-    if (uniqueParts.join(' ').length < 200) {
+    // If still missing content, use proximity-based extraction - LIMITED
+    if (!hasEnoughContent && uniqueParts.join(' ').length < 200) {
+      let proximityElements = 0;
+      const MAX_PROXIMITY_ELEMENTS = 15; // Limit proximity processing
+      
       const mainElement = $('main, [role="main"]').first();
       if (mainElement.length) {
-        // Get everything from top of main content
+        // Get everything from top of main content  
         const topContent: string[] = [];
-        mainElement.children().slice(0, 3).each((_, child) => {
-          $(child).find('h1, h2, h3, h4, h5, p').slice(0, 5).each((_, el) => {
+        mainElement.children().slice(0, 2).each((_, child) => { // Reduced from 3 to 2
+          $(child).find('h1, h2, h3, h4, h5, p').slice(0, 3).each((_, el) => { // Reduced from 5 to 3
+            if (proximityElements++ >= MAX_PROXIMITY_ELEMENTS) return false;
             const text = $(el).text().trim();
             if (text.length > 10 && !$(el).closest('nav').length && !isBoilerplate(text)) {
               topContent.push(text);
