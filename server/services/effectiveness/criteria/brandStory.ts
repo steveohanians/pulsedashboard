@@ -612,7 +612,9 @@ export async function scoreBrandStory(
 
     let analysis;
     try {
-      analysis = JSON.parse(analysisText);
+      // Extract JSON from markdown code blocks if present
+      const cleanJsonText = analysisText.replace(/^```json\s*|\s*```$/g, '').trim();
+      analysis = JSON.parse(cleanJsonText);
     } catch (parseError) {
       logger.error('Failed to parse OpenAI brand story response', {
         response: analysisText,

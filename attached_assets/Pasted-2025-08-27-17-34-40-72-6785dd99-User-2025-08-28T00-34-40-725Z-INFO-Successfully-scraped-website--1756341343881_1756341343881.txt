@@ -1,0 +1,155 @@
+2025-08-27 17:34:40.72
+6785dd99
+User
+[2025-08-28T00:34:40.725Z] INFO: Successfully scraped website {"websiteUrl":"https://www.cleardigital.com","htmlLength":170743,"hasScreenshot":true,"hasWebVitals":false,"dataQuality":"complete"}
+2025-08-27 17:34:40.72
+6785dd99
+User
+[2025-08-28T00:34:40.726Z] INFO: Starting criteria scoring {"url":"https://www.cleardigital.com","hasHTML":true,"hasWebVitals":null,"hasOpenAI":true,"criteriaCount":8}
+2025-08-27 17:34:40.72
+6785dd99
+User
+[2025-08-28T00:34:40.726Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"positioning","maxRetries":1,"hasHTML":true,"requiresHTML":true,"requiresAI":true,"index":0}
+2025-08-27 17:35:05.59
+6785dd99
+User
+[2025-08-28T00:35:05.597Z] INFO: Extracted comprehensive positioning content {"url":"https://www.cleardigital.com","mainHeadlineLength":30,"eyebrowTextLength":27,"subheadingLength":54,"valuePropParts":14,"differentiatorParts":3,"totalContentLength":858}
+2025-08-27 17:35:05.59
+6785dd99
+User
+[2025-08-28T00:35:05.597Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"ux","maxRetries":2,"hasHTML":true,"requiresHTML":true,"requiresAI":false,"index":1}
+2025-08-27 17:35:05.64
+6785dd99
+User
+[2025-08-28T00:35:05.644Z] INFO: Completed UX analysis {"url":"https://www.cleardigital.com","score":10,"headingsCount":53,"h1Count":1,"avgWordsPerLine":9.81060606060606,"interactiveElements":173,"hasFramework":true,"hasNavigation":true}
+2025-08-27 17:35:05.64
+6785dd99
+User
+[2025-08-28T00:35:05.645Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"brand_story","maxRetries":1,"hasHTML":true,"requiresHTML":true,"requiresAI":true,"index":2}
+2025-08-27 17:35:05.69
+6785dd99
+User
+[2025-08-28T00:35:05.699Z] INFO: Extracted labeled brand story content {"url":"https://www.cleardigital.com","contentLength":577,"sectionsFound":3}
+2025-08-27 17:35:05.69
+6785dd99
+User
+[2025-08-28T00:35:05.699Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"trust","maxRetries":2,"hasHTML":true,"requiresHTML":true,"requiresAI":false,"index":3}
+2025-08-27 17:35:05.72
+6785dd99
+User
+[2025-08-28T00:35:05.728Z] INFO: Completed trust analysis {"url":"https://www.cleardigital.com","score":7,"customerLogos":28,"testimonials":1,"caseStudies":12,"certifications":0,"trustKeywordCount":2,"hasRecentDates":true,"hasScaleIndicators":false}
+2025-08-27 17:35:05.72
+6785dd99
+User
+[2025-08-28T00:35:05.728Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"ctas","maxRetries":1,"hasHTML":true,"requiresHTML":true,"requiresAI":true,"index":4}
+2025-08-27 17:35:05.89
+6785dd99
+User
+[2025-08-28T00:35:05.892Z] INFO: Completed enhanced CTA analysis {"url":"https://www.cleardigital.com","score":8.89,"totalCTAs":81,"aboveFoldCTAs":73,"primaryCTAs":12,"secondaryCTAs":3,"tertiaryCTAs":1,"ctasByLocation":{"hero":2,"header":2,"main":82,"footer":0,"sticky":73},"messageMatchScore":1,"topCTAs":[{"text":"See how we work","type":"primary","prominence":3},{"text":"Contact us","type":"primary","prominence":3},{"text":"first link","type":"other","prominence":3}]}
+2025-08-27 17:35:05.89
+6785dd99
+User
+[2025-08-28T00:35:05.893Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"speed","maxRetries":2,"hasHTML":true,"requiresHTML":false,"requiresAI":false,"index":5}
+2025-08-27 17:35:05.89
+6785dd99
+User
+[2025-08-28T00:35:05.893Z] INFO: Fetching PageSpeed Insights data {"url":"https://www.cleardigital.com","hasApiKey":true}
+2025-08-27 17:35:05.89
+6785dd99
+User
+[2025-08-28T00:35:05.895Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"accessibility","maxRetries":2,"hasHTML":true,"requiresHTML":true,"requiresAI":false,"index":6}
+2025-08-27 17:35:05.92
+6785dd99
+User
+[2025-08-28T00:35:05.921Z] INFO: Completed accessibility analysis {"url":"https://www.cleardigital.com","score":9,"semanticCount":13,"ariaCount":50,"altTextCoverage":100,"formLabelsRatio":100,"focusableElements":174,"hasSkipLinks":false}
+2025-08-27 17:35:05.92
+6785dd99
+User
+[2025-08-28T00:35:05.921Z] INFO: 🚀 Starting criterion scoring {"url":"https://www.cleardigital.com","criterion":"seo","maxRetries":2,"hasHTML":true,"requiresHTML":true,"requiresAI":false,"index":7}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.936Z] INFO: Completed SEO analysis {"url":"https://www.cleardigital.com","score":8,"titleLength":45,"metaDescLength":158,"h1Count":1,"hasCanonical":true,"hasOpenGraph":true,"hasStructuredData":false,"imageAltRatio":100}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.937Z] INFO: ✅ Completed criterion ux {"url":"https://www.cleardigital.com","criterion":"ux","score":10,"duration":340,"retryCount":0,"evidence":{"description":"UX analysis: 53 headings (1 H1s), 10 avg words/line, 173 interactive elements...","reasoning":"Your website delivers a strong user experience with well-structured content and good accessibility p..."}}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.937Z] INFO: ✅ Completed criterion trust {"url":"https://www.cleardigital.com","criterion":"trust","score":7,"duration":238,"retryCount":0,"evidence":{"description":"Trust analysis: 28 logos, 1 testimonials, 12 case studies, 0 certifications...","reasoning":"Score based on customer logos (sufficient), third-party proof (none), recent proof (present), and ca..."}}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.937Z] INFO: ✅ Completed criterion ctas {"url":"https://www.cleardigital.com","criterion":"ctas","score":8.9,"duration":209,"retryCount":0,"evidence":{"description":"Enhanced CTA analysis: 81 total CTAs, 73 above-fold, 12 primary, 3 secondary, 1 tertiary...","reasoning":"Enhanced score based on above-fold presence (73 CTAs across hero/header/sticky), visual hierarchy (u..."}}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.937Z] INFO: ✅ Completed criterion accessibility {"url":"https://www.cleardigital.com","criterion":"accessibility","score":9,"duration":42,"retryCount":0,"evidence":{"description":"Accessibility analysis: 13 semantic elements, 50 ARIA attributes, 100% alt text coverage...","reasoning":"Score based on semantic HTML (present), ARIA attributes (50), alt text coverage (100%), form labels ..."}}
+2025-08-27 17:35:05.93
+6785dd99
+User
+[2025-08-28T00:35:05.937Z] INFO: ✅ Completed criterion seo {"url":"https://www.cleardigital.com","criterion":"seo","score":8,"duration":16,"retryCount":0,"evidence":{"description":"SEO analysis: 45ch title, 158ch meta desc, 1 H1s, 100% image alt coverage...","reasoning":"Score based on title optimization (optimal), meta description (optimal), H1 structure (unique), tech..."}}
+2025-08-27 17:35:05.98
+6785dd99
+User
+[2025-08-28T00:35:05.984Z] INFO: Comprehensive positioning content sent to OpenAI {"url":"https://www.cleardigital.com","mainHeadline":"Let's take you to what's next.","subheading":"Results-driven websites and digital brand experiences.","eyebrowText":"Hello! We are Clear Digital","contentLength":858,"contentPreview":"Hello! We are Clear Digital Let's take you to what's next. Results-driven websites and digital brand experiences. 20+ years of success Build and accelerate your website, brand, and digital marketing s..."}
+2025-08-27 17:35:05.98
+6785dd99
+User
+[2025-08-28T00:35:05.987Z] INFO: Brand story prompt content being sent to OpenAI {"url":"https://www.cleardigital.com","contentLength":577,"contentPreview":"PROOF: Clear Digital is a Silicon Valley-based digital agency and web design company, building digital brand experiences that drive real-world results for 20+ years.\nIMPACT: Build and accelerate your website, brand, and digital marketing success with our award-winning digital agency, rooted in Silic..."}
+2025-08-27 17:35:05.98
+6785dd99
+User
+2025-08-27 17:35:05.98
+6785dd99
+User
+========== BRAND STORY CONTENT SENT TO OPENAI ==========
+2025-08-27 17:35:05.98
+6785dd99
+User
+PROOF: Clear Digital is a Silicon Valley-based digital agency and web design company, building digital brand experiences that drive real-world results for 20+ years.
+2025-08-27 17:35:05.98
+6785dd99
+User
+IMPACT: Build and accelerate your website, brand, and digital marketing success with our award-winning digital agency, rooted in Silicon Valley innovation. We provide expert strategic and data-informed solutions that drive real-world results.
+2025-08-27 17:35:05.98
+6785dd99
+User
+IDENTITY: Clear Digital is a Silicon Valley-based digital agency and web design company, building digital brand experiences that drive real-world results for 20+ years.
+2025-08-27 17:35:05.98
+6785dd99
+User
+========== END BRAND STORY CONTENT ==========
+2025-08-27 17:35:06.25
+6785dd99
+User
+12:35:06 AM [express] GET /api/events/poll 304 in 305ms
+2025-08-27 17:35:07.42
+6785dd99
+User
+[2025-08-28T00:35:07.424Z] ERROR: Failed to parse OpenAI positioning response {"response":"```json\n{\n \"audience_named\": true,\n \"audience_evidence\": \"for B2B companies\",\n \"outcome_present\": true,\n \"outcome_evidence\": \"104% increase in conversions\",\n \"capability_clear\": true,\n \"capability_evidence\": \"award-winning digital agency\",\n \"brevity_check\": true,\n \"brevity_evidence\": \"9 words: Results-driven websites and digital brand experiences\",\n \"confidence\": 1.0\n}\n```","error":{}}
+2025-08-27 17:35:07.42
+6785dd99
+User
+[2025-08-28T00:35:07.424Z] ERROR: Error in positioning analysis {"url":"https://www.cleardigital.com","error":"Invalid JSON response from positioning analysis"}
+2025-08-27 17:35:07.52
+6785dd99
+User
+[2025-08-28T00:35:07.424Z] INFO: ✅ Completed criterion positioning {"url":"https://www.cleardigital.com","criterion":"positioning","score":0,"duration":26698,"retryCount":0,"evidence":{"description":"Error analyzing positioning...","reasoning":"Failed to complete positioning analysis due to technical error..."}}
+2025-08-27 17:35:07.82
+6785dd99
+User
+[2025-08-28T00:35:07.824Z] ERROR: Failed to parse OpenAI brand story response {"response":"```json\n{\n \"content_quality\": \"complete\",\n \"pov_present\": false,\n \"pov_evidence\": \"none found\",\n \"mechanism_named\": false,\n \"mechanism_evidence\": \"none found\",\n \"outcomes_stated\": false,\n \"outcomes_evidence\": \"none found\",\n \"proof_elements\": true,\n \"proof_evidence\": \"20+ years\",\n \"confidence\": 0.25,\n \"extraction_issues\": []\n}\n```","error":{}}
+2025-08-27 17:35:07.82
+6785dd99
+User
+[2025-08-28T00:35:07.824Z] ERROR: Error in brand story analysis {"url":"https://www.cleardigital.com","error":"Invalid JSON response from brand story analysis"}
+2025-08-27 17:35:07.92
+6785dd99
+User
+[2025-08-28T00:35:07.824Z] INFO: ✅ Completed criterion brand_story {"url":"https://www.cleardigital.com","criterion":"brand_story","score":0,"duration":2179,"retryCount":0,"evidence":{"description":"Error analyzing brand story...","reasoning":"Failed to complete brand story analysis due to technical error..."}}
+
+Wrap
+
+Colors
