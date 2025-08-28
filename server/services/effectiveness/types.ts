@@ -132,33 +132,37 @@ export const OPENAI_CLASSIFIERS: Record<string, OpenAIClassifier> = {
     prompt: `Analyze content for brand story elements. Return JSON only:
     - pov_present: Is there a clear point of view or unique perspective? Include the POV text.
     - mechanism_named: Is the specific method/approach mentioned? Include the mechanism description.
-    - outcomes_recent: Are there outcomes from the last 24 months mentioned? Include the outcome examples.
-    - case_complete: Are there complete case studies or success stories? Include case study reference.
+    - outcomes_stated: Are there specific outcomes or results mentioned? Include the outcome examples.
+    - proof_elements: Are there credibility indicators or proof points? Include proof reference.
     
     Content: {content}
     
     Return JSON with both boolean checks and evidence:
     {
+      "content_quality": "complete|partial|fragment|invalid",
       "pov_present": boolean,
       "pov_evidence": "exact text showing POV or null",
       "mechanism_named": boolean,
       "mechanism_evidence": "exact text describing mechanism or null",
-      "outcomes_recent": boolean,
-      "outcomes_evidence": "exact text of recent outcomes or null",
-      "case_complete": boolean,
-      "case_evidence": "case study description or null",
-      "confidence": 0-1
+      "outcomes_stated": boolean,
+      "outcomes_evidence": "exact text of outcomes or null",
+      "proof_elements": boolean,
+      "proof_evidence": "proof description or null",
+      "confidence": 0-1,
+      "extraction_issues": []
     }`,
     schema: {
+      content_quality: "string",
       pov_present: "boolean",
       pov_evidence: "string|null",
       mechanism_named: "boolean",
       mechanism_evidence: "string|null",
-      outcomes_recent: "boolean",
+      outcomes_stated: "boolean",
       outcomes_evidence: "string|null",
-      case_complete: "boolean",
-      case_evidence: "string|null",
-      confidence: "number"
+      proof_elements: "boolean",
+      proof_evidence: "string|null",
+      confidence: "number",
+      extraction_issues: "array"
     }
   },
   

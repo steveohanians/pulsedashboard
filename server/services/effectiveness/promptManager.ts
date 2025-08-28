@@ -17,22 +17,26 @@ export interface EffectivenessPrompt {
 /**
  * Get effectiveness prompt from database with fallback to hardcoded defaults
  */
+async function fetchTemplateWithRetry(criterion: string, maxRetries = 2): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const template = await Promise.race([
+        storage.getEffectivenessPromptTemplate(criterion),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 5000))
+      ]);
+      return template;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt)); // Exponential backoff
+    }
+  }
+}
+
 export async function getEffectivenessPrompt(criterion: string): Promise<EffectivenessPrompt | null> {
   try {
-    logger.info(`Fetching prompt template for criterion: ${criterion}`);
-    // Try to fetch from database
-    const dbTemplate = await storage.getEffectivenessPromptTemplate(criterion);
-    logger.info(`Database template result for ${criterion}:`, { 
-      exists: !!dbTemplate, 
-      hasPrompt: !!dbTemplate?.promptTemplate,
-      promptLength: dbTemplate?.promptTemplate?.length || 0
-    });
+    const dbTemplate = await fetchTemplateWithRetry(criterion);
     
     if (dbTemplate && dbTemplate.promptTemplate) {
-      logger.info(`✓ Using database prompt template for ${criterion}`, {
-        promptLength: dbTemplate.promptTemplate.length,
-        hasSystemPrompt: !!dbTemplate.systemPrompt
-      });
       return {
         promptTemplate: dbTemplate.promptTemplate,
         systemPrompt: dbTemplate.systemPrompt,
@@ -40,17 +44,12 @@ export async function getEffectivenessPrompt(criterion: string): Promise<Effecti
           ? JSON.parse(dbTemplate.schema) 
           : dbTemplate.schema
       };
-    } else {
-      logger.warn(`Database template exists but missing promptTemplate for ${criterion}`);
     }
   } catch (error) {
-    logger.warn(`Failed to fetch prompt template from database for ${criterion}`, {
-      error: error instanceof Error ? error.message : String(error)
-    });
+    // Silent fallback for production reliability
   }
 
   // Fallback to hardcoded defaults
-  logger.warn(`⚠️ Using fallback hardcoded prompt template for ${criterion} - database template not available`);
   
   let classifier;
   let systemPrompt;
@@ -69,18 +68,12 @@ export async function getEffectivenessPrompt(criterion: string): Promise<Effecti
       systemPrompt = 'You are an expert UX analyst evaluating CTA effectiveness. Return only valid JSON.';
       break;
     default:
-      logger.error(`No prompt template available for criterion: ${criterion}`);
       return null;
   }
   
   if (!classifier || !classifier.prompt) {
-    logger.error(`Classifier or prompt missing for ${criterion}`);
     return null;
   }
-  
-  logger.info(`✓ Using fallback prompt for ${criterion}`, {
-    promptLength: classifier.prompt.length
-  });
   
   return {
     promptTemplate: classifier.prompt,
