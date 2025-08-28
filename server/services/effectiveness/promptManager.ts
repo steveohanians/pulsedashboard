@@ -19,11 +19,20 @@ export interface EffectivenessPrompt {
  */
 export async function getEffectivenessPrompt(criterion: string): Promise<EffectivenessPrompt | null> {
   try {
+    logger.info(`Fetching prompt template for criterion: ${criterion}`);
     // Try to fetch from database
     const dbTemplate = await storage.getEffectivenessPromptTemplate(criterion);
+    logger.info(`Database template result for ${criterion}:`, { 
+      exists: !!dbTemplate, 
+      hasPrompt: !!dbTemplate?.promptTemplate,
+      promptLength: dbTemplate?.promptTemplate?.length || 0
+    });
     
-    if (dbTemplate) {
-      logger.info(`Using database prompt template for ${criterion}`);
+    if (dbTemplate && dbTemplate.promptTemplate) {
+      logger.info(`✓ Using database prompt template for ${criterion}`, {
+        promptLength: dbTemplate.promptTemplate.length,
+        hasSystemPrompt: !!dbTemplate.systemPrompt
+      });
       return {
         promptTemplate: dbTemplate.promptTemplate,
         systemPrompt: dbTemplate.systemPrompt,
@@ -31,6 +40,8 @@ export async function getEffectivenessPrompt(criterion: string): Promise<Effecti
           ? JSON.parse(dbTemplate.schema) 
           : dbTemplate.schema
       };
+    } else {
+      logger.warn(`Database template exists but missing promptTemplate for ${criterion}`);
     }
   } catch (error) {
     logger.warn(`Failed to fetch prompt template from database for ${criterion}`, {
@@ -39,7 +50,7 @@ export async function getEffectivenessPrompt(criterion: string): Promise<Effecti
   }
 
   // Fallback to hardcoded defaults
-  logger.info(`Using default prompt template for ${criterion}`);
+  logger.warn(`⚠️ Using fallback hardcoded prompt template for ${criterion} - database template not available`);
   
   let classifier;
   let systemPrompt;
@@ -58,8 +69,18 @@ export async function getEffectivenessPrompt(criterion: string): Promise<Effecti
       systemPrompt = 'You are an expert UX analyst evaluating CTA effectiveness. Return only valid JSON.';
       break;
     default:
+      logger.error(`No prompt template available for criterion: ${criterion}`);
       return null;
   }
+  
+  if (!classifier || !classifier.prompt) {
+    logger.error(`Classifier or prompt missing for ${criterion}`);
+    return null;
+  }
+  
+  logger.info(`✓ Using fallback prompt for ${criterion}`, {
+    promptLength: classifier.prompt.length
+  });
   
   return {
     promptTemplate: classifier.prompt,
