@@ -302,6 +302,17 @@ export class WebsiteEffectivenessScorer {
       const startTime = Date.now();
       let retryCount = 0;
       const maxRetries = criterion.requiresAI ? 1 : 2; // Fewer retries for AI-dependent criteria
+      
+      // 🔍 Debug: Track criterion start
+      logger.info(`🚀 Starting criterion scoring`, {
+        url: context.websiteUrl,
+        criterion: criterion.name,
+        maxRetries,
+        hasHTML: !criterion.requiresHTML || hasHTML,
+        requiresHTML: criterion.requiresHTML,
+        requiresAI: criterion.requiresAI,
+        index
+      });
 
       while (retryCount <= maxRetries) {
         try {
@@ -328,12 +339,16 @@ export class WebsiteEffectivenessScorer {
           ]);
 
           const duration = Date.now() - startTime;
-          logger.info(`Completed criterion ${result.criterion}`, {
+          logger.info(`✅ Completed criterion ${result.criterion}`, {
             url: context.websiteUrl,
             criterion: result.criterion,
             score: result.score,
             duration,
-            retryCount
+            retryCount,
+            evidence: {
+              description: result.evidence?.description?.substring(0, 100) + '...',
+              reasoning: result.evidence?.reasoning?.substring(0, 100) + '...'
+            }
           });
 
           return result;
@@ -342,12 +357,26 @@ export class WebsiteEffectivenessScorer {
           retryCount++;
           const duration = Date.now() - startTime;
           
+          // 🔍 Debug: Track retry/failure details
+          logger.error(`❌ Criterion ${criterion.name} failed (attempt ${retryCount}/${maxRetries + 1})`, {
+            url: context.websiteUrl,
+            criterion: criterion.name,
+            duration,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+            requiresAI: criterion.requiresAI,
+            hasHTML,
+            retryCount,
+            maxRetries
+          });
+          
           if (retryCount > maxRetries) {
-            logger.error(`Failed to score criterion ${criterion.name} after ${retryCount-1} retries`, {
+            logger.error(`💥 Final failure for criterion ${criterion.name} after ${retryCount-1} retries`, {
               url: context.websiteUrl,
               criterion: criterion.name,
               duration,
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
+              finalError: true
             });
 
             // Return degraded result with contextual message
@@ -375,11 +404,12 @@ export class WebsiteEffectivenessScorer {
               passes: { passed: [], failed: ['technical_error'] }
             };
           } else {
-            logger.warn(`Retrying criterion ${criterion.name}`, {
+            logger.warn(`🔄 Retrying criterion ${criterion.name}`, {
               url: context.websiteUrl,
               criterion: criterion.name,
               retryCount,
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
+              nextRetryDelay: 1000 * retryCount
             });
             // Brief delay before retry
             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
@@ -420,12 +450,19 @@ export class WebsiteEffectivenessScorer {
     const successfulScores = results.filter(r => r.score > 0).length;
     const totalScore = results.reduce((sum, r) => sum + r.score, 0);
     
-    logger.info("Completed criteria scoring", {
+    // 🔍 Debug: Detailed results summary
+    const successfulCriteria = results.filter(r => r.score > 0).map(r => r.criterion);
+    const failedCriteria = results.filter(r => r.score === 0).map(r => r.criterion);
+    
+    logger.info("📊 Completed criteria scoring summary", {
       url: context.websiteUrl,
       successfulCriteria: successfulScores,
       totalCriteria: results.length,
       averageScore: totalScore / results.length,
-      hasPartialFailures: successfulScores < results.length
+      hasPartialFailures: successfulScores < results.length,
+      successful: successfulCriteria,
+      failed: failedCriteria,
+      scores: results.map(r => ({ criterion: r.criterion, score: r.score }))
     });
 
     return results;
