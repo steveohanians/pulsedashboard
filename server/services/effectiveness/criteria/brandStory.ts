@@ -556,6 +556,18 @@ export async function scoreBrandStory(
     
     const prompt = effectivenessPrompt.promptTemplate.replace('{content}', storyContent);
     
+    // Debug logging for environment comparison
+    logger.info("BRAND_STORY_DEBUG: OpenAI Request", {
+      environment: process.env.NODE_ENV,
+      url: context.websiteUrl,
+      contentLength: storyContent.length,
+      contentPreview: storyContent.substring(0, 200),
+      promptSource: effectivenessPrompt ? 'database' : 'fallback',
+      openaiModel: config.openai.model,
+      openaiTemp: config.openai.temperature,
+      systemPrompt: effectivenessPrompt.systemPrompt.substring(0, 100)
+    });
+    
     // Log what we're sending to OpenAI
     logger.info("Brand story prompt content being sent to OpenAI", {
       url: context.websiteUrl,
@@ -589,11 +601,32 @@ export async function scoreBrandStory(
       throw new Error('No response from OpenAI brand story analysis');
     }
 
+    // Debug logging for response comparison
+    logger.info("BRAND_STORY_DEBUG: OpenAI Response", {
+      environment: process.env.NODE_ENV,
+      url: context.websiteUrl,
+      rawResponse: analysisText,
+      responseLength: analysisText.length,
+      hasMarkdownWrapper: analysisText.includes('```json')
+    });
+
     let analysis;
     try {
       // Extract JSON from markdown code blocks if present
       const cleanJsonText = analysisText.replace(/^```json\s*|\s*```$/g, '').trim();
       analysis = JSON.parse(cleanJsonText);
+      
+      // Debug logging for parsed analysis comparison
+      logger.info("BRAND_STORY_DEBUG: Parsed Analysis", {
+        environment: process.env.NODE_ENV,
+        url: context.websiteUrl,
+        contentQuality: analysis.content_quality,
+        confidence: analysis.confidence,
+        povPresent: analysis.pov_present,
+        mechanismNamed: analysis.mechanism_named,
+        outcomesStated: analysis.outcomes_stated,
+        proofElements: analysis.proof_elements
+      });
     } catch (parseError) {
       logger.error('Failed to parse OpenAI brand story response', {
         response: analysisText,
@@ -709,6 +742,23 @@ export async function scoreBrandStory(
     } else if (contentQuality === 'partial') {
       score *= 0.9;
     }
+    
+    // Debug logging for score calculation comparison
+    const contentQualityMultiplier = contentQuality === 'fragment' || contentQuality === 'invalid' ? 0.75 : 
+                                    contentQuality === 'partial' ? 0.9 : 1.0;
+    const confidenceFactor = analysis.confidence || 0.75;
+    
+    logger.info("BRAND_STORY_DEBUG: Score Calculation", {
+      environment: process.env.NODE_ENV,
+      url: context.websiteUrl,
+      baseScore: score,
+      bonusPoints: bonusPoints,
+      contentQuality: contentQuality,
+      contentQualityMultiplier: contentQualityMultiplier,
+      confidence: confidenceFactor,
+      scoreBeforeConfidence: score + bonusPoints,
+      finalScoreBeforeClamp: (score + bonusPoints) * confidenceFactor
+    });
     
     // Apply confidence factor and bonuses
     score = (score + bonusPoints) * (analysis.confidence || 0.75);
