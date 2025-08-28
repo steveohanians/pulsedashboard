@@ -55,7 +55,7 @@ export async function scorePositioning(
     let extractedHeadings: { [key: string]: string[] } = {};
 
     headings.forEach(tag => {
-      $(tag).slice(0, 2).each((_, el) => { // Reduced from 3 to 2 for efficiency
+      $(tag).each((_, el) => {
         const text = $(el).text().trim();
         // Skip navigation/footer
         if (!$(el).closest('nav, footer').length && text.length > 3 && !isBoilerplate(text)) {
@@ -90,7 +90,7 @@ export async function scorePositioning(
       const section = $(selector).first();
       if (section.length && !section.closest('footer').length) {
         // Get all text content from this section - LIMITED
-        section.find('h2, h3, h4, h5, p').slice(0, 5).each((_, el) => { // Reduced from 8 to 5
+        section.find('h2, h3, h4, h5, p').each((_, el) => {
           const text = $(el).text().trim();
           if (text.length > 10 && text.length < 300 && !isBoilerplate(text)) {
             valuePropContent.push(text);
@@ -112,12 +112,9 @@ export async function scorePositioning(
     ];
 
     const additionalContent: string[] = [];
-    const MAX_DIFFERENTIATOR_ELEMENTS = 50; // Limit processing for performance
 
-    // Find elements containing these patterns - LIMITED PROCESSING
-    let processedDiffElements = 0;
+    // Find elements containing these patterns
     $('p, h2, h3, h4, h5, li').each((_, el) => {
-      if (processedDiffElements++ >= MAX_DIFFERENTIATOR_ELEMENTS) return false;
       const text = $(el).text().trim();
       if (differentiatorPatterns.some(pattern => pattern.test(text)) && 
           text.length > 10 && text.length < 200 && !isBoilerplate(text)) {
@@ -134,7 +131,7 @@ export async function scorePositioning(
       // Skip navigation
       if ($list.closest('nav, header, footer').length) return;
       
-      const items = $list.find('li').slice(0, 6);
+      const items = $list.find('li');
       const listItems: string[] = [];
       
       items.each((_, li) => {
@@ -187,12 +184,9 @@ export async function scorePositioning(
     // 7. Fallback Enhancement - If content is thin, expand search - LIMITED
     if (!hasEnoughContent && currentContentLength < 300) {
       let fallbackElements = 0;
-      const MAX_FALLBACK_ELEMENTS = 20; // Limit fallback processing
-      
-      // Get first 3 sections of content
-      $('section').slice(0, 3).each((_, section) => {
-        $(section).find('h2, h3, p').slice(0, 2).each((_, el) => { // Reduced from 3 to 2
-          if (fallbackElements++ >= MAX_FALLBACK_ELEMENTS) return false;
+      // Get comprehensive sections of content
+      $('section').each((_, section) => {
+        $(section).find('h2, h3, p').each((_, el) => {
           const text = $(el).text().trim();
           if (text.length > 20 && text.length < 200 &&
               !text.match(/cookie|privacy|copyright/i) && !isBoilerplate(text)) {

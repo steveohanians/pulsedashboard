@@ -54,8 +54,7 @@ export async function scoreBrandStory(
     // Modern Smart Section Detection with Framework Support
     function extractBrandStory($: cheerio.CheerioAPI): string[] {
       let brandStoryContent: string[] = [];
-      const MAX_CONTENT_ITEMS = 12; // Stop when we have sufficient content
-      const MAX_TOTAL_LENGTH = 1800; // Stop when content is long enough
+      // No artificial limits on content extraction
       
       // Priority 1: Try Next.js __NEXT_DATA__ (most reliable for Next.js sites)
       const nextDataScript = $('script#__NEXT_DATA__').html();
@@ -63,10 +62,8 @@ export async function scoreBrandStory(
         try {
           const nextData = JSON.parse(nextDataScript);
           let processedItems = 0;
-          const MAX_NEXT_ITEMS = 50; // Limit Next.js processing
           const extractNextContent = (obj: any, depth = 0): void => {
-            if (depth > 5 || processedItems >= MAX_NEXT_ITEMS) return;
-            processedItems++;
+            if (depth > 5) return;
             if (typeof obj === 'string' && obj.length > 30 && obj.length < 500) {
               if (isBrandStoryContent(obj)) {
                 brandStoryContent.push(obj);
@@ -98,21 +95,14 @@ export async function scoreBrandStory(
             });
           }
           
-          // Early return if we have sufficient content from Next.js data
-          if (brandStoryContent.length >= MAX_CONTENT_ITEMS || 
-              brandStoryContent.join(' ').length >= MAX_TOTAL_LENGTH) {
-            return brandStoryContent.slice(0, MAX_CONTENT_ITEMS);
-          }
+          // Continue to extract comprehensive content from other sources too
         } catch (e) {
           logger.warn("Failed to parse __NEXT_DATA__", { error: e });
         }
       }
       
       // Priority 2: JSON-LD structured data (very reliable) - Limited processing
-      let jsonLdProcessed = 0;
-      const MAX_JSONLD_SCRIPTS = 3; // Limit JSON-LD processing
       $('script[type="application/ld+json"]').each((_, el) => {
-        if (jsonLdProcessed++ >= MAX_JSONLD_SCRIPTS) return false; // Stop after 3 scripts
         try {
           const jsonLd = JSON.parse($(el).html() || '{}');
           if (jsonLd['@type'] === 'Organization' || jsonLd['@type'] === 'Corporation' ||
@@ -175,17 +165,10 @@ export async function scoreBrandStory(
       ];
       
       for (const selector of modernSelectors) {
-        // Early exit if we have enough content
-        if (brandStoryContent.length >= MAX_CONTENT_ITEMS || 
-            brandStoryContent.join(' ').length >= MAX_TOTAL_LENGTH) {
-          break;
-        }
+        // Continue extracting comprehensive content
         
         const sections = $(selector);
-        let sectionCount = 0;
-        const MAX_SECTIONS_PER_SELECTOR = 3; // Limit sections per selector
         sections.each((_, el) => {
-          if (sectionCount++ >= MAX_SECTIONS_PER_SELECTOR) return false; // Stop after 3 sections
           const $section = $(el);
           if (!$section.closest('nav, footer, header').length) {
             // Extract all text content from modern components
@@ -199,11 +182,7 @@ export async function scoreBrandStory(
           }
         });
         
-        // More aggressive early exit
-        if (brandStoryContent.length >= MAX_CONTENT_ITEMS || 
-            brandStoryContent.join(' ').length >= MAX_TOTAL_LENGTH) {
-          break;
-        }
+        // Continue comprehensive extraction
       }
       
       // Priority 5: Traditional HTML patterns (fallback)
@@ -221,7 +200,7 @@ export async function scoreBrandStory(
         for (const selector of traditionalSelectors) {
           const section = $(selector).first();
           if (section.length && !section.closest('nav, footer').length) {
-            const texts = section.find('h2, h3, h4, h5, p').slice(0, 6)
+            const texts = section.find('h2, h3, h4, h5, p')
               .map((_, el) => $(el).text().trim())
               .get()
               .filter(text => isBrandStoryContent(text));
@@ -236,7 +215,7 @@ export async function scoreBrandStory(
       
       // Priority 6: Last resort - scan all text nodes
       if (brandStoryContent.length < 3) {
-        $('h1, h2, h3, h4, h5, p, span, div').slice(0, 30).each((_, el) => {
+        $('h1, h2, h3, h4, h5, p, span, div').each((_, el) => {
           const $el = $(el);
           const text = $el.text().trim();
           
