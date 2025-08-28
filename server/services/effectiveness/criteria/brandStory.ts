@@ -554,15 +554,6 @@ export async function scoreBrandStory(
       throw new Error('No prompt template available for brand_story criterion');
     }
     
-    // 🔍 DEBUG: Log template source
-    logger.info('🧪 Brand Story Template Loaded', {
-      url: context.websiteUrl,
-      templateLength: effectivenessPrompt.promptTemplate.length,
-      systemPromptLength: effectivenessPrompt.systemPrompt.length,
-      schema: effectivenessPrompt.schema,
-      source: 'database'
-    });
-    
     const prompt = effectivenessPrompt.promptTemplate.replace('{content}', storyContent);
     
     // Log what we're sending to OpenAI
@@ -603,18 +594,6 @@ export async function scoreBrandStory(
       // Extract JSON from markdown code blocks if present
       const cleanJsonText = analysisText.replace(/^```json\s*|\s*```$/g, '').trim();
       analysis = JSON.parse(cleanJsonText);
-      
-      // 🔍 DEBUG: Log analysis results for comparison
-      logger.info('🧪 Brand Story Analysis Results', {
-        url: context.websiteUrl,
-        content_quality: analysis.content_quality,
-        pov_present: analysis.pov_present,
-        mechanism_named: analysis.mechanism_named,
-        outcomes_stated: analysis.outcomes_stated,
-        proof_elements: analysis.proof_elements,
-        confidence: analysis.confidence,
-        templateSource: 'database'
-      });
     } catch (parseError) {
       logger.error('Failed to parse OpenAI brand story response', {
         response: analysisText,
@@ -623,17 +602,29 @@ export async function scoreBrandStory(
       throw new Error('Invalid JSON response from brand story analysis');
     }
 
-    // Database template handles all scoring logic - no hardcoded calculations needed
+    // Brand Story Scoring Logic - Updated for typical B2B content
+    const currentYear = new Date().getFullYear();
+    const recentYears = [currentYear, currentYear - 1, currentYear - 2];
 
-    // ✅ FIXED: Use ONLY database template confidence score (0-1 scale)
-    // The database template provides sophisticated analysis and proper confidence calculation
-    const score = analysis.confidence || 0;
-    
-    // Build passes/failed arrays based on analysis results for evidence
+    // Look for quantified results (more common in B2B than case studies)
+    const numberPattern = /(\d{1,3}[,.]?\d{0,3})\s*(%|percent|million|billion|thousand|times|x|years?|clients?|customers?|companies|projects?)/gi;
+    const quantifiedResults = storyContent.match(numberPattern) || [];
+    const hasQuantifiedOutcomes = quantifiedResults.length >= 1; // Lowered threshold
+
+    // Check for proof elements (replacing case study focus)
+    const proofKeywords = ['trusted by', 'working with', 'partnered with', 'clients include', 'award', 'recognized', 'certified', 'years of experience', 'founded', 'since'];
+    const hasProofElements = proofKeywords.some(keyword => 
+      storyContent.toLowerCase().includes(keyword)
+    );
+
+    // Calculate score and collect evidence
+    let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     const evidenceDetails: Record<string, any> = {};
-    
+
+    // 1. Point of View (25% - 2.5 points)
     if (analysis.pov_present) {
+      score += 2.5;
       passes.passed.push('pov_present');
       if (analysis.pov_evidence && analysis.pov_evidence !== 'none found') {
         evidenceDetails.pov = analysis.pov_evidence;
@@ -642,7 +633,9 @@ export async function scoreBrandStory(
       passes.failed.push('no_clear_pov');
     }
 
+    // 2. Mechanism/Approach (25% - 2.5 points)
     if (analysis.mechanism_named) {
+      score += 2.5;
       passes.passed.push('mechanism_described');
       if (analysis.mechanism_evidence && analysis.mechanism_evidence !== 'none found') {
         evidenceDetails.mechanism = analysis.mechanism_evidence;
@@ -650,18 +643,35 @@ export async function scoreBrandStory(
     } else {
       passes.failed.push('no_clear_approach');
     }
-    
+
+    // 3. Outcomes Stated (25% - 2.5 points)
+    // Updated: outcomes_stated instead of outcomes_recent
     if (analysis.outcomes_stated) {
-      passes.passed.push('outcomes_stated');
+      if (hasQuantifiedOutcomes) {
+        score += 2.5;
+        passes.passed.push('quantified_outcomes');
+        evidenceDetails.outcomes_quantified = quantifiedResults.slice(0, 3).join(', ');
+      } else {
+        score += 1.75; // Partial credit for non-quantified outcomes
+        passes.passed.push('outcomes_mentioned');
+      }
       if (analysis.outcomes_evidence && analysis.outcomes_evidence !== 'none found') {
         evidenceDetails.outcomes = analysis.outcomes_evidence;
       }
     } else {
       passes.failed.push('no_outcomes_stated');
     }
-    
+
+    // 4. Proof Elements (25% - 2.5 points)
+    // Replaced case_complete with proof_elements
     if (analysis.proof_elements) {
-      passes.passed.push('proof_elements');
+      if (hasProofElements && hasQuantifiedOutcomes) {
+        score += 2.5;
+        passes.passed.push('strong_proof_elements');
+      } else if (analysis.proof_elements || hasProofElements) {
+        score += 1.75;
+        passes.passed.push('some_proof_elements');
+      }
       if (analysis.proof_evidence && analysis.proof_evidence !== 'none found') {
         evidenceDetails.proof = analysis.proof_evidence;
       }
@@ -669,24 +679,48 @@ export async function scoreBrandStory(
       passes.failed.push('no_proof_elements');
     }
 
-    // Handle additional database template fields
+    // Handle additional database template fields gracefully
     const contentQuality = analysis.content_quality || 'complete';
     const extractionIssues = analysis.extraction_issues || [];
     
-    // 🔍 DEBUG: Show corrected score calculation
-    logger.info('🧪 Brand Story Score Calculation (FIXED)', {
-      url: context.websiteUrl,
-      databaseConfidenceScore: analysis.confidence,
-      finalScore: score,
-      contentQuality,
-      criteriaFound: passes.passed.length,
-      scalingFixed: 'Now using ONLY 0-1 database template confidence!'
-    });
+    // Bonus points for B2B-specific quality indicators
+    let bonusPoints = 0;
+
+    // Check for industry/vertical focus (common in B2B)
+    const industryKeywords = ['enterprise', 'B2B', 'SaaS', 'financial services', 'healthcare', 'manufacturing', 'technology'];
+    if (industryKeywords.some(keyword => storyContent.toLowerCase().includes(keyword))) {
+      bonusPoints += 0.5;
+      passes.passed.push('industry_focus');
+    }
+
+    // Check for capability breadth (B2B companies often list multiple capabilities)
+    const capabilityKeywords = ['strategy', 'consulting', 'implementation', 'support', 'solutions', 'services', 'expertise'];
+    const capabilityCount = capabilityKeywords.filter(keyword => 
+      storyContent.toLowerCase().includes(keyword)
+    ).length;
+    if (capabilityCount >= 3) {
+      bonusPoints += 0.5;
+      passes.passed.push('capability_breadth');
+    }
+
+    // Adjust score based on content quality if provided
+    if (contentQuality === 'fragment' || contentQuality === 'invalid') {
+      score *= 0.75; // Reduce score for poor content quality
+    } else if (contentQuality === 'partial') {
+      score *= 0.9;
+    }
+    
+    // Apply confidence factor and bonuses
+    score = (score + bonusPoints) * (analysis.confidence || 0.75);
+    score = Math.min(10, Math.max(0, score));
 
     logger.info("Completed brand story analysis", {
       url: context.websiteUrl,
       score,
-      contentQuality,
+      bonusPoints,
+      hasQuantifiedOutcomes,
+      quantifiedResults: quantifiedResults.length,
+      hasProofElements,
       confidence: analysis.confidence
     });
 
@@ -694,15 +728,19 @@ export async function scoreBrandStory(
       criterion: 'brand_story',
       score: Math.round(score * 10) / 10,
       evidence: {
-        description: `Brand story analysis: ${passes.passed.length}/4 elements present (confidence: ${score.toFixed(2)})`,
+        description: `Brand story analysis: ${passes.passed.length}/4+ elements present with ${quantifiedResults.length} quantified results`,
         details: {
           storyContent: storyContent.substring(0, 300) + '...',
           analysis,
+          hasQuantifiedOutcomes,
+          quantifiedResults: quantifiedResults.slice(0, 3),
+          hasProofElements,
+          bonusPoints,
           contentQuality,
           extractionIssues,
-          ...evidenceDetails
+          ...evidenceDetails // Include extracted evidence
         },
-        reasoning: `Score based on database template analysis: point of view (${analysis.pov_present ? 'present' : 'missing'}), mechanism explanation (${analysis.mechanism_named ? 'present' : 'missing'}), outcomes stated (${analysis.outcomes_stated ? 'found' : 'missing'}), and proof elements (${analysis.proof_elements ? 'present' : 'missing'}). Content quality: ${contentQuality}`
+        reasoning: `Score based on point of view (${analysis.pov_present ? 'present' : 'missing'}), mechanism explanation (${analysis.mechanism_named ? 'present' : 'missing'}), outcomes stated (${analysis.outcomes_stated ? 'found' : 'missing'}), and proof elements (${analysis.proof_elements || hasProofElements ? 'present' : 'missing'}). Bonus points: ${bonusPoints}`
       },
       passes
     };
