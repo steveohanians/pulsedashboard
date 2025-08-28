@@ -485,19 +485,28 @@ export async function scoreBrandStory(
     function extractCompleteBrandStory($: cheerio.CheerioAPI): string {
       // Step 1: Extract brand story content
       const storyContent = extractBrandStory($);
+      console.log("DEBUG: Raw story content extracted:", storyContent.length, "items");
+      storyContent.forEach((item, i) => console.log(`  Story ${i}:`, item.substring(0, 100)));
       
       // Step 2: Extract credentials separately
       const credentials = extractCredentials($);
+      console.log("DEBUG: Credentials extracted:", credentials.length, "items");
+      credentials.forEach((item, i) => console.log(`  Cred ${i}:`, item.substring(0, 100)));
       
       // Step 3: Combine and deduplicate
       const allContent = [...storyContent, ...credentials];
+      console.log("DEBUG: Combined content before dedup:", allContent.length, "items");
       const deduplicated = deduplicateContent(allContent);
+      console.log("DEBUG: After deduplication:", deduplicated.length, "items");
+      deduplicated.forEach((item, i) => console.log(`  Dedup ${i}:`, item.substring(0, 100)));
       
       // Step 4: Build labeled narrative
       const labeledNarrative = buildLabeledNarrative(
         deduplicated.filter(text => !credentials.includes(text)),
         credentials
       );
+      console.log("DEBUG: Labeled narrative sections:", labeledNarrative.length);
+      labeledNarrative.forEach((item, i) => console.log(`  Label ${i}:`, item.substring(0, 150)));
       
       // Step 5: Format output
       if (labeledNarrative.length >= 3) {
@@ -508,6 +517,8 @@ export async function scoreBrandStory(
       if (labeledNarrative.length < 3) {
         const metaDesc = $('meta[name="description"]').attr('content') || '';
         const ogDesc = $('meta[property="og:description"]').attr('content') || '';
+        console.log("DEBUG: Using fallback - metaDesc:", metaDesc?.substring(0, 100));
+        console.log("DEBUG: Using fallback - ogDesc:", ogDesc?.substring(0, 100));
         
         labeledNarrative.push(`IDENTITY: ${metaDesc}`);
         if (ogDesc && ogDesc !== metaDesc) {
@@ -516,11 +527,14 @@ export async function scoreBrandStory(
       }
       
       // Return labeled story (max 2500 chars)
-      return labeledNarrative
+      const finalResult = labeledNarrative
         .filter(line => line.split(': ')[1]?.length > 10) // Ensure content after label
         .slice(0, 8) // Max 8 labeled sections
         .join('\n')
         .substring(0, 2500);
+      
+      console.log("DEBUG: Final result length:", finalResult.length);
+      return finalResult;
     }
 
     // Main execution

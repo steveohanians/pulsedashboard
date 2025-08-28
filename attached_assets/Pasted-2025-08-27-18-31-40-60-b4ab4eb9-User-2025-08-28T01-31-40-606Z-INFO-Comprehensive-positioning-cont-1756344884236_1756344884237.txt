@@ -1,0 +1,20 @@
+2025-08-27 18:31:40.60
+b4ab4eb9
+User
+[2025-08-28T01:31:40.606Z] INFO: Comprehensive positioning content sent to OpenAI {"url":"https://www.cleardigital.com","mainHeadline":"Let's take you to what's next.","subheading":"Results-driven websites and digital brand experiences.","eyebrowText":"Hello! We are Clear Digital","contentLength":1403,"contentPreview":"Hello! We are Clear Digital Let's take you to what's next. Results-driven websites and digital brand experiences. 20+ years of success Build and accelerate your website, brand, and digital marketing s..."}
+2025-08-27 18:31:42.41
+b4ab4eb9
+User
+[2025-08-28T01:31:42.419Z] INFO: BRAND_STORY_DEBUG: OpenAI Response {"environment":"production","url":"https://www.cleardigital.com","rawResponse":"```json\n{\n \"content_quality\": \"complete\",\n \"pov_present\": false,\n \"pov_evidence\": \"none found\",\n \"mechanism_named\": false,\n \"mechanism_evidence\": \"none found\",\n \"outcomes_stated\": false,\n \"outcomes_evidence\": \"none found\",\n \"proof_elements\": true,\n \"proof_evidence\": \"20+ years\",\n \"confidence\": 0.25,\n \"extraction_issues\": []\n}\n```","responseLength":342,"hasMarkdownWrapper":true}
+2025-08-27 18:31:42.71
+b4ab4eb9
+User
+[2025-08-28T01:31:42.717Z] INFO: BRAND_STORY_DEBUG: Parsed Analysis {"environment":"production","url":"https://www.cleardigital.com","contentQuality":"complete","confidence":0.25,"povPresent":false,"mechanismNamed":false,"outcomesStated":false,"proofElements":true}
+2025-08-27 18:31:42.71
+b4ab4eb9
+User
+[2025-08-28T01:31:42.719Z] INFO: BRAND_STORY_DEBUG: Score Calculation {"environment":"production","url":"https://www.cleardigital.com","baseScore":1.75,"bonusPoints":0,"contentQuality":"complete","contentQualityMultiplier":1,"confidence":0.25,"scoreBeforeConfidence":1.75,"finalScoreBeforeClamp":0.4375}
+2025-08-27 18:31:42.71
+b4ab4eb9
+User
+[2025-08-28T01:31:42.719Z] INFO: Completed brand story analysis {"url":"https://www.cleardigital.com","score":0.4375,"bonusPoints":0,"hasQuantifiedOutcomes":false,"quantifiedResults":0,"hasProofElements":true,"confidence":0.25}
