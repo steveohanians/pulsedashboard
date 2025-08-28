@@ -181,9 +181,8 @@ export async function scorePositioning(
     const currentContentLength = uniqueParts.join(' ').length;
     const hasEnoughContent = currentContentLength >= 400 && uniqueParts.length >= 4;
 
-    // 7. Fallback Enhancement - If content is thin, expand search - LIMITED
+    // 7. Fallback Enhancement - If content is thin, expand search
     if (!hasEnoughContent && currentContentLength < 300) {
-      let fallbackElements = 0;
       // Get comprehensive sections of content
       $('section').each((_, section) => {
         $(section).find('h2, h3, p').each((_, el) => {
@@ -196,18 +195,14 @@ export async function scorePositioning(
       });
     }
 
-    // If still missing content, use proximity-based extraction - LIMITED
+    // If still missing content, use proximity-based extraction
     if (!hasEnoughContent && uniqueParts.join(' ').length < 200) {
-      let proximityElements = 0;
-      const MAX_PROXIMITY_ELEMENTS = 15; // Limit proximity processing
-      
       const mainElement = $('main, [role="main"]').first();
       if (mainElement.length) {
         // Get everything from top of main content  
         const topContent: string[] = [];
-        mainElement.children().slice(0, 2).each((_, child) => { // Reduced from 3 to 2
-          $(child).find('h1, h2, h3, h4, h5, p').slice(0, 3).each((_, el) => { // Reduced from 5 to 3
-            if (proximityElements++ >= MAX_PROXIMITY_ELEMENTS) return false;
+        mainElement.children().each((_, child) => {
+          $(child).find('h1, h2, h3, h4, h5, p').each((_, el) => {
             const text = $(el).text().trim();
             if (text.length > 10 && !$(el).closest('nav').length && !isBoilerplate(text)) {
               topContent.push(text);
