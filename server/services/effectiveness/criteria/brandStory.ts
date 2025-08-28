@@ -40,15 +40,15 @@ export async function scoreBrandStory(
       /©|copyright|privacy|cookie|terms/i
     ];
 
-    // Filter function
+    // Filter function - More permissive
     function isBrandStoryContent(text: string): boolean {
       // Exclude if matches non-story patterns
       if (notBrandStory.some(pattern => pattern.test(text))) {
         return false;
       }
-      // Include if matches story patterns OR is in right location
+      // Include if matches story patterns OR is substantial content
       return brandStoryIndicators.some(pattern => pattern.test(text)) ||
-             (text.length > 50 && text.length < 300);
+             (text.length > 30 && text.length < 500); // More permissive length
     }
 
     // Modern Smart Section Detection with Framework Support
@@ -213,50 +213,56 @@ export async function scoreBrandStory(
         }
       }
       
-      // Priority 6: Last resort - scan all text nodes
-      if (brandStoryContent.length < 3) {
-        $('h1, h2, h3, h4, h5, p, span, div').each((_, el) => {
-          const $el = $(el);
-          const text = $el.text().trim();
-          
-          // Skip if in navigation or footer
-          if ($el.closest('nav, header, footer, aside').length) return;
-          
-          // Check if it's brand story content
-          if (text.length > 30 && text.length < 500 && isBrandStoryContent(text)) {
+      // Priority 6: Comprehensive text scanning - Always run
+      $('h1, h2, h3, h4, h5, h6, p').each((_, el) => {
+        const $el = $(el);
+        const text = $el.text().trim();
+        
+        // Skip if in navigation or footer
+        if ($el.closest('nav, header, footer, aside, .nav, .header, .footer').length) return;
+        
+        // Check if it's brand story content and not already included
+        if (text.length > 20 && text.length < 600 && !brandStoryContent.includes(text)) {
+          if (isBrandStoryContent(text) || 
+              /digital|agency|brand|website|experience|results|success|clients?|years?|silicon valley/i.test(text)) {
             brandStoryContent.push(text);
           }
-        });
-      }
+        }
+      });
       
       return brandStoryContent;
     }
 
-    // Aggressive Deduplication
+    // Smart Deduplication - Less aggressive
     function deduplicateContent(content: string[]): string[] {
       const cleaned: string[] = [];
-      const fingerprints = new Set<string>();
+      const seen = new Set<string>();
       
       content.forEach(text => {
-        // Create multiple fingerprints for better duplicate detection
-        const fingerprint1 = text.substring(0, 50).toLowerCase().replace(/\s+/g, '');
-        const fingerprint2 = text.substring(0, 30).toLowerCase().replace(/\s+/g, '');
+        if (!text || text.length < 20) return;
         
-        // Check if we've seen this before
-        if (!fingerprints.has(fingerprint1) && !fingerprints.has(fingerprint2)) {
-          // Also check if this is a substring of existing content
-          const isDuplicate = cleaned.some(existing => {
-            const similarity = existing.includes(text) || 
-                              text.includes(existing) ||
-                              (existing.substring(0, 30) === text.substring(0, 30));
-            return similarity;
-          });
+        // Create a normalized version for comparison
+        const normalized = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+        
+        // Skip exact duplicates
+        if (seen.has(normalized)) return;
+        
+        // Check for substantial overlap (80% or more)
+        const isDuplicateContent = cleaned.some(existing => {
+          const existingNorm = existing.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
           
-          if (!isDuplicate) {
-            fingerprints.add(fingerprint1);
-            fingerprints.add(fingerprint2);
-            cleaned.push(text);
+          // If one is completely contained in the other and they're similar length
+          if (existingNorm.includes(normalized) || normalized.includes(existingNorm)) {
+            const lengthRatio = Math.min(normalized.length, existingNorm.length) / Math.max(normalized.length, existingNorm.length);
+            return lengthRatio > 0.8;
           }
+          
+          return false;
+        });
+        
+        if (!isDuplicateContent) {
+          seen.add(normalized);
+          cleaned.push(text);
         }
       });
       
@@ -424,57 +430,82 @@ export async function scoreBrandStory(
       narrative.PROOF = generalCreds;
       narrative.OUTCOMES = metrics;
       
-      // Categorize content with improved patterns
+      // Categorize content with comprehensive patterns - ONE CATEGORY PER TEXT
       contentPieces.forEach(text => {
         const lowerText = text.toLowerCase();
+        let categorized = false;
         
-        if (/\b(founded|established|began|started|since)\b/i.test(text)) {
+        // Foundation - company history/establishment (highest priority for years/founding)
+        if (/\b(founded|established|began|started|since|years?\s+(of|in)\s+(business|experience|success))\b/i.test(text) && !categorized) {
           narrative.FOUNDATION.push(text);
-        } 
-        else if (/^(we are|as a|our team|we're a)/i.test(text)) {
+          categorized = true;
+        }
+        
+        // Identity - who we are statements (specific patterns only)
+        if (!categorized && /(we are|we're|as a|digital agency|based|silicon valley|team)/i.test(text)) {
           narrative.IDENTITY.push(text);
-        } 
-        else if (/(our mission|we exist|purpose|dedicated to|committed to)/i.test(text)) {
+          categorized = true;
+        }
+        
+        // Mission - purpose and goals
+        if (!categorized && /(our mission|we exist|purpose|dedicated to|committed to|vision|goal)/i.test(text)) {
           narrative.MISSION.push(text);
-        } 
-        else if (/(our approach|how we|process|method|framework|we work)/i.test(text)) {
+          categorized = true;
+        }
+        
+        // Approach - how we work
+        if (!categorized && /(our approach|how we|process|method|framework|strategy|methodology)/i.test(text)) {
           narrative.APPROACH.push(text);
-        } 
-        else if (/(we believe|our values|philosophy|principles|culture)/i.test(text)) {
+          categorized = true;
+        }
+        
+        // Values - beliefs and principles
+        if (!categorized && /(we believe|our values|philosophy|principles|culture|passionate)/i.test(text)) {
           narrative.VALUES.push(text);
-        } 
-        else if (/(unlike|different|unique|sets us apart|why choose|advantage)/i.test(text)) {
+          categorized = true;
+        }
+        
+        // Differentiators - what makes us unique
+        if (!categorized && /(unlike|different|unique|sets us apart|why choose|advantage|award.?winning|leading)/i.test(text)) {
           narrative.DIFFERENTIATORS.push(text);
+          categorized = true;
         }
-        else if (/(\d+[%xX]|\d+\s*fold|generated|saved|increased|improved by)/i.test(text)) {
+        
+        // Outcomes - specific metrics and results
+        if (!categorized && /(\d+[%xX]|\d+\s*fold|generated|saved|increased|improved by|clients?|projects?)/i.test(text)) {
           narrative.OUTCOMES.push(text);
-        } 
-        else if (/(results|outcomes|impact|achieve|deliver|help)/i.test(text)) {
-          narrative.IMPACT.push(text);
+          categorized = true;
         }
-        // Default categorization based on content
-        else if (lowerText.includes('we') || lowerText.includes('our')) {
-          if (text.length < 100) {
-            narrative.VALUES.push(text);
-          } else {
+        
+        // Impact - results we deliver
+        if (!categorized && /(results|outcomes|impact|achieve|deliver|help|success|drive|accelerate)/i.test(text)) {
+          narrative.IMPACT.push(text);
+          categorized = true;
+        }
+        
+        // Default categorization for uncategorized content
+        if (!categorized) {
+          if (/(website|digital|brand|experience|design)/i.test(text)) {
+            narrative.IDENTITY.push(text);
+          } else if (text.length > 100) {
             narrative.APPROACH.push(text);
+          } else {
+            narrative.VALUES.push(text);
           }
         }
       });
       
-      // Build labeled output
+      // Build labeled output - Include ALL content, not just best
       const labeledStory: string[] = [];
       
       Object.entries(narrative).forEach(([label, content]) => {
         if (content.length > 0) {
-          // Take best/first item from each category
-          const bestContent = content
+          // Use ALL content from each category, not just the best one
+          content
             .filter(text => text && text.length > 20)
-            .sort((a, b) => b.length - a.length)[0];
-          
-          if (bestContent) {
-            labeledStory.push(`${label}: ${bestContent}`);
-          }
+            .forEach(text => {
+              labeledStory.push(`${label}: ${text}`);
+            });
         }
       });
       
