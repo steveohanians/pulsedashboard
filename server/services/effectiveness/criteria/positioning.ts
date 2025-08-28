@@ -359,15 +359,13 @@ export async function scorePositioning(
     const buzzwordPenalty = buzzwordCount * 0.5;
     score = Math.max(0, score - buzzwordPenalty);
 
-    // Apply confidence factor
-    score = score * (analysis.confidence || 0.8);
-    score = Math.min(10, Math.max(0, score));
+    // ✅ FIXED: Use ONLY database template confidence score (0-1 scale)
+    score = analysis.confidence || 0;
 
-    logger.info("Completed positioning analysis", {
+    logger.info("Completed positioning analysis (FIXED)", {
       url: context.websiteUrl,
-      score,
-      buzzwordCount,
-      confidence: analysis.confidence,
+      databaseConfidenceScore: analysis.confidence,
+      finalScore: score,
       passes: passes.passed.length
     });
 
