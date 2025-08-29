@@ -326,6 +326,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                       clientName={data.client.name}
                       overallScore={run.overallScore}
                       className="flex-1"
+                      aiInsights={run.aiInsights}
+                      insightsGeneratedAt={run.insightsGeneratedAt}
                     />
                   </CardContent>
                 </Card>

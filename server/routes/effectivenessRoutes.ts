@@ -66,7 +66,10 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       client,
       run: {
         ...latestRun,
-        criterionScores
+        criterionScores,
+        // Include AI insights if available
+        aiInsights: latestRun.aiInsights || null,
+        insightsGeneratedAt: latestRun.insightsGeneratedAt || null
       },
       hasData: true
     };
@@ -75,7 +78,8 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       clientId,
       runId: latestRun.id,
       overallScore: latestRun.overallScore,
-      criteriaCount: criterionScores.length
+      criteriaCount: criterionScores.length,
+      hasInsights: !!latestRun.aiInsights
     });
 
     res.json(response);
@@ -181,18 +185,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           progress: 'Scoring website effectiveness criteria...'
         });
         
-        // Update run with results and screenshot metadata
-        await storage.updateEffectivenessRun(newRun.id, {
-          overallScore: result.overallScore.toString(),
-          status: 'completed',
-          progress: 'Analysis completed successfully',
-          screenshotUrl: result.screenshotUrl,
-          webVitals: result.webVitals,
-          screenshotMethod: result.screenshotMethod || null,
-          screenshotError: result.screenshotError || null
-        });
-
-        // Save criterion scores
+        // Save criterion scores first (needed for insights generation)
         for (const criterionResult of result.criterionResults) {
           await storage.createCriterionScore({
             runId: newRun.id,
@@ -202,6 +195,61 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             passes: criterionResult.passes
           });
         }
+
+        // Generate AI insights after scoring is complete
+        let aiInsights = null;
+        let insightsGeneratedAt = null;
+        
+        try {
+          // Update progress: Generating insights
+          await storage.updateEffectivenessRun(newRun.id, {
+            status: 'generating_insights',
+            progress: 'Generating AI-powered insights...'
+          });
+
+          // Import and create insights service
+          const { createInsightsService } = await import('../services/effectiveness');
+          const insightsService = createInsightsService(storage);
+
+          // Generate insights (don't pass userId/userRole for internal generation)
+          const insightsResult = await insightsService.generateInsights(
+            clientId, 
+            newRun.id, 
+            undefined, // userId - internal generation, skip auth
+            'Admin'    // userRole - internal generation, use admin privileges
+          );
+
+          aiInsights = insightsResult.insights;
+          insightsGeneratedAt = new Date();
+          
+          logger.info('AI insights generated successfully', {
+            clientId,
+            runId: newRun.id,
+            keyPattern: aiInsights.key_pattern,
+            recommendationCount: aiInsights.recommendations.length
+          });
+
+        } catch (insightsError) {
+          logger.warn('AI insights generation failed, continuing without insights', {
+            clientId,
+            runId: newRun.id,
+            error: insightsError instanceof Error ? insightsError.message : String(insightsError)
+          });
+          // Don't fail the entire run if insights fail
+        }
+
+        // Update run with results, screenshot metadata, and insights
+        await storage.updateEffectivenessRun(newRun.id, {
+          overallScore: result.overallScore.toString(),
+          status: 'completed',
+          progress: 'Analysis completed successfully',
+          screenshotUrl: result.screenshotUrl,
+          webVitals: result.webVitals,
+          screenshotMethod: result.screenshotMethod || null,
+          screenshotError: result.screenshotError || null,
+          aiInsights,
+          insightsGeneratedAt
+        });
 
         // Update client last run timestamp
         await storage.updateClient(clientId, {
@@ -444,23 +492,51 @@ router.get('/test-screenshot', requireAuth, requireAdmin, async (req, res) => {
 
 /**
  * POST /api/effectiveness/insights/:clientId/:runId
- * Generate AI insights for effectiveness scoring results
+ * Generate AI insights for effectiveness scoring results (fallback/regeneration)
  */
 router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
   try {
     const { clientId, runId } = req.params;
+    const { force = false } = req.body;
+
+    // Check if insights already exist and are recent
+    if (!force) {
+      const run = await storage.getEffectivenessRun(runId);
+      if (run?.aiInsights && run.insightsGeneratedAt) {
+        const isRecent = new Date(run.insightsGeneratedAt) > new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
+        if (isRecent) {
+          logger.info('Returning cached insights', { clientId, runId });
+          return res.json({
+            success: true,
+            insights: run.aiInsights,
+            clientName: run.client?.name || 'Unknown',
+            overallScore: run.overallScore,
+            runId,
+            cached: true
+          });
+        }
+      }
+    }
     
     // Import and create insights service
     const { createInsightsService, ErrorClassifier } = await import('../services/effectiveness');
     const insightsService = createInsightsService(storage);
 
-    // Generate insights using the service
+    // Generate fresh insights
     const result = await insightsService.generateInsights(
       clientId,
       runId,
       req.user?.clientId,
       req.user?.role
     );
+
+    // Update the run with new insights (optional - for regeneration)
+    if (force) {
+      await storage.updateEffectivenessRun(runId, {
+        aiInsights: result.insights,
+        insightsGeneratedAt: new Date()
+      });
+    }
 
     res.json(result);
 

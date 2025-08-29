@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface EffectivenessAIInsightsProps {
   clientId: string;
@@ -8,6 +8,14 @@ interface EffectivenessAIInsightsProps {
   clientName: string;
   overallScore: number;
   className?: string;
+  // New props to support stored insights
+  aiInsights?: {
+    insight: string;
+    recommendations: string[];
+    confidence: number;
+    key_pattern: string;
+  } | null;
+  insightsGeneratedAt?: string | null;
 }
 
 interface InsightsResponse {
@@ -21,6 +29,7 @@ interface InsightsResponse {
   clientName: string;
   overallScore: number;
   runId: string;
+  cached?: boolean;
 }
 
 export function EffectivenessAIInsights({
@@ -28,10 +37,14 @@ export function EffectivenessAIInsights({
   runId,
   clientName,
   overallScore,
-  className
+  className,
+  aiInsights,
+  insightsGeneratedAt
 }: EffectivenessAIInsightsProps) {
-  // Fetch AI insights
-  const { data: insightsData, isLoading, error } = useQuery<InsightsResponse>({
+  // Only fetch insights if not provided (fallback for missing/failed insights)
+  const shouldFetchInsights = !aiInsights;
+  
+  const { data: insightsData, isLoading, error, refetch } = useQuery<InsightsResponse>({
     queryKey: ['effectiveness-insights', clientId, runId],
     queryFn: async () => {
       const response = await fetch(`/api/effectiveness/insights/${clientId}/${runId}`, {
@@ -45,11 +58,17 @@ export function EffectivenessAIInsights({
       
       return response.json();
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes - insights don't change often
-    retry: 1 // Only retry once for AI insights
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
+    enabled: shouldFetchInsights // Only run query if no insights provided
   });
 
-  if (isLoading) {
+  // Use stored insights if available, otherwise use API data
+  const insights = aiInsights || insightsData?.insights;
+  const isApiLoading = shouldFetchInsights && isLoading;
+  const hasError = shouldFetchInsights && (error || !insightsData?.success);
+
+  if (isApiLoading) {
     return (
       <div className={`flex items-center justify-center py-2 ${className || ''}`}>
         <div className="flex items-center gap-2 text-slate-600">
@@ -60,18 +79,35 @@ export function EffectivenessAIInsights({
     );
   }
 
-  if (error || !insightsData?.success) {
+  if (hasError) {
     return (
       <div className={`flex items-center justify-center py-2 ${className || ''}`}>
         <div className="flex items-center gap-2 text-red-600">
           <AlertCircle className="h-4 w-4" />
           <span className="text-xs">Unable to load insights</span>
+          <button 
+            onClick={() => refetch()} 
+            className="ml-2 p-1 hover:bg-red-50 rounded"
+            title="Retry"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </button>
         </div>
       </div>
     );
   }
 
-  const { insights } = insightsData;
+  // No insights available
+  if (!insights) {
+    return (
+      <div className={`flex items-center justify-center py-2 ${className || ''}`}>
+        <div className="flex items-center gap-2 text-slate-500">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-xs">No insights available</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-3 ${className || ''}`}>

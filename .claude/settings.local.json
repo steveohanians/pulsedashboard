@@ -91,7 +91,12 @@
       "Bash(server/routes/effectivenessRoutes.ts )",
       "Bash(server/services/effectiveness/types.ts )",
       "Bash(server/services/effectiveness/scorer.ts )",
-      "Bash(server/storage.ts --transform='s|.*/||')"
+      "Bash(server/storage.ts --transform='s|.*/||')",
+      "Bash(NODE_ENV=development npx tsx -e \"console.log(''Testing imports...''); import(''./server/storage.ts'').then(() => console.log(''✅ Storage imports OK'')).catch(e => console.error(''❌ Storage import failed:'', e.message))\")",
+      "Bash(NODE_ENV=development npx tsx -e \"\nimport { db } from ''./server/db.js'';\nconsole.log(''Testing database connection...'');\ntry {\n  await db.$client.query(''SELECT 1 as test'');\n  console.log(''✅ Database connection OK'');\n} catch (e) {\n  console.error(''❌ Database connection failed:'', e.message);\n}\n\")",
+      "Bash(NODE_ENV=development timeout 10s npx tsx server/index.ts)",
+      "Bash(timeout:*)",
+      "Bash(export NODE_ENV=development)"
     ],
     "deny": [],
     "ask": [],

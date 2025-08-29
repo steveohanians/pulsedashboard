@@ -337,6 +337,8 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   screenshotMethod: text("screenshot_method"), // Method used: 'playwright', 'api', or null
   screenshotError: text("screenshot_error"), // Error message if screenshot failed
   webVitals: jsonb("web_vitals"), // LCP, CLS, FID metrics
+  aiInsights: jsonb("ai_insights"), // Stored AI-generated insights
+  insightsGeneratedAt: timestamp("insights_generated_at"), // When insights were generated
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   clientIdIdx: index("idx_effectiveness_runs_client_id").on(table.clientId),
