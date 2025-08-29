@@ -211,6 +211,17 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           const { createInsightsService } = await import('../services/effectiveness');
           const insightsService = createInsightsService(storage);
 
+          // Update the run with overallScore first so insights can access it
+          await storage.updateEffectivenessRun(newRun.id, {
+            overallScore: result.overallScore.toString()
+          });
+          
+          logger.info('Updated run with overallScore before insights generation', {
+            clientId,
+            runId: newRun.id,
+            overallScore: result.overallScore
+          });
+
           // Generate insights (don't pass userId/userRole for internal generation)
           const insightsResult = await insightsService.generateInsights(
             clientId, 
@@ -238,9 +249,8 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           // Don't fail the entire run if insights fail
         }
 
-        // Update run with results, screenshot metadata, and insights
+        // Update run with final results, screenshot metadata, and insights
         await storage.updateEffectivenessRun(newRun.id, {
-          overallScore: result.overallScore.toString(),
           status: 'completed',
           progress: 'Analysis completed successfully',
           screenshotUrl: result.screenshotUrl,

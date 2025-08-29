@@ -56,7 +56,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   // Fetch effectiveness data
   const { data, isLoading, error } = useQuery<EffectivenessData>({
-    queryKey: ['effectiveness', clientId],
+    queryKey: ['effectiveness', clientId, 'v2'], // Add version to bust cache
     queryFn: async () => {
       const response = await fetch(`/api/effectiveness/latest/${clientId}`, {
         credentials: 'include'
@@ -80,8 +80,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     refetchInterval: (query) => {
       // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
       const status = query.state.data?.run?.status;
-      return status && ['pending', 'initializing', 'scraping', 'analyzing'].includes(status) ? 5000 : false;
+      return status && ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(status) ? 5000 : false;
     },
+    placeholderData: (previousData) => previousData, // Keep showing previous data while loading
     retry: (failureCount, error) => {
       // Don't retry on client errors (4xx) except for brief network issues
       if (error?.message?.includes('Access denied') || error?.message?.includes('not found')) {
@@ -132,7 +133,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       });
       
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['effectiveness', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['effectiveness', clientId, 'v2'] });
     },
     onError: (error: Error) => {
       let title = "Scoring Failed";
@@ -193,7 +194,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   const run = data?.run;
-  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing'].includes(run.status) : false;
+  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
   return (
