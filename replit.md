@@ -3,6 +3,32 @@
 ## Overview
 Pulse Dashboard™ is a full-stack analytics benchmarking dashboard for Clear Digital's B2B clients. It provides AI-powered web analytics by benchmarking client performance against competitors, industry averages, and Clear Digital's internal portfolio. Integrating with data sources like Google Analytics 4, it delivers comprehensive web analytics and actionable recommendations to enhance clients' digital presence and performance through competitive benchmarking.
 
+## Recent Changes
+
+### AI Insights Integration Optimization (August 2025)
+**Major integration completed to optimize AI insights generation for website effectiveness scoring.**
+
+**Database Changes:**
+- Added 2 new columns to `effectiveness_runs` table: `ai_insights` (JSONB) and `insights_generated_at` (TIMESTAMP)
+- Migration applied: `migrations/add_insights_to_effectiveness_runs.sql`
+
+**Backend Changes:**
+- `server/routes/effectivenessRoutes.ts`: Modified scoring process to generate insights during effectiveness runs (lines 195-255)
+- `shared/schema.ts`: Added new columns to schema definition  
+- `server/index.ts`: Fixed port binding issue (removed reusePort: true)
+
+**Frontend Changes:**
+- `client/src/components/effectiveness-card.tsx`: Updated to use stored insights and improved caching
+- `client/src/components/effectiveness-ai-insights.tsx`: Modified to accept stored insights as props
+
+**Key Integration Points:**
+- Insights now generate automatically during scoring (after overallScore is set)
+- Frontend receives insights immediately with run data (no separate API call needed)
+- Maintains backwards compatibility with existing `/insights` endpoint as fallback
+
+**Rollback Strategy:**
+If issues arise, comment out lines 199-244 in `server/routes/effectivenessRoutes.ts` to revert to on-demand insights generation. Database columns can remain (safe to ignore).
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 SEO preferences: Noindex meta tag applied to prevent search engine crawling.
@@ -85,6 +111,7 @@ Pulse Dashboard™ utilizes a modern full-stack architecture prioritizing perfor
 - **Data Integrity and Company Management**: Implemented metric versioning, company validation and normalization utilities, comprehensive company deletion logic, and robust company creation utilities with SEMrush API integration checks.
 - **Complete TypeScript Error Resolution (August 2025)**: Successfully eliminated all TypeScript compilation errors across the entire codebase. Achieved zero TypeScript errors through frontend architecture overhaul, enhanced chart data processing with safe value parsing utilities (`safeNumericValue`, `validateAndGetColor`), improved JSONB data handling for metrics and device distribution, and comprehensive type safety implementation. Build process now completes without any TypeScript warnings or errors, ensuring robust production deployments and improved developer experience.
 - **Production Optimization Phase Implementation (August 2025)**: Completed 5-phase production readiness enhancement. **Phase 1**: Centralized debug logging system with environment-aware suppression for production performance. **Phase 2**: Enhanced Content Security Policy with strict production rules while maintaining development flexibility for Vite HMR. **Phase 3**: Standardized authentication middleware with consistent error codes (401 UNAUTHENTICATED, 403 FORBIDDEN) and development auto-authentication. **Phase 4**: Complete GA4 API endpoints integration with token management, refresh handling, and property access verification. **Phase 5**: Resource preloading optimization with Link headers for critical API endpoints (`/api/user`, `/api/filters`) to improve initial load performance.
+- **AI Insights Integration Optimization (August 2025)**: Implemented automated AI insights generation during effectiveness scoring. Added database storage for insights (`ai_insights` JSONB column in `effectiveness_runs`), modified scoring pipeline to generate insights automatically after score calculation, and updated frontend components to consume stored insights directly. Maintains backward compatibility with existing insights endpoint while eliminating separate API calls for improved performance.
 
 ## External Dependencies
 **Core Infrastructure:**
