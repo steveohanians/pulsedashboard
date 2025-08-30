@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(NODE_ENV=development npx tsx test_positioning_vision.ts)"
+      "Bash(NODE_ENV=development npx tsx test_positioning_vision.ts)",
+      "Bash(NODE_ENV=development npx tsx test_5criteria_positioning.ts)",
+      "Bash(node:*)",
+      "Bash(NODE_ENV=development npx tsx test_brandstory_5criteria.ts)",
+      "Bash(npx tsx:*)",
+      "Bash(NODE_ENV=development npx tsx test_cta_new_schema.ts)"
     ],
     "deny": [],
     "ask": [],

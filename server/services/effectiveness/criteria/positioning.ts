@@ -372,13 +372,12 @@ export async function scorePositioning(
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     const evidenceDetails: Record<string, any> = {};
     
-    // Remove the arbitrary 22-word limit and fix evidence extraction
+    // Store extracted hero content for evidence
     const wordCount = heroContent.split(/\s+/).length;
-    const brevityPass = wordCount <= 30; // More realistic than 22
     
-    // Equal weight for each element
+    // Equal weight for each criterion (5 criteria × 2 points = 10 points max)
     if (analysis.audience_named) {
-      score += 2.5;
+      score += 2;
       passes.passed.push('audience_identified');
       if (analysis.audience_evidence) {
         evidenceDetails.audience_evidence = analysis.audience_evidence;
@@ -388,7 +387,7 @@ export async function scorePositioning(
     }
     
     if (analysis.outcome_present) {
-      score += 2.5;
+      score += 2;
       passes.passed.push('value_stated');
       if (analysis.outcome_evidence) {
         evidenceDetails.outcome_evidence = analysis.outcome_evidence;
@@ -398,7 +397,7 @@ export async function scorePositioning(
     }
     
     if (analysis.capability_clear) {
-      score += 2.5;
+      score += 2;
       passes.passed.push('capability_clear');
       if (analysis.capability_evidence) {
         evidenceDetails.capability_evidence = analysis.capability_evidence;
@@ -407,12 +406,33 @@ export async function scorePositioning(
       passes.failed.push('no_capability_clear');
     }
     
-    if (brevityPass) {
-      score += 2.5;
+    if (analysis.brevity_check) {
+      score += 2;
       passes.passed.push('concise_messaging');
+      if (analysis.brevity_evidence) {
+        evidenceDetails.brevity_evidence = analysis.brevity_evidence;
+      }
     } else {
-      // Don't fail for word count, just don't add points
-      // This is subjective and shouldn't penalize
+      passes.failed.push('headline_too_long');
+    }
+
+    // New 5th criterion: visual positioning support
+    if (analysis.visual_supports_positioning) {
+      score += 2;
+      passes.passed.push('visual_supports_positioning');
+      if (analysis.visual_supports_evidence) {
+        evidenceDetails.visual_supports_evidence = analysis.visual_supports_evidence;
+      }
+    } else {
+      passes.failed.push('visual_positioning_weak');
+    }
+
+    // Store visual analysis data
+    if (analysis.visual_hierarchy_score !== undefined) {
+      evidenceDetails.visual_hierarchy_score = analysis.visual_hierarchy_score;
+    }
+    if (analysis.visual_effectiveness) {
+      evidenceDetails.visual_effectiveness = analysis.visual_effectiveness;
     }
 
     // Reduce score for buzzwords
@@ -435,7 +455,7 @@ export async function scorePositioning(
       criterion: 'positioning',
       score: Math.round(score * 10) / 10, // Round to 1 decimal
       evidence: {
-        description: `Positioning analysis of hero content: ${passes.passed.length}/4 criteria passed`,
+        description: `Positioning analysis of hero content: ${passes.passed.length}/5 criteria passed`,
         details: {
           heroContent,
           analysis,

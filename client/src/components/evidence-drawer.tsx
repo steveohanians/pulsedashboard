@@ -47,18 +47,32 @@ const getFailedCheckMessage = (check: string): string => {
     no_clear_approach: 'Methodology or approach not explained',
     no_outcomes_stated: 'Results or achievements not mentioned',
     no_proof_elements: 'Credibility indicators or proof points missing',
+    visual_story_weak: 'Visual elements do not support the brand story narrative',
     
-    // CTAs checks
+    // CTAs checks (new advanced system - 5 separate checks)
+    no_primary_cta: 'No primary call-to-action found on the page',
+    no_above_fold_cta: 'No primary CTA visible above the fold',
+    no_page_end_cta: 'No primary CTA at page end or footer',
+    no_block_closure: 'Content blocks do not end with primary CTAs',
+    no_cta_reinforcement: 'Insufficient CTA reinforcement across the page',
+    cta_conflict: 'Conflicting primary CTAs compete for user attention',
+    only_secondary_ctas: 'Only secondary CTAs found, no primary conversion actions',
+    visual_cta_unassessed: 'Visual CTA elements could not be properly assessed',
+    // Legacy CTA checks (for backward compatibility)
     few_above_fold_ctas: 'Insufficient call-to-action buttons above the fold',
-    no_primary_cta: 'Primary call-to-action not clearly identified',
     no_secondary_paths: 'Alternative engagement options not available',
     message_mismatch: 'CTA messaging inconsistent across the page',
+    no_clear_hierarchy: 'CTA hierarchy not clearly established',
+    visual_ctas_weak: 'Visual CTA design not effective for conversion',
+    no_page_end_cta: 'No call-to-action at page end or footer',
+    no_block_closure: 'Content blocks do not end with clear calls-to-action',
     
     // Positioning checks
-    brevity_check: 'Value proposition too lengthy or unclear',
-    no_audience_named: 'Target audience not clearly identified',
-    no_outcome_present: 'Expected outcome or benefit not stated',
+    no_target_audience: 'Target audience not clearly identified',
+    no_specific_value: 'Expected outcome or benefit not stated',
     no_capability_clear: 'Core capabilities or services not clearly defined',
+    headline_too_long: 'Headline exceeds recommended word count',
+    visual_positioning_weak: 'Visual elements do not support positioning message',
     
     // SEO checks  
     no_sitemap: 'XML sitemap not found or accessible',
@@ -97,6 +111,68 @@ const getFailedCheckMessage = (check: string): string => {
   
   return messages[check] || 'Requirement not met on this page';
 };
+
+// Smart dynamic evidence mapping function
+function findEvidenceForCheck(checkName: string, evidenceDetails: any): string | null {
+  // Look in analysis object for evidence patterns first (most common location)
+  const analysis = evidenceDetails.analysis || {};
+  
+  // 1. Pattern-based matching for evidence fields (specific mappings first)
+  const evidencePatterns = [
+    // Brand story specific mappings (FIRST - highest priority)
+    checkName.replace(/^pov_present$/, 'pov_evidence'),
+    checkName.replace(/^mechanism_described$/, 'mechanism_evidence'),
+    checkName.replace(/^outcomes_stated$/, 'outcomes_evidence'),
+    checkName.replace(/^proof_elements$/, 'proof_evidence'),
+    checkName.replace(/^visual_supports_story$/, 'visual_supports_evidence'),
+    checkName.replace(/^visual_story_weak$/, 'visual_supports_evidence'),
+    checkName.replace(/^visual_story_weak$/, 'visual_effectiveness'),
+    
+    // CTA specific mappings (advanced system - 5 separate checks)
+    checkName.replace(/^cta_present$/, 'cta_evidence'),
+    checkName.replace(/^cta_above_fold$/, 'cta_evidence'),
+    checkName.replace(/^cta_page_end$/, 'cta_evidence'),
+    checkName.replace(/^cta_block_closure$/, 'cta_evidence'),
+    checkName.replace(/^cta_reinforcement$/, 'cta_evidence'),
+    checkName.replace(/^cta_conflict$/, 'cta_evidence'),
+    // Legacy CTA mappings
+    checkName.replace(/^above_fold_present$/, 'above_fold_evidence'),
+    checkName.replace(/^clear_hierarchy$/, 'hierarchy_evidence'),
+    checkName.replace(/^message_match$/, 'message_evidence'),
+    checkName.replace(/^secondary_paths$/, 'secondary_evidence'),
+    checkName.replace(/^visual_supports_ctas$/, 'visual_supports_evidence'),
+    checkName.replace(/^visual_ctas_weak$/, 'visual_supports_evidence'),
+    checkName.replace(/^visual_ctas_weak$/, 'visual_effectiveness'),
+    
+    // Positioning specific mappings
+    checkName.replace(/^value_stated$/, 'outcome_evidence'),
+    checkName.replace(/^concise_messaging$/, 'brevity_evidence'),
+    checkName.replace(/_positioning$/, '_evidence'),
+    
+    // Generic mappings (lower priority)
+    checkName.replace(/_identified$/, '_evidence'),
+    checkName.replace(/_clear$/, '_evidence').replace(/_present$/, '_evidence').replace(/_named$/, '_evidence').replace(/_check$/, '_evidence').replace(/_described$/, '_evidence').replace(/_stated$/, '_evidence').replace(/_elements$/, '_evidence'),
+    
+    // Direct evidence field match (last resort)
+    checkName + '_evidence'
+  ];
+  
+  // Try evidence patterns in analysis object
+  for (const pattern of evidencePatterns) {
+    if (analysis[pattern] && typeof analysis[pattern] === 'string') {
+      return analysis[pattern];
+    }
+  }
+  
+  // 2. Try evidence patterns at root level  
+  for (const pattern of evidencePatterns) {
+    if (evidenceDetails[pattern] && typeof evidenceDetails[pattern] === 'string') {
+      return evidenceDetails[pattern];
+    }
+  }
+  
+  return null;
+}
 
 interface CriterionScore {
   id: string;
@@ -320,9 +396,12 @@ export function EvidenceDrawer({
                     // Brand story specific mappings
                     if (score.criterion === 'brand_story') {
                       const evidenceMapping: Record<string, string> = {
-                        'pov_present': 'pov',
-                        'mechanism_described': 'mechanism', 
-                        'mechanism_named': 'mechanism',
+                        'pov_present': 'pov_evidence',
+                        'mechanism_described': 'mechanism_evidence', 
+                        'mechanism_named': 'mechanism_evidence',
+                        'outcomes_stated': 'outcomes_evidence',
+                        'proof_elements': 'proof_evidence',
+                        'visual_supports_story': 'visual_supports_evidence',
                         'quantified_outcomes': 'outcomes_quantified',
                         'outcomes_mentioned': 'outcomes',
                         'strong_proof_elements': 'proof',
@@ -332,15 +411,79 @@ export function EvidenceDrawer({
                       };
                       evidenceKey = evidenceMapping[check] || check;
                       evidence = score.evidence.details[evidenceKey];
+                    } else if (score.criterion === 'ctas') {
+                      // CTA specific mappings (advanced system - 5 separate checks)
+                      const evidenceMapping: Record<string, string> = {
+                        'cta_present': 'cta_evidence',
+                        'cta_above_fold': 'cta_evidence',
+                        'cta_page_end': 'cta_evidence',
+                        'cta_block_closure': 'cta_evidence',
+                        'cta_reinforcement': 'cta_evidence',
+                        'cta_conflict': 'cta_evidence',
+                        // Legacy CTA mappings for backward compatibility
+                        'above_fold_present': 'above_fold_evidence',
+                        'clear_hierarchy': 'hierarchy_evidence',
+                        'message_match': 'message_evidence', 
+                        'secondary_paths': 'secondary_evidence',
+                        'visual_supports_ctas': 'visual_supports_evidence',
+                        'multiple_above_fold_ctas': 'above_fold_evidence',
+                        'above_fold_cta_present': 'above_fold_evidence',
+                        'clear_cta_hierarchy': 'hierarchy_evidence',
+                        'primary_cta_present': 'hierarchy_evidence',
+                        'secondary_paths_available': 'secondary_evidence',
+                        'message_match_verified': 'message_evidence',
+                        'ctas_present': 'message_evidence'
+                      };
+                      evidenceKey = evidenceMapping[check] || check;
+                      evidence = score.evidence.details[evidenceKey];
+                      
+                      // Enhanced CTA evidence handling
+                      if (check === 'cta_present' && score.evidence.details.cta_primary_examples) {
+                        const primaryCTAs = score.evidence.details.cta_primary_examples;
+                        const secondaryCTAs = score.evidence.details.cta_secondary_examples || [];
+                        const groups = score.evidence.details.primary_cta_groups_used || [];
+                        
+                        let ctaDetails = `Primary CTAs: ${primaryCTAs.join(', ')}`;
+                        if (secondaryCTAs.length > 0) {
+                          ctaDetails += ` | Secondary: ${secondaryCTAs.join(', ')}`;
+                        }
+                        if (groups.length > 0) {
+                          ctaDetails += ` | Groups: [${groups.join(', ')}]`;
+                        }
+                        evidence = ctaDetails;
+                      } else if (check === 'cta_above_fold') {
+                        // Show primary CTAs found above fold
+                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        evidence = primaryCTAs.length > 0 
+                          ? `Above-fold primary CTAs: ${primaryCTAs.join(', ')}`
+                          : 'Primary CTA found above the fold';
+                      } else if (check === 'cta_page_end') {
+                        // Show page-end specific evidence
+                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        evidence = `Page-end CTAs: ${primaryCTAs.join(', ')}`;
+                      } else if (check === 'cta_block_closure') {
+                        // Show block closure specific evidence
+                        const blockExamples = score.evidence.details.cta_block_examples || [];
+                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        
+                        if (blockExamples.length > 0) {
+                          evidence = `Block closure in: ${blockExamples.join(', ')} with CTAs: ${primaryCTAs.join(', ')}`;
+                        } else {
+                          evidence = `Block closure with CTAs: ${primaryCTAs.join(', ')}`;
+                        }
+                      } else if (check === 'cta_reinforcement') {
+                        // Show reinforcement evidence
+                        const strengthScore = score.evidence.details.cta_strength_score || 0;
+                        evidence = `Reinforcement detected (strength: ${strengthScore})`;
+                      }
                       
                       // Special handling for bonus points
                       if (check === 'industry_focus' || check === 'capability_breadth') {
                         evidence = `Bonus points awarded: +${score.evidence.details.bonusPoints || 0}`;
                       }
                     } else {
-                      // Legacy evidence key transformation for other criteria
-                      evidenceKey = `${check.replace('_named', '_evidence').replace('_present', '_evidence').replace('_clear', '_evidence').replace('_check', '_evidence')}`;
-                      evidence = score.evidence.details[evidenceKey];
+                      // Smart dynamic evidence mapping for all other criteria
+                      evidence = findEvidenceForCheck(check, score.evidence.details);
                     }
                     
                     return (
@@ -381,6 +524,7 @@ export function EvidenceDrawer({
                 </div>
               </div>
             )}
+
             
             <div className="text-xs text-muted-foreground bg-gray-50 p-2 rounded">
               <strong>Analysis:</strong>{" "}
@@ -389,6 +533,11 @@ export function EvidenceDrawer({
                   __html: formatMarkdown(score.evidence.reasoning)
                 }}
               />
+              {score.criterion === 'ctas' && score.evidence.details.cta_strength_score !== undefined && (
+                <span className="ml-2 font-medium">
+                  | Strength Score: {score.evidence.details.cta_strength_score}
+                </span>
+              )}
             </div>
           </div>
         </CardContent>

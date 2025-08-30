@@ -56,16 +56,18 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   // Fun rotating messages for analysis progress
   const funMessages = [
-    "Exploring your website like a digital detective",
-    "Scanning every pixel and word for insights",
-    "Reading between the lines (and behind the code)",
-    "Capturing stunning screenshots (both views)",
-    "Taking photos like a professional web photographer",
-    "Getting the perfect shot of your digital masterpiece",
-    "Teaching our AI to judge your website's awesomeness",
-    "Running 127 website effectiveness calculations",
-    "Measuring how much your visitors will love this",
-    "Checking if your website sparks joy (Marie Kondo style)"
+    "Exploring your site like a friendly sleuth",
+    "Scanning pixels and copy for clues",
+    "Reading between the lines and <div>s",
+    "Peeking under the hood—gently",
+    "Snapping pixel-perfect screenshots",
+    "Framing each page like a pro photo shoot",
+    "Training our model on your brand signals",
+    "Running 127 effectiveness checks (for real)",
+    "Scoring for 8 effectiveness criteria signals",
+    "Predicting how first-time visitors will feel",
+    "Asking the big one: does this drive action?",
+    "Packaging clear, do-this-next recommendations"
   ];
 
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
