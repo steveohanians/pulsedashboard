@@ -2553,23 +2553,6 @@ export class DatabaseStorage implements IStorage {
     // Later we could add a table to store insights if needed
     return insights;
   }
-
-  async clearEffectivenessRuns(clientId: string): Promise<void> {
-    // Clear effectiveness runs for this client to reset stuck states
-    try {
-      await db.delete(effectivenessRuns)
-        .where(eq(effectivenessRuns.clientId, clientId));
-      
-      // Also clear any related criterion scores
-      await db.delete(criterionScores)
-        .where(eq(criterionScores.clientId, clientId));
-      
-      logger.info('Cleared effectiveness data', { clientId });
-    } catch (error) {
-      logger.error('Failed to clear effectiveness data', { clientId, error });
-      throw error;
-    }
-  }
 }
 
 export const storage = new DatabaseStorage();

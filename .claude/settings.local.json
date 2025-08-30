@@ -7,15 +7,7 @@
       "Bash(node:*)",
       "Bash(NODE_ENV=development npx tsx test_brandstory_5criteria.ts)",
       "Bash(npx tsx:*)",
-      "Bash(NODE_ENV=development npx tsx test_cta_new_schema.ts)",
-      "Bash(npm run build:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run dev:*)",
-      "Bash(pkill:*)",
-      "Bash(NODE_OPTIONS=\"--loader tsx/esm\" node test-loadkit.js)",
-      "Bash(lsof:*)",
-      "Bash(curl:*)",
-      "Bash(PORT=3001 npm run dev)"
+      "Bash(NODE_ENV=development npx tsx test_cta_new_schema.ts)"
     ],
     "deny": [],
     "ask": [],
