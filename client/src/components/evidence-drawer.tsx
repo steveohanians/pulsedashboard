@@ -64,8 +64,6 @@ const getFailedCheckMessage = (check: string): string => {
     message_mismatch: 'CTA messaging inconsistent across the page',
     no_clear_hierarchy: 'CTA hierarchy not clearly established',
     visual_ctas_weak: 'Visual CTA design not effective for conversion',
-    no_page_end_cta: 'No call-to-action at page end or footer',
-    no_block_closure: 'Content blocks do not end with clear calls-to-action',
     
     // Positioning checks
     no_target_audience: 'Target audience not clearly identified',

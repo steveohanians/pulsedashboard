@@ -4,7 +4,7 @@
  * CRITICAL: Must respect existing timing and behavior
  */
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { CopyConfig } from './types'
 
 /**
@@ -199,10 +199,10 @@ export function withSafeFallback<T extends object>(
 ) {
   return function SafeComponent(props: T) {
     try {
-      return <Component {...props} />
+      return React.createElement(Component, props)
     } catch (error) {
       console.error('LoadKit component error:', error)
-      return <FallbackComponent {...props} />
+      return React.createElement(FallbackComponent, props)
     }
   }
 }
