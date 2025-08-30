@@ -47,7 +47,7 @@ export default function BrandSignals() {
   const [activeAnalysisType, setActiveAnalysisType] = useState<'main' | 'test' | null>(null);
 
   // LoadKit integration - behavioral cloning
-  const { shouldUse: useLoadKit } = useLoadKit('brand-signals');
+  const { shouldUse: useLoadKitBrandSignals } = useLoadKit('brand-signals');
 
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -959,7 +959,7 @@ export default function BrandSignals() {
   );
 
   // LoadKit integration - use if enabled, fallback to existing
-  if (useLoadKit) {
+  if (useLoadKitBrandSignals) {
     return (
       <LoadKit.BrandSignals state={brandSignalsLoadingState}>
         {mainContent}

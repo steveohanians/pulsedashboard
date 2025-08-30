@@ -12,7 +12,7 @@ export type LoadingSurface = 'dashboard' | 'brand-signals' | 'effectiveness' | '
  * Core loading state that mirrors existing patterns
  */
 export interface BaseLoadingState {
-  isLoading: boolean
+  isLoading?: boolean
   variant?: LoadingVariant
   size?: LoadingSize
   className?: string

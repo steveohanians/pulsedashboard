@@ -575,4 +575,37 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/effectiveness/reset/:clientId
+ * Reset effectiveness data for a client (clear stuck runs)
+ */
+router.delete('/reset/:clientId', requireAuth, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    
+    logger.info('Resetting effectiveness data', { clientId });
+    
+    // Clear effectiveness runs for this client
+    await storage.clearEffectivenessRuns(clientId);
+    
+    res.json({
+      success: true,
+      message: 'Effectiveness data reset successfully',
+      clientId
+    });
+    
+  } catch (error) {
+    logger.error('Error resetting effectiveness data', { 
+      error: error instanceof Error ? error.message : String(error),
+      clientId: req.params.clientId
+    });
+    
+    res.status(500).json({
+      success: false,
+      code: 'RESET_FAILED',
+      message: 'Failed to reset effectiveness data'
+    });
+  }
+});
+
 export default router;

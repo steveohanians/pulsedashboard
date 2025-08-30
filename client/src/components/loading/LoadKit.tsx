@@ -102,8 +102,6 @@ function LoadKitDashboard({ state, children, className }: LoadKitDashboardProps)
   const enabled = useFeatureFlag('LOADKIT_DASHBOARD')
   
   if (!enabled) {
-    // Fallback to existing behavior - this should never be reached in practice
-    // The parent component should check the flag before rendering LoadKit
     return <>{children}</>
   }
   
@@ -114,7 +112,7 @@ function LoadKitDashboard({ state, children, className }: LoadKitDashboardProps)
     return <>{children}</>
   }
   
-  // Recreate exact skeleton from dashboard.tsx:300-314
+  // Simple skeleton without recursive LoadKit components
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header Skeleton - exact copy from dashboard.tsx */}
@@ -134,16 +132,12 @@ function LoadKitDashboard({ state, children, className }: LoadKitDashboardProps)
         </div>
       </div>
       
-      {/* Content skeleton */}
-      <div className="p-4 sm:p-6">
-        <LoadKitCore
-          isLoading={showLoading}
-          surface="dashboard"
-          size="lg"
-          className={className}
-        >
-          {children}
-        </LoadKitCore>
+      {/* Simple loading indicator */}
+      <div className="p-4 sm:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading dashboard...</p>
+        </div>
       </div>
     </div>
   )

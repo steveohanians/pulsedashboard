@@ -20,6 +20,8 @@ export interface LoadingSpinnerProps extends BaseLoadingState {
   centered?: boolean
   /** Padding around component */
   padding?: string
+  /** Inline styles */
+  style?: React.CSSProperties
 }
 
 /**
@@ -39,6 +41,7 @@ export function LoadingSpinner({
   centered = true,
   padding = 'p-8',
   className,
+  style,
   'aria-label': ariaLabel,
   ...props
 }: LoadingSpinnerProps) {
@@ -83,6 +86,7 @@ export function LoadingSpinner({
   return (
     <div 
       className={containerClasses}
+      style={style}
       role="status"
       aria-live="polite"
       aria-busy="true"

@@ -3,6 +3,7 @@ import { useDashboardData, useDashboardFilters, useSmartFilterCombinations } fro
 import { useAuth } from "@/hooks/use-auth";
 import { useLoadKit } from "@/hooks/useLoadKit";
 import LoadKit from "@/components/loading";
+import { LoadKitDebugIndicator } from "@/components/loading/LoadKitDebug";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EffectivenessCard } from "@/components/effectiveness-card";
@@ -87,7 +88,7 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // LoadKit integration - behavioral cloning
-  const { shouldUse: useLoadKit } = useLoadKit('dashboard');
+  const { shouldUse: useLoadKitDashboard } = useLoadKit('dashboard');
 
   // Clear metric statuses when switching between clients to prevent cross-client contamination
   const effectiveClientId = viewAsClientId || user?.clientId;
@@ -311,10 +312,12 @@ export default function Dashboard() {
 
   if (isLoading || isRefreshing) {
     // LoadKit integration - use if enabled, fallback to existing
-    if (useLoadKit) {
+    if (useLoadKitDashboard) {
       return (
         <LoadKit.Dashboard state={dashboardLoadingState}>
-          {/* This will be the main dashboard content when not loading */}
+          <div>
+            {/* This will be the main dashboard content when not loading */}
+          </div>
         </LoadKit.Dashboard>
       );
     }
@@ -1148,6 +1151,7 @@ export default function Dashboard() {
       <div className="lg:ml-64">
         <Footer />
       </div>
+      <LoadKitDebugIndicator />
     </div>
   );
 }

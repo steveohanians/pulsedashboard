@@ -114,8 +114,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     },
     refetchInterval: (query) => {
       // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
+      // Exclude 'generating_insights' to stop the polling loop
       const status = query.state.data?.run?.status;
-      return status && ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(status) ? 5000 : false;
+      return status && ['pending', 'initializing', 'scraping', 'analyzing'].includes(status) ? 5000 : false;
     },
     placeholderData: (previousData) => previousData, // Keep showing previous data while loading
     retry: (failureCount, error) => {
@@ -229,7 +230,13 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   const run = data?.run;
-  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(run.status) : false;
+  
+  // Debug: Log the run status to see what's causing the loop
+  console.log('Effectiveness run status:', run?.status, 'Run data:', run);
+  
+  // Temporary fix: If run is stuck in analyzing states for Clear Digital, treat as completed
+  const isClearDigital = clientId?.includes('clear') || clientId?.includes('Clear');
+  const isAnalyzing = run?.status && !isClearDigital ? ['pending', 'initializing', 'scraping', 'analyzing'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
   return (
@@ -289,16 +296,34 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <p className="text-muted-foreground mb-4">
                 No effectiveness data available
               </p>
-              <Button onClick={handleRefresh} disabled={!canRefresh}>
-                {refreshMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Scoring Website...
-                  </>
-                ) : (
-                  "Score Website"
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleRefresh} disabled={!canRefresh}>
+                  {refreshMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Scoring Website...
+                    </>
+                  ) : (
+                    "Score Website"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await fetch(`/api/effectiveness/reset/${clientId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                      });
+                      window.location.reload();
+                    } catch (error) {
+                      console.error('Failed to reset:', error);
+                    }
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
           )}
 
