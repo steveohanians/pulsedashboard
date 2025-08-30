@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useLoadKit } from "@/hooks/useLoadKit";
+import LoadKit from "@/components/loading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +45,9 @@ export default function BrandSignals() {
   const [isTestAnalysis, setIsTestAnalysis] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [activeAnalysisType, setActiveAnalysisType] = useState<'main' | 'test' | null>(null);
+
+  // LoadKit integration - behavioral cloning
+  const { shouldUse: useLoadKit } = useLoadKit('brand-signals');
 
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
@@ -248,7 +253,17 @@ export default function BrandSignals() {
     }
   };
 
-  return (
+  // LoadKit state preparation - mirror existing exactly
+  const brandSignalsLoadingState = {
+    isLoading: false, // Brand signals doesn't have general loading, only isAnalyzing
+    isAnalyzing,
+    progressSteps,
+    activeAnalysisType,
+    currentStep: progressSteps.length - 1,
+    errorMessage
+  };
+
+  const mainContent = (
     <div className="min-h-screen bg-slate-50">
       {/* Header - EXACT SAME AS DASHBOARD */}
       <header className="bg-gradient-to-r from-white via-white to-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-4 sm:px-6 py-3 sm:py-5 sticky top-0 z-20 shadow-sm">
@@ -942,4 +957,16 @@ export default function BrandSignals() {
       </div>
     </div>
   );
+
+  // LoadKit integration - use if enabled, fallback to existing
+  if (useLoadKit) {
+    return (
+      <LoadKit.BrandSignals state={brandSignalsLoadingState}>
+        {mainContent}
+      </LoadKit.BrandSignals>
+    );
+  }
+
+  // Return existing content unchanged for safety
+  return mainContent;
 }

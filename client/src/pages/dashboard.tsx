@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useDashboardData, useDashboardFilters, useSmartFilterCombinations } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/use-auth";
+import { useLoadKit } from "@/hooks/useLoadKit";
+import LoadKit from "@/components/loading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EffectivenessCard } from "@/components/effectiveness-card";
@@ -83,6 +85,9 @@ export default function Dashboard() {
     Record<string, "success" | "needs_improvement" | "warning" | undefined>
   >({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // LoadKit integration - behavioral cloning
+  const { shouldUse: useLoadKit } = useLoadKit('dashboard');
 
   // Clear metric statuses when switching between clients to prevent cross-client contamination
   const effectiveClientId = viewAsClientId || user?.clientId;
@@ -295,7 +300,26 @@ export default function Dashboard() {
     return acc;
   }, {});
 
+  // LoadKit state preparation - mirror existing exactly
+  const dashboardLoadingState = {
+    isLoading,
+    isRefreshing,
+    filtersLoading,
+    combinationsLoading,
+    insightsLoading
+  };
+
   if (isLoading || isRefreshing) {
+    // LoadKit integration - use if enabled, fallback to existing
+    if (useLoadKit) {
+      return (
+        <LoadKit.Dashboard state={dashboardLoadingState}>
+          {/* This will be the main dashboard content when not loading */}
+        </LoadKit.Dashboard>
+      );
+    }
+
+    // Existing skeleton implementation - unchanged for safety
     return (
       <div className="min-h-screen bg-slate-50">
         {/* Header Skeleton */}
