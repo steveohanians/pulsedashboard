@@ -17,11 +17,15 @@ interface ScreenshotOptions {
   };
   outputDir?: string;
   filename?: string;
+  captureFullPage?: boolean;
 }
 
-interface ScreenshotResult {
+export interface ScreenshotResult {
   screenshotPath: string;
   screenshotUrl: string;
+  fullPageScreenshotPath?: string;
+  fullPageScreenshotUrl?: string;
+  fullPageError?: string;
   webVitals?: {
     lcp: number;
     cls: number;
@@ -207,6 +211,113 @@ export class ScreenshotService {
   }
 
   /**
+   * Capture full-page screenshot using Screenshotone.com API with optimized parameters
+   */
+  private async captureFullPageWithAPI(url: string, outputDir: string, baseFilename?: string): Promise<{
+    fullPageScreenshotPath: string;
+    fullPageScreenshotUrl: string;
+    fullPageError?: string;
+  }> {
+    try {
+      const apiKey = process.env.SCREENSHOTONE_API_KEY;
+      
+      if (!apiKey) {
+        return {
+          fullPageScreenshotPath: '',
+          fullPageScreenshotUrl: '',
+          fullPageError: 'Screenshot API not configured - set SCREENSHOTONE_API_KEY environment variable'
+        };
+      }
+
+      logger.info('Capturing full-page screenshot with Screenshotone API', { url });
+      
+      // Use optimized full-page parameters from working test
+      const apiUrl = new URL('https://api.screenshotone.com/take');
+      apiUrl.searchParams.append('access_key', apiKey);
+      apiUrl.searchParams.append('url', url);
+      
+      // Full-page specific parameters (from test_screenshot_openai.ts)
+      apiUrl.searchParams.append('full_page', 'true');
+      apiUrl.searchParams.append('full_page_scroll', 'true');
+      apiUrl.searchParams.append('full_page_algorithm', 'by_sections');
+      apiUrl.searchParams.append('full_page_scroll_delay', '1000');
+      apiUrl.searchParams.append('full_page_scroll_by', '300');
+      apiUrl.searchParams.append('wait_until', 'networkidle0');
+      apiUrl.searchParams.append('delay', '5');
+      apiUrl.searchParams.append('timeout', '60');
+      
+      // Standard parameters
+      apiUrl.searchParams.append('viewport_width', '1440');
+      apiUrl.searchParams.append('viewport_height', '900');
+      apiUrl.searchParams.append('format', 'png');
+      apiUrl.searchParams.append('image_quality', '90');
+      apiUrl.searchParams.append('cache', 'true');
+      apiUrl.searchParams.append('cache_ttl', '86400');
+      apiUrl.searchParams.append('block_ads', 'true');
+      apiUrl.searchParams.append('block_cookie_banners', 'true');
+      
+      // Fetch full-page screenshot (may take 20-30 seconds)
+      const response = await fetch(apiUrl.toString(), {
+        method: 'GET',
+        headers: { 'Accept': 'image/png' },
+        signal: AbortSignal.timeout(70000) // 70 second timeout for full-page
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Full-page API returned ${response.status}: ${errorText}`);
+      }
+
+      // Generate filename for full-page screenshot
+      const timestamp = new Date().getTime();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const fullPageFilename = baseFilename 
+        ? `fullpage_${baseFilename}` 
+        : `fullpage_${timestamp}_${randomId}.png`;
+      
+      const fullPageScreenshotPath = path.join(outputDir, fullPageFilename);
+      const fullPageScreenshotUrl = `/screenshots/${fullPageFilename}`;
+
+      // Ensure output directory exists
+      await fs.mkdir(outputDir, { recursive: true });
+      
+      // Get image buffer and save
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await fs.writeFile(fullPageScreenshotPath, buffer);
+      
+      // Verify file was created
+      const fileStats = await fs.stat(fullPageScreenshotPath).catch(() => null);
+      
+      if (!fileStats) {
+        throw new Error('Full-page screenshot file was not created');
+      }
+
+      logger.info('Full-page screenshot captured successfully', {
+        url,
+        fullPageScreenshotPath,
+        fileSize: Math.round(fileStats.size / 1024 / 1024 * 100) / 100 + ' MB'
+      });
+
+      return {
+        fullPageScreenshotPath,
+        fullPageScreenshotUrl
+      };
+
+    } catch (error) {
+      logger.error('Full-page screenshot capture failed', {
+        url,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      return {
+        fullPageScreenshotPath: '',
+        fullPageScreenshotUrl: '',
+        fullPageError: `Full-page screenshot failed: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  /**
    * Capture website screenshot and measure web vitals
    */
   public async captureWebsiteScreenshot(options: ScreenshotOptions): Promise<ScreenshotResult> {
@@ -214,7 +325,8 @@ export class ScreenshotService {
       url,
       viewport = { width: 1440, height: 900 },
       outputDir = 'uploads/screenshots',
-      filename
+      filename,
+      captureFullPage = false
     } = options;
 
     // Try API first (more reliable in cloud environments)
@@ -222,6 +334,19 @@ export class ScreenshotService {
     if (apiKey) {
       const apiResult = await this.captureWithAPI(url, outputDir, filename);
       if (!apiResult.error) {
+        // If above-fold screenshot succeeded and full-page is requested, capture that too
+        if (captureFullPage) {
+          logger.info('Above-fold screenshot successful, now capturing full-page', { url });
+          const fullPageResult = await this.captureFullPageWithAPI(url, outputDir, filename);
+          
+          // Merge results - full-page failure doesn't break above-fold success
+          return {
+            ...apiResult,
+            fullPageScreenshotPath: fullPageResult.fullPageScreenshotPath,
+            fullPageScreenshotUrl: fullPageResult.fullPageScreenshotUrl,
+            fullPageError: fullPageResult.fullPageError
+          };
+        }
         return apiResult;
       }
       logger.warn('API screenshot failed, trying Playwright fallback', { url });

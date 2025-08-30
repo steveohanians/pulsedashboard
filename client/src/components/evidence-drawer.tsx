@@ -437,7 +437,8 @@ export function EvidenceDrawer({
 
               <div className="mt-6">
                 <TabsContent value="screenshot">
-                  <div className="space-y-4">
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-4">
                     {evidenceData?.run?.screenshotUrl && evidenceData.run.screenshotUrl !== '' ? (
                       <div className="space-y-4">
                         <div className="rounded-lg border bg-white p-4">
@@ -454,6 +455,33 @@ export function EvidenceDrawer({
                             Captured on {formatDate(evidenceData.run.createdAt)} • Shows website as visitors first see it
                           </p>
                         </div>
+
+                        {/* Full-Page Screenshot Section */}
+                        {evidenceData?.run?.fullPageScreenshotUrl && evidenceData.run.fullPageScreenshotUrl !== '' ? (
+                          <div className="rounded-lg border bg-white p-4">
+                            <div className="text-sm font-medium text-gray-900 mb-3">
+                              Full-Page Website Screenshot
+                            </div>
+                            <div className="relative border rounded-lg overflow-hidden bg-gray-50">
+                              <ScreenshotDisplay 
+                                url={evidenceData.run.fullPageScreenshotUrl}
+                                runData={evidenceData.run}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Captured on {formatDate(evidenceData.run.createdAt)} • Shows complete website layout and content flow
+                            </p>
+                          </div>
+                        ) : evidenceData?.run?.fullPageScreenshotError && (
+                          <div className="rounded-lg border bg-yellow-50 p-4">
+                            <div className="text-sm font-medium text-yellow-800 mb-2">
+                              Full-Page Screenshot Unavailable
+                            </div>
+                            <p className="text-xs text-yellow-700">
+                              {evidenceData.run.fullPageScreenshotError}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
@@ -490,7 +518,8 @@ export function EvidenceDrawer({
                         )}
                       </div>
                     )}
-                  </div>
+                    </div>
+                  </ScrollArea>
                 </TabsContent>
 
                 <TabsContent value="vitals">

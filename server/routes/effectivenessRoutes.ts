@@ -254,9 +254,11 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           status: 'completed',
           progress: 'Analysis completed successfully',
           screenshotUrl: result.screenshotUrl,
+          fullPageScreenshotUrl: result.fullPageScreenshotUrl,
           webVitals: result.webVitals,
           screenshotMethod: result.screenshotMethod || null,
           screenshotError: result.screenshotError || null,
+          fullPageScreenshotError: result.fullPageScreenshotError || null,
           aiInsights,
           insightsGeneratedAt
         });
@@ -350,7 +352,9 @@ router.get('/evidence/:clientId/:runId', requireAuth, async (req, res) => {
     const screenshotInfo = {
       hasScreenshot: !!run.screenshotUrl && run.screenshotUrl !== '',
       screenshotMethod: run.screenshotMethod || null,
-      screenshotError: run.screenshotError || null
+      screenshotError: run.screenshotError || null,
+      hasFullPageScreenshot: !!run.fullPageScreenshotUrl && run.fullPageScreenshotUrl !== '',
+      fullPageScreenshotError: run.fullPageScreenshotError || null
     };
     
     const evidence = {

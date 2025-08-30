@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,39 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showEvidence, setShowEvidence] = useState(false);
+
+  // Fun rotating messages for analysis progress
+  const funMessages = [
+    "Exploring your website like a digital detective",
+    "Scanning every pixel and word for insights",
+    "Reading between the lines (and behind the code)",
+    "Capturing stunning screenshots (both views)",
+    "Taking photos like a professional web photographer",
+    "Getting the perfect shot of your digital masterpiece",
+    "Teaching our AI to judge your website's awesomeness",
+    "Running 127 website effectiveness calculations",
+    "Measuring how much your visitors will love this",
+    "Checking if your website sparks joy (Marie Kondo style)"
+  ];
+
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [messageOpacity, setMessageOpacity] = useState(1);
+
+  // Rotate through fun messages every 4 seconds with fade effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Fade out
+      setMessageOpacity(0);
+      
+      // After fade out completes, change message and fade in
+      setTimeout(() => {
+        setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % funMessages.length);
+        setMessageOpacity(1);
+      }, 250); // Half of the transition duration
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [funMessages.length]);
 
   // Fetch effectiveness data
   const { data, isLoading, error } = useQuery<EffectivenessData>({
@@ -273,15 +306,16 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 <p className="text-muted-foreground font-medium flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {run.status === 'initializing' && 'Preparing analysis...'}
-                  {run.status === 'scraping' && 'Loading website...'}
+                  {run.status === 'scraping' && 'Analyzing website effectiveness...'}
                   {run.status === 'analyzing' && 'Scoring criteria...'}
                   {run.status === 'pending' && 'Starting analysis...'}
                 </p>
-                {run.progress && (
-                  <p className="text-sm text-muted-foreground">
-                    {run.progress}
-                  </p>
-                )}
+                <p 
+                  className="text-sm text-muted-foreground transition-opacity duration-500 ease-in-out"
+                  style={{ opacity: isAnalyzing ? messageOpacity : 1 }}
+                >
+                  {isAnalyzing ? funMessages[currentMessageIndex] : run.progress}
+                </p>
               </div>
             </div>
           )}

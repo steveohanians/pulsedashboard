@@ -22,22 +22,30 @@ export interface ScoringContext {
   websiteUrl: string;
   html: string;
   screenshot?: string;
+  fullPageScreenshot?: string;
   webVitals?: {
     lcp: number;
     cls: number;
     fid: number;
   };
+  screenshotMethod?: string;
+  screenshotError?: string;
+  fullPageScreenshotError?: string;
 }
 
 export interface EffectivenessResult {
   overallScore: number;
   criterionResults: CriterionResult[];
   screenshotUrl?: string;
+  fullPageScreenshotUrl?: string;
   webVitals?: {
     lcp: number;
     cls: number;
     fid: number;
   };
+  screenshotMethod?: string;
+  screenshotError?: string;
+  fullPageScreenshotError?: string;
 }
 
 export interface ScoringConfig {

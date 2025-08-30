@@ -16,6 +16,7 @@ import { scoreCTAs } from "./criteria/ctas";
 import { scoreAccessibility } from "./criteria/accessibility";
 import { scoreSEO } from "./criteria/seo";
 import { screenshotService } from "./screenshot";
+import type { ScreenshotResult } from "./screenshot";
 import logger from "../../utils/logging/logger";
 
 export class WebsiteEffectivenessScorer {
@@ -63,7 +64,7 @@ export class WebsiteEffectivenessScorer {
         });
       } else if (speedResult?.evidence?.details?.apiStatus === 'failed') {
         // API failed - don't use misleading default values
-        webVitalsToSave = null;
+        webVitalsToSave = undefined;
         logger.warn("PageSpeed API failed, Web Vitals unavailable", {
           websiteUrl,
           error: speedResult.evidence.details.error,
@@ -81,10 +82,12 @@ export class WebsiteEffectivenessScorer {
       return {
         overallScore,
         criterionResults,
-        screenshotUrl: context.screenshot,
+        screenshotUrl: context.screenshot || undefined,
+        fullPageScreenshotUrl: context.fullPageScreenshot || undefined,
         webVitals: webVitalsToSave,
-        screenshotMethod: context.screenshotMethod || null,
-        screenshotError: context.screenshotError || null
+        screenshotMethod: context.screenshotMethod || undefined,
+        screenshotError: context.screenshotError || undefined,
+        fullPageScreenshotError: context.fullPageScreenshotError || undefined
       };
 
     } catch (error) {
@@ -109,7 +112,7 @@ export class WebsiteEffectivenessScorer {
       logger.info("Scraping website with Playwright", { websiteUrl });
 
       // Use Playwright for comprehensive scraping and screenshot capture with retries
-      let screenshotResult;
+      let screenshotResult: ScreenshotResult | null = null;
       let retryCount = 0;
       const maxRetries = 2;
 
@@ -119,10 +122,11 @@ export class WebsiteEffectivenessScorer {
             screenshotService.captureWebsiteScreenshot({
               url: websiteUrl,
               viewport: config.viewport || { width: 1440, height: 900 },
-              outputDir: 'uploads/screenshots'
+              outputDir: 'uploads/screenshots',
+              captureFullPage: true // Enable full-page screenshot capture
             }),
             new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Screenshot timeout after 45s')), 45000)
+              setTimeout(() => reject(new Error('Screenshot timeout after 90s')), 90000) // Increased timeout for full-page
             )
           ]);
           break;
@@ -134,7 +138,12 @@ export class WebsiteEffectivenessScorer {
               retryCount,
               error: screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
             });
-            screenshotResult = { error: screenshotError instanceof Error ? screenshotError.message : String(screenshotError) };
+            screenshotResult = { 
+              screenshotPath: '',
+              screenshotUrl: '',
+              error: screenshotError instanceof Error ? screenshotError.message : String(screenshotError),
+              screenshotMethod: 'none'
+            };
           } else {
             logger.info("Retrying screenshot capture", { websiteUrl, retryCount });
             await new Promise(resolve => setTimeout(resolve, 2000)); // 2s delay between retries
@@ -219,10 +228,12 @@ export class WebsiteEffectivenessScorer {
       return {
         websiteUrl,
         html: html || '<html><body></body></html>', // Provide minimal HTML fallback
-        screenshot: screenshotResult?.screenshotUrl || null,
-        webVitals: screenshotResult?.webVitals || null,
-        screenshotMethod: screenshotResult?.screenshotMethod || null,
-        screenshotError: screenshotResult?.error || null
+        screenshot: screenshotResult?.screenshotUrl || undefined,
+        fullPageScreenshot: screenshotResult?.fullPageScreenshotUrl || undefined,
+        webVitals: screenshotResult?.webVitals || undefined,
+        screenshotMethod: screenshotResult?.screenshotMethod || undefined,
+        screenshotError: screenshotResult?.error || undefined,
+        fullPageScreenshotError: screenshotResult?.fullPageError || undefined
       };
 
     } catch (error) {

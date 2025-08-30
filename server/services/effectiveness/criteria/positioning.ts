@@ -9,6 +9,8 @@ import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
 import logger from "../../../utils/logging/logger";
 import { getEffectivenessPrompt } from "../promptManager";
+import { callOpenAIWithVision } from "../visionHelper";
+import path from "path";
 
 export async function scorePositioning(
   context: ScoringContext,
@@ -268,23 +270,81 @@ export async function scorePositioning(
       contentPreview: heroContent.substring(0, 200) + '...'
     });
     
-    const response = await openai.chat.completions.create({
-      model: config.openai.model,
-      temperature: config.openai.temperature,
-      messages: [
-        {
-          role: 'system',
-          content: effectivenessPrompt.systemPrompt
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 200
-    });
+    let analysisText: string;
 
-    const analysisText = response.choices[0]?.message?.content?.trim();
+    // Try vision-enhanced analysis if full-page screenshot is available
+    if (context.fullPageScreenshot && config.openai.model === 'gpt-4o') {
+      try {
+        // Convert screenshot URL to file path
+        const screenshotFilename = context.fullPageScreenshot.split('/').pop();
+        const screenshotPath = path.join('uploads', 'screenshots', screenshotFilename);
+        
+        logger.info('Using vision-enhanced positioning analysis', {
+          url: context.websiteUrl,
+          screenshotPath: screenshotFilename
+        });
+
+        analysisText = await callOpenAIWithVision(
+          heroContent,
+          screenshotPath,
+          effectivenessPrompt.promptTemplate,
+          effectivenessPrompt.systemPrompt,
+          openai,
+          300 // Increased tokens for vision analysis
+        );
+
+      } catch (visionError) {
+        logger.warn('Vision analysis failed, falling back to text-only', {
+          url: context.websiteUrl,
+          error: visionError instanceof Error ? visionError.message : String(visionError)
+        });
+        
+        // Fallback to existing text-only analysis
+        const response = await openai.chat.completions.create({
+          model: config.openai.model,
+          temperature: config.openai.temperature,
+          messages: [
+            {
+              role: 'system',
+              content: effectivenessPrompt.systemPrompt
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 200
+        });
+
+        analysisText = response.choices[0]?.message?.content?.trim() || '';
+      }
+    } else {
+      // Standard text-only analysis (existing behavior)
+      logger.info('Using text-only positioning analysis', {
+        url: context.websiteUrl,
+        hasFullPageScreenshot: !!context.fullPageScreenshot,
+        model: config.openai.model
+      });
+
+      const response = await openai.chat.completions.create({
+        model: config.openai.model,
+        temperature: config.openai.temperature,
+        messages: [
+          {
+            role: 'system',
+            content: effectivenessPrompt.systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200
+      });
+
+      analysisText = response.choices[0]?.message?.content?.trim() || '';
+    }
+
     if (!analysisText) {
       throw new Error('No response from OpenAI positioning analysis');
     }

@@ -336,6 +336,8 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   screenshotUrl: text("screenshot_url"), // URL to above-fold screenshot
   screenshotMethod: text("screenshot_method"), // Method used: 'playwright', 'api', or null
   screenshotError: text("screenshot_error"), // Error message if screenshot failed
+  fullPageScreenshotUrl: text("full_page_screenshot_url"), // URL to full-page screenshot
+  fullPageScreenshotError: text("full_page_screenshot_error"), // Error message if full-page screenshot failed
   webVitals: jsonb("web_vitals"), // LCP, CLS, FID metrics
   aiInsights: jsonb("ai_insights"), // Stored AI-generated insights
   insightsGeneratedAt: timestamp("insights_generated_at"), // When insights were generated
