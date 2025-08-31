@@ -385,7 +385,46 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             // Process competitors with controlled concurrency instead of sequential delays
             const competitorPromises = competitors.map(async (competitor, index) => {
               try {
-                // Check if there's already a recent run (within 24 hours) or pending run
+                // First, clean up any stale pending runs (older than 2 hours)
+                const staleRuns = await db
+                  .select()
+                  .from(effectivenessRuns)
+                  .where(and(
+                    eq(effectivenessRuns.clientId, clientId),
+                    eq(effectivenessRuns.competitorId, competitor.id),
+                    eq(effectivenessRuns.status, 'pending'),
+                    sql`created_at < NOW() - INTERVAL '2 hours'`
+                  ));
+
+                if (staleRuns.length > 0) {
+                  logger.warn('Found stale pending competitor runs, marking as failed', {
+                    clientId,
+                    competitorId: competitor.id,
+                    competitorDomain: competitor.domain,
+                    staleRunCount: staleRuns.length,
+                    staleRuns: staleRuns.map(r => ({
+                      id: r.id,
+                      createdAt: r.createdAt,
+                      ageHours: Math.round((Date.now() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60))
+                    }))
+                  });
+
+                  // Mark all stale pending runs as failed
+                  for (const staleRun of staleRuns) {
+                    await storage.updateEffectivenessRun(staleRun.id, {
+                      status: 'failed',
+                      progress: `Competitor run timed out after 2+ hours - marked as failed by cleanup process`
+                    });
+                  }
+
+                  logger.info('Cleaned up stale pending competitor runs', {
+                    clientId,
+                    competitorId: competitor.id,
+                    cleanedUpCount: staleRuns.length
+                  });
+                }
+
+                // Check if there's already a recent run (within 24 hours) or active pending run
                 const existingRun = await db
                   .select()
                   .from(effectivenessRuns)
@@ -393,7 +432,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                     eq(effectivenessRuns.clientId, clientId),
                     eq(effectivenessRuns.competitorId, competitor.id),
                     or(
-                      eq(effectivenessRuns.status, 'pending'),
+                      // Active pending runs (less than 2 hours old)
+                      and(
+                        eq(effectivenessRuns.status, 'pending'),
+                        sql`created_at > NOW() - INTERVAL '2 hours'`
+                      ),
+                      // Recent completed runs (within 24 hours)
                       and(
                         eq(effectivenessRuns.status, 'completed'),
                         sql`created_at > NOW() - INTERVAL '24 hours'`
@@ -404,12 +448,14 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   .limit(1);
 
                 if (existingRun.length > 0) {
-                  logger.info('Skipping competitor scoring - recent or pending run exists', {
+                  const runAge = Math.round((Date.now() - new Date(existingRun[0].createdAt).getTime()) / (1000 * 60 * 60));
+                  logger.info('Skipping competitor scoring - recent or active run exists', {
                     clientId,
                     competitorId: competitor.id,
                     competitorDomain: competitor.domain,
                     existingRunStatus: existingRun[0].status,
-                    existingRunCreated: existingRun[0].createdAt
+                    existingRunCreated: existingRun[0].createdAt,
+                    runAgeHours: runAge
                   });
                   return null; // Skip this competitor
                 }
