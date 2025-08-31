@@ -65,8 +65,6 @@ const getFailedCheckMessage = (check: string): string => {
     message_mismatch: 'CTA messaging inconsistent across the page',
     no_clear_hierarchy: 'CTA hierarchy not clearly established',
     visual_ctas_weak: 'Visual CTA design not effective for conversion',
-    no_page_end_cta: 'No call-to-action at page end or footer',
-    no_block_closure: 'Content blocks do not end with clear calls-to-action',
     
     // Positioning checks
     no_target_audience: 'Target audience not clearly identified',
@@ -263,7 +261,7 @@ function ScreenshotDisplay({ url, runData }: { url: string; runData: any }) {
       {imageLoading && (
         <div className="flex items-center justify-center p-8 bg-gray-50 min-h-[400px]">
           <div className="text-center">
-            <ButtonLoadingSpinner size="lg" className="mb-4 mx-auto" />
+            <ButtonLoadingSpinner size="md" className="mb-4 mx-auto" />
             <p className="text-sm text-gray-600">Loading screenshot...</p>
           </div>
         </div>
@@ -572,7 +570,7 @@ export function EvidenceDrawer({
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <ButtonLoadingSpinner size="lg" className="mb-4" />
+                  <ButtonLoadingSpinner size="md" className="mb-4" />
                   <p className="text-sm text-muted-foreground">Loading evidence data...</p>
                 </div>
               </div>
