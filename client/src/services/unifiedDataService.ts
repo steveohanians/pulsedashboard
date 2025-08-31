@@ -361,7 +361,7 @@ export class UnifiedDataService {
       if (competitorTraffic.length > 0) {
         result.push({
           sourceType: `Competitor_${competitor.id}`,
-          label: this.cleanDomainName(competitor.domain),
+          label: competitor.label || this.cleanDomainName(competitor.domain),
           channels: competitorTraffic
         });
       }
@@ -638,7 +638,7 @@ export class UnifiedDataService {
         devices.sort((a, b) => a.name === 'Desktop' ? -1 : 1);
         result.push({
           sourceType: `Competitor_${competitor.id}`,
-          label: this.cleanDomainName(competitor.domain),
+          label: competitor.label || this.cleanDomainName(competitor.domain),
           devices: devices
         });
         

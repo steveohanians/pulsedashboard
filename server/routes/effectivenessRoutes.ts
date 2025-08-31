@@ -13,7 +13,7 @@ import logger from '../utils/logging/logger';
 import { z } from 'zod';
 import { db } from '../db';
 import { effectivenessRuns } from '@shared/schema';
-import { and, eq, or, desc, sql } from 'drizzle-orm';
+import { and, eq, or, desc, sql, isNotNull } from 'drizzle-orm';
 
 const router = Router();
 const scorer = new WebsiteEffectivenessScorer();
@@ -142,10 +142,48 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       competitorsWithoutData: competitors.length - competitorEffectivenessData.length
     });
     
+    // Compute overall status considering both client and competitor runs
+    let overallStatus = latestRun.status;
+    let overallProgress = latestRun.progress;
+    
+    if (competitors.length > 0) {
+      // Check if we have pending competitor runs (with safeguard to prevent endless loops)
+      const pendingCompetitorRuns = await db
+        .select()
+        .from(effectivenessRuns)
+        .where(and(
+          eq(effectivenessRuns.clientId, clientId),
+          isNotNull(effectivenessRuns.competitorId),
+          sql`status IN ('pending', 'initializing', 'scraping', 'analyzing')`,
+          sql`created_at >= NOW() - INTERVAL '30 minutes'` // Ignore runs older than 30min
+        ));
+      
+      if (pendingCompetitorRuns.length > 0) {
+        // We have pending competitor runs
+        overallStatus = 'analyzing';
+        overallProgress = `Scoring competitors (${competitorEffectivenessData.length}/${competitors.length} completed)`;
+        
+        logger.info('Adjusting overall status due to pending competitor runs', {
+          clientId,
+          clientStatus: latestRun.status,
+          pendingCompetitorRuns: pendingCompetitorRuns.length,
+          completedCompetitors: competitorEffectivenessData.length,
+          totalCompetitors: competitors.length,
+          overallStatus,
+          overallProgress,
+          safeguardActive: true,
+          pendingRunIds: pendingCompetitorRuns.map(r => r.id)
+        });
+      }
+    }
+    
     const response = {
       client,
       run: {
         ...latestRun,
+        // Override status and progress to reflect overall completion
+        status: overallStatus,
+        progress: overallProgress,
         criterionScores,
         // Include AI insights if available
         aiInsights: latestRun.aiInsights || null,

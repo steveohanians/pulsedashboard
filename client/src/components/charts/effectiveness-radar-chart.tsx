@@ -243,7 +243,7 @@ export function EffectivenessRadarChart({
             className="sr-only"
           />
           <div 
-            className={`w-3 h-3 rounded-sm mr-2 border-2 transition-all ${
+            className={`w-3 h-3 rounded-sm mr-2 border-2 transition-all flex items-center justify-center ${
               !hiddenEntities.has(clientName) ? 'border-primary' : 'border-gray-300'
             }`}
             style={{ 
@@ -253,7 +253,7 @@ export function EffectivenessRadarChart({
             }}
           >
             {!hiddenEntities.has(clientName) && (
-              <svg className="w-2 h-2 text-white ml-0.5 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
@@ -275,7 +275,7 @@ export function EffectivenessRadarChart({
                 className="sr-only"
               />
               <div 
-                className={`w-3 h-3 rounded-sm mr-2 border-2 transition-all ${
+                className={`w-3 h-3 rounded-sm mr-2 border-2 transition-all flex items-center justify-center ${
                   !hiddenEntities.has(competitorLabel) ? 'border-gray-400' : 'border-gray-300'
                 }`}
                 style={{ 
@@ -285,7 +285,7 @@ export function EffectivenessRadarChart({
                 }}
               >
                 {!hiddenEntities.has(competitorLabel) && (
-                  <svg className="w-2 h-2 text-white ml-0.5 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 )}

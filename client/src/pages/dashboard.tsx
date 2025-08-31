@@ -201,7 +201,7 @@ export default function Dashboard() {
       
       return {
         id: competitor.id,
-        label: competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+        label: competitor.label || competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
         value: Math.round(value * 10) / 10,
       };
     });
@@ -889,7 +889,7 @@ export default function Dashboard() {
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
-                            clientUrl={client?.websiteUrl}
+                            clientUrl={client?.name || client?.websiteUrl}
                             timeSeriesData={dashboardData?.timeSeriesData}
                             periods={dashboardData?.periods}
                             competitors={getCompetitorChartData(metricName)}
@@ -902,7 +902,7 @@ export default function Dashboard() {
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
-                            clientUrl={client?.websiteUrl}
+                            clientUrl={client?.name || client?.websiteUrl}
                             timeSeriesData={dashboardData?.timeSeriesData}
                             periods={dashboardData?.periods}
                             competitors={getCompetitorChartData(metricName)}
@@ -922,7 +922,7 @@ export default function Dashboard() {
                             clientData={metricData.Client || 0}
                             industryAvg={metricData.Industry_Avg || 0}
                             cdAvg={metricData.CD_Avg || 0}
-                            clientUrl={client?.websiteUrl}
+                            clientUrl={client?.name || client?.websiteUrl}
                             timeSeriesData={dashboardData?.timeSeriesData}
                             periods={dashboardData?.periods}
                             competitors={getCompetitorChartData(metricName)}
@@ -990,7 +990,7 @@ export default function Dashboard() {
                             if (!desktop && !mobile) return null;
                             return {
                               id: competitor.id,
-                              label: competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
+                              label: competitor.label || competitor.domain.replace(/^https?:\/\//, "").replace(/^www\./, ""),
                               value: {
                                 Desktop: desktop?.percentage || desktop?.value || 0,
                                 Mobile: mobile?.percentage || mobile?.value || 0
