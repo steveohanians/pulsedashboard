@@ -59,7 +59,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const [displayedContext, setDisplayedContext] = useState("");
   const [displayedInsight, setDisplayedInsight] = useState("");
   const [displayedRecommendation, setDisplayedRecommendation] = useState("");
-  const [manualLoading, setManualLoading] = useState(false);
   const shouldAnimateRef = useRef(false);
   const [animationTrigger, setAnimationTrigger] = useState(0);
   const forceAnimateRef = useRef(false);
@@ -316,7 +315,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       return result;
     },
     onSuccess: async (metricInsightFromServer) => {
-      setManualLoading(false);
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Clear displayed text BEFORE setting new data to prevent flash
       setDisplayedContext("");
@@ -333,7 +331,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       });
     },
     onError: (error) => {
-      setManualLoading(false);
       suppressHydrationRef.current = false;
       logger.warn("Failed to generate insight", {
         error,
@@ -614,7 +611,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     );
   }
 
-  const isGeneratingInsights = generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || versionStatus?.isGenerating || manualLoading;
+  const isGeneratingInsights = generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || versionStatus?.isGenerating;
   
 
   const mainContent = (
@@ -627,7 +624,6 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         </p>
         <Button
           onClick={() => {
-            setManualLoading(true);
             shouldAnimateRef.current = true;
             suppressHydrationRef.current = true;
             setForcedEmpty(false);
@@ -637,7 +633,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
             generateInsightMutation.mutate();
           }}
           disabled={generateInsightMutation.isPending}
-          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium px-6 py-2.5"
+          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
           size="sm"
         >
           {generateInsightMutation.isPending ? (

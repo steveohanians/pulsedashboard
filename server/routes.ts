@@ -15,6 +15,7 @@ import benchmarkAdminRouter from "./routes/benchmark-admin";
 import adminUsersRouter from "./routes/admin-users";
 import sovRoutes from "./routes/sovRoutes";
 import effectivenessRoutes from "./routes/effectivenessRoutes";
+import { debugRoutes } from "./routes/debugRoutes";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema, updateEffectivenessPromptTemplateSchema } from "@shared/schema";
 import { 
@@ -2387,99 +2388,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      logger.info("DELETE COMPETITOR REQUEST", { 
-        competitorId: id, 
-        user: req.user?.id,
-        fullUrl: req.originalUrl,
-        params: req.params,
-        method: req.method
-      });
       
-      // Get competitor info before deletion for validation and cache clearing
+      // Get competitor info before deletion for validation
       const competitor = await storage.getCompetitor(id);
       if (!competitor) {
-        logger.warn("Competitor not found", { competitorId: id });
         return res.status(404).json({ message: "Competitor not found" });
       }
       
       // Verify user has access to this competitor's client
       if (!req.user || (req.user.clientId !== competitor.clientId && req.user.role !== "Admin")) {
-        logger.warn("Access denied for competitor deletion", { 
-          competitorId: id, 
-          userId: req.user?.id, 
-          userClientId: req.user?.clientId,
-          competitorClientId: competitor.clientId 
-        });
         return res.status(403).json({ message: "Access denied" });
       }
       
-      const clientId = competitor.clientId;
+      // Delete competitor and all related data
+      const effectivenessRunIds = await db
+        .select({ id: effectivenessRuns.id })
+        .from(effectivenessRuns)
+        .where(eq(effectivenessRuns.competitorId, id));
       
-      // SIMPLIFIED DELETION - Direct database operations
-      logger.info("Starting simplified competitor deletion", { competitorId: id, domain: competitor.domain });
-      
-      try {
-        // Step 1: Delete criterion scores for effectiveness runs
-        logger.info("Deleting criterion scores for competitor effectiveness runs", { competitorId: id });
-        const effectivenessRunIds = await db
-          .select({ id: effectivenessRuns.id })
-          .from(effectivenessRuns)
-          .where(eq(effectivenessRuns.competitorId, id));
-        
-        for (const run of effectivenessRunIds) {
-          await db.delete(criterionScores).where(eq(criterionScores.runId, run.id));
-        }
-        logger.info("Criterion scores deleted successfully", { 
-          competitorId: id, 
-          effectivenessRunsCount: effectivenessRunIds.length 
-        });
-        
-        // Step 2: Delete effectiveness runs
-        logger.info("Deleting competitor effectiveness runs", { competitorId: id });
-        await db.delete(effectivenessRuns).where(eq(effectivenessRuns.competitorId, id));
-        logger.info("Effectiveness runs deleted successfully", { competitorId: id });
-        
-        // Step 3: Delete associated metrics
-        logger.info("Deleting competitor metrics", { competitorId: id });
-        await db.delete(metrics).where(eq(metrics.competitorId, id));
-        logger.info("Competitor metrics deleted successfully", { competitorId: id });
-        
-        // Step 4: Delete the competitor record
-        logger.info("Deleting competitor record", { competitorId: id });
-        await db.delete(competitors).where(eq(competitors.id, id));
-        logger.info("Competitor record deleted successfully", { competitorId: id });
-        
-        // Step 5: Clear caches
-        clearCache();
-        performanceCache.clear();
-        
-        logger.info("COMPETITOR DELETION COMPLETED", { 
-          competitorId: id, 
-          domain: competitor.domain,
-          clientId,
-          message: "Successfully deleted competitor and all related data, cleared caches"
-        });
-        
-        res.sendStatus(204);
-        
-      } catch (deleteError) {
-        logger.error("DETAILED ERROR in simplified deletion", { 
-          error: (deleteError as Error).message, 
-          stack: (deleteError as Error).stack, 
-          competitorId: id,
-          competitorDomain: competitor.domain,
-          user: req.user?.id 
-        });
-        throw deleteError;
+      // Delete in correct order to avoid foreign key violations
+      for (const run of effectivenessRunIds) {
+        await db.delete(criterionScores).where(eq(criterionScores.runId, run.id));
       }
+      await db.delete(effectivenessRuns).where(eq(effectivenessRuns.competitorId, id));
+      await db.delete(metrics).where(eq(metrics.competitorId, id));
+      await db.delete(competitors).where(eq(competitors.id, id));
+      
+      // Clear caches to ensure UI updates
+      clearCache();
+      performanceCache.clear();
+      
+      logger.info("Competitor deleted successfully", { 
+        competitorId: id, 
+        domain: competitor.domain
+      });
+      
+      res.sendStatus(204);
+      
     } catch (error) {
       logger.error("Error deleting competitor", { 
-        error: (error as Error).message, 
-        stack: (error as Error).stack, 
-        competitorId: req.params.id,
-        user: req.user?.id 
+        error: (error as Error).message,
+        competitorId: req.params.id
       });
-      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -4599,6 +4550,9 @@ Output: Numbered list with tags.
 
   // Website Effectiveness Scoring routes
   app.use("/api/effectiveness", effectivenessRoutes);
+
+  // Debug routes (temporary - enabled for all environments)
+  app.use("/api/debug", debugRoutes);
 
   // Export routes - must come before generic cleanup route
   app.use("/api/export", exportPdfRouter);

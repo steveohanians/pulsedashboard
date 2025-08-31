@@ -166,8 +166,6 @@ export function useDashboardData({
       return text ? JSON.parse(text) : { success: true };
     },
     onSuccess: () => {
-      console.log('DEBUG: Competitor deletion successful, invalidating queries');
-      
       // Force invalidate ALL queries to ensure UI updates
       queryClient.invalidateQueries();
       
@@ -175,8 +173,6 @@ export function useDashboardData({
       queryClient.invalidateQueries({
         queryKey: QueryKeys.dashboard(effectiveClientId, effectiveTimePeriod)
       });
-      
-      console.log('DEBUG: Force refetching dashboard query');
       
       // Force refetch with a slight delay to ensure server state is consistent
       setTimeout(() => {
@@ -188,12 +184,11 @@ export function useDashboardData({
       
       toast({
         title: 'Competitor removed',
-        description: 'Clay has been successfully removed from your competitors.',
+        description: 'The competitor has been successfully removed.',
         duration: 3000,
       });
     },
     onError: (error) => {
-      console.log('DEBUG: Competitor deletion failed', error);
       setDeletingCompetitorId(null);
       toast({
         title: 'Failed to remove competitor',

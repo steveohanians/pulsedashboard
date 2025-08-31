@@ -66,13 +66,58 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
     const criterionScores = await storage.getCriterionScores(latestRun.id);
     
     // Get competitor effectiveness data
+    logger.info('Fetching competitor effectiveness data', {
+      clientId,
+      function: 'getLatestEffectiveness',
+      step: 'fetchingCompetitors'
+    });
+
     const competitors = await storage.getCompetitorsByClient(clientId);
+    
+    logger.info('Found competitors for client', {
+      clientId,
+      competitorCount: competitors.length,
+      competitors: competitors.map(c => ({
+        id: c.id,
+        domain: c.domain,
+        label: c.label,
+        status: c.status
+      }))
+    });
+
     const competitorEffectivenessData = [];
     
     for (const competitor of competitors) {
+      logger.info('Processing competitor effectiveness data', {
+        clientId,
+        competitorId: competitor.id,
+        competitorDomain: competitor.domain,
+        competitorLabel: competitor.label
+      });
+
       const competitorRun = await storage.getLatestEffectivenessRunByCompetitor(clientId, competitor.id);
-      if (competitorRun) { // Only check if run exists, status is guaranteed to be 'completed'
+      
+      if (competitorRun) {
+        logger.info('Found completed competitor run, fetching criterion scores', {
+          clientId,
+          competitorId: competitor.id,
+          runId: competitorRun.id,
+          overallScore: competitorRun.overallScore
+        });
+
         const competitorCriterionScores = await storage.getCriterionScores(competitorRun.id);
+        
+        logger.info('Retrieved competitor criterion scores', {
+          clientId,
+          competitorId: competitor.id,
+          runId: competitorRun.id,
+          criterionScoresCount: competitorCriterionScores.length,
+          criterionScores: competitorCriterionScores.map(cs => ({
+            criterion: cs.criterion,
+            score: cs.score
+          }))
+        });
+
         competitorEffectivenessData.push({
           competitor,
           run: {
@@ -80,8 +125,22 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
             criterionScores: competitorCriterionScores
           }
         });
+      } else {
+        logger.warn('No completed competitor run found', {
+          clientId,
+          competitorId: competitor.id,
+          competitorDomain: competitor.domain,
+          competitorLabel: competitor.label
+        });
       }
     }
+
+    logger.info('Completed competitor effectiveness data processing', {
+      clientId,
+      totalCompetitors: competitors.length,
+      competitorsWithData: competitorEffectivenessData.length,
+      competitorsWithoutData: competitors.length - competitorEffectivenessData.length
+    });
     
     const response = {
       client,
@@ -96,12 +155,22 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       hasData: true
     };
 
-    logger.info('Retrieved effectiveness data', {
+    logger.info('Retrieved effectiveness data - Final Response', {
       clientId,
       runId: latestRun.id,
       overallScore: latestRun.overallScore,
       criteriaCount: criterionScores.length,
-      hasInsights: !!latestRun.aiInsights
+      hasInsights: !!latestRun.aiInsights,
+      competitorEffectivenessDataCount: competitorEffectivenessData.length,
+      finalResponse: {
+        hasData: response.hasData,
+        clientOverallScore: response.run?.overallScore,
+        competitorData: competitorEffectivenessData.map(cd => ({
+          competitorLabel: cd.competitor.label,
+          overallScore: cd.run.overallScore,
+          criterionScoresCount: cd.run.criterionScores.length
+        }))
+      }
     });
 
     res.json(response);

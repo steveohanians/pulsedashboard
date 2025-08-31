@@ -43,7 +43,6 @@ function LoadKitCore({
   const enabled = useFeatureFlag('LOADKIT_ENABLED')
   const funCopyEnabled = useFeatureFlag('LOADKIT_FUN_COPY')
   
-  console.log('LoadKit.Core DEBUG:', { surface, enabled, funCopyEnabled, isLoading })
   
   // Get copy configuration for this surface
   const copyConfig = FUN_COPY_CONFIGS[surface] || FUN_COPY_CONFIGS['dashboard']
@@ -94,7 +93,7 @@ function LoadKitCore({
         <LoadingSpinner 
           size={size}
           variant={spinnerVariant}
-          text={currentCopy || "TEST: Loading text should appear here"}
+          text={currentCopy}
           showText={true}
           centered={true}
           className={cn(
@@ -103,16 +102,6 @@ function LoadKitCore({
           style={{ opacity }}
         />
       )}
-      
-      {/* DEBUG: Force show text for testing */}
-      <div className="mt-4 text-center">
-        <p className="text-sm text-slate-600">
-          DEBUG Current Copy: "{currentCopy}"
-        </p>
-        <p className="text-xs text-slate-500">
-          ShowFunCopy: {showFunCopy ? 'true' : 'false'} | Enabled: {enabled ? 'true' : 'false'} | Surface: {surface}
-        </p>
-      </div>
       
       {/* Screen reader gets serious copy only */}
       <span className="sr-only">

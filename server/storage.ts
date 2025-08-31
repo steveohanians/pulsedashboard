@@ -2500,7 +2500,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestEffectivenessRunByCompetitor(clientId: string, competitorId: string): Promise<any> {
-    const results = await db
+    logger.info('Querying latest effectiveness run by competitor', {
+      clientId,
+      competitorId,
+      function: 'getLatestEffectivenessRunByCompetitor'
+    });
+
+    // First, check if competitor exists
+    const competitor = await db
+      .select()
+      .from(competitors)
+      .where(eq(competitors.id, competitorId))
+      .limit(1);
+
+    if (competitor.length === 0) {
+      logger.warn('Competitor not found', { clientId, competitorId });
+      return null;
+    }
+
+    logger.info('Competitor found', {
+      clientId,
+      competitorId,
+      competitorDomain: competitor[0].domain,
+      competitorLabel: competitor[0].label
+    });
+
+    // Check ALL runs for this competitor (not just completed)
+    const allRuns = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        eq(effectivenessRuns.competitorId, competitorId)
+      ))
+      .orderBy(desc(effectivenessRuns.createdAt));
+
+    logger.info('All effectiveness runs for competitor', {
+      clientId,
+      competitorId,
+      totalRuns: allRuns.length,
+      runs: allRuns.map(r => ({
+        id: r.id,
+        status: r.status,
+        overallScore: r.overallScore,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt
+      }))
+    });
+
+    // Now get only completed runs
+    const completedResults = await db
       .select()
       .from(effectivenessRuns)
       .where(and(
@@ -2511,7 +2560,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(effectivenessRuns.createdAt))
       .limit(1);
     
-    return results[0];
+    const latestCompletedRun = completedResults[0];
+    
+    if (latestCompletedRun) {
+      logger.info('Found latest completed effectiveness run for competitor', {
+        clientId,
+        competitorId,
+        runId: latestCompletedRun.id,
+        overallScore: latestCompletedRun.overallScore,
+        status: latestCompletedRun.status,
+        createdAt: latestCompletedRun.createdAt
+      });
+    } else {
+      logger.warn('No completed effectiveness runs found for competitor', {
+        clientId,
+        competitorId,
+        competitorDomain: competitor[0].domain,
+        competitorLabel: competitor[0].label,
+        totalRuns: allRuns.length,
+        pendingRuns: allRuns.filter(r => r.status === 'pending').length,
+        failedRuns: allRuns.filter(r => r.status === 'failed').length
+      });
+    }
+    
+    return latestCompletedRun;
   }
 
   async getEffectivenessRun(runId: string): Promise<any> {

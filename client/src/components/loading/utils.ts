@@ -123,22 +123,16 @@ export function useCopyRotation(
 
   // Fun copy timer (3s delay)
   useEffect(() => {
-    console.log('Fun copy timer check:', { isLoading, enabled, enableFunCopy: config.enableFunCopy, surface: config.surface })
-    
     if (!isLoading || !enabled || !config.enableFunCopy) {
-      console.log('Fun copy timer NOT starting - conditions not met')
       return
     }
 
-    console.log('Fun copy timer STARTING - 100ms delay for surface:', config.surface)
     funCopyTimerRef.current = setTimeout(() => {
-      console.log('Fun copy timer FIRED! Setting showFunCopy to true for surface:', config.surface)
       setShowFunCopy(true)
-    }, 100) // Immediate delay for testing
+    }, 3000) // 3 second delay
 
     return () => {
       if (funCopyTimerRef.current) {
-        console.log('Clearing fun copy timer for surface:', config.surface)
         clearTimeout(funCopyTimerRef.current)
       }
     }
