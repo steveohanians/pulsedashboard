@@ -114,7 +114,7 @@ export class WebsiteEffectivenessScorer {
       // Use Playwright for comprehensive scraping and screenshot capture with retries
       let screenshotResult: ScreenshotResult | null = null;
       let retryCount = 0;
-      const maxRetries = 2;
+      const maxRetries = 1; // Reduced from 2 to speed up stuck processes
 
       while (retryCount <= maxRetries) {
         try {
@@ -126,7 +126,7 @@ export class WebsiteEffectivenessScorer {
               captureFullPage: true // Enable full-page screenshot capture
             }),
             new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Screenshot timeout after 90s')), 90000) // Increased timeout for full-page
+              setTimeout(() => reject(new Error('Screenshot timeout after 30s')), 30000) // Reduced from 90s to prevent hangs
             )
           ]);
           break;
@@ -146,7 +146,7 @@ export class WebsiteEffectivenessScorer {
             };
           } else {
             logger.info("Retrying screenshot capture", { websiteUrl, retryCount });
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2s delay between retries
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced from 2s to 1s
           }
         }
       }
