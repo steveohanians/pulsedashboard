@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { db } from "./db";
 import { and, eq, not, like, desc, sql } from "drizzle-orm";
-import { metrics } from "@shared/schema";
+import { metrics, competitors, effectivenessRuns, criterionScores } from "@shared/schema";
 import { generateMetricInsights, generateBulkInsights } from "./services/openai";
 import { generatePDF } from "./pdf";
 import { ga4DataService } from "./services/ga4/PulseDataService";
@@ -2252,6 +2252,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
+  // DEBUG: Check actual competitors in database
+  app.get("/api/debug/competitors/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const competitors = await storage.getCompetitorsByClient(clientId);
+      logger.info("DEBUG: Actual competitors in database", { 
+        clientId, 
+        count: competitors.length,
+        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, name: c.name }))
+      });
+      res.json({
+        clientId,
+        count: competitors.length,
+        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, name: c.name }))
+      });
+    } catch (error) {
+      logger.error("DEBUG: Error fetching competitors", { error: (error as Error).message });
+      res.status(500).json({ error: "Failed to fetch competitors" });
+    }
+  });
+
   // Competitors management
   app.post("/api/competitors", requireAuth, async (req, res) => {
     try {
@@ -2366,7 +2387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/competitors/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      logger.info("Attempting to delete competitor", { competitorId: id, user: req.user?.id });
+      logger.info("DELETE COMPETITOR REQUEST", { 
+        competitorId: id, 
+        user: req.user?.id,
+        fullUrl: req.originalUrl,
+        params: req.params,
+        method: req.method
+      });
       
       // Get competitor info before deletion for validation and cache clearing
       const competitor = await storage.getCompetitor(id);
@@ -2388,25 +2415,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const clientId = competitor.clientId;
       
-      await storage.deleteCompetitor(id);
-      logger.info("Deleted competitor successfully", { 
-        id, 
-        domain: competitor.domain, 
-        clientId 
-      });
+      // SIMPLIFIED DELETION - Direct database operations
+      logger.info("Starting simplified competitor deletion", { competitorId: id, domain: competitor.domain });
       
-      // Clear both cache systems after competitor deletion - force clear everything
-      clearCache(); // Clear ALL query optimizer cache
-      performanceCache.clear(); // Clear ALL performance cache
-      
-      logger.info("FORCE CLEARED ALL CACHES after competitor deletion", { 
-        competitorId: id, 
-        clientId,
-        message: "Completely cleared both cache systems to ensure UI updates",
-        beforeClear: "All caches emptied"
-      });
-      
-      res.sendStatus(204);
+      try {
+        // Step 1: Delete criterion scores for effectiveness runs
+        logger.info("Deleting criterion scores for competitor effectiveness runs", { competitorId: id });
+        const effectivenessRunIds = await db
+          .select({ id: effectivenessRuns.id })
+          .from(effectivenessRuns)
+          .where(eq(effectivenessRuns.competitorId, id));
+        
+        for (const run of effectivenessRunIds) {
+          await db.delete(criterionScores).where(eq(criterionScores.runId, run.id));
+        }
+        logger.info("Criterion scores deleted successfully", { 
+          competitorId: id, 
+          effectivenessRunsCount: effectivenessRunIds.length 
+        });
+        
+        // Step 2: Delete effectiveness runs
+        logger.info("Deleting competitor effectiveness runs", { competitorId: id });
+        await db.delete(effectivenessRuns).where(eq(effectivenessRuns.competitorId, id));
+        logger.info("Effectiveness runs deleted successfully", { competitorId: id });
+        
+        // Step 3: Delete associated metrics
+        logger.info("Deleting competitor metrics", { competitorId: id });
+        await db.delete(metrics).where(eq(metrics.competitorId, id));
+        logger.info("Competitor metrics deleted successfully", { competitorId: id });
+        
+        // Step 4: Delete the competitor record
+        logger.info("Deleting competitor record", { competitorId: id });
+        await db.delete(competitors).where(eq(competitors.id, id));
+        logger.info("Competitor record deleted successfully", { competitorId: id });
+        
+        // Step 5: Clear caches
+        clearCache();
+        performanceCache.clear();
+        
+        logger.info("COMPETITOR DELETION COMPLETED", { 
+          competitorId: id, 
+          domain: competitor.domain,
+          clientId,
+          message: "Successfully deleted competitor and all related data, cleared caches"
+        });
+        
+        res.sendStatus(204);
+        
+      } catch (deleteError) {
+        logger.error("DETAILED ERROR in simplified deletion", { 
+          error: (deleteError as Error).message, 
+          stack: (deleteError as Error).stack, 
+          competitorId: id,
+          competitorDomain: competitor.domain,
+          user: req.user?.id 
+        });
+        throw deleteError;
+      }
     } catch (error) {
       logger.error("Error deleting competitor", { 
         error: (error as Error).message, 

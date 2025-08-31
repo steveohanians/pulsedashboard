@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { ButtonLoadingSpinner } from '@/components/loading';
 
 interface EffectivenessAIInsightsProps {
   clientId: string;
@@ -72,7 +73,7 @@ export function EffectivenessAIInsights({
     return (
       <div className={`flex items-center justify-center py-2 ${className || ''}`}>
         <div className="flex items-center gap-2 text-slate-600">
-          <Loader2 className="animate-spin h-4 w-4" />
+          <ButtonLoadingSpinner size="sm" />
           <span className="text-xs">Loading insights...</span>
         </div>
       </div>

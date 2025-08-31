@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, TrendingUp, Target, AlertCircle } from 'lucide-react';
 import { InsightGenerationButton } from './insight-generation-button';
+import { LoadingSpinner } from '@/components/loading';
 
 interface ComprehensiveInsightsDisplayProps {
   /** Client identifier for insights fetching */
@@ -93,14 +94,10 @@ export function ComprehensiveInsightsDisplay({
   // Show loading only when initially loading or actually generating
   if (isLoading || isFetching || isGenerating) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-slate-200 rounded-lg w-1/3 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-slate-200 rounded w-full"></div>
-            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-          </div>
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mb-4" />
+          <p className="text-slate-600">Loading insights...</p>
         </div>
       </div>
     );

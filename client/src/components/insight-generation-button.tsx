@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Loader2, TrendingUp } from 'lucide-react';
+import { Sparkles, TrendingUp } from 'lucide-react';
+import { ButtonLoadingSpinner } from '@/components/loading';
+import LoadKit from '@/components/loading';
 import { apiRequest } from '@/lib/queryClient';
 
 interface InsightGenerationButtonProps {
@@ -74,7 +76,7 @@ export function InsightGenerationButton({
     },
   });
 
-  return (
+  const mainContent = (
     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
       <Button
         onClick={() => generateInsightsMutation.mutate()}
@@ -84,7 +86,7 @@ export function InsightGenerationButton({
       >
         <div className="flex items-center gap-2">
           {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <ButtonLoadingSpinner size="sm" className="text-white" />
           ) : (
             <Sparkles className="h-4 w-4 group-hover:animate-pulse" />
           )}
@@ -118,4 +120,19 @@ export function InsightGenerationButton({
       </div>
     </div>
   );
+
+  // Show fun copy when generating, otherwise show button
+  if (isGenerating) {
+    return (
+      <LoadKit.Core
+        isLoading={isGenerating}
+        surface="metric-insights"
+        showSpinner={true}
+        size="md"
+        className="min-h-[120px]"
+      />
+    );
+  }
+
+  return mainContent;
 }

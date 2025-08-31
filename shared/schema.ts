@@ -330,6 +330,7 @@ export const filterOptions = pgTable("filter_options", {
 export const effectivenessRuns = pgTable("effectiveness_runs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
+  competitorId: varchar("competitor_id").references(() => competitors.id), // NULL for client runs, set for competitor runs
   overallScore: decimal("overall_score", { precision: 3, scale: 1 }), // e.g., 8.5 out of 10
   status: text("status").notNull().default("pending"), // pending, completed, failed
   progress: text("progress"), // Current progress message
@@ -344,8 +345,10 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   clientIdIdx: index("idx_effectiveness_runs_client_id").on(table.clientId),
+  competitorIdIdx: index("idx_effectiveness_runs_competitor_id").on(table.competitorId),
   statusIdx: index("idx_effectiveness_runs_status").on(table.status),
   clientCreatedIdx: index("idx_effectiveness_runs_client_created").on(table.clientId, table.createdAt),
+  clientCompetitorIdx: index("idx_effectiveness_runs_client_competitor").on(table.clientId, table.competitorId),
 }));
 
 export const criterionScores = pgTable("criterion_scores", {
@@ -425,6 +428,7 @@ export const competitorsRelations = relations(competitors, ({ one, many }) => ({
     references: [clients.id],
   }),
   metrics: many(metrics),
+  effectivenessRuns: many(effectivenessRuns),
 }));
 
 export const metricsRelations = relations(metrics, ({ one }) => ({
@@ -456,6 +460,10 @@ export const effectivenessRunsRelations = relations(effectivenessRuns, ({ one, m
   client: one(clients, {
     fields: [effectivenessRuns.clientId],
     references: [clients.id],
+  }),
+  competitor: one(competitors, {
+    fields: [effectivenessRuns.competitorId],
+    references: [competitors.id],
   }),
   criterionScores: many(criterionScores),
 }));

@@ -54,7 +54,19 @@ export async function scoreSpeed(
       });
 
       try {
-        const response = await fetch(pageSpeedUrl);
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
+        const response = await fetch(pageSpeedUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Website-Effectiveness-Engine/1.0'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
           const errorText = await response.text();
           logger.warn("PageSpeed API error response", { 
@@ -106,7 +118,7 @@ export async function scoreSpeed(
         } else if (errorMessage.includes('403') || errorMessage.includes('401')) {
           errorType = 'auth_error';
           userMessage = 'PageSpeed API authentication failed. Check API key configuration.';
-        } else if (errorMessage.includes('timeout')) {
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
           errorType = 'timeout';
           userMessage = 'PageSpeed API request timed out. Try again later.';
         } else if (errorMessage.includes('404')) {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useDashboardData, useDashboardFilters, useSmartFilterCombinations } from "@/hooks/useDashboardData";
 import { useAuth } from "@/hooks/use-auth";
+import { useLoadKit } from "@/components/loading";
+import LoadKit, { ButtonLoadingSpinner, useFeatureFlag } from "@/components/loading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EffectivenessCard } from "@/components/effectiveness-card";
@@ -295,67 +297,23 @@ export default function Dashboard() {
     return acc;
   }, {});
 
+  // LoadKit integration - behavioral cloning
+  const { shouldUse: useLoadKitDashboard } = useLoadKit('dashboard');
+  
+  // LoadKit state preparation - mirror existing exactly
+  const dashboardLoadingState = {
+    isLoading,
+    isRefreshing,
+    filtersLoading,
+    combinationsLoading,
+    insightsLoading
+  };
+
   if (isLoading || isRefreshing) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        {/* Header Skeleton */}
-        <div className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-40">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="h-8 w-24 sm:h-10 sm:w-32 bg-slate-200 rounded animate-pulse"></div>
-              <div className="hidden sm:block">
-                <div className="h-4 w-32 sm:h-5 sm:w-40 bg-slate-200 rounded animate-pulse mb-1"></div>
-                <div className="h-3 w-20 sm:w-24 bg-slate-200 rounded animate-pulse"></div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-slate-200 rounded animate-pulse lg:hidden"></div>
-              <div className="h-8 w-16 sm:w-20 bg-slate-200 rounded animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex">
-          {/* Desktop Navigation Skeleton */}
-          <div className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 p-4 hidden lg:block">
-            <div className="h-6 w-20 bg-slate-200 rounded animate-pulse mb-4"></div>
-            <div className="space-y-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-8 bg-slate-200 rounded animate-pulse"></div>
-              ))}
-            </div>
-          </div>
-
-          {/* Content Skeleton */}
-          <div className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
-            {/* Filter section skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
-                  <div className="h-4 w-24 sm:h-5 sm:w-32 bg-slate-200 rounded animate-pulse mb-3 sm:mb-4"></div>
-                  <div className="h-8 sm:h-10 bg-slate-200 rounded animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-
-            {/* Metric Cards Skeleton */}
-            <div className="space-y-8 sm:space-y-10 lg:space-y-12">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm">
-                  <div className="h-5 w-32 sm:h-6 sm:w-48 bg-slate-200 rounded animate-pulse mb-4 sm:mb-6"></div>
-                  <div className="h-48 sm:h-56 lg:h-64 bg-slate-200 rounded-lg animate-pulse mb-4 sm:mb-6"></div>
-                  <div className="bg-slate-100 rounded-lg p-3 sm:p-4">
-                    <div className="space-y-2">
-                      <div className="h-3 w-full bg-slate-200 rounded animate-pulse"></div>
-                      <div className="h-3 w-3/4 bg-slate-200 rounded animate-pulse"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <LoadKit.Dashboard state={dashboardLoadingState}>
+        {/* This will be the main dashboard content when not loading */}
+      </LoadKit.Dashboard>
     );
   }
 
@@ -453,7 +411,11 @@ export default function Dashboard() {
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
             >
-              <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+              {logoutMutation.isPending ? (
+                <ButtonLoadingSpinner size="sm" />
+              ) : (
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+              )}
             </Button>
           </div>
         </div>
@@ -808,7 +770,7 @@ export default function Dashboard() {
                           className="h-6 w-6 p-0"
                         >
                           {deletingCompetitorId === competitor.id ? (
-                            <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                            <ButtonLoadingSpinner size="xs" />
                           ) : (
                             <X className="h-3 w-3" />
                           )}

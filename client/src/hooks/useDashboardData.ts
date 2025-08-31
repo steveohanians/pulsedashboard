@@ -166,27 +166,34 @@ export function useDashboardData({
       return text ? JSON.parse(text) : { success: true };
     },
     onSuccess: () => {
-      // Invalidate relevant queries
+      console.log('DEBUG: Competitor deletion successful, invalidating queries');
+      
+      // Force invalidate ALL queries to ensure UI updates
+      queryClient.invalidateQueries();
+      
+      // Also specifically invalidate dashboard queries
       queryClient.invalidateQueries({
         queryKey: QueryKeys.dashboard(effectiveClientId, effectiveTimePeriod)
       });
-      queryClient.invalidateQueries({
-        queryKey: QueryKeys.aiInsights(effectiveClientId, effectiveTimePeriod)
-      });
       
-      // Refetch data
-      dashboardQuery.refetch();
-      insightsQuery.refetch();
+      console.log('DEBUG: Force refetching dashboard query');
+      
+      // Force refetch with a slight delay to ensure server state is consistent
+      setTimeout(() => {
+        dashboardQuery.refetch();
+        insightsQuery.refetch();
+      }, 500);
       
       setDeletingCompetitorId(null);
       
       toast({
         title: 'Competitor removed',
-        description: 'The competitor has been successfully removed.',
+        description: 'Clay has been successfully removed from your competitors.',
         duration: 3000,
       });
     },
     onError: (error) => {
+      console.log('DEBUG: Competitor deletion failed', error);
       setDeletingCompetitorId(null);
       toast({
         title: 'Failed to remove competitor',

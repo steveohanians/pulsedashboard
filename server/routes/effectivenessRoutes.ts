@@ -11,6 +11,9 @@ import { WebsiteEffectivenessScorer } from '../services/effectiveness/scorer';
 import { EffectivenessConfigManager } from '../services/effectiveness/config';
 import logger from '../utils/logging/logger';
 import { z } from 'zod';
+import { db } from '../db';
+import { effectivenessRuns } from '@shared/schema';
+import { and, eq, or, desc, sql } from 'drizzle-orm';
 
 const router = Router();
 const scorer = new WebsiteEffectivenessScorer();
@@ -62,6 +65,24 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
     // Get criterion scores for the run
     const criterionScores = await storage.getCriterionScores(latestRun.id);
     
+    // Get competitor effectiveness data
+    const competitors = await storage.getCompetitorsByClient(clientId);
+    const competitorEffectivenessData = [];
+    
+    for (const competitor of competitors) {
+      const competitorRun = await storage.getLatestEffectivenessRunByCompetitor(clientId, competitor.id);
+      if (competitorRun) { // Only check if run exists, status is guaranteed to be 'completed'
+        const competitorCriterionScores = await storage.getCriterionScores(competitorRun.id);
+        competitorEffectivenessData.push({
+          competitor,
+          run: {
+            ...competitorRun,
+            criterionScores: competitorCriterionScores
+          }
+        });
+      }
+    }
+    
     const response = {
       client,
       run: {
@@ -71,6 +92,7 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
         aiInsights: latestRun.aiInsights || null,
         insightsGeneratedAt: latestRun.insightsGeneratedAt || null
       },
+      competitorEffectivenessData,
       hasData: true
     };
 
@@ -273,6 +295,202 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           runId: newRun.id,
           overallScore: result.overallScore,
           criteriaCount: result.criterionResults.length
+        });
+
+        // Start competitor scoring process (don't wait for it to complete)
+        // This runs after client scoring but doesn't block the response
+        (async () => {
+          try {
+            const competitors = await storage.getCompetitorsByClient(clientId);
+            if (!competitors || competitors.length === 0) {
+              logger.info('No competitors found for scoring', { clientId });
+              return;
+            }
+
+            logger.info('Starting competitor effectiveness scoring', {
+              clientId,
+              competitorCount: competitors.length,
+              parentRunId: newRun.id
+            });
+
+            // Process competitors with controlled concurrency instead of sequential delays
+            const competitorPromises = competitors.map(async (competitor, index) => {
+              try {
+                // Check if there's already a recent run (within 24 hours) or pending run
+                const existingRun = await db
+                  .select()
+                  .from(effectivenessRuns)
+                  .where(and(
+                    eq(effectivenessRuns.clientId, clientId),
+                    eq(effectivenessRuns.competitorId, competitor.id),
+                    or(
+                      eq(effectivenessRuns.status, 'pending'),
+                      and(
+                        eq(effectivenessRuns.status, 'completed'),
+                        sql`created_at > NOW() - INTERVAL '24 hours'`
+                      )
+                    )
+                  ))
+                  .orderBy(desc(effectivenessRuns.createdAt))
+                  .limit(1);
+
+                if (existingRun.length > 0) {
+                  logger.info('Skipping competitor scoring - recent or pending run exists', {
+                    clientId,
+                    competitorId: competitor.id,
+                    competitorDomain: competitor.domain,
+                    existingRunStatus: existingRun[0].status,
+                    existingRunCreated: existingRun[0].createdAt
+                  });
+                  return null; // Skip this competitor
+                }
+
+                // Add small staggered delay to prevent simultaneous API calls (5 seconds per competitor)
+                if (index > 0) {
+                  const delayMs = index * 5000; // 5 seconds between each competitor start
+                  logger.info('Applying stagger delay for competitor', {
+                    clientId,
+                    competitorId: competitor.id,
+                    competitorIndex: index,
+                    delayMs
+                  });
+                  await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+
+                // Create new run record for competitor
+                const competitorRun = await storage.createEffectivenessRun({
+                  clientId,
+                  competitorId: competitor.id,
+                  status: 'pending',
+                  overallScore: null
+                });
+
+                logger.info('Starting competitor scoring', {
+                  clientId,
+                  competitorId: competitor.id,
+                  competitorDomain: competitor.domain,
+                  runId: competitorRun.id,
+                  competitorIndex: index
+                });
+
+                // Score competitor website - normalize URL
+                let competitorUrl = competitor.domain;
+                if (!competitorUrl.startsWith('http://') && !competitorUrl.startsWith('https://')) {
+                  competitorUrl = `https://${competitorUrl}`;
+                }
+
+                // Add timeout wrapper to prevent hanging
+                const competitorResult = await Promise.race([
+                  scorer.scoreWebsite(competitorUrl),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Competitor scoring timeout after 5 minutes')), 5 * 60 * 1000)
+                  )
+                ]) as any; // Type assertion to handle Promise.race typing
+                
+                // Save competitor criterion scores
+                for (const criterionResult of competitorResult.criterionResults) {
+                  await storage.createCriterionScore({
+                    runId: competitorRun.id,
+                    criterion: criterionResult.criterion,
+                    score: criterionResult.score.toString(),
+                    evidence: criterionResult.evidence,
+                    passes: criterionResult.passes
+                  });
+                }
+
+                // Update competitor run with final results (no AI insights for competitors)
+                await storage.updateEffectivenessRun(competitorRun.id, {
+                  status: 'completed',
+                  overallScore: competitorResult.overallScore.toString(),
+                  progress: 'Competitor analysis completed successfully',
+                  screenshotUrl: competitorResult.screenshotUrl,
+                  fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl,
+                  webVitals: competitorResult.webVitals,
+                  screenshotMethod: competitorResult.screenshotMethod || null,
+                  screenshotError: competitorResult.screenshotError || null,
+                  fullPageScreenshotError: competitorResult.fullPageScreenshotError || null
+                });
+
+                logger.info('Competitor effectiveness scoring completed successfully', {
+                  clientId,
+                  competitorId: competitor.id,
+                  competitorDomain: competitor.domain,
+                  runId: competitorRun.id,
+                  overallScore: competitorResult.overallScore,
+                  competitorIndex: index
+                });
+
+                return { competitor, runId: competitorRun.id, success: true };
+
+              } catch (competitorError) {
+                logger.error('Competitor effectiveness scoring failed', {
+                  clientId,
+                  competitorId: competitor.id,
+                  competitorDomain: competitor.domain,
+                  competitorIndex: index,
+                  error: competitorError instanceof Error ? competitorError.message : String(competitorError)
+                });
+                
+                // Mark the run as failed if it was created
+                try {
+                  const failedRun = await db
+                    .select()
+                    .from(effectivenessRuns)
+                    .where(and(
+                      eq(effectivenessRuns.clientId, clientId),
+                      eq(effectivenessRuns.competitorId, competitor.id),
+                      eq(effectivenessRuns.status, 'pending')
+                    ))
+                    .orderBy(desc(effectivenessRuns.createdAt))
+                    .limit(1);
+
+                  if (failedRun.length > 0) {
+                    await storage.updateEffectivenessRun(failedRun.id, {
+                      status: 'failed',
+                      progress: `Competitor analysis failed: ${competitorError instanceof Error ? competitorError.message : String(competitorError)}`
+                    });
+                  }
+                } catch (updateError) {
+                  logger.warn('Failed to mark competitor run as failed', {
+                    clientId,
+                    competitorId: competitor.id,
+                    updateError: updateError instanceof Error ? updateError.message : String(updateError)
+                  });
+                }
+                
+                return { competitor, error: competitorError, success: false };
+              }
+            });
+
+            // Wait for all competitor scoring to complete (or fail)
+            const results = await Promise.allSettled(competitorPromises);
+            
+            const successful = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+            const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value && !r.value.success)).length;
+            const skipped = results.filter(r => r.status === 'fulfilled' && r.value === null).length;
+            
+            logger.info('Competitor effectiveness scoring completed', {
+              clientId,
+              totalCompetitors: competitors.length,
+              successful,
+              failed,
+              skipped,
+              parentRunId: newRun.id
+            });
+
+          } catch (backgroundError) {
+            logger.error('Competitor scoring process failed', {
+              clientId,
+              parentRunId: newRun.id,
+              error: backgroundError instanceof Error ? backgroundError.message : String(backgroundError)
+            });
+          }
+        })().catch(err => {
+          logger.error('Unhandled competitor scoring error', {
+            clientId,
+            parentRunId: newRun.id,
+            error: err instanceof Error ? err.message : String(err)
+          });
         });
 
       } catch (scoringError) {
@@ -540,7 +758,7 @@ router.post('/insights/:clientId/:runId', requireAuth, async (req, res) => {
     const result = await insightsService.generateInsights(
       clientId,
       runId,
-      req.user?.clientId,
+      req.user?.clientId || undefined,
       req.user?.role
     );
 

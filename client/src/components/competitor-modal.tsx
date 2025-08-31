@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ButtonLoadingSpinner } from "@/components/loading";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,14 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
         }
       });
       
+      // Invalidate effectiveness data to refresh radar chart with new competitors
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('effectiveness');
+        }
+      });
+      
       // Clear form inputs after successful addition
       setDomain("");
       setLabel("");
@@ -159,6 +168,14 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
         predicate: (query) => {
           const queryKey = query.queryKey[0]?.toString() || '';
           return queryKey.includes('/api/dashboard');
+        }
+      });
+      
+      // Invalidate effectiveness data to refresh radar chart after competitor removal
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0]?.toString() || '';
+          return queryKey.includes('effectiveness');
         }
       });
       
@@ -254,7 +271,7 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
                 >
                   {addCompetitorMutation.isPending ? (
                     <>
-                      <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      <ButtonLoadingSpinner size="sm" className="mr-2 text-white" />
                       Validating...
                     </>
                   ) : (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ButtonLoadingSpinner } from "@/components/loading";
 import {
   Drawer,
   DrawerContent,
@@ -262,7 +263,7 @@ function ScreenshotDisplay({ url, runData }: { url: string; runData: any }) {
       {imageLoading && (
         <div className="flex items-center justify-center p-8 bg-gray-50 min-h-[400px]">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+            <ButtonLoadingSpinner size="lg" className="mb-4 mx-auto" />
             <p className="text-sm text-gray-600">Loading screenshot...</p>
           </div>
         </div>
@@ -568,6 +569,14 @@ export function EvidenceDrawer({
           </DrawerHeader>
 
           <div className="p-4 pb-8">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <ButtonLoadingSpinner size="lg" className="mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading evidence data...</p>
+                </div>
+              </div>
+            ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="screenshot">
@@ -834,6 +843,7 @@ export function EvidenceDrawer({
                 </TabsContent>
               </div>
             </Tabs>
+            )}
           </div>
         </div>
       </DrawerContent>

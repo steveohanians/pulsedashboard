@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Loader2, Sparkles } from "lucide-react";
+import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Sparkles } from "lucide-react";
+import { ButtonLoadingSpinner } from "@/components/loading";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
@@ -41,6 +42,17 @@ interface EffectivenessData {
     websiteUrl: string;
   };
   run: EffectivenessRun | null;
+  competitorEffectivenessData?: {
+    competitor: {
+      id: string;
+      domain: string;
+      label: string;
+    };
+    run: {
+      overallScore: number;
+      criterionScores: CriterionScore[];
+    };
+  }[];
   hasData: boolean;
 }
 
@@ -262,7 +274,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
         <CardContent>
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <ButtonLoadingSpinner size="lg" />
             </div>
           )}
 
@@ -292,7 +304,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <Button onClick={handleRefresh} disabled={!canRefresh}>
                 {refreshMutation.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <ButtonLoadingSpinner size="sm" className="mr-2" />
                     Scoring Website...
                   </>
                 ) : (
@@ -306,7 +318,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             <div className="text-center py-8">
               <div className="space-y-2">
                 <p className="text-muted-foreground font-medium flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <ButtonLoadingSpinner size="sm" />
                   {run.status === 'initializing' && 'Preparing analysis...'}
                   {run.status === 'scraping' && 'Analyzing website effectiveness...'}
                   {run.status === 'analyzing' && 'Scoring criteria...'}
@@ -331,7 +343,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <Button onClick={handleRefresh} disabled={!canRefresh}>
                 {refreshMutation.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <ButtonLoadingSpinner size="sm" className="mr-2" />
                     Scoring Website...
                   </>
                 ) : (
@@ -376,7 +388,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   </CardHeader>
                   <CardContent className="h-full flex flex-col">
                     <EffectivenessRadarChart 
-                      criterionScores={run.criterionScores} 
+                      criterionScores={run.criterionScores}
+                      competitorEffectivenessData={data.competitorEffectivenessData || []}
+                      clientName={data.client.name}
                       className="w-full"
                     />
                   </CardContent>
@@ -407,10 +421,11 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     disabled={!canRefresh}
                     className="text-slate-500 hover:text-slate-700 h-7 px-2"
                   >
-                    <RotateCcw className={cn(
-                      "h-3 w-3", 
-                      refreshMutation.isPending && "animate-spin"
-                    )} />
+                    {refreshMutation.isPending ? (
+                      <ButtonLoadingSpinner size="xs" />
+                    ) : (
+                      <RotateCcw className="h-3 w-3" />
+                    )}
                   </Button>
                 </div>
               </div>

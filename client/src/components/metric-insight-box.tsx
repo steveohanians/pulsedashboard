@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { useGA4Status } from "@/hooks/useGA4Status";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { ButtonLoadingSpinner } from "@/components/loading";
+import LoadKit from "@/components/loading";
 import { AIInsights } from "@/components/ai-insights";
 import { logger } from "@/utils/logger";
 import { QueryKeys } from "@/lib/queryKeys";
@@ -58,6 +59,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
   const [displayedContext, setDisplayedContext] = useState("");
   const [displayedInsight, setDisplayedInsight] = useState("");
   const [displayedRecommendation, setDisplayedRecommendation] = useState("");
+  const [manualLoading, setManualLoading] = useState(false);
   const shouldAnimateRef = useRef(false);
   const [animationTrigger, setAnimationTrigger] = useState(0);
   const forceAnimateRef = useRef(false);
@@ -310,9 +312,11 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
+      const result = await response.json();
+      return result;
     },
     onSuccess: async (metricInsightFromServer) => {
+      setManualLoading(false);
       suppressHydrationRef.current = false; // Allow hydration after generate
       // Clear displayed text BEFORE setting new data to prevent flash
       setDisplayedContext("");
@@ -329,6 +333,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
       });
     },
     onError: (error) => {
+      setManualLoading(false);
       suppressHydrationRef.current = false;
       logger.warn("Failed to generate insight", {
         error,
@@ -430,7 +435,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
             size="sm"
             className="bg-gradient-to-r from-primary to-primary/90 text-white font-medium px-6 py-2.5"
           >
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <ButtonLoadingSpinner size="sm" className="mr-2 text-white" />
             {generateInsightMutation.isPending ||
             generateInsightWithContextMutation.isPending ||
             versionStatus?.isGenerating
@@ -609,7 +614,10 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
     );
   }
 
-  return (
+  const isGeneratingInsights = generateInsightMutation.isPending || generateInsightWithContextMutation.isPending || versionStatus?.isGenerating || manualLoading;
+  
+
+  const mainContent = (
     <div ref={containerRef} className="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 min-h-[140px] sm:min-h-[160px]">
       <div className="text-center">
         <p className="text-sm text-slate-600 mb-5 max-w-sm mx-auto leading-relaxed">
@@ -619,6 +627,7 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
         </p>
         <Button
           onClick={() => {
+            setManualLoading(true);
             shouldAnimateRef.current = true;
             suppressHydrationRef.current = true;
             setForcedEmpty(false);
@@ -628,12 +637,12 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
             generateInsightMutation.mutate();
           }}
           disabled={generateInsightMutation.isPending}
-          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium px-6 py-2.5"
+          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium px-6 py-2.5"
           size="sm"
         >
           {generateInsightMutation.isPending ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <ButtonLoadingSpinner size="sm" className="mr-2 text-white" />
               Generating Insights...
             </>
           ) : (
@@ -641,11 +650,28 @@ export const MetricInsightBox = React.memo(function MetricInsightBox({
           )}
         </Button>
         {generateInsightMutation.isPending && (
-          <p className="text-xs text-slate-500 mt-3 animate-pulse">
+          <p className="text-xs text-slate-500 mt-3">
             Analyzing competitive data and market trends...
           </p>
         )}
       </div>
     </div>
   );
+
+  // Show fun copy when generating insights, otherwise show main content
+  if (isGeneratingInsights) {
+    return (
+      <LoadKit.Core
+        isLoading={isGeneratingInsights}
+        surface="metric-insights"
+        showSpinner={true}
+        size="md"
+        className="min-h-[200px]"
+      >
+        Generating insights...
+      </LoadKit.Core>
+    );
+  }
+
+  return mainContent;
 });

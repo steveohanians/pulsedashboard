@@ -164,6 +164,7 @@ export interface IStorage {
   
   // Website Effectiveness Scoring
   getLatestEffectivenessRun(clientId: string): Promise<any>;
+  getLatestEffectivenessRunByCompetitor(clientId: string, competitorId: string): Promise<any>;
   getEffectivenessRun(runId: string): Promise<any>;
   createEffectivenessRun(run: any): Promise<any>;
   updateEffectivenessRun(runId: string, updates: any): Promise<any>;
@@ -2488,7 +2489,25 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select()
       .from(effectivenessRuns)
-      .where(eq(effectivenessRuns.clientId, clientId))
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        isNull(effectivenessRuns.competitorId) // Only client runs, not competitor runs
+      ))
+      .orderBy(desc(effectivenessRuns.createdAt))
+      .limit(1);
+    
+    return results[0];
+  }
+
+  async getLatestEffectivenessRunByCompetitor(clientId: string, competitorId: string): Promise<any> {
+    const results = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        eq(effectivenessRuns.competitorId, competitorId),
+        eq(effectivenessRuns.status, 'completed') // Only get completed runs
+      ))
       .orderBy(desc(effectivenessRuns.createdAt))
       .limit(1);
     

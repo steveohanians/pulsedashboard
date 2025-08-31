@@ -7,7 +7,16 @@
       "Bash(node:*)",
       "Bash(NODE_ENV=development npx tsx test_brandstory_5criteria.ts)",
       "Bash(npx tsx:*)",
-      "Bash(NODE_ENV=development npx tsx test_cta_new_schema.ts)"
+      "Bash(NODE_ENV=development npx tsx test_cta_new_schema.ts)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run client:*)",
+      "Bash(npm run:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(echo $REACT_APP_LOADKIT_ENABLED)",
+      "Bash(echo $REACT_APP_LOADKIT_CARDS)",
+      "Bash(pkill:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": [],

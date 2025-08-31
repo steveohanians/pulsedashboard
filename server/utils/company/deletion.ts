@@ -214,12 +214,23 @@ export async function deleteCompetitorEnhanced(
   competitorId: string, 
   storage: any
 ): Promise<void> {
-  await deleteCompanyWithCleanup({
-    companyType: 'competitor',
-    companyId: competitorId,
-    shouldRecalculatePortfolioAverages: false,
-    shouldClearSpecificCaches: ['dashboard', 'metrics']
-  }, storage);
+  logger.info('deleteCompetitorEnhanced starting', { competitorId });
+  try {
+    await deleteCompanyWithCleanup({
+      companyType: 'competitor',
+      companyId: competitorId,
+      shouldRecalculatePortfolioAverages: false,
+      shouldClearSpecificCaches: ['dashboard', 'metrics']
+    }, storage);
+    logger.info('deleteCompetitorEnhanced completed successfully', { competitorId });
+  } catch (error) {
+    logger.error('deleteCompetitorEnhanced failed', { 
+      competitorId, 
+      error: (error as Error).message, 
+      stack: (error as Error).stack 
+    });
+    throw error;
+  }
 }
 
 
