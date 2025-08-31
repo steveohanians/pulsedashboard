@@ -368,27 +368,35 @@ export class WebsiteEffectivenessScorer {
               error: error instanceof Error ? error.message : String(error)
             });
 
-            // Return degraded result with contextual message
-            let degradedMessage = 'Technical error prevented scoring';
-            if (!hasHTML && criterion.requiresHTML) {
-              degradedMessage = 'Unable to access website content for analysis';
+            // Check if this is speed criterion with a timeout - use fallback score
+            let fallbackScore = 0;
+            let fallbackDescription = `${criterion.name.charAt(0).toUpperCase() + criterion.name.slice(1)} analysis failed`;
+            let fallbackReasoning = 'Technical error prevented scoring';
+            
+            // Special handling for speed timeouts
+            if (criterion.name === 'speed' && error instanceof Error && error.message.includes('Timeout')) {
+              fallbackScore = 4.5;
+              fallbackDescription = 'Speed analysis unavailable - using conservative baseline';
+              fallbackReasoning = 'PageSpeed API timed out - assigned conservative baseline score';
+            } else if (!hasHTML && criterion.requiresHTML) {
+              fallbackReasoning = 'Unable to access website content for analysis';
             } else if (!hasOpenAI && criterion.requiresAI) {
-              degradedMessage = 'AI analysis unavailable - configuration required';
+              fallbackReasoning = 'AI analysis unavailable - configuration required';
             } else if (error instanceof Error && error.message.includes('timeout')) {
-              degradedMessage = 'Analysis timed out - website may be slow to respond';
+              fallbackReasoning = 'Analysis timed out - website may be slow to respond';
             }
 
             return {
               criterion: criterion.name,
-              score: 0,
+              score: fallbackScore,
               evidence: {
-                description: `${criterion.name.charAt(0).toUpperCase() + criterion.name.slice(1)} analysis failed`,
+                description: fallbackDescription,
                 details: { 
                   error: error instanceof Error ? error.message : String(error),
                   retryCount: retryCount - 1,
                   hasRequiredData: !criterion.requiresHTML || hasHTML
                 },
-                reasoning: degradedMessage
+                reasoning: fallbackReasoning
               },
               passes: { passed: [], failed: ['technical_error'] }
             };
