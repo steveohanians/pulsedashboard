@@ -161,7 +161,7 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       if (pendingCompetitorRuns.length > 0) {
         // We have pending competitor runs
         overallStatus = 'analyzing';
-        overallProgress = `Scoring competitors (${competitorEffectivenessData.length}/${competitors.length} completed)`;
+        overallProgress = `Analyzing ${pendingCompetitorRuns.length} competitor websites...`;
         
         logger.info('Adjusting overall status due to pending competitor runs', {
           clientId,
@@ -297,13 +297,13 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
         // Update progress: Initializing
         await storage.updateEffectivenessRun(newRun.id, {
           status: 'initializing',
-          progress: 'Preparing website analysis...'
+          progress: 'Analyzing website effectiveness..'
         });
         
         // Update progress: Scraping website
         await storage.updateEffectivenessRun(newRun.id, {
           status: 'scraping',
-          progress: 'Loading website and capturing screenshot...'
+          progress: 'Scoring criteria...'
         });
         
         const result = await scorer.scoreWebsite(client.websiteUrl);
@@ -406,8 +406,28 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
         // Start competitor scoring process (don't wait for it to complete)
         // This runs after client scoring but doesn't block the response
+        
+        // Capture environment variables before async context
+        const capturedEnv = {
+          SCREENSHOTONE_API_KEY: process.env.SCREENSHOTONE_API_KEY,
+          PAGESPEED_API_KEY: process.env.PAGESPEED_API_KEY || process.env.GOOGLE_API_KEY,
+          OPENAI_API_KEY: process.env.OPENAI_API_KEY
+        };
+
+        logger.info('Captured environment for competitor scoring', {
+          hasScreenshotKey: !!capturedEnv.SCREENSHOTONE_API_KEY,
+          hasPageSpeedKey: !!capturedEnv.PAGESPEED_API_KEY
+        });
+        
         (async () => {
           try {
+            // Restore environment variables in async context
+            Object.assign(process.env, capturedEnv);
+            
+            logger.info('Restored environment in competitor context', {
+              hasScreenshotKey: !!process.env.SCREENSHOTONE_API_KEY
+            });
+            
             const competitors = await storage.getCompetitorsByClient(clientId);
             if (!competitors || competitors.length === 0) {
               logger.info('No competitors found for scoring', { clientId });

@@ -65,6 +65,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showEvidence, setShowEvidence] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Fun rotating messages for analysis progress
   const funMessages = [
@@ -100,6 +101,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
     return () => clearInterval(interval);
   }, [funMessages.length]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   // Fetch effectiveness data
   const { data, isLoading, error } = useQuery<EffectivenessData>({
@@ -201,8 +211,41 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     }
   });
 
+  const startPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+    
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/effectiveness/latest/${clientId}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Update query cache with new data
+          queryClient.setQueryData(['effectiveness', clientId, 'v2'], data);
+          
+          // Stop polling if status is completed or failed
+          if (data.run && !['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(data.run.status)) {
+            clearInterval(interval);
+            setPollingInterval(null);
+          }
+        }
+      } catch (error) {
+        console.warn('Polling failed:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    setPollingInterval(interval);
+  };
+
   const handleRefresh = () => {
     refreshMutation.mutate();
+    // Start polling after triggering refresh
+    startPolling();
   };
 
   const handleViewEvidence = () => {
@@ -323,6 +366,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   {run.status === 'scraping' && 'Analyzing website effectiveness...'}
                   {run.status === 'analyzing' && 'Scoring criteria...'}
                   {run.status === 'pending' && 'Starting analysis...'}
+                  {run.status === 'generating_insights' && 'Generating AI insights...'}
                 </p>
                 <p 
                   className="text-sm text-muted-foreground transition-opacity duration-500 ease-in-out"
