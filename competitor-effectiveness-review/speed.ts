@@ -311,18 +311,17 @@ export async function scoreSpeed(
         
         return {
           criterion: 'speed',
-          score: 4.5, // Conservative baseline instead of 0
+          score: 0,
           evidence: {
-            description: 'Speed analysis unavailable - using conservative baseline (site was accessible but API timed out)',
+            description: 'Speed analysis failed',
             details: { 
               error: 'Timeout after 30s',
-              apiStatus: 'failed',
               retryCount: PSI_CONFIG.maxRetries,
               hasRequiredData: true
             },
-            reasoning: 'PageSpeed API timed out after multiple retries. Site appears operational but may be slow or have complex resources. Assigned conservative baseline score.'
+            reasoning: 'Technical error prevented scoring'
           },
-          passes: { passed: [], failed: ['api_timeout'] }
+          passes: { passed: [], failed: ['analysis_failed'] }
         };
       }
     } else {
@@ -401,15 +400,11 @@ export async function scoreSpeed(
 
     return {
       criterion: 'speed',
-      score: 4.5, // Conservative baseline instead of 0
+      score: 0,
       evidence: {
-        description: 'Speed analysis unavailable - using conservative baseline (site was accessible but analysis failed)',
-        details: { 
-          error: error instanceof Error ? error.message : String(error),
-          apiStatus: 'failed',
-          hasRequiredData: true
-        },
-        reasoning: 'Speed analysis encountered technical error. Site appears operational but speed could not be measured. Assigned conservative baseline score.'
+        description: 'Error analyzing website speed',
+        details: { error: error instanceof Error ? error.message : String(error) },
+        reasoning: 'Failed to complete speed analysis due to technical error'
       },
       passes: {
         passed: [],
