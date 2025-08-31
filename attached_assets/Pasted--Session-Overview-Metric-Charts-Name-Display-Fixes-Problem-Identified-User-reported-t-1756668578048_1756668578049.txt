@@ -1,0 +1,102 @@
+## Session Overview: Metric Charts Name Display Fixes
+
+  ### 🎯 Problem Identified
+  User reported that metric charts were displaying URLs
+  instead of proper business names in legends, axis labels,
+  and tooltips:
+  - Client showing "https://www.cleardigital.com" instead of
+  "Clear Digital"
+  - Competitors showing "clay.global" instead of "Clay"
+  (user-provided labels)
+
+  ### 🔍 Root Cause Analysis
+  Found two main issues:
+  1. **Dashboard chart calls**: Passing `client?.websiteUrl`
+  instead of client name
+  2. **Data processing services**: Using processed domains
+  instead of proper labels for competitors
+
+  ### 🔧 Changes Made
+
+  #### **1. Dashboard Chart Calls Fixed**
+  (`/client/src/pages/dashboard.tsx`)
+  **Lines 892, 905, 925** - Updated all chart component calls:
+  ```typescript
+  // BEFORE:
+  clientUrl={client?.websiteUrl}  // Passed full URL
+
+  // AFTER:
+  clientUrl={client?.name || client?.websiteUrl}  //
+  Prioritizes client name
+
+  Lines 204, 993 - Fixed competitor data in
+  getCompetitorChartData():
+  // BEFORE:
+  label: competitor.domain.replace(/^https?:\/\//,
+  '').replace(/^www\./, ''),
+
+  // AFTER:
+  label: competitor.label ||
+  competitor.domain.replace(/^https?:\/\//,
+  '').replace(/^www\./, ''),
+
+  2. Unified Data Service Fixed 
+  (/client/src/services/unifiedDataService.ts)
+
+  Line 364 - Traffic Channels competitor labels:
+  // BEFORE:
+  label: this.cleanDomainName(competitor.domain),
+
+  // AFTER:
+  label: competitor.label ||
+  this.cleanDomainName(competitor.domain),
+
+  Line 641 - Device Distribution competitor labels:
+  // BEFORE:
+  label: this.cleanDomainName(competitor.domain),
+
+  // AFTER:
+  label: competitor.label ||
+  this.cleanDomainName(competitor.domain),
+
+  📊 Charts Fixed
+
+  All 6 metric charts now display proper names:
+  1. ✅ TimeSeriesChart (Bounce Rate, Pages per Session,
+  Sessions per User)
+  2. ✅ MetricBarChart (Session Duration)
+  3. ✅ StackedBarChart (Traffic Channels)
+  4. ✅ LollipopChart (Device Distribution)
+  5. ✅ EffectivenessRadarChart (Already working correctly)
+  6. ✅ SessionDurationAreaChart (Imported but not currently
+  used)
+
+  🎯 Impact
+
+  - Client legends: Now show "Clear Digital" instead of URLs
+  - Competitor legends: Now show "Clay" instead of
+  "clay.global"
+  - All tooltips: Display human-readable names
+  - Axis labels: Use proper business names throughout
+  - Consistent behavior: All charts follow the same naming
+  pattern
+
+  🔄 Implementation Strategy
+
+  Changes implement a fallback hierarchy:
+  1. First priority: Use proper labels (client.name,
+  competitor.label)
+  2. Second priority: Process URLs to extract clean domain
+  names
+  3. Final fallback: Generic labels ("Client", "Demo Company")
+
+  ✅ Status: Complete
+
+  All metric charts now properly display business names
+  instead of URLs across legends, axis labels, and tooltip
+  hovers. The system maintains backward compatibility while
+  prioritizing user-friendly display names.
+
+  This provides a complete technical summary that the Replit
+  agent can use to understand the full scope of changes made
+  during this session.
