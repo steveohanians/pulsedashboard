@@ -424,29 +424,64 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             const competitor = competitors[index];
             
             try {
-              // Only skip if there's an active pending run (to avoid duplicates)
-              // Always create new runs for completed runs since this is a user-requested action
-              const activePendingRun = await db
-                .select()
-                .from(effectivenessRuns)
-                .where(and(
-                  eq(effectivenessRuns.clientId, clientId),
-                  eq(effectivenessRuns.competitorId, competitor.id),
-                  eq(effectivenessRuns.status, 'pending'),
-                  sql`created_at > NOW() - INTERVAL '1 hour'` // Only skip very recent pending runs
-                ))
-                .orderBy(desc(effectivenessRuns.createdAt))
-                .limit(1);
+              // Check cooldown for competitors (24 hours) unless forced or user is admin
+              if (!force && req.user?.role !== 'Admin') {
+                const recentCompetitorRun = await db
+                  .select()
+                  .from(effectivenessRuns)
+                  .where(and(
+                    eq(effectivenessRuns.clientId, clientId),
+                    eq(effectivenessRuns.competitorId, competitor.id),
+                    or(
+                      eq(effectivenessRuns.status, 'completed'),
+                      and(
+                        eq(effectivenessRuns.status, 'pending'),
+                        sql`created_at > NOW() - INTERVAL '2 hours'`
+                      )
+                    ),
+                    sql`created_at > NOW() - INTERVAL '24 hours'`
+                  ))
+                  .orderBy(desc(effectivenessRuns.createdAt))
+                  .limit(1);
 
-              if (activePendingRun.length > 0) {
-                logger.info('Skipping competitor - active pending run exists', {
-                  clientId,
-                  competitorId: competitor.id,
-                  competitorDomain: competitor.domain,
-                  pendingRunId: activePendingRun[0].id,
-                  pendingRunCreated: activePendingRun[0].createdAt
-                });
-                continue;
+                if (recentCompetitorRun.length > 0) {
+                  logger.info('Skipping competitor - recent run exists and not admin/forced', {
+                    clientId,
+                    competitorId: competitor.id,
+                    competitorDomain: competitor.domain,
+                    recentRunStatus: recentCompetitorRun[0].status,
+                    recentRunCreated: recentCompetitorRun[0].createdAt,
+                    isForced: force,
+                    userRole: req.user?.role
+                  });
+                  continue;
+                }
+              } else {
+                // For admin or forced requests, only skip active pending runs to avoid duplicates
+                const activePendingRun = await db
+                  .select()
+                  .from(effectivenessRuns)
+                  .where(and(
+                    eq(effectivenessRuns.clientId, clientId),
+                    eq(effectivenessRuns.competitorId, competitor.id),
+                    eq(effectivenessRuns.status, 'pending'),
+                    sql`created_at > NOW() - INTERVAL '1 hour'`
+                  ))
+                  .orderBy(desc(effectivenessRuns.createdAt))
+                  .limit(1);
+
+                if (activePendingRun.length > 0) {
+                  logger.info('Skipping competitor - active pending run exists (admin/forced)', {
+                    clientId,
+                    competitorId: competitor.id,
+                    competitorDomain: competitor.domain,
+                    pendingRunId: activePendingRun[0].id,
+                    pendingRunCreated: activePendingRun[0].createdAt,
+                    isForced: force,
+                    userRole: req.user?.role
+                  });
+                  continue;
+                }
               }
 
               // Add delay between competitors to avoid rate limiting
