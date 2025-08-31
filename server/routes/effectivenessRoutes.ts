@@ -245,7 +245,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
     const { force = false } = body.data;
 
-    logger.info('Effectiveness refresh requested', { clientId, force });
+    logger.info('🔍 DEBUG: Effectiveness refresh requested', { 
+      clientId, 
+      force, 
+      userRole: req.user?.role,
+      userId: req.user?.id 
+    });
 
     // Get client to verify access and get website URL
     const client = await storage.getClient(clientId);
@@ -406,9 +411,11 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
         // Start competitor scoring process (don't wait for it to complete)
         // This runs after client scoring but doesn't block the response
+        logger.info('🔍 COMPETITOR DEBUG: About to start competitor scoring section', { clientId });
         (async () => {
           try {
             const competitors = await storage.getCompetitorsByClient(clientId);
+            logger.info('🔍 COMPETITOR DEBUG: Fetched competitors', { clientId, competitorCount: competitors?.length || 0 });
             if (!competitors || competitors.length === 0) {
               logger.info('No competitors found for scoring', { clientId });
               return;
@@ -632,12 +639,14 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             });
 
           } catch (backgroundError) {
-            logger.error('Competitor scoring process failed', {
+            logger.error('🔍 COMPETITOR DEBUG: Competitor scoring process failed', {
               clientId,
               parentRunId: newRun.id,
               error: backgroundError instanceof Error ? backgroundError.message : String(backgroundError)
             });
           }
+          
+          logger.info('🔍 COMPETITOR DEBUG: Competitor async block finished', { clientId });
         })().catch(err => {
           logger.error('Unhandled competitor scoring error', {
             clientId,

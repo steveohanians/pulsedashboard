@@ -152,7 +152,7 @@ export class ScreenshotService {
         headers: {
           'Accept': 'image/png'
         },
-        signal: AbortSignal.timeout(30000) // 30 second timeout
+        signal: AbortSignal.timeout(15000) // 15 second timeout
       });
 
       if (!response.ok) {
@@ -260,7 +260,7 @@ export class ScreenshotService {
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
         headers: { 'Accept': 'image/png' },
-        signal: AbortSignal.timeout(70000) // 70 second timeout for full-page
+        signal: AbortSignal.timeout(25000) // 25 second timeout for full-page
       });
 
       if (!response.ok) {
@@ -382,7 +382,7 @@ export class ScreenshotService {
       // Navigate to the page
       await page.goto(url, {
         waitUntil: 'networkidle',
-        timeout: 30000
+        timeout: 15000
       });
 
       // Wait for page to be ready
