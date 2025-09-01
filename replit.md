@@ -50,6 +50,7 @@ Pulse Dashboard™ employs a modern full-stack architecture built for performanc
 - **Advanced CTA Analysis System (August 2025)**: Replaced 500+ line hardcoded CTA scorer with sophisticated AI-powered analysis system using 5-criteria scoring pattern. Implemented vision-enhanced analysis with full-page screenshots, CTA taxonomy classification (PRIMARY vs SECONDARY), conflict detection using synonym groups, and 13-field AI response schema.
 - **Type Safety**: Complete elimination of all `any` types across the codebase, ensuring robust production deployments.
 - **Production Optimization**: Centralized debug logging, enhanced Content Security Policy, standardized authentication middleware, complete GA4 API endpoints integration, and resource preloading optimization.
+- **Effectiveness System Enhancements (September 2025)**: Implemented comprehensive reliability improvements including automated stale run cleanup (2-hour timeout protection), enhanced Playwright-based screenshot capture with Screenshotone.com API fallback, extended PageSpeed Insights integration with 60s timeouts and exponential backoff retries, preprocessing responsiveness checks, fallback scoring mechanisms, improved UI error handling with detailed screenshot failure explanations, and comprehensive cache invalidation for real-time competitor management updates.
 
 ## External Dependencies
 - **Neon PostgreSQL**: Serverless database hosting.
