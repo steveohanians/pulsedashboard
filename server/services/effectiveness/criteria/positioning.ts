@@ -10,7 +10,7 @@ import * as cheerio from "cheerio";
 import logger from "../../../utils/logging/logger";
 import { getEffectivenessPrompt } from "../promptManager";
 import { callOpenAIWithVision } from "../visionHelper";
-import path from "path";
+import * as path from "path";
 
 export async function scorePositioning(
   context: ScoringContext,
@@ -20,215 +20,144 @@ export async function scorePositioning(
   try {
     const $ = cheerio.load(context.html);
     
-    // Utility function to check for boilerplate content
+    // Simplified boilerplate detection
     const isBoilerplate = (text: string): boolean => {
-      const boilerplatePatterns = [
-        /^(menu|nav|footer|contact|copyright|privacy|terms|cookie|login|sign|search)/i,
-        /^[\d\s\-\(\)]+$/, // Phone numbers
-        /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, // Emails
-        /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Dates
-        /^(mon|tue|wed|thu|fri|sat|sun)/i, // Days
-        /^(all rights reserved|©|\®|\™)/i,
-        /cookie|privacy policy|terms of service|copyright/i
-      ];
-      
-      return boilerplatePatterns.some(pattern => pattern.test(text)) || 
-             text.length < 10 || 
-             text.length > 500;
+      return /^(cookie|privacy|terms|copyright|©|menu|login|sign in)$/i.test(text.trim()) ||
+             text.length < 5;
     };
 
-    // 1. Expand Hero Section Detection with flexible patterns
-    const heroSelectors = [
-      '[class*="hero"]',  // Catches hero, hero__, hero--
-      '[class*="banner"]',
-      '[class*="masthead"]',
-      'section:first-child',
-      'main > section:first-child',
-      '.intro, [class*="intro"]',
-      'header + section',  // First section after header
-      '[data-section="hero"]',
-      '.jumbotron', '.header-content',
-      'section:first-of-type', 'main > *:first-child',
-      '[role="banner"]', '.landing', '[class*="landing"]'
-    ];
-
-    // 2. Extract ALL Heading Levels (h1-h6) including eyebrow text
-    const headings = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-    let extractedHeadings: { [key: string]: string[] } = {};
-
-    headings.forEach(tag => {
-      $(tag).each((_, el) => {
-        const text = $(el).text().trim();
-        // Skip navigation/footer
-        if (!$(el).closest('nav, footer').length && text.length > 3 && !isBoilerplate(text)) {
-          if (!extractedHeadings[tag]) extractedHeadings[tag] = [];
-          extractedHeadings[tag].push(text);
-        }
-      });
-    });
-
-    // Use H5/H6 if they appear before H1 (common pattern for eyebrow text)
-    const eyebrowText = extractedHeadings.h5?.[0] || extractedHeadings.h6?.[0] || '';
-    const mainHeadline = extractedHeadings.h1?.[0] || '';
-    const subheading = extractedHeadings.h2?.[0] || extractedHeadings.h3?.[0] || '';
-
-    // 3. Find Value Proposition Sections
-    const valuePropSelectors = [
-      '.intro, [class*="intro"]',
-      '[class*="value"]',
-      '[class*="about"]',
-      'section:nth-child(2)',  // Second section often has value props
-      'section:nth-child(3)',
-      '[class*="features"]',
-      '[class*="benefits"]',
-      '[class*="services"]'
-    ];
-
-    let valuePropContent: string[] = [];
-    valuePropSelectors.forEach(selector => {
-      // Early exit if we have enough content
-      if (valuePropContent.length >= 10) return; // Stop after 10 value prop items
+    // Balanced positioning content extraction - hero-focused but comprehensive
+    const extractPositioningContent = ($: cheerio.Root): string => {
+      const positioningParts: string[] = [];
       
-      const section = $(selector).first();
-      if (section.length && !section.closest('footer').length) {
-        // Get all text content from this section - LIMITED
-        section.find('h2, h3, h4, h5, p').each((_, el) => {
+      // 1. Get the main headline (H1 or first H2)
+      const h1 = $('h1').not('nav h1, footer h1').first().text().trim();
+      const h2First = $('h2').not('nav h2, footer h2').first().text().trim();
+      const mainHeadline = h1 || h2First;
+      
+      if (mainHeadline && mainHeadline.length > 5 && mainHeadline.length < 200) {
+        positioningParts.push(mainHeadline);
+      }
+      
+      // 2. Get hero section content (primary focus)
+      const heroSection = $('[class*="hero"], header, section:first-of-type').first();
+      if (heroSection.length) {
+        heroSection.find('p, h2, h3, [class*="tagline"], [class*="subtitle"]').each((i, el) => {
+          if (i > 5) return false;
           const text = $(el).text().trim();
-          if (text.length > 10 && text.length < 300 && !isBoilerplate(text)) {
-            valuePropContent.push(text);
+          if (text && text !== mainHeadline && text.length > 10 && text.length < 300) {
+            positioningParts.push(text);
           }
         });
       }
-    });
-
-    // 4. Extract Differentiators and Proof Points
-    const differentiatorPatterns = [
-      /\d+\s*(year|client|project|company|brand)/i,  // "20+ years", "500+ clients"
-      /award[- ]winning/i,
-      /trusted by/i,
-      /recognized/i,
-      /leading|leader/i,
-      /expert|expertise/i,
-      /proven/i,
-      /results/i
-    ];
-
-    const additionalContent: string[] = [];
-
-    // Find elements containing these patterns
-    $('p, h2, h3, h4, h5, li').each((_, el) => {
-      const text = $(el).text().trim();
-      if (differentiatorPatterns.some(pattern => pattern.test(text)) && 
-          text.length > 10 && text.length < 200 && !isBoilerplate(text)) {
-        additionalContent.push(text);
-      }
-    });
-
-    // 5. Get List-Based Value Props - LIMITED PROCESSING  
-    let processedLists = 0;
-    const MAX_LISTS = 8; // Limit list processing
-    $('ul, ol').each((_, list) => {
-      if (processedLists++ >= MAX_LISTS) return false; // Stop after 8 lists
-      const $list = $(list);
-      // Skip navigation
-      if ($list.closest('nav, header, footer').length) return;
       
-      const items = $list.find('li');
-      const listItems: string[] = [];
+      // 3. Look for WHO (audience) throughout the page
+      const audiencePatterns = [
+        /for\s+(companies|businesses|organizations|teams|leaders|startups|enterprises)/i,
+        /we (help|serve|work with|partner with)\s+\w+/i,
+        /designed for|built for|made for/i,
+        /whether you('re|'re)/i
+      ];
       
-      items.each((_, li) => {
-        const text = $(li).text().trim();
-        // Look for value prop patterns
-        if (text.match(/approach|performance|excellence|collaborative|expertise|solution/i) &&
-            text.length > 15 && text.length < 150 && !isBoilerplate(text)) {
-          listItems.push(text);
-        }
-      });
+      // 4. Look for WHAT (outcomes/value) throughout the page
+      const outcomePatterns = [
+        /we help|we enable|we empower|we provide/i,
+        /transform|accelerate|optimize|improve|increase|reduce|drive|deliver/i,
+        /results|outcomes|success|growth|performance|revenue/i,
+        /solution|platform|service|software/i
+      ];
       
-      if (listItems.length >= 2) {
-        additionalContent.push(...listItems);
-      }
-    });
-
-    // 6. Smart Content Assembly
-    const contentParts: string[] = [];
-
-    // 1. Eyebrow/intro text (if exists)
-    if (eyebrowText && eyebrowText !== mainHeadline) {
-      contentParts.push(eyebrowText);
-    }
-
-    // 2. Main headline
-    if (mainHeadline) {
-      contentParts.push(mainHeadline);
-    }
-
-    // 3. Subheading (if different from main)
-    if (subheading && subheading !== mainHeadline) {
-      contentParts.push(subheading);
-    }
-
-    // 4. Value prop content
-    contentParts.push(...valuePropContent);
-
-    // 5. Additional differentiators
-    contentParts.push(...additionalContent);
-
-    // Remove duplicates and clean
-    const uniqueParts = [...new Set(contentParts)]
-      .filter(text => text && text.length > 5)
-      .map(text => text.replace(/\s+/g, ' ').trim());
+      // 5. Look for HOW (differentiators) throughout the page
+      const differentiatorPatterns = [
+        /trusted by|used by|chosen by|loved by/i,
+        /unlike|different|unique|only|first/i,
+        /years of experience|expertise|proven|award/i,
+        /our approach|our method|our process|our framework/i
+      ];
       
-    // Early content sufficiency check - avoid expensive fallback processing
-    const currentContentLength = uniqueParts.join(' ').length;
-    const hasEnoughContent = currentContentLength >= 400 && uniqueParts.length >= 4;
-
-    // 7. Fallback Enhancement - If content is thin, expand search
-    if (!hasEnoughContent && currentContentLength < 300) {
-      // Get comprehensive sections of content
-      $('section').each((_, section) => {
-        $(section).find('h2, h3, p').each((_, el) => {
-          const text = $(el).text().trim();
-          if (text.length > 20 && text.length < 200 &&
-              !text.match(/cookie|privacy|copyright/i) && !isBoilerplate(text)) {
-            uniqueParts.push(text);
-          }
-        });
-      });
-    }
-
-    // If still missing content, use proximity-based extraction
-    if (!hasEnoughContent && uniqueParts.join(' ').length < 200) {
-      const mainElement = $('main, [role="main"]').first();
-      if (mainElement.length) {
-        // Get everything from top of main content  
-        const topContent: string[] = [];
-        mainElement.children().each((_, child) => {
-          $(child).find('h1, h2, h3, h4, h5, p').each((_, el) => {
-            const text = $(el).text().trim();
-            if (text.length > 10 && !$(el).closest('nav').length && !isBoilerplate(text)) {
-              topContent.push(text);
-            }
-          });
-        });
+      // Scan broader but with limits (first 50 text elements)
+      const allPatterns = [...audiencePatterns, ...outcomePatterns, ...differentiatorPatterns];
+      let elementsScanned = 0;
+      const maxElements = 50;
+      
+      $('p, h2, h3, h4, li').each((_, el) => {
+        if (elementsScanned++ >= maxElements) return false;
         
-        uniqueParts.push(...topContent);
-      }
+        const text = $(el).text().trim();
+        if (text.length > 20 && text.length < 250 && !isBoilerplate(text)) {
+          // Check if it matches positioning patterns
+          if (allPatterns.some(pattern => pattern.test(text))) {
+            if (!positioningParts.includes(text)) {
+              positioningParts.push(text);
+            }
+          }
+        }
+      });
+      
+      // 6. Extract any eyebrow text (small text above headline)
+      const eyebrowSelectors = [
+        '.eyebrow', '[class*="eyebrow"]',
+        'h5:first-of-type', 'h6:first-of-type',
+        '[class*="overline"]', '[class*="pre-heading"]'
+      ];
+      
+      $(eyebrowSelectors.join(',')).first().each((_, el) => {
+        const text = $(el).text().trim();
+        if (text.length > 5 && text.length < 100) {
+          positioningParts.unshift(text);
+        }
+      });
+      
+      // 7. Look for about/intro sections specifically
+      const aboutSelectors = [
+        '[class*="about"]:not(nav *, footer *)',
+        '[class*="intro"]:not(nav *, footer *)',
+        'section:has(h2:contains("Who"))',
+        'section:has(h2:contains("What"))'
+      ];
+      
+      $(aboutSelectors.join(',')).each((i, section) => {
+        if (i > 2) return false; // Check first 3 matching sections
+        $(section).find('p').slice(0, 3).each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length > 30 && text.length < 250 && !positioningParts.includes(text)) {
+            positioningParts.push(text);
+          }
+        });
+      });
+      
+      // 8. Return clean, deduplicated content (expanded limit)
+      const unique = Array.from(new Set(positioningParts));
+      return unique.slice(0, 15).join('\n').substring(0, 1500);
+    };
+
+    // Extract focused positioning content
+    let heroContent = extractPositioningContent($);
+
+    if (!heroContent || heroContent.length < 50) {
+      // Fallback: get first section's text
+      const fallbackContent = $('main, body').first()
+        .find('h1, h2, h3, p').slice(0, 10)
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(text => text.length > 10 && text.length < 300)
+        .join('\n')
+        .substring(0, 1000);
+        
+      heroContent = fallbackContent;
     }
 
-    const heroContent = uniqueParts
-      .filter((text, index, self) => self.indexOf(text) === index)
-      .join(' ')
-      .substring(0, 1500)
+    // Prepare content for OpenAI
+    const contentForAI = {
+      heroContent: heroContent,
+      mainHeadline: $('h1').first().text().trim() || $('h2').first().text().trim(),
+      subheading: $('h1 + p, h2 + p, [class*="hero"] p').first().text().trim()
+    };
     
-    logger.info("Extracted comprehensive positioning content", {
+    logger.info("Extracted positioning content", {
       url: context.websiteUrl,
-      mainHeadlineLength: mainHeadline.length,
-      eyebrowTextLength: eyebrowText.length,
-      subheadingLength: subheading.length,
-      valuePropParts: valuePropContent.length,
-      differentiatorParts: additionalContent.length,
-      totalContentLength: heroContent.length
+      contentLength: heroContent.length,
+      mainHeadline: contentForAI.mainHeadline.substring(0, 100)
     });
 
     if (!heroContent) {
@@ -237,7 +166,7 @@ export async function scorePositioning(
         score: 0,
         evidence: {
           description: 'No positioning content found',
-          details: { mainHeadline, subheading, eyebrowText },
+          details: { mainHeadline: contentForAI.mainHeadline },
           reasoning: 'Unable to evaluate positioning without hero content'
         },
         passes: {
@@ -247,28 +176,18 @@ export async function scorePositioning(
       };
     }
 
-    // Get prompt from database or use default
+    // Get prompt from database
     const effectivenessPrompt = await getEffectivenessPrompt('positioning');
     if (!effectivenessPrompt) {
       throw new Error('No prompt template available for positioning criterion');
     }
     
-    // Replace template variables - use comprehensive content instead of individual pieces
+    // Replace template variables with clean content
     const prompt = effectivenessPrompt.promptTemplate
-      .replace('{content}', heroContent)
-      .replace('{h1}', mainHeadline)
-      .replace('{subheading}', subheading)
-      .replace('{firstParagraph}', valuePropContent[0] || '');
-    
-    // Log what we're sending to OpenAI
-    logger.info("Comprehensive positioning content sent to OpenAI", {
-      url: context.websiteUrl,
-      mainHeadline: mainHeadline.substring(0, 100),
-      subheading: subheading.substring(0, 100),
-      eyebrowText: eyebrowText.substring(0, 100),
-      contentLength: heroContent.length,
-      contentPreview: heroContent.substring(0, 200) + '...'
-    });
+      .replace('{content}', contentForAI.heroContent)
+      .replace('{h1}', contentForAI.mainHeadline)
+      .replace('{subheading}', contentForAI.subheading)
+      .replace('{firstParagraph}', contentForAI.subheading); // Use same as subheading
     
     let analysisText: string;
 
@@ -290,7 +209,7 @@ export async function scorePositioning(
           effectivenessPrompt.promptTemplate,
           effectivenessPrompt.systemPrompt,
           openai,
-          300 // Increased tokens for vision analysis
+          300
         );
 
       } catch (visionError) {
@@ -299,7 +218,7 @@ export async function scorePositioning(
           error: visionError instanceof Error ? visionError.message : String(visionError)
         });
         
-        // Fallback to existing text-only analysis
+        // Fallback to text-only analysis
         const response = await openai.chat.completions.create({
           model: config.openai.model,
           temperature: config.openai.temperature,
@@ -319,13 +238,7 @@ export async function scorePositioning(
         analysisText = response.choices[0]?.message?.content?.trim() || '';
       }
     } else {
-      // Standard text-only analysis (existing behavior)
-      logger.info('Using text-only positioning analysis', {
-        url: context.websiteUrl,
-        hasFullPageScreenshot: !!context.fullPageScreenshot,
-        model: config.openai.model
-      });
-
+      // Standard text-only analysis
       const response = await openai.chat.completions.create({
         model: config.openai.model,
         temperature: config.openai.temperature,
@@ -372,9 +285,6 @@ export async function scorePositioning(
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
     const evidenceDetails: Record<string, any> = {};
     
-    // Store extracted hero content for evidence
-    const wordCount = heroContent.split(/\s+/).length;
-    
     // Equal weight for each criterion (5 criteria × 2 points = 10 points max)
     if (analysis.audience_named) {
       score += 2;
@@ -416,7 +326,7 @@ export async function scorePositioning(
       passes.failed.push('headline_too_long');
     }
 
-    // New 5th criterion: visual positioning support
+    // 5th criterion: visual positioning support
     if (analysis.visual_supports_positioning) {
       score += 2;
       passes.passed.push('visual_supports_positioning');
@@ -453,7 +363,7 @@ export async function scorePositioning(
 
     return {
       criterion: 'positioning',
-      score: Math.round(score * 10) / 10, // Round to 1 decimal
+      score: Math.round(score * 10) / 10,
       evidence: {
         description: `Positioning analysis of hero content: ${passes.passed.length}/5 criteria passed`,
         details: {
@@ -461,13 +371,10 @@ export async function scorePositioning(
           analysis,
           buzzwordCount,
           buzzwordPenalty,
-          wordCount: mainHeadline.split(' ').length,
-          mainHeadline,
-          subheading,
-          eyebrowText,
-          valuePropPartsCount: valuePropContent.length,
-          differentiatorPartsCount: additionalContent.length,
-          ...evidenceDetails // Include extracted evidence
+          wordCount: contentForAI.mainHeadline.split(' ').length,
+          mainHeadline: contentForAI.mainHeadline,
+          subheading: contentForAI.subheading,
+          ...evidenceDetails
         },
         reasoning: generatePositioningInsights(analysis, buzzwordCount, passes.passed, passes.failed)
       },
@@ -514,24 +421,24 @@ function generatePositioningInsights(analysis: any, buzzwordCount: number, passe
   // Specific recommendations
   const recommendations: string[] = [];
   
-  if (failed.includes('audience_named')) {
-    recommendations.push("**Define your target audience** - Be specific about who you serve rather than using generic terms");
+  if (failed.includes('no_target_audience')) {
+    recommendations.push("**Define your target audience** - Be specific about who you serve");
   }
   
-  if (failed.includes('outcome_present')) {
-    recommendations.push("**Clarify the outcome** - Visitors should immediately understand what result they'll achieve by working with you");
+  if (failed.includes('no_specific_value')) {
+    recommendations.push("**Clarify the outcome** - State what result visitors will achieve");
   }
   
-  if (failed.includes('capability_clear')) {
-    recommendations.push("**Specify your capabilities** - Explain exactly how you deliver results, not just what you do");
+  if (failed.includes('no_capability_clear')) {
+    recommendations.push("**Specify your capabilities** - Explain how you deliver results");
   }
   
-  if (failed.includes('brevity_check')) {
-    recommendations.push("**Simplify your message** - Hero content should be concise and immediately scannable");
+  if (failed.includes('headline_too_long')) {
+    recommendations.push("**Simplify your message** - Keep hero content concise and scannable");
   }
   
   if (buzzwordCount > 0) {
-    recommendations.push(`**Reduce buzzwords** - Replace ${buzzwordCount} generic terms with specific, results-focused language`);
+    recommendations.push(`**Reduce buzzwords** - Replace ${buzzwordCount} generic terms with specific language`);
   }
   
   // Combine insights and recommendations

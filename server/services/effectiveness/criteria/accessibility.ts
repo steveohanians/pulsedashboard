@@ -34,6 +34,12 @@ export async function scoreAccessibility(
     );
     const hasAriaLabels = ariaCount >= 5;
 
+    // Check for modern ARIA patterns
+    const hasAriaLive = $('[aria-live]').length > 0;
+    const hasAriaCurrent = $('[aria-current]').length > 0;
+    const hasAriaExpanded = $('[aria-expanded]').length > 0;
+    const modernAriaScore = [hasAriaLive, hasAriaCurrent, hasAriaExpanded].filter(Boolean).length;
+
     // Check image alt text coverage
     const images = $('img');
     const imagesWithAlt = $('img[alt]');
@@ -44,11 +50,35 @@ export async function scoreAccessibility(
       (imagesWithAlt.length) / totalImages;
     const hasGoodAltTexts = altTextCoverage >= 0.9;
 
-    // Check for form accessibility
+    // Check for meaningful alt text (not just present)
+    const meaningfulAltTexts = imagesWithAlt.filter((_, el) => {
+      const alt = $(el).attr('alt') || '';
+      // Check if alt text is not placeholder text
+      return alt.length > 3 && 
+             !alt.match(/^(image|img|photo|picture|icon|logo)\d*$/i) &&
+             !alt.match(/^untitled/i);
+    });
+    const meaningfulAltRatio = totalImages === 0 ? 1 : meaningfulAltTexts.length / totalImages;
+
+    // Check for form accessibility with multiple labeling methods
     const formInputs = $('input, textarea, select');
-    const labeledInputs = $('input[id], textarea[id], select[id]').filter((_, el) => {
-      const id = $(el).attr('id');
-      return $(`label[for="${id}"]`).length > 0;
+    const labeledInputs = formInputs.filter((_, el) => {
+      const $el = $(el);
+      const id = $el.attr('id');
+      
+      // Method 1: Explicit label with for attribute
+      if (id && $(`label[for="${id}"]`).length > 0) return true;
+      
+      // Method 2: Implicit label (input wrapped in label)
+      if ($el.parent('label').length > 0) return true;
+      
+      // Method 3: ARIA labeling
+      if ($el.attr('aria-label') || $el.attr('aria-labelledby')) return true;
+      
+      // Method 4: Title attribute (fallback)
+      if ($el.attr('title')) return true;
+      
+      return false;
     });
     const formLabelsRatio = formInputs.length === 0 ? 1 : 
       labeledInputs.length / formInputs.length;
@@ -61,9 +91,27 @@ export async function scoreAccessibility(
     const elementsWithTabIndex = $('[tabindex]');
     const hasFocusManagement = focusableElements.length >= 3;
 
-    // Check for skip links
-    const skipLinks = $('a[href^="#"]:contains("skip"), a[href^="#"]:contains("main")');
+    // Check for skip links with more patterns
+    const skipLinkPatterns = [
+      'a[href^="#"]:contains("skip")',
+      'a[href^="#"]:contains("Skip")',
+      'a[href^="#"]:contains("jump")',
+      'a[href^="#"]:contains("Jump")',
+      'a[href^="#main"]',
+      'a[href^="#content"]',
+      '.skip-link',
+      '[class*="skip"]'
+    ];
+    const skipLinks = $(skipLinkPatterns.join(', '));
     const hasSkipLinks = skipLinks.length > 0;
+
+    // Check for proper button/link semantics
+    const buttonsAsLinks = $('button[onclick*="location"], button[onclick*="href"]');
+    const linksAsButtons = $('a[href="#"][onclick], a[href="javascript:"]').filter((_, el) => {
+      const text = $(el).text().toLowerCase();
+      return !text.includes('read more') && !text.includes('learn more');
+    });
+    const hasProperSemantics = buttonsAsLinks.length === 0 && linksAsButtons.length < 3;
 
     // Check headings hierarchy for screen readers
     const headings = $('h1, h2, h3, h4, h5, h6');
@@ -101,23 +149,29 @@ export async function scoreAccessibility(
       passes.failed.push('no_semantic_structure');
     }
 
-    // ARIA attributes (15% of score - 1.5 points)
-    if (hasAriaLabels) {
+    // ARIA attributes with modern patterns (15% of score - 1.5 points)
+    if (hasAriaLabels && modernAriaScore >= 2) {
       score += 1.5;
+      passes.passed.push('comprehensive_aria');
+    } else if (hasAriaLabels || modernAriaScore >= 1) {
+      score += 1.0;
       passes.passed.push('aria_attributes_present');
     } else if (ariaCount >= 2) {
-      score += 0.75;
+      score += 0.5;
       passes.passed.push('some_aria_attributes');
     } else {
-      passes.failed.push('no_aria_attributes');
+      passes.failed.push('insufficient_aria');
     }
 
     // Image alt text (15% of score - 1.5 points)
-    if (hasGoodAltTexts) {
+    if (meaningfulAltRatio >= 0.8) {
       score += 1.5;
+      passes.passed.push('meaningful_alt_text');
+    } else if (hasGoodAltTexts) {
+      score += 1.2;
       passes.passed.push('good_alt_text_coverage');
     } else if (altTextCoverage >= 0.6) {
-      score += 1.0;
+      score += 0.8;
       passes.passed.push('adequate_alt_text_coverage');
     } else {
       passes.failed.push('poor_alt_text_coverage');
@@ -161,17 +215,25 @@ export async function scoreAccessibility(
       passes.failed.push('no_skip_links');
     }
 
-    // Language attribute (5% of score - 0.5 points)
-    if (hasLangAttribute) {
+    // Semantic button/link usage (5% of score - 0.5 points)
+    if (hasProperSemantics) {
       score += 0.5;
+      passes.passed.push('proper_button_link_semantics');
+    } else {
+      passes.failed.push('improper_button_link_usage');
+    }
+
+    // Language attribute (2.5% of score - 0.25 points)
+    if (hasLangAttribute) {
+      score += 0.25;
       passes.passed.push('language_declared');
     } else {
       passes.failed.push('no_language_declaration');
     }
 
-    // Accessibility tools/framework (5% of score - 0.5 points)
+    // Accessibility tools/framework (2.5% of score - 0.25 points)
     if (hasA11yLibrary || hasCSSFramework) {
-      score += 0.5;
+      score += 0.25;
       passes.passed.push('accessibility_tools');
     } else {
       passes.failed.push('no_accessibility_tools');
@@ -184,22 +246,30 @@ export async function scoreAccessibility(
       score,
       semanticCount,
       ariaCount,
+      modernAriaScore,
       altTextCoverage: Math.round(altTextCoverage * 100),
+      meaningfulAltRatio: Math.round(meaningfulAltRatio * 100),
       formLabelsRatio: Math.round(formLabelsRatio * 100),
       focusableElements: focusableElements.length,
-      hasSkipLinks
+      hasSkipLinks,
+      hasProperSemantics
     });
 
     return {
       criterion: 'accessibility',
       score: Math.round(score * 10) / 10,
       evidence: {
-        description: `Accessibility analysis: ${semanticCount} semantic elements, ${ariaCount} ARIA attributes, ${Math.round(altTextCoverage * 100)}% alt text coverage`,
+        description: `Accessibility analysis: ${semanticCount} semantic elements, ${ariaCount} ARIA attributes, ${Math.round(meaningfulAltRatio * 100)}% meaningful alt text`,
         details: {
           semanticCount,
           ariaCount,
+          hasAriaLive,
+          hasAriaCurrent,
+          hasAriaExpanded,
+          modernAriaScore,
           totalImages,
           altTextCoverage: Math.round(altTextCoverage * 100),
+          meaningfulAltRatio: Math.round(meaningfulAltRatio * 100),
           formInputs: formInputs.length,
           labeledInputs: labeledInputs.length,
           formLabelsRatio: Math.round(formLabelsRatio * 100),
@@ -207,9 +277,12 @@ export async function scoreAccessibility(
           hasSkipLinks,
           hasLangAttribute,
           h1Count,
-          headingsTotal: headings.length
+          headingsTotal: headings.length,
+          buttonsAsLinks: buttonsAsLinks.length,
+          linksAsButtons: linksAsButtons.length,
+          hasProperSemantics
         },
-        reasoning: `Score based on semantic HTML (${hasSemanticStructure ? 'present' : 'missing'}), ARIA attributes (${ariaCount}), alt text coverage (${Math.round(altTextCoverage * 100)}%), form labels (${Math.round(formLabelsRatio * 100)}%), focus management (${hasFocusManagement ? 'adequate' : 'poor'}), and heading structure (${hasHeadingStructure ? 'proper' : 'improper'})`
+        reasoning: `Score based on semantic HTML (${hasSemanticStructure ? 'present' : 'missing'}), ARIA attributes (${ariaCount} with modern score: ${modernAriaScore}), meaningful alt text (${Math.round(meaningfulAltRatio * 100)}%), form labels (${Math.round(formLabelsRatio * 100)}%), focus management (${hasFocusManagement ? 'adequate' : 'poor'}), heading structure (${hasHeadingStructure ? 'proper' : 'improper'}), and semantic button/link usage (${hasProperSemantics ? 'proper' : 'improper'})`
       },
       passes
     };

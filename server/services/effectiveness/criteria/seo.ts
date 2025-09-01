@@ -20,22 +20,24 @@ export async function scoreSEO(
     const title = titleElement.text().trim();
     const hasTitle = title.length > 0;
     const titleLength = title.length;
-    const hasTitleLength = titleLength >= 30 && titleLength <= 60; // SEO best practice
+    const hasTitleLength = titleLength >= 30 && titleLength <= 70; // Updated for modern SERPs
 
     // Meta description analysis
     const metaDescription = $('meta[name="description"]').attr('content')?.trim() || '';
     const hasMetaDescription = metaDescription.length > 0;
     const metaDescLength = metaDescription.length;
-    const hasMetaDescLength = metaDescLength >= 120 && metaDescLength <= 160;
+    const hasMetaDescLength = metaDescLength >= 120 && metaDescLength <= 200; // Google now shows up to 200 chars
 
     // H1 analysis
     const h1Elements = $('h1');
     const h1Count = h1Elements.length;
     const h1Text = h1Elements.first().text().trim();
     const hasUniqueH1 = h1Count === 1 && h1Text.length > 0;
-    const h1TitleMatch = title && h1Text && 
-      (title.toLowerCase().includes(h1Text.toLowerCase()) || 
-       h1Text.toLowerCase().includes(title.toLowerCase()));
+    // H1 and title should be different but both present and substantial
+    const h1TitleOptimized = h1Text && title && 
+      h1Text !== title && // Should be different
+      h1Text.length > 10 && // H1 should be meaningful
+      title.length > 10; // Title should be meaningful
 
     // Canonical URL
     const canonicalLink = $('link[rel="canonical"]').attr('href');
@@ -85,6 +87,23 @@ export async function scoreSEO(
     const hasCleanURL = !url.search && !url.pathname.includes('?') && 
                        !url.pathname.includes('&') && url.pathname.split('/').length <= 4;
 
+    // Mobile optimization check
+    const hasMobileViewport = $('meta[name="viewport"][content*="width=device-width"]').length > 0;
+
+    // HTTPS check
+    const isHTTPS = context.websiteUrl.startsWith('https://');
+
+    // Performance hints (checking for modern optimization)
+    const hasLazyLoading = $('img[loading="lazy"]').length > 0;
+    const hasModernImageFormats = $('source[type="image/webp"], source[type="image/avif"]').length > 0;
+
+    // International SEO
+    const hasHreflang = $('link[hreflang]').length > 0;
+
+    // Breadcrumb structured data
+    const hasBreadcrumbs = $('script[type="application/ld+json"]:contains("BreadcrumbList")').length > 0 ||
+                           $('[itemtype*="BreadcrumbList"]').length > 0;
+
     // Calculate score
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
@@ -112,7 +131,7 @@ export async function scoreSEO(
     }
 
     // H1 optimization (15% of score - 1.5 points)
-    if (hasUniqueH1 && h1TitleMatch) {
+    if (hasUniqueH1 && h1TitleOptimized) {
       score += 1.5;
       passes.passed.push('optimized_h1');
     } else if (hasUniqueH1) {
@@ -193,6 +212,22 @@ export async function scoreSEO(
       passes.failed.push('poor_page_structure');
     }
 
+    // Modern web standards bonus (up to 0.5 points, replacing some technical SEO weight)
+    let modernBonus = 0;
+    if (isHTTPS) {
+      modernBonus += 0.2;
+      passes.passed.push('https_enabled');
+    }
+    if (hasMobileViewport) {
+      modernBonus += 0.2;
+      passes.passed.push('mobile_optimized');
+    }
+    if (hasLazyLoading || hasModernImageFormats) {
+      modernBonus += 0.1;
+      passes.passed.push('performance_optimized');
+    }
+    score += Math.min(0.5, modernBonus);
+
     score = Math.min(10, Math.max(0, score));
 
     logger.info("Completed SEO analysis", {
@@ -229,9 +264,16 @@ export async function scoreSEO(
           jsonLdCount: jsonLdScripts.length,
           imageAltRatio: Math.round(imageAltRatio * 100),
           internalLinksCount: internalLinks.length,
-          hasCleanURL
+          hasCleanURL,
+          hasMobileViewport,
+          isHTTPS,
+          hasLazyLoading,
+          hasModernImageFormats,
+          hasHreflang,
+          hasBreadcrumbs,
+          h1TitleOptimized
         },
-        reasoning: `Score based on title optimization (${hasTitleLength ? 'optimal' : hasTitle ? 'present' : 'missing'}), meta description (${hasMetaDescLength ? 'optimal' : hasMetaDescription ? 'present' : 'missing'}), H1 structure (${hasUniqueH1 ? 'unique' : 'poor'}), technical SEO (canonical: ${hasCanonical}, indexable: ${robotsAllowsIndexing}), social tags (${hasOpenGraph && hasTwitterCards ? 'complete' : hasOpenGraph || hasTwitterCards ? 'partial' : 'missing'}), and structured data (${hasStructuredData ? 'present' : 'missing'})`
+        reasoning: `Score based on title optimization (${hasTitleLength ? 'optimal' : hasTitle ? 'present' : 'missing'}), meta description (${hasMetaDescLength ? 'optimal' : hasMetaDescription ? 'present' : 'missing'}), H1 optimization (${h1TitleOptimized ? 'optimized' : hasUniqueH1 ? 'unique' : 'poor'}), technical SEO (canonical: ${hasCanonical}, indexable: ${robotsAllowsIndexing}, HTTPS: ${isHTTPS}), mobile optimization (${hasMobileViewport ? 'yes' : 'no'}), social tags (${hasOpenGraph && hasTwitterCards ? 'complete' : hasOpenGraph || hasTwitterCards ? 'partial' : 'missing'}), and structured data (${hasStructuredData ? 'present' : 'missing'})`
       },
       passes
     };

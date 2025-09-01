@@ -20,29 +20,40 @@ export async function scoreCTAs(
     const $ = cheerio.load(context.html);
     
     // Extract CTA content from the page
-    const ctaContent = extractCTAContent($);
+    let ctaContent = extractCTAContent($);
     
-    logger.info("Extracted CTA content for AI analysis", {
+    // Validate extracted content
+    if (!ctaContent || ctaContent.trim().length < 50) {
+      // Try alternative extraction method
+      ctaContent = $('body').text().replace(/\s+/g, ' ').trim();
+      
+      if (ctaContent.length < 50) {
+        logger.warn("Insufficient content for CTA analysis", {
+          url: context.websiteUrl,
+          contentLength: ctaContent.length
+        });
+        
+        return {
+          criterion: 'ctas',
+          score: 0,
+          evidence: {
+            description: 'Insufficient content found for analysis',
+            details: { contentLength: ctaContent.length },
+            reasoning: 'Unable to evaluate CTAs without adequate content'
+          },
+          passes: {
+            passed: [],
+            failed: ['insufficient_content']
+          }
+        };
+      }
+    }
+    
+    logger.info("Extracted page content for CTA AI analysis", {
       url: context.websiteUrl,
       contentLength: ctaContent.length,
-      ctaSectionsFound: (ctaContent.match(/\n/g) || []).length + 1
+      lineCount: (ctaContent.match(/\n/g) || []).length + 1
     });
-
-    if (!ctaContent || ctaContent.length < 50) {
-      return {
-        criterion: 'ctas',
-        score: 0,
-        evidence: {
-          description: 'Insufficient CTA content found for analysis',
-          details: { contentLength: ctaContent.length },
-          reasoning: 'Unable to evaluate CTAs without adequate content'
-        },
-        passes: {
-          passed: [],
-          failed: ['insufficient_content']
-        }
-      };
-    }
 
     // Get AI prompt from database
     const effectivenessPrompt = await getEffectivenessPrompt('ctas');
@@ -221,10 +232,18 @@ export async function scoreCTAs(
       // AI already limited score to max +0.25 for secondary-only
     }
 
-    // OCR and Visual Issues
-    if (analysis.extraction_issues?.includes('visual_cta_unassessed')) {
-      passes.failed.push('visual_cta_unassessed');
+    // Map extraction_issues to fails
+    if (analysis.extraction_issues && Array.isArray(analysis.extraction_issues)) {
+      analysis.extraction_issues.forEach((issue: string) => {
+        if (!passes.failed.includes(issue)) {
+          passes.failed.push(issue);
+        }
+      });
     }
+
+    // Ensure we're not duplicating pass/fail entries
+    passes.passed = [...new Set(passes.passed)];
+    passes.failed = [...new Set(passes.failed)];
 
     // Store comprehensive analysis data for evidence
     evidenceDetails.cta_strength_score = strengthScore;
@@ -253,7 +272,7 @@ export async function scoreCTAs(
       criterion: 'ctas',
       score: Math.round(score * 10) / 10,
       evidence: {
-        description: `CTA analysis: ${passes.passed.length}/5 criteria met, strength score ${analysis.cta_strength_score}`,
+        description: `CTA analysis: strength score ${(analysis.cta_strength_score * 10).toFixed(1)}/10. ${analysis.cta_evidence || ''}`,
         details: {
           ctaContent: ctaContent.substring(0, 300) + '...',
           analysis,
@@ -286,37 +305,84 @@ export async function scoreCTAs(
   }
 }
 
-// CTA content extraction function
+// CTA content extraction function - extracts full page text preserving structure
 function extractCTAContent($: cheerio.CheerioAPI): string {
-  const ctaContent: string[] = [];
+  // Remove script and style elements first
+  $('script, style, noscript').remove();
   
-  // Extract CTA elements
-  const ctaSelectors = [
-    'a[href]', 'button', 'input[type="submit"]', 'input[type="button"]',
-    '[role="button"]', '.btn', '.button', '.cta', '[class*="cta"]'
-  ];
+  // Build structured text representation preserving layout
+  const textParts: string[] = [];
+  const processedElements = new Set<cheerio.Element>();
   
-  ctaSelectors.forEach(selector => {
-    $(selector).each((_, el) => {
-      const $el = $(el);
-      const text = $el.text().trim();
-      const href = $el.attr('href');
-      const location = getElementLocation($el);
+  // Process the page in natural reading order
+  $('body').find('*').each((_, element) => {
+    const $el = $(element);
+    
+    // Skip if already processed or not visible
+    if (processedElements.has(element)) {
+      return;
+    }
+    
+    // Skip hidden elements
+    if ($el.css('display') === 'none' || $el.css('visibility') === 'hidden') {
+      return;
+    }
+    
+    // Get direct text content (not from children)
+    const directText = $el.contents()
+      .filter(function() { return this.type === 'text'; })
+      .text()
+      .trim();
+    
+    if (directText) {
+      // Mark as processed
+      processedElements.add(element);
       
-      if (text && text.length > 2) {
-        ctaContent.push(`CTA: "${text}" | Location: ${location} | Link: ${href || 'button'}`);
+      // Preserve headings with line breaks
+      if ($el.is('h1, h2, h3, h4, h5, h6')) {
+        textParts.push('\n' + directText + '\n');
       }
-    });
+      // Preserve paragraph breaks
+      else if ($el.is('p, div, section, article')) {
+        if (directText.length > 0) {
+          textParts.push(directText + '\n');
+        }
+      }
+      // Inline elements including buttons and links
+      else if ($el.is('a, button, span, strong, em')) {
+        if (directText.length > 0) {
+          textParts.push(directText + ' ');
+        }
+      }
+      // List items
+      else if ($el.is('li')) {
+        textParts.push('• ' + directText + '\n');
+      }
+    }
   });
   
-  return ctaContent.join('\n');
-}
-
-// Helper to determine element location
-function getElementLocation($el: cheerio.Cheerio<cheerio.Element>): string {
-  if ($el.closest('header, .header, nav, .nav').length) return 'header';
-  if ($el.closest('footer, .footer').length) return 'footer';
-  if ($el.closest('.hero, [class*="hero"]').length) return 'hero';
-  if ($el.closest('aside, .sidebar').length) return 'sidebar';
-  return 'main';
+  // Clean up and normalize whitespace while preserving structure
+  let pageText = textParts.join('');
+  
+  // Collapse multiple blank lines to maximum of 2
+  pageText = pageText.replace(/\n{3,}/g, '\n\n');
+  
+  // Collapse multiple spaces to single space
+  pageText = pageText.replace(/ {2,}/g, ' ');
+  
+  // Trim each line
+  pageText = pageText.split('\n').map(line => line.trim()).join('\n');
+  
+  // Remove empty lines at start and end
+  pageText = pageText.trim();
+  
+  // If extraction failed or too short, try simpler approach
+  if (pageText.length < 100) {
+    // Fallback: just get all text from body
+    pageText = $('body').text()
+      .replace(/\s+/g, ' ')  // Normalize whitespace
+      .trim();
+  }
+  
+  return pageText;
 }

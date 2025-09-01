@@ -18,10 +18,11 @@ export async function scoreUX(
     // Analyze heading hierarchy
     const headings = $('h1, h2, h3, h4, h5, h6').toArray().map(el => {
       const $el = $(el);
+      const tagName = (el as any).tagName || (el as any).name || 'h1';
       return {
-        tag: el.tagName.toLowerCase(),
+        tag: tagName.toLowerCase(),
         text: $el.text().trim(),
-        level: parseInt(el.tagName.charAt(1))
+        level: parseInt(tagName.charAt(1))
       };
     });
 
@@ -29,29 +30,54 @@ export async function scoreUX(
     const h1Count = headings.filter(h => h.level === 1).length;
     const hasProperHierarchy = h1Count === 1 && headings.length >= 3;
     
-    // Analyze text blocks for line length
-    const paragraphs = $('p').toArray().map(el => $(el).text().trim()).filter(text => text.length > 50);
-    const avgWordsPerLine = paragraphs.reduce((acc, p) => {
-      const words = p.split(/\s+/).length;
-      const lines = Math.ceil(words / 12); // Estimate ~12 words per line
-      return acc + (words / lines);
-    }, 0) / Math.max(paragraphs.length, 1);
+    // Modern approach: Check for readable content width indicators
+    const hasReadableWidth = 
+      $('[class*="container"], [class*="wrapper"], [class*="content"], article, main').length > 0 ||
+      $('p').parent().filter((i, el) => {
+        const classes = $(el).attr('class') || '';
+        return !!classes.match(/col-|w-|max-w-|container/);
+      }).length > 0;
+
+    // Set avgWordsPerLine to optimal if modern layout detected
+    const avgWordsPerLine = hasReadableWidth ? 12 : 20; // Assume good or poor
     
-    // Check for interactive elements
-    const buttons = $('button, input[type="submit"], input[type="button"], a.btn, .button').length;
-    const links = $('a[href]').length;
-    const forms = $('form').length;
-    const interactiveElements = buttons + links + forms;
+    // Count meaningful interactions, not all links
+    const meaningfulButtons = $('button:not([type="submit"]), a.btn, a.button, [class*="btn"]:not(nav *)').filter((i, el) => {
+      const text = $(el).text().trim();
+      return text.length > 0 && text.length < 30; // Avoid counting nav links
+    }).length;
+
+    const meaningfulForms = $('form').filter((i, el) => {
+      return $(el).find('input:not([type="hidden"])').length > 0;
+    }).length;
+
+    const interactiveComponents = $('.carousel, .slider, .tabs, .accordion, [class*="carousel"], [class*="slider"], [class*="tab"], [class*="accordion"]').length;
+
+    const interactiveElements = meaningfulButtons + (meaningfulForms * 3) + (interactiveComponents * 2);
 
     // Look for responsive design indicators
     const hasViewportMeta = $('meta[name="viewport"]').length > 0;
     const hasResponsiveClasses = $('[class*="responsive"], [class*="mobile"], [class*="tablet"], [class*="desktop"]').length > 0;
     
-    // Check for CSS frameworks (implies better UX structure)
-    const pageText = context.html.toLowerCase();
-    const hasBootstrap = pageText.includes('bootstrap') || $('[class*="col-"], [class*="row"]').length > 5;
-    const hasTailwind = pageText.includes('tailwind') || $('[class*="flex"], [class*="grid"]').length > 10;
-    const hasFramework = hasBootstrap || hasTailwind;
+    // Detect modern styling patterns regardless of framework
+    const styleIndicators = {
+      layoutClasses: $('[class*="flex"], [class*="grid"], [class*="container"], [class*="wrapper"]').length,
+      componentClasses: $('[class*="card"], [class*="modal"], [class*="dropdown"], [class*="nav"]').length,
+      utilityClasses: $('[class]').toArray().reduce((count, el) => {
+        const classes = $(el).attr('class') || '';
+        const classCount = classes.split(' ').filter(c => c.length > 0).length;
+        return count + (classCount > 3 ? 1 : 0);
+      }, 0),
+      customProperties: context.html.includes('var(--') || context.html.includes(':root')
+    };
+
+    const hasModernStyling = 
+      styleIndicators.layoutClasses >= 5 ||
+      styleIndicators.componentClasses >= 3 ||
+      styleIndicators.utilityClasses >= 10 ||
+      styleIndicators.customProperties;
+
+    const hasFramework = hasModernStyling; // Renamed for compatibility
 
     // Look for accessibility features
     const altTexts = $('img[alt]').length;
@@ -66,76 +92,89 @@ export async function scoreUX(
     const navElements = $('nav, [role="navigation"], .navigation, .nav').length;
     const hasNavigation = navElements > 0;
 
-    // Calculate score
+    // Modern UX patterns
+    const modernPatterns = {
+      hasHero: $('.hero, [class*="hero"], header > div:has(h1)').length > 0,
+      hasCards: $('.card, [class*="card"], article[class*="box"]').length >= 2,
+      hasSections: $('section, [class*="section"]:not(a)').length >= 3,
+      hasCallToAction: $('button:contains("Get"), button:contains("Start"), button:contains("Try"), a[class*="btn"]:contains("Demo")').length > 0,
+      hasSocialProof: $('[class*="testimonial"], [class*="review"], [class*="client"], [class*="logo"]').length > 0,
+      hasSearch: $('input[type="search"], [class*="search"]:has(input), [placeholder*="Search"]').length > 0,
+      hasFooter: $('footer, [class*="footer"]').find('a').length >= 5
+    };
+
+    const modernUXScore = Object.values(modernPatterns).filter(Boolean).length;
+
+    // Calculate score with modern UX weighting
     let score = 0;
     const passes: { passed: string[]; failed: string[] } = { passed: [], failed: [] };
 
-    // Heading hierarchy (15% of score - 1.5 points)
-    if (hasProperHierarchy) {
+    // Visual hierarchy and layout (25% - 2.5 points)
+    if (hasProperHierarchy && modernUXScore >= 4) {
+      score += 2.5;
+      passes.passed.push('excellent_layout');
+    } else if (hasProperHierarchy || modernUXScore >= 3) {
       score += 1.5;
-      passes.passed.push('proper_heading_hierarchy');
+      passes.passed.push('good_layout');
+    } else if (headings.length >= 2) {
+      score += 0.5;
+      passes.passed.push('basic_layout');
     } else {
-      passes.failed.push('improper_heading_hierarchy');
+      passes.failed.push('poor_layout');
     }
 
-    // Text readability (20% of score - 2 points)
-    if (avgWordsPerLine >= 8 && avgWordsPerLine <= 15) {
+    // Content readability (15% - 1.5 points) 
+    if (hasReadableWidth) {
+      score += 1.5;
+      passes.passed.push('readable_content');
+    } else {
+      score += 0.5;
+      passes.failed.push('content_width_issues');
+    }
+
+    // Meaningful interactions (20% - 2 points)
+    if (interactiveElements >= 15) {
       score += 2.0;
-      passes.passed.push('optimal_line_length');
-    } else if (avgWordsPerLine >= 6 && avgWordsPerLine <= 20) {
-      score += 1.0;
-      passes.passed.push('acceptable_line_length');
-    } else {
-      passes.failed.push('poor_line_length');
-    }
-
-    // Interactive elements (15% of score - 1.5 points)
-    if (interactiveElements >= 10) {
-      score += 1.5;
       passes.passed.push('rich_interactivity');
-    } else if (interactiveElements >= 5) {
+    } else if (interactiveElements >= 8) {
       score += 1.0;
       passes.passed.push('adequate_interactivity');
     } else {
-      passes.failed.push('poor_interactivity');
+      passes.failed.push('limited_interactivity');
     }
 
-    // Responsive design (15% of score - 1.5 points)
-    if (hasViewportMeta && (hasResponsiveClasses || hasFramework)) {
-      score += 1.5;
-      passes.passed.push('responsive_design');
+    // Mobile & Responsive (20% - 2 points)
+    const hasMobileOptimization = hasViewportMeta && 
+      ($('[class*="mobile"], [class*="responsive"], [class*="lg:"], [class*="md:"], [class*="sm:"]').length > 0 ||
+       hasFramework);
+
+    if (hasMobileOptimization) {
+      score += 2.0;
+      passes.passed.push('mobile_optimized');
     } else if (hasViewportMeta) {
-      score += 0.75;
-      passes.passed.push('viewport_meta');
+      score += 1.0;
+      passes.passed.push('basic_mobile_support');
     } else {
-      passes.failed.push('no_responsive_design');
+      passes.failed.push('no_mobile_optimization');
     }
 
-    // Framework/Structure (10% of score - 1 point)
+    // Modern styling (10% - 1 point)
     if (hasFramework) {
       score += 1.0;
-      passes.passed.push('css_framework');
+      passes.passed.push('modern_styling');
     } else {
-      passes.failed.push('no_css_framework');
+      passes.failed.push('basic_styling');
     }
 
-    // Accessibility features (15% of score - 1.5 points)
+    // Accessibility features (10% - 1 point)
     if (hasAltTexts && hasAriaLabels) {
-      score += 1.5;
+      score += 1.0;
       passes.passed.push('accessibility_features');
     } else if (hasAltTexts || hasAriaLabels) {
-      score += 0.75;
+      score += 0.5;
       passes.passed.push('some_accessibility');
     } else {
       passes.failed.push('no_accessibility_features');
-    }
-
-    // Navigation (10% of score - 1 point)
-    if (hasNavigation) {
-      score += 1.0;
-      passes.passed.push('navigation_present');
-    } else {
-      passes.failed.push('no_navigation');
     }
 
     score = Math.min(10, Math.max(0, score));
@@ -155,16 +194,19 @@ export async function scoreUX(
       criterion: 'ux',
       score: Math.round(score * 10) / 10,
       evidence: {
-        description: `UX analysis: ${headings.length} headings (${h1Count} H1s), ${Math.round(avgWordsPerLine)} avg words/line, ${interactiveElements} interactive elements`,
+        description: `UX analysis: ${headings.length} headings (${h1Count} H1s), ${interactiveElements} interactive elements, ${modernUXScore} modern patterns detected`,
         details: {
           headingsCount: headings.length,
           h1Count,
           hasProperHierarchy,
-          avgWordsPerLine: Math.round(avgWordsPerLine * 10) / 10,
+          hasReadableWidth,
           interactiveElements,
+          meaningfulButtons,
           hasViewportMeta,
           hasFramework,
           hasNavigation,
+          modernUXScore,
+          modernPatterns,
           altTexts,
           totalImages,
           hasAltTexts,
@@ -178,7 +220,10 @@ export async function scoreUX(
           hasNavigation,
           hasViewportMeta,
           hasAltTexts,
-          ariaLabels
+          ariaLabels,
+          hasReadableWidth,
+          modernUXScore,
+          meaningfulButtons
         })
       },
       passes
@@ -218,6 +263,9 @@ function generateUXInsights(passed: string[], failed: string[], details: {
   hasViewportMeta: boolean;
   hasAltTexts: boolean;
   ariaLabels: number;
+  hasReadableWidth?: boolean;
+  modernUXScore?: number;
+  meaningfulButtons?: number;
 }): string {
   const insights: string[] = [];
   const recommendations: string[] = [];
@@ -232,28 +280,24 @@ function generateUXInsights(passed: string[], failed: string[], details: {
   }
   
   // Specific recommendations based on failed checks
-  if (failed.includes('improper_heading_hierarchy')) {
-    recommendations.push("**Fix heading structure** - Use a single H1 and logical H2-H6 progression to help users scan content");
+  if (failed.includes('poor_layout')) {
+    recommendations.push("**Improve page structure** - Add clear sections, hero area, and visual hierarchy to guide visitors");
   }
   
-  if (failed.includes('poor_line_length')) {
-    if (details.avgWordsPerLine > 20) {
-      recommendations.push("**Shorten text lines** - Break up long paragraphs for better readability");
-    } else {
-      recommendations.push("**Optimize text layout** - Adjust column widths for comfortable reading");
-    }
+  if (failed.includes('content_width_issues')) {
+    recommendations.push("**Optimize content width** - Use containers to limit text width for better readability");
   }
   
-  if (failed.includes('poor_interactivity')) {
-    recommendations.push("**Add interactive elements** - Include more buttons, forms, or engaging components to guide user actions");
+  if (failed.includes('limited_interactivity')) {
+    recommendations.push("**Add meaningful CTAs** - Include clear action buttons and interactive elements to drive engagement");
   }
   
-  if (failed.includes('no_responsive_design')) {
-    recommendations.push("**Implement responsive design** - Ensure your site works seamlessly across mobile, tablet, and desktop");
+  if (failed.includes('no_mobile_optimization')) {
+    recommendations.push("**Optimize for mobile** - Implement responsive design for seamless mobile experience");
   }
   
-  if (failed.includes('no_css_framework')) {
-    recommendations.push("**Adopt a CSS framework** - Use Bootstrap, Tailwind, or similar for consistent, professional styling");
+  if (failed.includes('basic_styling')) {
+    recommendations.push("**Modernize design** - Update styling with contemporary patterns like cards, grids, and consistent spacing");
   }
   
   if (failed.includes('no_accessibility_features')) {
@@ -266,10 +310,12 @@ function generateUXInsights(passed: string[], failed: string[], details: {
   
   // Positive reinforcement for good practices
   const strengths: string[] = [];
-  if (passed.includes('proper_heading_hierarchy')) strengths.push("clear content hierarchy");
-  if (passed.includes('optimal_line_length')) strengths.push("readable text formatting");
+  if (passed.includes('excellent_layout')) strengths.push("excellent visual hierarchy");
+  if (passed.includes('good_layout')) strengths.push("good page structure");
+  if (passed.includes('readable_content')) strengths.push("optimized content width");
   if (passed.includes('rich_interactivity')) strengths.push("engaging interactive elements");
-  if (passed.includes('responsive_design')) strengths.push("mobile optimization");
+  if (passed.includes('mobile_optimized')) strengths.push("mobile optimization");
+  if (passed.includes('modern_styling')) strengths.push("modern design patterns");
   if (passed.includes('accessibility_features')) strengths.push("accessibility compliance");
   
   // Combine insights and recommendations

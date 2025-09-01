@@ -37,11 +37,21 @@ const getFailedCheckMessage = (check: string): string => {
     // Accessibility checks
     no_skip_links: 'Skip navigation links not implemented',
     no_aria_attributes: 'ARIA attributes missing or insufficient',
+    insufficient_aria: 'ARIA implementation needs improvement',
     poor_alt_text_coverage: 'Images missing descriptive alt text',
     poor_heading_structure: 'Heading hierarchy not properly structured',
+    improper_heading_structure: 'Heading hierarchy not properly structured',
     no_language_declared: 'Page language not declared in HTML',
+    no_language_declaration: 'Page language not declared in HTML',
     no_accessibility_tools: 'Accessibility enhancement tools not detected',
     poor_focus_management: 'Keyboard navigation focus not properly managed',
+    no_focus_management: 'Focus management for keyboard navigation missing',
+    no_semantic_structure: 'Semantic HTML structure missing',
+    missing_form_labels: 'Form inputs missing accessible labels',
+    improper_button_link_usage: 'Buttons and links not used semantically',
+    comprehensive_aria: 'Comprehensive ARIA implementation detected',
+    meaningful_alt_text: 'Images have meaningful descriptive text',
+    proper_button_link_semantics: 'Buttons and links used semantically correct',
     
     // Brand Story checks
     no_clear_pov: 'Company point of view or stance not clearly expressed',
@@ -85,27 +95,46 @@ const getFailedCheckMessage = (check: string): string => {
     poor_social_optimization: 'Open Graph or social media tags incomplete',
     poor_content_optimization: 'Content not optimized for target keywords',
     poor_page_structure: 'Page structure not optimized for SEO',
+    poor_h1_structure: 'H1 heading structure needs improvement',
+    https_enabled: 'Site uses secure HTTPS protocol',
+    mobile_optimized: 'Site optimized for mobile devices',
+    performance_optimized: 'Modern performance optimizations detected',
     
     // Trust checks
-    no_third_party_proof: 'Third-party endorsements or testimonials missing',
+    no_media_coverage: 'No media mentions or press coverage found',
+    media_coverage: 'Media mentions present but not from major outlets',
+    major_media_coverage: 'Featured in major media outlets',
+    no_third_party_proof: 'Third-party certifications or awards missing',
+    some_third_party_proof: 'Some third-party endorsements present',
+    third_party_proof: 'Strong third-party certifications or awards present',
     weak_trust_language: 'Trust-building language insufficient',
+    some_trust_language: 'Some trust indicators present',
+    trust_language: 'Strong trust language and scale indicators',
     insufficient_logos: 'Not enough client or partner logos displayed',
-    no_recent_proof: 'Recent success stories or case studies missing',
-    few_case_stories: 'Limited case studies or client examples',
+    some_logos: 'Some client or partner logos present',
+    sufficient_logos: 'Multiple client or partner logos displayed',
+    no_recent_proof: 'Recent dates or current content missing',
+    recent_proof: 'Recent dates and current content present',
+    no_case_stories: 'No case studies or testimonials found',
+    some_case_stories: 'Limited case studies or client examples',
+    multiple_case_stories: 'Multiple case studies and testimonials present',
+    
+    // UX checks (updated for modern patterns)
+    poor_layout: 'Page structure and visual hierarchy need improvement',
+    basic_layout: 'Basic page structure present but could be enhanced',
+    content_width_issues: 'Content width not optimized for readability',
+    limited_interactivity: 'Interactive elements insufficient for engagement',
+    no_mobile_optimization: 'Design not optimized for mobile devices',
+    basic_mobile_support: 'Basic mobile support but not fully optimized',
+    basic_styling: 'Modern design patterns not detected',
+    poor_interactivity: 'Interactive elements insufficient or missing',
+    not_responsive: 'Design not optimized for mobile devices',
+    no_accessibility_features: 'Accessibility features missing or insufficient',
     
     // Speed checks
     lcp_poor: 'Largest Contentful Paint loading time too slow',
     cls_poor: 'Cumulative Layout Shift causing visual instability',
     fid_poor: 'First Input Delay causing interaction delays',
-    
-    // UX checks
-    poor_heading_hierarchy: 'Heading structure doesn\'t follow proper hierarchy',
-    poor_line_length: 'Text line length not optimized for readability',
-    limited_interactivity: 'Interactive elements insufficient or missing',
-    not_responsive: 'Design not optimized for mobile devices',
-    no_css_framework: 'Modern CSS framework not implemented',
-    limited_accessibility: 'Accessibility features insufficient',
-    no_navigation: 'Navigation structure unclear or missing',
   };
   
   return messages[check] || 'Requirement not met on this page';
@@ -144,9 +173,22 @@ function findEvidenceForCheck(checkName: string, evidenceDetails: any): string |
     checkName.replace(/^visual_ctas_weak$/, 'visual_effectiveness'),
     
     // Positioning specific mappings
+    checkName.replace(/^audience_identified$/, 'audience_evidence'),
     checkName.replace(/^value_stated$/, 'outcome_evidence'),
+    checkName.replace(/^capability_clear$/, 'capability_evidence'),
     checkName.replace(/^concise_messaging$/, 'brevity_evidence'),
+    checkName.replace(/^visual_supports_positioning$/, 'visual_supports_evidence'),
     checkName.replace(/_positioning$/, '_evidence'),
+    
+    // UX specific mappings
+    checkName === 'excellent_layout' ? 'modernUXScore' : null,
+    checkName === 'good_layout' ? 'modernUXScore' : null,
+    checkName === 'readable_content' ? 'hasReadableWidth' : null,
+    checkName === 'rich_interactivity' ? 'interactiveElements' : null,
+    checkName === 'adequate_interactivity' ? 'interactiveElements' : null,
+    checkName === 'mobile_optimized' ? 'hasMobileOptimization' : null,
+    checkName === 'modern_styling' ? 'hasFramework' : null,
+    checkName === 'accessibility_features' ? 'hasAltTexts' : null,
     
     // Generic mappings (lower priority)
     checkName.replace(/_identified$/, '_evidence'),
@@ -473,12 +515,62 @@ export function EvidenceDrawer({
                       } else if (check === 'cta_reinforcement') {
                         // Show reinforcement evidence
                         const strengthScore = score.evidence.details.cta_strength_score || 0;
-                        evidence = `Reinforcement detected (strength: ${strengthScore})`;
+                        evidence = `Reinforcement detected (strength: ${(strengthScore * 10).toFixed(1)}/10)`;
+                      }
+                      
+                      // Special handling for trust media coverage
+                      if (check === 'major_media_coverage' || check === 'media_coverage') {
+                        const featuredCount = score.evidence.details.featuredInSections || 0;
+                        const hasMajor = score.evidence.details.hasMajorMedia || false;
+                        if (hasMajor) {
+                          evidence = `Featured in major media outlets (${featuredCount} sections found)`;
+                        } else if (featuredCount > 0) {
+                          evidence = `Media mentions found (${featuredCount} sections)`;
+                        }
+                      }
+                      
+                      // Special handling for trust metrics
+                      if (check === 'sufficient_logos' || check === 'some_logos') {
+                        const logoCount = score.evidence.details.customerLogos || 0;
+                        evidence = `${logoCount} client/partner logos found`;
+                      }
+                      
+                      if (check === 'multiple_case_stories' || check === 'some_case_stories') {
+                        const testimonials = score.evidence.details.testimonials || 0;
+                        const caseStudies = score.evidence.details.caseStudies || 0;
+                        evidence = `${testimonials} testimonials, ${caseStudies} case studies`;
+                      }
+                      
+                      if (check === 'trust_language' || check === 'some_trust_language') {
+                        const metrics = score.evidence.details.numberMatches || [];
+                        if (metrics.length > 0) {
+                          evidence = `Trust indicators: ${metrics.slice(0, 2).join(', ')}`;
+                        }
                       }
                       
                       // Special handling for bonus points
                       if (check === 'industry_focus' || check === 'capability_breadth') {
                         evidence = `Bonus points awarded: +${score.evidence.details.bonusPoints || 0}`;
+                      }
+                    } else if (score.criterion === 'ux') {
+                      // Special handling for UX metrics
+                      if (check === 'excellent_layout' || check === 'good_layout') {
+                        const modernScore = score.evidence.details.modernUXScore || 0;
+                        evidence = `${modernScore} modern UX patterns detected`;
+                      } else if (check === 'readable_content') {
+                        evidence = 'Optimized content width for readability';
+                      } else if (check === 'rich_interactivity' || check === 'adequate_interactivity') {
+                        const elements = score.evidence.details.interactiveElements || 0;
+                        const buttons = score.evidence.details.meaningfulButtons || 0;
+                        evidence = `${elements} interactive elements${buttons > 0 ? ` (${buttons} CTAs)` : ''}`;
+                      } else if (check === 'mobile_optimized' || check === 'basic_mobile_support') {
+                        evidence = 'Mobile viewport and responsive design detected';
+                      } else if (check === 'modern_styling') {
+                        evidence = 'Modern CSS patterns and framework detected';
+                      } else if (check === 'accessibility_features' || check === 'some_accessibility') {
+                        const altTexts = score.evidence.details.altTexts || 0;
+                        const ariaLabels = score.evidence.details.ariaLabels || 0;
+                        evidence = `${altTexts} alt texts, ${ariaLabels} ARIA labels`;
                       }
                     } else {
                       // Smart dynamic evidence mapping for all other criteria
@@ -534,7 +626,7 @@ export function EvidenceDrawer({
               />
               {score.criterion === 'ctas' && score.evidence.details.cta_strength_score !== undefined && (
                 <span className="ml-2 font-medium">
-                  | Strength Score: {score.evidence.details.cta_strength_score}
+                  | Strength Score: {(score.evidence.details.cta_strength_score * 10).toFixed(1)}/10
                 </span>
               )}
             </div>
