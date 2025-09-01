@@ -34,6 +34,7 @@ export interface ScreenshotResult {
   error?: string;
   fallbackUsed?: boolean;
   screenshotMethod?: 'playwright' | 'api' | 'none';
+  renderedHtml?: string;
 }
 
 export class ScreenshotService {
@@ -152,7 +153,7 @@ export class ScreenshotService {
         headers: {
           'Accept': 'image/png'
         },
-        signal: AbortSignal.timeout(15000) // 15 second timeout
+        signal: AbortSignal.timeout(45000) // 45 seconds for API
       });
 
       if (!response.ok) {
@@ -260,7 +261,7 @@ export class ScreenshotService {
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
         headers: { 'Accept': 'image/png' },
-        signal: AbortSignal.timeout(25000) // 25 second timeout for full-page
+        signal: AbortSignal.timeout(45000) // 45 second timeout for full-page
       });
 
       if (!response.ok) {
@@ -382,7 +383,7 @@ export class ScreenshotService {
       // Navigate to the page
       await page.goto(url, {
         waitUntil: 'networkidle',
-        timeout: 15000
+        timeout: 30000 // 30 seconds for Playwright
       });
 
       // Wait for page to be ready
@@ -390,6 +391,15 @@ export class ScreenshotService {
 
       // Measure Web Vitals
       const webVitals = await this.measureWebVitals(page);
+
+      // Extract fully-rendered HTML content after JavaScript execution
+      const renderedHtml = await page.content();
+      
+      logger.info('Extracted rendered HTML content', {
+        url,
+        htmlLength: renderedHtml.length,
+        hasBasicElements: renderedHtml.includes('<body>') && renderedHtml.includes('</body>')
+      });
 
       // Ensure output directory exists
       await fs.mkdir(outputDir, { recursive: true });
@@ -435,7 +445,8 @@ export class ScreenshotService {
         screenshotPath,
         screenshotUrl,
         webVitals,
-        screenshotMethod: 'playwright'
+        screenshotMethod: 'playwright',
+        renderedHtml
       };
 
     } catch (error) {

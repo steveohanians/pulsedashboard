@@ -4537,9 +4537,9 @@ Output: Numbered list with tags.
   });
 
   app.use("/api/ga4", ga4Routes);
+  app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/ga4-data", ga4StatusRouter);
   app.use("/api/ga4-data", smartGA4Route);
-  app.use("/api/ga4-data", ga4DataRoute);
   app.use("/api/admin/ga4", adminGA4Route);
   app.use("/api/admin/ga4-sync", ga4AdminRoutes);
   app.use("/api/admin/benchmark", benchmarkAdminRouter);
