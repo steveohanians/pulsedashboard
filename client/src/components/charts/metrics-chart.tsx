@@ -43,10 +43,11 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
       if (key !== 'Client') {
         let finalValue = value || 0;
         
-        // Apply percentage conversion for rate metrics
+        // Smart percentage conversion for rate metrics - only convert if value appears to be decimal
         if (shouldConvertToPercentage(metricName)) {
           if (key === 'Industry_Avg' || key === 'CD_Avg' || key.includes('Avg')) {
-            finalValue = finalValue * 100;
+            // Only convert if value appears to be decimal (< 1.0 for bounce rates)
+            finalValue = finalValue < 1.0 ? finalValue * 100 : finalValue;
           }
         }
         

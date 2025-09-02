@@ -114,9 +114,9 @@ function generateTimeSeriesData(
     const currentPeriod = periods && periods.length > 0 ? periods[0] : '2025-07';
     const currentMonth = generatePeriodLabel(currentPeriod);
     
-    // Convert CD_Avg from decimal to percentage for Bounce Rate, handle undefined/null cases
+    // Smart conversion for CD_Avg - only convert if value appears to be decimal (< 1.0 for bounce rates)
     const processedCdAvg = (cdAvg !== undefined && cdAvg !== null && !isNaN(cdAvg)) 
-      ? (metricName?.includes('Rate') ? cdAvg * 100 : cdAvg)
+      ? (metricName?.includes('Rate') && cdAvg < 1.0 ? cdAvg * 100 : cdAvg)
       : 0;
     
 
