@@ -633,7 +633,7 @@ export default function Dashboard() {
 
 
           {/* Filters Section - Simplified */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-12">
             {/* Keep existing filter cards but use data from hooks */}
             <Card>
               <CardHeader>
@@ -824,7 +824,7 @@ export default function Dashboard() {
                     <CardTitle className="text-lg lg:text-xl">
                       {metricName}
                       {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
-                        <div className="float-right flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 mt-2 sm:mt-0 sm:float-right">
                           {(() => {
                             // Only show comparison chips for target metrics
                             const targetMetrics = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
@@ -840,7 +840,7 @@ export default function Dashboard() {
                               );
                               
                               return (
-                                <div className="flex items-center gap-1">
+                                <div className="flex flex-wrap items-center gap-1">
                                   {comparisonData.industry && (
                                     <ComparisonChip
                                       label="Industry Avg"
@@ -864,7 +864,7 @@ export default function Dashboard() {
                             }
                             return null;
                           })()}
-                          <span className="text-2xl lg:text-3xl font-light text-primary">
+                          <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary">
                             {metricData.Client
                               ? `${Math.round(metricData.Client * 10) / 10}${
                                   metricName.includes("Rate") ? "%" : 
@@ -879,7 +879,7 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-slate-50/50 rounded-xl p-6">
+                    <div className="bg-slate-50/50 rounded-xl p-4 sm:p-6">
                       <div className="h-64">
                         {/* Render appropriate chart based on metric */}
                         {metricName === "Bounce Rate" && (
@@ -1025,10 +1025,10 @@ export default function Dashboard() {
                     </div>
 
                     {/* AI Insights Section */}
-                    <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-6 mt-6">
+                    <div className="bg-gradient-to-br from-primary/8 via-primary/5 to-primary/10 border border-primary/10 rounded-2xl p-4 sm:p-6 mt-6">
                       <div className="flex items-center mb-4">
                         <Sparkles className="h-5 w-5 text-primary mr-3" />
-                        <h3 className="text-lg font-bold text-primary">
+                        <h3 className="text-base sm:text-lg font-bold text-primary">
                           Pulse AI Insight
                         </h3>
                         {metricStatuses[metricName] && (

@@ -306,7 +306,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     {getEffectivenessStatus(run.overallScore).text}
                   </span>
                 </span>
-                <div className="text-2xl lg:text-3xl font-light text-primary">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-light text-primary">
                   {run.overallScore}
                 </div>
               </div>
@@ -317,7 +317,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
         <CardContent>
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <ButtonLoadingSpinner size="lg" />
+              <ButtonLoadingSpinner size="md" />
             </div>
           )}
 
@@ -403,7 +403,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           {run && run.status === 'completed' && (
             <div className="space-y-4">
               {/* Two-column layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
                 {/* AI Insights Card */}
                 <Card className="h-full bg-slate-50">
                   <CardHeader className="pb-3">
@@ -466,7 +466,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     className="text-slate-500 hover:text-slate-700 h-7 px-2"
                   >
                     {refreshMutation.isPending ? (
-                      <ButtonLoadingSpinner size="xs" />
+                      <ButtonLoadingSpinner size="sm" />
                     ) : (
                       <RotateCcw className="h-3 w-3" />
                     )}
