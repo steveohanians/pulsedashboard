@@ -248,7 +248,8 @@ export function convertMetricValue(
 }
 
 export function shouldConvertToPercentage(metricName: string): boolean {
-  return metricName === 'Bounce Rate';
+  // Backend already provides Bounce Rate as percentages - no conversion needed
+  return false;
 }
 
 export function shouldConvertToMinutes(metricName: string): boolean {

@@ -219,6 +219,11 @@ export class UnifiedDataService {
       if (metricName === "Session Duration" && value > 60) {
         value = value / 60; // Convert seconds to minutes
       }
+      
+      // Convert decimal bounce rates to percentages for Competitor and Industry_Avg
+      if (metricName === "Bounce Rate" && (sourceType === "Competitor" || sourceType === "Industry_Avg") && value < 1) {
+        value = value * 100; // Convert 0.7179 to 71.79
+      }
 
       result[metricName][sourceType] += value;
       counts[metricName][sourceType] += 1;

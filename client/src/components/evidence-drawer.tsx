@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   X, 
@@ -291,27 +291,27 @@ function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: 
     onRunChange(runId, runType);
   };
 
+  const selectOptions = [
+    {
+      value: clientRun.id,
+      label: `Your Site (${clientRun.overallScore}/10)`
+    },
+    ...competitorData.map(compData => ({
+      value: compData.run.id,
+      label: `${compData.competitor.label} (${compData.run.overallScore}/10)`
+    }))
+  ];
+
   return (
     <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
       <label className="text-sm font-medium text-gray-700">Viewing data for:</label>
-      <Select 
+      <NativeSelect
         value={selectedRunId}
-        onValueChange={handleValueChange}
-      >
-        <SelectTrigger className="w-64">
-          <SelectValue placeholder="Select data source" />
-        </SelectTrigger>
-        <SelectContent className="z-[9999]">
-          <SelectItem value={clientRun.id}>
-            Your Site ({clientRun.overallScore}/10)
-          </SelectItem>
-          {competitorData?.map(compData => (
-            <SelectItem key={compData.run.id} value={compData.run.id}>
-              {compData.competitor.label} ({compData.run.overallScore}/10)
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onChange={(e) => handleValueChange(e.target.value)}
+        options={selectOptions}
+        className="w-64"
+        placeholder="Select data source"
+      />
     </div>
   );
 }
@@ -778,9 +778,6 @@ export function EvidenceDrawer({
           </DrawerHeader>
 
           {/* Competitor Selector */}
-          <div className="px-4 py-2 text-xs text-gray-500">
-            Debug: competitorData = {JSON.stringify(competitorData?.slice(0, 2) || 'undefined')}
-          </div>
           {competitorData && competitorData.length > 0 && (
             <div className="px-4">
               <RunSelector

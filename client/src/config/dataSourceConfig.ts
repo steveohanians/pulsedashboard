@@ -95,8 +95,9 @@ export const DATA_SOURCE_FLAGS = {
 
 // Metric configuration
 export const METRIC_CONFIG = {
-  // Metrics that need percentage conversion
-  PERCENTAGE_METRICS: ['Bounce Rate'],
+  // Metrics that need percentage conversion  
+  // Note: Bounce Rate removed because backend already provides percentages
+  PERCENTAGE_METRICS: [],
   
   // Metrics that need time conversion (seconds to minutes)
   TIME_METRICS: ['Session Duration'],

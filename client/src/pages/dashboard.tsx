@@ -194,9 +194,8 @@ export default function Dashboard() {
         // Apply conversions
         if (metricName === 'Session Duration' && value > 60) {
           value = value / 60;
-        } else if (metricName === 'Bounce Rate') {
-          value = value * 100;
         }
+        // Bounce Rate values from backend are already percentages - no conversion needed
       }
       
       return {
