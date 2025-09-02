@@ -204,9 +204,9 @@ function generateAreaData(
           // Use fallback industry average when timeSeriesData is missing Industry_Avg
           let industryValue = industryMetric ? Number(industryMetric.value) : industryAvg;
           
+          // CD_Avg and Industry_Avg are already percentages from backend - no conversion needed
           if (metricName?.includes('Rate')) {
-            cdAvgValue = cdAvgValue * 100; // Convert to percentage
-            industryValue = industryValue * 100; // Convert to percentage
+            // No conversion needed - values already percentages
           }
           
           // Create authentic data point
@@ -240,9 +240,9 @@ function generateAreaData(
     // Fallback: Generate temporal variations for each data source (only if no authentic data)
     const safeMetricName = metricName || 'Unknown Metric';
     
-    // Apply percentage conversion for Rate metrics before generating variations
-    const processedIndustryAvg = metricName?.includes('Rate') ? industryAvg * 100 : industryAvg;
-    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    // CD_Avg and Industry_Avg are already percentages from backend - no conversion needed
+    const processedIndustryAvg = industryAvg;
+    const processedCdAvg = cdAvg;
     
     const clientVariations = generateTemporalVariationSync(clientData, dates, safeMetricName, `client-${safeMetricName}`);
     const industryVariations = generateTemporalVariationSync(processedIndustryAvg, dates, safeMetricName, `industry-${safeMetricName}`);
@@ -272,9 +272,9 @@ function generateAreaData(
       data.push(point);
     });
   } else {
-    // For other time periods, use static values with proper percentage conversion for Rate metrics
-    const processedIndustryAvg = metricName?.includes('Rate') ? industryAvg * 100 : industryAvg;
-    const processedCdAvg = metricName?.includes('Rate') ? cdAvg * 100 : cdAvg;
+    // For other time periods, use static values - no conversion needed as values are already percentages
+    const processedIndustryAvg = industryAvg;
+    const processedCdAvg = cdAvg;
     
     dates.forEach((date, index) => {
       const point: AreaDataPoint = {

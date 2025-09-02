@@ -297,26 +297,15 @@ function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: 
         }}
       >
         <SelectTrigger className="w-64">
-          <SelectValue />
+          <SelectValue placeholder="Select data source" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={clientRun.id}>
-            <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">
-                Your Site
-              </Badge>
-              <span>({clientRun.overallScore}/10)</span>
-            </div>
+            Your Site ({clientRun.overallScore}/10)
           </SelectItem>
           {competitorData?.map(compData => (
             <SelectItem key={compData.run.id} value={compData.run.id}>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-gray-600">
-                  Competitor
-                </Badge>
-                <span>{compData.competitor.label}</span>
-                <span>({compData.run.overallScore}/10)</span>
-              </div>
+              {compData.competitor.label} ({compData.run.overallScore}/10)
             </SelectItem>
           ))}
         </SelectContent>
