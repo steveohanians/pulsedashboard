@@ -291,10 +291,10 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     <>
       <Card className={cn("relative", className)}>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg lg:text-xl">
-            Website Effectiveness Engine™ Audit
-            {run && run.status === 'completed' && (
-              <div className="flex flex-col gap-2 mt-2">
+          <CardTitle className="text-lg lg:text-xl flex justify-between items-start">
+            <div className="flex flex-col gap-2">
+              <span>Website Effectiveness Engine™ Audit</span>
+              {run && run.status === 'completed' && (
                 <span 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 w-fit"
                   data-testid="effectiveness-status-chip"
@@ -304,10 +304,12 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     {getEffectivenessStatus(run.overallScore).text}
                   </span>
                 </span>
-                <div className="text-xl sm:text-2xl lg:text-3xl font-light text-primary">
-                  {run.overallScore}
-                </div>
-              </div>
+              )}
+            </div>
+            {run && run.status === 'completed' && (
+              <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0">
+                {run.overallScore}
+              </span>
             )}
           </CardTitle>
         </CardHeader>
