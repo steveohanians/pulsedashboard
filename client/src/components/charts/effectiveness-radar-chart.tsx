@@ -233,7 +233,7 @@ export function EffectivenessRadarChart({
       </ResponsiveContainer>
       
       {/* Interactive Legend */}
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-4 pb-4 border-t border-gray-200 mt-6">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-4 pb-8 sm:pb-12 border-t border-gray-200 mt-6">
         {/* Client Legend Item */}
         <label className="flex items-center cursor-pointer text-xs">
           <input

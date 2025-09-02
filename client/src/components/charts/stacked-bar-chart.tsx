@@ -167,7 +167,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 pb-4 border-t border-gray-200 mt-6">
+      <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 pb-8 sm:pb-12 border-t border-gray-200 mt-6">
         {Object.entries(getChannelColors()).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-1.5 sm:gap-2">
             <div 
