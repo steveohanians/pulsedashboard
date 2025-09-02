@@ -290,7 +290,7 @@ function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: 
     <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
       <label className="text-sm font-medium text-gray-700">Viewing data for:</label>
       <Select 
-        value={selectedRunId} 
+        value={selectedRunId}
         onValueChange={(runId) => {
           const runType = runId === clientRun.id ? 'client' : 'competitor';
           onRunChange(runId, runType);
