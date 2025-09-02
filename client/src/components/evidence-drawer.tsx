@@ -286,20 +286,22 @@ interface RunSelectorProps {
 }
 
 function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: RunSelectorProps) {
+  const handleValueChange = (runId: string) => {
+    const runType = runId === clientRun.id ? 'client' : 'competitor';
+    onRunChange(runId, runType);
+  };
+
   return (
     <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
       <label className="text-sm font-medium text-gray-700">Viewing data for:</label>
       <Select 
         value={selectedRunId}
-        onValueChange={(runId) => {
-          const runType = runId === clientRun.id ? 'client' : 'competitor';
-          onRunChange(runId, runType);
-        }}
+        onValueChange={handleValueChange}
       >
         <SelectTrigger className="w-64">
           <SelectValue placeholder="Select data source" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[9999]">
           <SelectItem value={clientRun.id}>
             Your Site ({clientRun.overallScore}/10)
           </SelectItem>
@@ -776,7 +778,10 @@ export function EvidenceDrawer({
           </DrawerHeader>
 
           {/* Competitor Selector */}
-          {competitorData.length > 0 && (
+          <div className="px-4 py-2 text-xs text-gray-500">
+            Debug: competitorData = {JSON.stringify(competitorData?.slice(0, 2) || 'undefined')}
+          </div>
+          {competitorData && competitorData.length > 0 && (
             <div className="px-4">
               <RunSelector
                 clientRun={clientRun}
@@ -789,6 +794,7 @@ export function EvidenceDrawer({
               />
             </div>
           )}
+
 
           <div className="p-4 pb-8">
             {isLoading ? (

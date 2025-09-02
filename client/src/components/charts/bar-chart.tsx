@@ -115,10 +115,9 @@ function processTimeSeriesForBar(
       if (cdMetric) cdValue = cdValue / 60;
       // Fallback values are already in minutes, so no conversion needed
     } else if (metricName?.includes('Rate')) {
-      // Convert from decimal to percentage for Rate metrics
-      // Only convert if coming from timeSeriesData (not fallback values which may already be percentages)
-      if (industryMetric) industryValue = industryValue * 100;
-      if (cdMetric) cdValue = cdValue * 100;
+      // CD_Avg and Industry_Avg are already percentages from backend - no conversion needed
+      // Only convert Client data if it comes as decimal
+      if (clientMetric && clientValue < 1.0) clientValue = clientValue * 100;
     }
     
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
