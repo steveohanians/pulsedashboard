@@ -200,15 +200,15 @@ function findEvidenceForCheck(checkName: string, evidenceDetails: any): string |
     checkName + '_evidence'
   ];
   
-  // Try evidence patterns in analysis object
-  for (const pattern of evidencePatterns) {
+  // Try evidence patterns in analysis object (filter out nulls)
+  for (const pattern of evidencePatterns.filter(p => p !== null)) {
     if (analysis[pattern] && typeof analysis[pattern] === 'string') {
       return analysis[pattern];
     }
   }
   
-  // 2. Try evidence patterns at root level  
-  for (const pattern of evidencePatterns) {
+  // 2. Try evidence patterns at root level (filter out nulls)
+  for (const pattern of evidencePatterns.filter(p => p !== null)) {
     if (evidenceDetails[pattern] && typeof evidenceDetails[pattern] === 'string') {
       return evidenceDetails[pattern];
     }
