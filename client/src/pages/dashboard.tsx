@@ -312,7 +312,9 @@ export default function Dashboard() {
   if (isLoading || isRefreshing) {
     return (
       <LoadKit.Dashboard state={dashboardLoadingState}>
-        {/* This will be the main dashboard content when not loading */}
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <ButtonLoadingSpinner size="md" />
+        </div>
       </LoadKit.Dashboard>
     );
   }
@@ -770,7 +772,7 @@ export default function Dashboard() {
                           className="h-6 w-6 p-0"
                         >
                           {deletingCompetitorId === competitor.id ? (
-                            <ButtonLoadingSpinner size="xs" />
+                            <ButtonLoadingSpinner size="sm" />
                           ) : (
                             <X className="h-3 w-3" />
                           )}
@@ -824,7 +826,7 @@ export default function Dashboard() {
                     <CardTitle className="text-lg lg:text-xl">
                       {metricName}
                       {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 mt-2 sm:mt-0 sm:float-right">
+                        <div className="flex flex-col gap-2 mt-2">
                           {(() => {
                             // Only show comparison chips for target metrics
                             const targetMetrics = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];

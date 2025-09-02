@@ -291,14 +291,12 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     <>
       <Card className={cn("relative", className)}>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg lg:text-xl">
-              Website Effectiveness Engine™ Audit
-            </CardTitle>
+          <CardTitle className="text-lg lg:text-xl">
+            Website Effectiveness Engine™ Audit
             {run && run.status === 'completed' && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 mt-2">
                 <span 
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 text-xs"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 w-fit"
                   data-testid="effectiveness-status-chip"
                 >
                   <span>Your Website is</span>
@@ -311,7 +309,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </div>
               </div>
             )}
-          </div>
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
