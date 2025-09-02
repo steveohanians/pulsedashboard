@@ -484,12 +484,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           isOpen={showEvidence}
           onClose={() => setShowEvidence(false)}
           clientId={clientId}
-          runId={run.id}
-          effectivenessData={{
-            overallScore: run.overallScore,
-            criterionScores: run.criterionScores,
-            createdAt: run.createdAt
-          }}
+          clientRun={run}
+          competitorData={data?.competitorEffectivenessData || []}
         />
       )}
     </>

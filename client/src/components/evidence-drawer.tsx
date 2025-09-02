@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
   X, 
   Image as ImageIcon, 
@@ -240,8 +242,119 @@ interface EvidenceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: string;
-  runId: string;
-  effectivenessData: EffectivenessData;
+  clientRun: {
+    id: string;
+    overallScore: number;
+    criterionScores: CriterionScore[];
+    createdAt: string;
+    screenshotUrl?: string;
+    fullPageScreenshotUrl?: string;
+    webVitals?: any;
+    screenshotError?: string;
+    fullPageScreenshotError?: string;
+    status: string;
+    progress?: string;
+  };
+  competitorData?: {
+    competitor: {
+      id: string;
+      domain: string;
+      label: string;
+    };
+    run: {
+      id: string;
+      overallScore: number;
+      criterionScores: CriterionScore[];
+      createdAt: string;
+      screenshotUrl?: string;
+      fullPageScreenshotUrl?: string;
+      webVitals?: any;
+      screenshotError?: string;
+      fullPageScreenshotError?: string;
+      status: string;
+      progress?: string;
+    };
+  }[];
+}
+
+// RunSelector component for switching between client and competitor data
+interface RunSelectorProps {
+  clientRun: any;
+  competitorData: any[];
+  selectedRunId: string;
+  onRunChange: (runId: string, runType: 'client' | 'competitor') => void;
+}
+
+function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: RunSelectorProps) {
+  return (
+    <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+      <label className="text-sm font-medium text-gray-700">Viewing data for:</label>
+      <Select 
+        value={selectedRunId} 
+        onValueChange={(runId) => {
+          const runType = runId === clientRun.id ? 'client' : 'competitor';
+          onRunChange(runId, runType);
+        }}
+      >
+        <SelectTrigger className="w-64">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={clientRun.id}>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">
+                Your Site
+              </Badge>
+              <span>({clientRun.overallScore}/10)</span>
+            </div>
+          </SelectItem>
+          {competitorData?.map(compData => (
+            <SelectItem key={compData.run.id} value={compData.run.id}>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-gray-600">
+                  Competitor
+                </Badge>
+                <span>{compData.competitor.label}</span>
+                <span>({compData.run.overallScore}/10)</span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// ErrorDisplay component for showing errors with technical details
+interface ErrorDisplayProps {
+  title: string;
+  message: string;
+  details?: string;
+  type?: 'warning' | 'error';
+}
+
+function ErrorDisplay({ title, message, details, type = 'warning' }: ErrorDisplayProps) {
+  const isError = type === 'error';
+  
+  return (
+    <Alert variant={isError ? 'destructive' : 'default'} className={cn(!isError && "border-yellow-200 bg-yellow-50")}>
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle className={cn(!isError && "text-yellow-800")}>{title}</AlertTitle>
+      <AlertDescription className={cn(!isError && "text-yellow-700")}>
+        {message}
+        {details && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm hover:opacity-80">
+              Technical Details
+            </summary>
+            <pre className="mt-1 p-2 bg-white rounded border text-xs overflow-x-auto max-w-full">
+              {details}
+            </pre>
+          </details>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 // Component to handle screenshot display with better error handling
@@ -326,16 +439,31 @@ export function EvidenceDrawer({
   isOpen,
   onClose,
   clientId,
-  runId,
-  effectivenessData
+  clientRun,
+  competitorData = []
 }: EvidenceDrawerProps) {
   const [activeTab, setActiveTab] = useState("screenshot");
+  const [selectedRunId, setSelectedRunId] = useState(clientRun.id);
+  const [selectedRunType, setSelectedRunType] = useState<'client' | 'competitor'>('client');
+
+  // Find current run data
+  const currentRunData = selectedRunType === 'client' 
+    ? clientRun
+    : competitorData.find(comp => comp.run.id === selectedRunId)?.run;
+
+  // Reset selection when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedRunId(clientRun.id);
+      setSelectedRunType('client');
+    }
+  }, [isOpen, clientRun.id]);
 
   // Fetch detailed evidence when drawer opens
-  const { data: evidenceData, isLoading } = useQuery({
-    queryKey: ['effectiveness-evidence', clientId, runId],
+  const { data: evidenceData, isLoading, error } = useQuery({
+    queryKey: ['effectiveness-evidence', selectedRunId],
     queryFn: async () => {
-      const response = await fetch(`/api/effectiveness/evidence/${clientId}/${runId}`, {
+      const response = await fetch(`/api/effectiveness/${selectedRunId}/evidence/all`, {
         credentials: 'include'
       });
       
@@ -345,12 +473,12 @@ export function EvidenceDrawer({
       
       return response.json();
     },
-    enabled: isOpen && !!runId
+    enabled: isOpen && !!selectedRunId && !!currentRunData
   });
 
   // Group criteria by category for different tabs
   const categorizedScores = React.useMemo(() => {
-    const scores = effectivenessData.criterionScores;
+    const scores = currentRunData?.criterionScores || [];
     
     return {
       onPage: scores.filter(s => ['positioning', 'ux', 'brand_story', 'trust', 'ctas'].includes(s.criterion)),
@@ -358,7 +486,7 @@ export function EvidenceDrawer({
       accessibility: scores.filter(s => s.criterion === 'accessibility'),
       seo: scores.filter(s => s.criterion === 'seo')
     };
-  }, [effectivenessData.criterionScores]);
+  }, [currentRunData?.criterionScores]);
 
   // Get criterion color based on score
   const getCriterionColor = (score: number) => {
@@ -647,7 +775,7 @@ export function EvidenceDrawer({
                   Website Effectiveness Report
                 </DrawerTitle>
                 <DrawerDescription className="text-left">
-                  Detailed analysis and evidence for {effectivenessData.overallScore} score • {formatDate(effectivenessData.createdAt)}
+                  Detailed analysis and evidence for {currentRunData?.overallScore}/10 score • {formatDate(currentRunData?.createdAt || '')}
                 </DrawerDescription>
               </div>
               <DrawerClose asChild>
@@ -657,6 +785,21 @@ export function EvidenceDrawer({
               </DrawerClose>
             </div>
           </DrawerHeader>
+
+          {/* Competitor Selector */}
+          {competitorData.length > 0 && (
+            <div className="px-4">
+              <RunSelector
+                clientRun={clientRun}
+                competitorData={competitorData}
+                selectedRunId={selectedRunId}
+                onRunChange={(runId, runType) => {
+                  setSelectedRunId(runId);
+                  setSelectedRunType(runType);
+                }}
+              />
+            </div>
+          )}
 
           <div className="p-4 pb-8">
             {isLoading ? (
@@ -687,6 +830,36 @@ export function EvidenceDrawer({
                 <TabsContent value="screenshot">
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-4">
+                      {/* Add error display for screenshot errors */}
+                      {evidenceData?.run?.screenshotError && (
+                        <ErrorDisplay
+                          title="Screenshot Capture Failed"
+                          message="Unable to capture website screenshot"
+                          details={evidenceData.run.screenshotError}
+                          type="warning"
+                        />
+                      )}
+                      
+                      {/* Add timeout error display */}
+                      {evidenceData?.run?.progress?.includes('timeout') && (
+                        <ErrorDisplay
+                          title="Analysis Timeout"
+                          message="Website analysis timed out during processing"
+                          details={evidenceData.run.progress}
+                          type="error"
+                        />
+                      )}
+
+                      {/* Add general query error display */}
+                      {error && (
+                        <ErrorDisplay
+                          title="Failed to Load Evidence"
+                          message="Unable to fetch evidence data for this analysis"
+                          details={error instanceof Error ? error.message : String(error)}
+                          type="error"
+                        />
+                      )}
+
                     {evidenceData?.run?.screenshotUrl && evidenceData.run.screenshotUrl !== '' ? (
                       <div className="space-y-4">
                         <div className="rounded-lg border bg-white p-4">
@@ -773,6 +946,21 @@ export function EvidenceDrawer({
                 <TabsContent value="vitals">
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-4">
+                      {/* Add PageSpeed API error display */}
+                      {categorizedScores.performance.length > 0 && 
+                       categorizedScores.performance[0].evidence?.details?.error && (
+                        <ErrorDisplay
+                          title="Performance Data Unavailable"
+                          message={
+                            categorizedScores.performance[0].evidence.details.error === 'quota_exceeded'
+                              ? "PageSpeed API quota exceeded"
+                              : "PageSpeed API request failed"
+                          }
+                          details={categorizedScores.performance[0].evidence.details.message || categorizedScores.performance[0].evidence.description}
+                          type="warning"
+                        />
+                      )}
+                      
                       <div className="grid gap-4 md:grid-cols-2">
                         <Card>
                           <CardHeader className="pb-3">

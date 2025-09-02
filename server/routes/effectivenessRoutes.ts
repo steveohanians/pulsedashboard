@@ -713,6 +713,54 @@ router.get('/:runId/evidence/:criterion', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/effectiveness/:runId/evidence/all
+ * Get all evidence data for an effectiveness run (used by evidence drawer)
+ */
+router.get('/:runId/evidence/all', requireAuth, async (req, res) => {
+  try {
+    const { runId } = req.params;
+    
+    // Get the run to verify access
+    const run = await storage.getEffectivenessRun(runId);
+    if (!run) {
+      return res.status(404).json({
+        code: 'RUN_NOT_FOUND',
+        message: 'Effectiveness run not found'
+      });
+    }
+
+    // Check user access
+    if (req.user?.role !== 'Admin' && req.user?.clientId !== run.clientId) {
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        message: 'Access denied'
+      });
+    }
+
+    // Get all criterion scores for this run
+    const criterionScores = await storage.getCriterionScores(runId);
+    
+    res.json({
+      run: {
+        ...run,
+        criterionScores
+      }
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch all evidence', {
+      runId: req.params.runId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to fetch evidence'
+    });
+  }
+});
+
+/**
  * POST /api/effectiveness/:runId/insights
  * Generate AI insights for an effectiveness run
  */
