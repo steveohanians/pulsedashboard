@@ -83,9 +83,9 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
   const maxLabelLength = Math.max(...data.map(item => item.label.length));
   const labelWidth = Math.max(maxLabelLength * 8, 120); // 8px per char, min 120px
 
-  // Calculate dynamic height based on content
+  // Calculate dynamic height based on content - account for mobile legend wrapping
   const barHeight = 32; // Height per bar including spacing
-  const legendHeight = 60; // Height for legend area
+  const legendHeight = 120; // Increased height for legend area to accommodate mobile wrapping
   const containerHeight = data.length * barHeight + legendHeight;
 
   return (
@@ -167,7 +167,7 @@ export function StackedBarChart({ data, title, description }: StackedBarChartPro
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 pb-8 sm:pb-12 border-t border-gray-200 mt-6">
+      <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 pt-4 sm:pt-6 pb-4 sm:pb-8 border-t border-gray-200 mt-6">
         {Object.entries(getChannelColors()).map(([channel, color]) => (
           <div key={channel} className="flex items-center gap-1.5 sm:gap-2">
             <div 

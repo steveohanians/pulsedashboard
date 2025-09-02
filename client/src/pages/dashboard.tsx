@@ -882,7 +882,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="bg-slate-50/50 rounded-xl p-4 sm:p-6">
-                      <div>
+                      <div className="min-h-64">
                         {/* Render appropriate chart based on metric */}
                         {metricName === "Bounce Rate" && (
                           <TimeSeriesChart
