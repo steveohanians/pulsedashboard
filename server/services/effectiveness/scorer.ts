@@ -233,7 +233,10 @@ export class WebsiteEffectivenessScorer {
         finalHtmlLength: finalHtml.length,
         htmlSource: screenshotResult?.renderedHtml ? 'playwright-rendered' : 'simple-fetch',
         playwrightHtmlLength: screenshotResult?.renderedHtml?.length || 0,
-        fetchHtmlLength: html.length
+        fetchHtmlLength: html.length,
+        screenshotMethod: screenshotResult?.screenshotMethod,
+        usingRenderedHtml: !!screenshotResult?.renderedHtml,
+        htmlContentPreview: finalHtml.substring(0, 200) + '...'
       });
 
       return {

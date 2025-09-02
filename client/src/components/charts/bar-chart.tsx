@@ -8,6 +8,7 @@ import {
   safeTooltipProps,
   getTimeSeriesColors 
 } from '@/utils/chartUtils';
+import { convertMetricValue, formatMetricDisplay } from '@/utils/metricConversion';
 
 /** Props interface for MetricBarChart component configuration */
 interface BarChartProps {
@@ -108,17 +109,27 @@ function processTimeSeriesForBar(
     
 
     
-    if (metricName === 'Session Duration') {
-      // Only convert from seconds to minutes if data comes from timeSeriesData (not fallback values)
-      if (clientMetric) clientValue = clientValue / 60;
-      if (industryMetric) industryValue = industryValue / 60; 
-      if (cdMetric) cdValue = cdValue / 60;
-      // Fallback values are already in minutes, so no conversion needed
-    } else if (metricName?.includes('Rate')) {
-      // CD_Avg and Industry_Avg are already percentages from backend - no conversion needed
-      // Only convert Client data if it comes as decimal
-      if (clientMetric && clientValue < 1.0) clientValue = clientValue * 100;
-    }
+    // Apply centralized conversions
+    const clientConverted = convertMetricValue({ 
+      metricName, 
+      sourceType: 'Client', 
+      rawValue: clientValue 
+    });
+    const industryConverted = convertMetricValue({ 
+      metricName, 
+      sourceType: 'Industry_Avg', 
+      rawValue: industryValue 
+    });
+    const cdConverted = convertMetricValue({ 
+      metricName, 
+      sourceType: 'CD_Avg', 
+      rawValue: cdValue 
+    });
+    
+    // Use converted values
+    clientValue = clientConverted.value;
+    industryValue = industryConverted.value;
+    cdValue = cdConverted.value;
     
     dataPoint[clientKey] = Math.round(clientValue * 10) / 10;
     dataPoint['Industry Avg'] = Math.round(industryValue * 10) / 10;

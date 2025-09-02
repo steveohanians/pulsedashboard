@@ -61,6 +61,8 @@ import { ErrorBanner, useErrorBanner } from "@/components/ErrorBanner";
 import PdfExportButton from "@/components/pdf/PdfExportButton";
 import ComparisonChip from "@/components/ComparisonChip";
 import { generateComparisonData } from "@/utils/comparisonUtils";
+import { convertMetricValue, formatMetricDisplay } from "@/utils/metricConversion";
+import { enableConversionDebug } from "@/utils/conversionValidator";
 
 import clearLogoPath from "@assets/Clear_Primary_RGB_Logo_2Color_1753909931351.png";
 
@@ -91,6 +93,13 @@ export default function Dashboard() {
   useEffect(() => {
     setMetricStatuses({});
   }, [effectiveClientId]);
+
+  // Enable conversion debugging in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      enableConversionDebug();
+    }
+  }, []);
 
   // Error banner state
   const {
@@ -188,20 +197,21 @@ export default function Dashboard() {
         m.metricName === metricName
       );
       
-      let value = 0;
+      let convertedValue = 0;
       if (competitorMetric) {
-        value = parseFloat(competitorMetric.value);
-        // Apply conversions
-        if (metricName === 'Session Duration' && value > 60) {
-          value = value / 60;
-        }
-        // Bounce Rate values from backend are already percentages - no conversion needed
+        // Apply centralized conversion to ensure consistency
+        const converted = convertMetricValue({
+          metricName,
+          sourceType: 'Competitor',
+          rawValue: parseFloat(competitorMetric.value)
+        });
+        convertedValue = converted.value;
       }
       
       return {
         id: competitor.id,
         label: competitor.label || competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
-        value: Math.round(value * 10) / 10,
+        value: Math.round(convertedValue * 10) / 10,
       };
     });
   };
@@ -854,7 +864,7 @@ export default function Dashboard() {
                                     )}
                                     {comparisonData.bestCompetitor && (
                                       <ComparisonChip
-                                        label="Best Comp"
+                                        label="Best Competitor"
                                         percentage={comparisonData.bestCompetitor.percentage}
                                         isOutperforming={comparisonData.bestCompetitor.isOutperforming}
                                         className="text-xs"
@@ -872,12 +882,14 @@ export default function Dashboard() {
                       {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
                         <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0">
                           {metricData.Client
-                            ? `${Math.round(metricData.Client * 10) / 10}${
-                                metricName.includes("Rate") ? "%" : 
-                                metricName.includes("Session Duration") ? " min" :
-                                metricName.includes("Pages per Session") ? " pages" :
-                                metricName.includes("Sessions per User") ? " sessions" : ""
-                              }`
+                            ? (() => {
+                                const converted = convertMetricValue({
+                                  metricName,
+                                  sourceType: 'Client',
+                                  rawValue: metricData.Client
+                                });
+                                return formatMetricDisplay(converted);
+                              })()
                             : "N/A"}
                         </span>
                       )}

@@ -9,6 +9,7 @@ import {
   safeNumericValue,
   safeTooltipProps
 } from '@/utils/chartUtils';
+import { convertMetricValue, formatMetricDisplay } from '@/utils/metricConversion';
 
 // Custom diamond dot component
 import { DiamondDot } from '../shared/DiamondDot';
@@ -198,16 +199,26 @@ function generateAreaData(
           const cdAvgMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'CD_Avg');
           const industryMetric = periodData.find(m => m.metricName === metricName && m.sourceType === 'Industry_Avg');
           
-          // Convert values and apply percentage conversion for Rate metrics
-          let clientValue = Number(clientMetric?.value) || 0;
-          let cdAvgValue = Number(cdAvgMetric?.value) || 0;
-          // Use fallback industry average when timeSeriesData is missing Industry_Avg
-          let industryValue = industryMetric ? Number(industryMetric.value) : industryAvg;
+          // Apply centralized conversions
+          const clientConverted = convertMetricValue({ 
+            metricName, 
+            sourceType: 'Client', 
+            rawValue: Number(clientMetric?.value) || 0
+          });
+          const cdConverted = convertMetricValue({ 
+            metricName, 
+            sourceType: 'CD_Avg', 
+            rawValue: Number(cdAvgMetric?.value) || 0
+          });
+          const industryConverted = convertMetricValue({ 
+            metricName, 
+            sourceType: 'Industry_Avg', 
+            rawValue: industryMetric ? Number(industryMetric.value) : industryAvg
+          });
           
-          // CD_Avg and Industry_Avg are already percentages from backend - no conversion needed
-          if (metricName?.includes('Rate')) {
-            // No conversion needed - values already percentages
-          }
+          let clientValue = clientConverted.value;
+          let cdAvgValue = cdConverted.value;
+          let industryValue = industryConverted.value;
           
           // Create authentic data point
           const point: AreaDataPoint = {

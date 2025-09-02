@@ -14,6 +14,7 @@ import {
   shouldConvertToPercentage,
   shouldConvertToMinutes 
 } from './chartUtils';
+import { convertMetricValue } from './metricConversion';
 
 /**
  * EXAMPLE: Adding benchmark support to any chart component
@@ -76,14 +77,13 @@ const oldApproachExample = `
     
     let value = 42.3; // Fallback
     if (benchmarkMetric) {
-      const rawValue = parseMetricValue(benchmarkMetric.value);
-      if (metricName === 'Bounce Rate') {
-        value = rawValue * 100; // Convert to percentage
-      } else if (metricName === 'Session Duration') {
-        value = rawValue / 60; // Convert to minutes
-      } else {
-        value = rawValue;
-      }
+      // Apply centralized conversion to ensure consistency
+      const converted = convertMetricValue({
+        metricName,
+        sourceType: 'Benchmark',
+        rawValue: parseMetricValue(benchmarkMetric.value)
+      });
+      value = converted.value;
     }
     
     return {

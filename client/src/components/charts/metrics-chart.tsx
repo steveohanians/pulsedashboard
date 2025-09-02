@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps, shouldConvertToPercentage } from '@/utils/chartUtils';
+import { getMetricsColors, normalizeChartData, safeNumericValue, safeTooltipProps } from '@/utils/chartUtils';
+import { convertMetricValue } from '@/utils/metricConversion';
 
 interface MetricsChartProps {
   metricName: string;
@@ -41,18 +42,15 @@ export function MetricsChart({ metricName, data }: MetricsChartProps) {
     
     Object.entries(data || {}).forEach(([key, value]) => {
       if (key !== 'Client') {
-        let finalValue = value || 0;
-        
-        // CD_Avg and Industry_Avg are already percentage from backend - no conversion needed
-        // Only convert raw data that comes as decimals
-        if (shouldConvertToPercentage(metricName)) {
-          if (key !== 'Industry_Avg' && key !== 'CD_Avg' && !key.includes('Avg')) {
-            finalValue = finalValue * 100;
-          }
-        }
+        // Apply centralized conversion
+        const converted = convertMetricValue({
+          metricName,
+          sourceType: key,
+          rawValue: value || 0
+        });
         
         // Add each metric as a property of the single data point
-        dataPoint[key] = finalValue;
+        dataPoint[key] = converted.value;
       }
     });
     

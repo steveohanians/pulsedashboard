@@ -113,6 +113,70 @@ export class ScreenshotService {
   }
 
   /**
+   * Capture only rendered HTML using Playwright (lightweight, no screenshot)
+   * Used to supplement API screenshot method with rendered HTML
+   */
+  private async captureRenderedHTMLOnly(url: string): Promise<string | undefined> {
+    // Only proceed if Playwright is available
+    if (this.browserAvailable === false) {
+      return undefined;
+    }
+
+    let page: Page | null = null;
+    const browser = await this.ensureBrowser();
+    if (!browser) return undefined;
+
+    try {
+      page = await browser.newPage();
+      
+      // Use minimal viewport for faster loading
+      await page.setViewportSize({ width: 1440, height: 900 });
+      
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      );
+      
+      logger.info('[HTML CAPTURE] Starting rendered HTML capture for API screenshot path', { 
+        url,
+        purpose: 'supplement-api-screenshot-with-rendered-html'
+      });
+      
+      // Navigate and wait for network idle
+      await page.goto(url, {
+        waitUntil: 'networkidle',
+        timeout: 30000
+      });
+      
+      // Wait for JavaScript frameworks to render
+      await page.waitForTimeout(2000);
+      
+      // Extract the rendered HTML
+      const renderedHtml = await page.content();
+      
+      logger.info('[HTML CAPTURE] Successfully captured rendered HTML for prompts', {
+        url,
+        htmlLength: renderedHtml.length,
+        hasInteractiveElements: renderedHtml.includes('button') || renderedHtml.includes('btn'),
+        hasJavaScriptContent: renderedHtml.includes('</script>') || renderedHtml.includes('onclick'),
+        purpose: 'ai-prompt-analysis'
+      });
+      
+      return renderedHtml;
+      
+    } catch (error) {
+      logger.warn('Failed to capture rendered HTML', {
+        url,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return undefined;
+    } finally {
+      if (page) {
+        await page.close().catch(() => {});
+      }
+    }
+  }
+
+  /**
    * Capture screenshot using Screenshotone.com API
    */
   private async captureWithAPI(url: string, outputDir: string, filename?: string): Promise<ScreenshotResult> {
@@ -182,18 +246,24 @@ export class ScreenshotService {
         throw new Error('Screenshot file was not created');
       }
 
+      // ADD THIS: Capture rendered HTML since API doesn't provide it
+      const renderedHtml = await this.captureRenderedHTMLOnly(url);
+
       logger.info('Screenshot captured successfully via API', {
         url,
         screenshotPath,
         fileSize: fileStats.size,
-        method: 'screenshotone'
+        method: 'screenshotone',
+        hasRenderedHtml: !!renderedHtml,
+        renderedHtmlLength: renderedHtml?.length || 0
       });
 
       return {
         screenshotPath,
         screenshotUrl,
         fallbackUsed: false,
-        screenshotMethod: 'api'
+        screenshotMethod: 'api',
+        renderedHtml  // ADD THIS: Include the captured HTML
       };
     } catch (error) {
       logger.error('Screenshotone API failed', {

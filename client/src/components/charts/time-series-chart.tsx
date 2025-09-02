@@ -16,6 +16,7 @@ import { generatePeriodLabel } from '@/utils/chartGenerators';
 import { logger } from '@/utils/logger';
 
 import { parseMetricValue } from '../../utils/metricParser';
+import { convertMetricValue } from '@/utils/metricConversion';
 
 // Use shared DiamondDot component
 import { DiamondDot } from '../shared/DiamondDot';
@@ -114,25 +115,36 @@ function generateTimeSeriesData(
     const currentPeriod = periods && periods.length > 0 ? periods[0] : '2025-07';
     const currentMonth = generatePeriodLabel(currentPeriod);
     
-    // CD_Avg is already percentage from backend - no conversion needed
-    const processedCdAvg = (cdAvg !== undefined && cdAvg !== null && !isNaN(cdAvg)) 
-      ? cdAvg
-      : 0;
+    // Apply centralized conversions for all data sources
+    const clientConverted = convertMetricValue({
+      metricName: metricName || '',
+      sourceType: 'Client',
+      rawValue: clientData
+    });
     
-
+    const cdConverted = convertMetricValue({
+      metricName: metricName || '',
+      sourceType: 'CD_Avg', 
+      rawValue: (cdAvg !== undefined && cdAvg !== null && !isNaN(cdAvg)) ? cdAvg : 0
+    });
     
     const result = [{
       date: currentMonth,
-      [clientKey]: Number(clientData).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
+      [clientKey]: Number(clientConverted.value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       'Industry_Avg': 0, // No synthetic data
-      'Clear Digital Clients Avg': Number(processedCdAvg).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
+      'Clear Digital Clients Avg': Number(cdConverted.value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0),
       ...competitors.reduce((acc, comp) => {
-        // Use actual competitor values - they're already properly converted
-        let value = comp.value;
-        const formattedValue = Number(value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0);
+        // Apply centralized conversion for competitor values
+        const competitorConverted = convertMetricValue({
+          metricName: metricName || '',
+          sourceType: 'Competitor',
+          rawValue: comp.value
+        });
+        const formattedValue = Number(competitorConverted.value).toFixed(metricName?.includes('Pages per Session') || metricName?.includes('Sessions per User') ? 1 : 0);
         return { ...acc, [comp.label]: formattedValue };
       }, {})
     }];
+    return result;
   }
   
   // No authentic data available - return empty data rather than fake data
@@ -187,21 +199,32 @@ function generateRealTimeSeriesData(
     const industryMetrics = relevantData.filter(m => m.sourceType === 'Industry_Avg');
     
     // Calculate averages for each source type - use fallback values when timeSeriesData is missing
-    const avgClient = clientMetrics.length > 0 ? 
+    const rawAvgClient = clientMetrics.length > 0 ? 
       clientMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / clientMetrics.length : 0;
-    const avgIndustry = industryMetrics.length > 0 ? 
+    const rawAvgIndustry = industryMetrics.length > 0 ? 
       industryMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / industryMetrics.length : (industryAvg || 0);
-    
-
     
     // Check if we have CD_Avg metrics in the time series data for this period
     const cdMetrics = relevantData.filter(m => m.sourceType === 'CD_Avg' || m.sourceType === 'CD_Portfolio');
-    const avgCD = cdMetrics.length > 0 ? 
+    const rawAvgCD = cdMetrics.length > 0 ? 
       cdMetrics.reduce((sum, m) => sum + parseMetricValue(m.value), 0) / cdMetrics.length : (cdAvg || 0);
     
-    // Convert both CD_Avg and Industry_Avg from decimal to percentage for Rate metrics
-    const processedAvgCD = metricName?.includes('Rate') ? avgCD * 100 : avgCD;
-    const processedAvgIndustry = metricName?.includes('Rate') ? avgIndustry * 100 : avgIndustry;
+    // Apply centralized conversions to all averages
+    const clientConverted = convertMetricValue({
+      metricName: metricName || '',
+      sourceType: 'Client',
+      rawValue: rawAvgClient
+    });
+    const industryConverted = convertMetricValue({
+      metricName: metricName || '',
+      sourceType: 'Industry_Avg',
+      rawValue: rawAvgIndustry
+    });
+    const cdConverted = convertMetricValue({
+      metricName: metricName || '',
+      sourceType: 'CD_Avg',
+      rawValue: rawAvgCD
+    });
     
 
     
@@ -209,9 +232,9 @@ function generateRealTimeSeriesData(
     
 
     
-    dataPoint[clientKey] = Math.round(avgClient * 10) / 10;
-    dataPoint['Industry_Avg'] = Math.round(processedAvgIndustry * 10) / 10;
-    dataPoint['Clear Digital Clients Avg'] = Math.round(processedAvgCD * 10) / 10;
+    dataPoint[clientKey] = Math.round(clientConverted.value * 10) / 10;
+    dataPoint['Industry_Avg'] = Math.round(industryConverted.value * 10) / 10;
+    dataPoint['Clear Digital Clients Avg'] = Math.round(cdConverted.value * 10) / 10;
     
     // Add actual competitor data for each period
     competitors.forEach(competitor => {
@@ -221,36 +244,23 @@ function generateRealTimeSeriesData(
       );
       
       if (competitorData) {
-        let value = parseMetricValue(competitorData.value);
+        // Apply centralized conversion for competitor data  
+        const competitorConverted = convertMetricValue({
+          metricName: metricName || '',
+          sourceType: 'Competitor',
+          rawValue: parseMetricValue(competitorData.value)
+        });
         
-        // Debug Session Duration processing
-        if (metricName === 'Session Duration') {
-
-        }
-        
-        // Apply same conversions as current period
-        if (metricName === 'Bounce Rate') {
-          value = value * 100; // Convert to percentage
-        } else if (metricName === 'Session Duration' && value > 60) {
-          value = value / 60; // Convert seconds to minutes
-        }
-        
-        dataPoint[competitor.label] = Math.round(value * 10) / 10;
+        dataPoint[competitor.label] = Math.round(competitorConverted.value * 10) / 10;
       } else {
-        // Use the competitor value we have instead of defaulting to 0
-        let value = competitor.value;
+        // Apply centralized conversion for fallback competitor values
+        const fallbackConverted = convertMetricValue({
+          metricName: metricName || '',
+          sourceType: 'Competitor',
+          rawValue: competitor.value
+        });
         
-        // Debug Session Duration fallback processing
-        if (metricName === 'Session Duration') {
-
-        }
-        
-        // Convert Session Duration from seconds to minutes if needed
-        if (metricName === 'Session Duration' && value && value > 60) {
-          value = value / 60; // Convert seconds to minutes
-        }
-        
-        dataPoint[competitor.label] = Math.round(value * 10) / 10;
+        dataPoint[competitor.label] = Math.round(fallbackConverted.value * 10) / 10;
       }
     });
     

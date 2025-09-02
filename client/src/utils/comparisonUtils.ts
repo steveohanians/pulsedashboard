@@ -61,15 +61,11 @@ export function generateComparisonData(
     bestCompetitor?: { percentage: number; isOutperforming: boolean; label: string };
   } = {};
 
-  // Industry comparison with data normalization
+  // Industry comparison - values are already normalized by centralized conversion system
   if (industryAvg && industryAvg > 0) {
-    // Normalize Industry_Avg to match Client data format (both as percentages)
-    // Convert decimal format (0.4934) to percentage format (49.34) if needed
-    const normalizedIndustryAvg = industryAvg < 1 && industryAvg > 0
-      ? industryAvg * 100
-      : industryAvg;
-      
-    const industryDiff = calculatePercentageDifference(clientValue, normalizedIndustryAvg);
+    // Both clientValue and industryAvg are already properly converted by the centralized system
+    // No additional conversion needed to prevent double conversion bug
+    const industryDiff = calculatePercentageDifference(clientValue, industryAvg);
     const isOutperforming = isLowerBetter(metricName) ? industryDiff < 0 : industryDiff > 0;
     comparisons.industry = {
       percentage: Math.round(industryDiff),
