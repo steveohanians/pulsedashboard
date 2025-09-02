@@ -20,7 +20,8 @@ export interface CriterionResult {
 
 export interface ScoringContext {
   websiteUrl: string;
-  html: string;
+  html: string;                    // Rendered HTML (from Playwright) - preferred for CTA/dynamic content
+  initialHtml?: string;           // Initial HTML (from fetch) - for SEO analysis
   screenshot?: string;
   fullPageScreenshot?: string;
   webVitals?: {

@@ -49,10 +49,20 @@ export async function scoreCTAs(
       }
     }
     
-    logger.info("Extracted page content for CTA AI analysis", {
+    // Debug what CTA content we actually extracted
+    const ctaKeywords = ['GET TO KNOW US', 'View more work', 'Contact Us', 'Learn More', 'Get Started', 'Book Now', 'Sign Up', 'button', 'btn'];
+    const foundKeywords = ctaKeywords.filter(keyword => ctaContent.toLowerCase().includes(keyword.toLowerCase()));
+    const buttonCount = (ctaContent.match(/button|btn/gi) || []).length;
+    
+    logger.info("[CTA ANALYSIS] Extracted page content for AI analysis", {
       url: context.websiteUrl,
       contentLength: ctaContent.length,
-      lineCount: (ctaContent.match(/\n/g) || []).length + 1
+      lineCount: (ctaContent.match(/\n/g) || []).length + 1,
+      foundCTAKeywords: foundKeywords.length > 0 ? foundKeywords : 'none-found',
+      buttonCount: buttonCount,
+      hasJavaScriptContent: context.html.includes('</script>') || context.html.includes('onclick'),
+      htmlSource: context.html.includes('<!DOCTYPE html>') ? 'full-html' : 'partial-content',
+      contentPreview: ctaContent.substring(0, 300) + '...'
     });
 
     // Get AI prompt from database

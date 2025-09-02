@@ -225,23 +225,25 @@ export class WebsiteEffectivenessScorer {
         dataQuality: hasScreenshot && hasHTML ? 'complete' : hasScreenshot || hasHTML ? 'partial' : 'minimal'
       });
 
-      // Prioritize rendered HTML from Playwright over simple fetch result
-      const finalHtml = screenshotResult?.renderedHtml || html || '<html><body></body></html>';
+      // Provide BOTH HTML sources - rendered for CTAs, initial for SEO
+      const renderedHtml = screenshotResult?.renderedHtml || html || '<html><body></body></html>';
+      const initialHtml = html || '<html><body></body></html>';
       
-      logger.info("Final HTML content selected", {
+      logger.info("HTML sources prepared for scoring", {
         websiteUrl,
-        finalHtmlLength: finalHtml.length,
-        htmlSource: screenshotResult?.renderedHtml ? 'playwright-rendered' : 'simple-fetch',
-        playwrightHtmlLength: screenshotResult?.renderedHtml?.length || 0,
-        fetchHtmlLength: html.length,
+        renderedHtmlLength: renderedHtml.length,
+        initialHtmlLength: initialHtml.length,
+        hasRenderedHtml: !!screenshotResult?.renderedHtml,
+        hasBothSources: !!screenshotResult?.renderedHtml && !!html,
         screenshotMethod: screenshotResult?.screenshotMethod,
-        usingRenderedHtml: !!screenshotResult?.renderedHtml,
-        htmlContentPreview: finalHtml.substring(0, 200) + '...'
+        renderedHtmlSource: screenshotResult?.renderedHtml ? 'playwright' : 'fallback-to-initial',
+        renderedHtmlPreview: renderedHtml.substring(0, 200) + '...'
       });
 
       return {
         websiteUrl,
-        html: finalHtml,
+        html: renderedHtml,           // Primary HTML (rendered) for CTAs and dynamic content
+        initialHtml: initialHtml,     // Initial HTML for SEO analysis
         screenshot: screenshotResult?.screenshotUrl || undefined,
         fullPageScreenshot: screenshotResult?.fullPageScreenshotUrl || undefined,
         webVitals: screenshotResult?.webVitals || undefined,

@@ -13,7 +13,15 @@ export async function scoreSEO(
   config: ScoringConfig
 ): Promise<CriterionResult> {
   try {
-    const $ = cheerio.load(context.html);
+    // Use initial HTML for SEO analysis (better for meta tags, structured data)
+    const htmlToAnalyze = context.initialHtml || context.html;
+    const $ = cheerio.load(htmlToAnalyze);
+    
+    logger.info("SEO analysis using HTML source", {
+      url: context.websiteUrl,
+      usingInitialHtml: !!context.initialHtml,
+      htmlLength: htmlToAnalyze.length
+    });
     
     // Title tag analysis
     const titleElement = $('title').first();
@@ -69,7 +77,7 @@ export async function scoreSEO(
     
     // Sitemap reference
     const sitemapLink = $('link[rel="sitemap"]').attr('href') || 
-                       context.html.includes('sitemap.xml');
+                       htmlToAnalyze.includes('sitemap.xml');
     const hasSitemapReference = !!sitemapLink;
 
     // Image SEO

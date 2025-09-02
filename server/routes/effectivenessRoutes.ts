@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth';
 import { storage } from '../storage';
 import { WebsiteEffectivenessScorer } from '../services/effectiveness/scorer';
+import { EnhancedWebsiteEffectivenessScorer } from '../services/effectiveness/enhancedScorer';
 import { EffectivenessConfigManager } from '../services/effectiveness/config';
 import logger from '../utils/logging/logger';
 import { z } from 'zod';
@@ -17,7 +18,28 @@ import { and, eq, or, desc, sql, isNotNull } from 'drizzle-orm';
 
 const router = Router();
 const scorer = new WebsiteEffectivenessScorer();
+const enhancedScorer = new EnhancedWebsiteEffectivenessScorer();
 const configManager = EffectivenessConfigManager.getInstance();
+
+// Feature flag for enhanced scoring (set via env var)
+const USE_ENHANCED_SCORING = process.env.USE_ENHANCED_SCORING === 'true';
+
+/**
+ * Get tier number for a criterion (for legacy scorer compatibility)
+ */
+function getCriterionTier(criterion: string): number {
+  const tierMap: Record<string, number> = {
+    'ux': 1,
+    'trust': 1,
+    'accessibility': 1,
+    'seo': 1,
+    'positioning': 2,
+    'brand_story': 2,
+    'ctas': 2,
+    'speed': 3
+  };
+  return tierMap[criterion] || 1;
+}
 
 // Request/Response schemas
 const refreshRequestSchema = z.object({
@@ -25,11 +47,37 @@ const refreshRequestSchema = z.object({
 });
 
 /**
- * Score a website with timeout protection
+ * Score a website with timeout protection and progressive updates
  */
-async function scoreWithTimeout(url: string, timeoutMs: number = 120000): Promise<any> {
+async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number = 90000): Promise<any> {
+  if (USE_ENHANCED_SCORING) {
+    // Use enhanced scorer with progressive updates
+    return Promise.race([
+      enhancedScorer.scoreWebsiteProgressive(url, runId, async (status, progress, results) => {
+        // Progressive status updates are handled inside enhancedScorer
+        logger.info('Progressive scoring update', { url, runId, status, progress });
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Enhanced scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
+      )
+    ]);
+  } else {
+    // Use legacy scorer
+    return Promise.race([
+      scorer.scoreWebsite(url),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Legacy scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
+      )
+    ]);
+  }
+}
+
+/**
+ * Score a website without progressive updates (for competitors)
+ */
+async function scoreWithTimeoutLegacy(url: string, timeoutMs: number = 90000): Promise<any> {
   return Promise.race([
-    scorer.scoreWebsite(url),
+    USE_ENHANCED_SCORING ? enhancedScorer.scoreWebsite(url) : scorer.scoreWebsite(url),
     new Promise((_, reject) => 
       setTimeout(() => reject(new Error(`Scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
     )
@@ -369,24 +417,30 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           progress: 'Scoring criteria...'
         });
         
-        // Score with 2-minute timeout
-        const result = await scoreWithTimeout(client.websiteUrl, 120000);
+        // Score with enhanced approach (90s timeout, includes progressive updates)
+        const result = await scoreWithTimeout(client.websiteUrl, newRun.id, 90000);
         
-        // Update progress: Analyzing criteria
-        await storage.updateEffectivenessRun(newRun.id, {
-          status: 'analyzing',
-          progress: 'Scoring website effectiveness criteria...'
-        });
-        
-        // Save criterion scores first (needed for insights generation)
-        for (const criterionResult of result.criterionResults) {
-          await storage.createCriterionScore({
-            runId: newRun.id,
-            criterion: criterionResult.criterion,
-            score: criterionResult.score.toString(),
-            evidence: criterionResult.evidence,
-            passes: criterionResult.passes
+        // For enhanced scoring, criterion scores are already saved progressively
+        // For legacy scoring, save them now
+        if (!USE_ENHANCED_SCORING) {
+          // Update progress: Analyzing criteria
+          await storage.updateEffectivenessRun(newRun.id, {
+            status: 'analyzing',
+            progress: 'Scoring website effectiveness criteria...'
           });
+          
+          // Save criterion scores (needed for insights generation)
+          for (const criterionResult of result.criterionResults) {
+            await storage.createCriterionScore({
+              runId: newRun.id,
+              criterion: criterionResult.criterion,
+              score: criterionResult.score.toString(),
+              evidence: criterionResult.evidence,
+              passes: criterionResult.passes,
+              tier: getCriterionTier(criterionResult.criterion),
+              completedAt: new Date()
+            });
+          }
         }
 
         // Generate AI insights after scoring is complete
@@ -533,7 +587,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
               }
 
               // Score competitor with 90-second timeout
-              const competitorResult = await scoreWithTimeout(competitorUrl, 90000);
+              const competitorResult = await scoreWithTimeoutLegacy(competitorUrl, 90000);
               
               // Save competitor criterion scores
               for (const criterionResult of competitorResult.criterionResults) {
@@ -542,7 +596,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   criterion: criterionResult.criterion,
                   score: criterionResult.score.toString(),
                   evidence: criterionResult.evidence,
-                  passes: criterionResult.passes
+                  passes: criterionResult.passes,
+                  tier: getCriterionTier(criterionResult.criterion),
+                  completedAt: new Date()
                 });
               }
 

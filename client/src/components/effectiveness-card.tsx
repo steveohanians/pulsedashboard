@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Sparkles } from "lucide-react";
 import { ButtonLoadingSpinner } from "@/components/loading";
 import { useToast } from "@/hooks/use-toast";
+import { useProgressiveToasts } from "@/hooks/useProgressiveToasts";
 import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
 import { EffectivenessRadarChart } from "./charts/effectiveness-radar-chart";
@@ -29,7 +30,7 @@ interface CriterionScore {
 interface EffectivenessRun {
   id: string;
   overallScore: number;
-  status: 'pending' | 'initializing' | 'scraping' | 'analyzing' | 'completed' | 'failed';
+  status: 'pending' | 'initializing' | 'scraping' | 'analyzing' | 'tier1_analyzing' | 'tier1_complete' | 'tier2_analyzing' | 'tier2_complete' | 'tier3_analyzing' | 'completed' | 'failed' | 'generating_insights';
   progress?: string;
   createdAt: string;
   criterionScores: CriterionScore[];
@@ -137,7 +138,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     refetchInterval: (query) => {
       // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
       const status = query.state.data?.run?.status;
-      return status && ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(status) ? 5000 : false;
+      return status && ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(status) ? 3000 : false;
     },
     placeholderData: (previousData) => previousData, // Keep showing previous data while loading
     retry: (failureCount, error) => {
@@ -229,7 +230,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           queryClient.setQueryData(['effectiveness', clientId, 'v2'], data);
           
           // Stop polling if status is completed or failed
-          if (data.run && !['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(data.run.status)) {
+          if (data.run && !['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(data.run.status)) {
             clearInterval(interval);
             setPollingInterval(null);
           }
@@ -284,8 +285,16 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   };
 
   const run = data?.run;
-  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'generating_insights'].includes(run.status) : false;
+  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
+
+  // Progressive toast notifications for milestone completions
+  useProgressiveToasts({
+    status: run?.status,
+    progress: run?.progress,
+    overallScore: run?.overallScore,
+    criterionScores: run?.criterionScores
+  }, data?.client?.name);
 
   return (
     <>
@@ -363,9 +372,14 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 <p className="text-muted-foreground font-medium flex items-center justify-center gap-2">
                   <ButtonLoadingSpinner size="sm" />
                   {run.status === 'initializing' && 'Preparing analysis...'}
-                  {run.status === 'scraping' && 'Analyzing website effectiveness...'}
+                  {run.status === 'scraping' && 'Collecting website data...'}
                   {run.status === 'analyzing' && 'Scoring criteria...'}
                   {run.status === 'pending' && 'Starting analysis...'}
+                  {run.status === 'tier1_analyzing' && 'Quick analysis in progress...'}
+                  {run.status === 'tier1_complete' && 'Quick analysis complete! 📊'}
+                  {run.status === 'tier2_analyzing' && 'Enhanced AI analysis...'}
+                  {run.status === 'tier2_complete' && 'Enhanced analysis complete! 🤖'}  
+                  {run.status === 'tier3_analyzing' && 'Performance analysis...'}
                   {run.status === 'generating_insights' && 'Generating AI insights...'}
                 </p>
                 <p 
@@ -374,6 +388,53 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 >
                   {isAnalyzing ? funMessages[currentMessageIndex] : run.progress}
                 </p>
+                
+                {/* Progressive completion indicator */}
+                {run.status && ['tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status) && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex justify-center items-center space-x-4 text-sm">
+                      <div className={`flex items-center space-x-1 ${
+                        ['tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status) 
+                          ? 'text-green-600' : 'text-muted-foreground'
+                      }`}>
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span>Quick Analysis</span>
+                      </div>
+                      
+                      <div className={`flex items-center space-x-1 ${
+                        ['tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status)
+                          ? 'text-green-600' : 'text-muted-foreground'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          ['tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status)
+                            ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                        <span>AI Analysis</span>
+                      </div>
+                      
+                      <div className={`flex items-center space-x-1 ${
+                        run.status === 'completed' ? 'text-green-600' : 'text-muted-foreground'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          run.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                        <span>Performance</span>
+                      </div>
+                    </div>
+                    
+                    {/* Progress bar */}
+                    <div className="w-48 mx-auto bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-in-out"
+                        style={{
+                          width: run.status === 'tier1_complete' ? '33%' :
+                                 ['tier2_analyzing', 'tier2_complete'].includes(run.status) ? '66%' :
+                                 ['tier3_analyzing', 'completed'].includes(run.status) ? '100%' : '0%'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

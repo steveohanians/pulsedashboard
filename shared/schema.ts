@@ -327,13 +327,33 @@ export const filterOptions = pgTable("filter_options", {
 });
 
 // Website Effectiveness Scoring Tables
+// Progressive effectiveness run status enum
+export const effectivenessRunStatusEnum = pgEnum("effectiveness_run_status", [
+  "pending",
+  "initializing", 
+  "scraping",
+  "analyzing",
+  "tier1_analyzing",
+  "tier1_complete",
+  "tier2_analyzing", 
+  "tier2_complete",
+  "tier3_analyzing",
+  "completed",
+  "failed",
+  "generating_insights"
+]);
+
 export const effectivenessRuns = pgTable("effectiveness_runs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
   competitorId: varchar("competitor_id").references(() => competitors.id), // NULL for client runs, set for competitor runs
   overallScore: decimal("overall_score", { precision: 3, scale: 1 }), // e.g., 8.5 out of 10
-  status: text("status").notNull().default("pending"), // pending, completed, failed
+  status: effectivenessRunStatusEnum("status").notNull().default("pending"),
   progress: text("progress"), // Current progress message
+  // Progressive completion tracking
+  tier1CompletedAt: timestamp("tier1_completed_at"), // When Tier 1 (fast criteria) completed
+  tier2CompletedAt: timestamp("tier2_completed_at"), // When Tier 2 (AI criteria) completed  
+  tier3CompletedAt: timestamp("tier3_completed_at"), // When Tier 3 (external APIs) completed
   screenshotUrl: text("screenshot_url"), // URL to above-fold screenshot
   screenshotMethod: text("screenshot_method"), // Method used: 'playwright', 'api', or null
   screenshotError: text("screenshot_error"), // Error message if screenshot failed
@@ -358,11 +378,17 @@ export const criterionScores = pgTable("criterion_scores", {
   score: decimal("score", { precision: 3, scale: 1 }).notNull(), // individual criterion score 0-10
   evidence: jsonb("evidence"), // detailed evidence and reasoning
   passes: jsonb("passes"), // what passed/failed for this criterion
+  // Progressive completion tracking
+  tier: integer("tier").notNull().default(1), // 1=fast, 2=AI, 3=external APIs
+  completedAt: timestamp("completed_at").defaultNow().notNull(), // When this criterion completed
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   runIdIdx: index("idx_criterion_scores_run_id").on(table.runId),
   criterionIdx: index("idx_criterion_scores_criterion").on(table.criterion),
   runCriterionIdx: index("idx_criterion_scores_run_criterion").on(table.runId, table.criterion),
+  // New indexes for progressive scoring
+  tierIdx: index("idx_criterion_scores_tier").on(table.tier),
+  runTierIdx: index("idx_criterion_scores_run_tier").on(table.runId, table.tier),
 }));
 
 export const effectivenessConfig = pgTable("effectiveness_config", {

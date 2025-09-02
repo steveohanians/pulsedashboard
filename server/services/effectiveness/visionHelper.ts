@@ -14,10 +14,34 @@ import logger from '../../utils/logging/logger';
  */
 export async function convertScreenshotToBase64(screenshotPath: string): Promise<string> {
   try {
-    // Handle both absolute and relative paths
-    const fullPath = path.isAbsolute(screenshotPath) 
-      ? screenshotPath 
-      : path.join(process.cwd(), screenshotPath);
+    // Handle multiple path formats
+    let fullPath: string;
+    
+    if (screenshotPath.startsWith('/screenshots/')) {
+      // Handle URL paths like "/screenshots/filename.png" - most common case  
+      const filename = screenshotPath.replace('/screenshots/', '');
+      fullPath = path.join(process.cwd(), 'uploads', 'screenshots', filename);
+    } else if (path.isAbsolute(screenshotPath) && !screenshotPath.startsWith('/screenshots/')) {
+      // Already absolute filesystem path
+      fullPath = screenshotPath;
+    } else if (screenshotPath.startsWith('screenshots/')) {
+      // Handle relative paths like "screenshots/filename.png"
+      fullPath = path.join(process.cwd(), 'uploads', screenshotPath);
+    } else if (screenshotPath.startsWith('uploads/')) {
+      // Handle paths like "uploads/screenshots/filename.png"
+      fullPath = path.join(process.cwd(), screenshotPath);
+    } else {
+      // Handle bare filenames like "fullpage_xxx.png"
+      fullPath = path.join(process.cwd(), 'uploads', 'screenshots', screenshotPath);
+    }
+    
+    logger.info('Converting screenshot to base64', {
+      originalPath: screenshotPath,
+      resolvedPath: fullPath
+    });
+    
+    // Additional check: ensure the resolved path exists
+    await fs.access(fullPath);
     
     const imageBuffer = await fs.readFile(fullPath);
     return imageBuffer.toString('base64');

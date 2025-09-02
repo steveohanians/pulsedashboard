@@ -59,15 +59,37 @@ export class ScreenshotService {
 
     try {
       logger.info('Testing Playwright browser availability');
-      const testBrowser = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-        ]
-      });
+      
+      // Try with Nix browser path first (Replit environment)
+      const nixBrowserPath = '/nix/store/0n9rl5l9syy808xi9bk4f6dhnfrvhkww-playwright-browsers-chromium/chromium-1080/chrome-linux/chrome';
+      
+      let testBrowser;
+      try {
+        testBrowser = await chromium.launch({
+          headless: true,
+          executablePath: nixBrowserPath,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+          ]
+        });
+        logger.info('Using Nix browser for Playwright');
+      } catch (nixError) {
+        // Fallback to default Playwright installation
+        testBrowser = await chromium.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+          ]
+        });
+        logger.info('Using default Playwright browser installation');
+      }
+      
       await testBrowser.close();
       this.browserAvailable = true;
       logger.info('Playwright browser is available');
@@ -92,15 +114,35 @@ export class ScreenshotService {
     if (!this.browser) {
       try {
         logger.info('Launching Playwright browser for screenshots');
-        this.browser = await chromium.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-          ]
-        });
+        
+        // Try with Nix browser path first (Replit environment)
+        const nixBrowserPath = '/nix/store/0n9rl5l9syy808xi9bk4f6dhnfrvhkww-playwright-browsers-chromium/chromium-1080/chrome-linux/chrome';
+        
+        try {
+          this.browser = await chromium.launch({
+            headless: true,
+            executablePath: nixBrowserPath,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-gpu',
+            ]
+          });
+          logger.info('Launched Nix browser for Playwright');
+        } catch (nixError) {
+          // Fallback to default Playwright installation
+          this.browser = await chromium.launch({
+            headless: true,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-gpu',
+            ]
+          });
+          logger.info('Launched default Playwright browser');
+        }
       } catch (error) {
         logger.error('Failed to launch Playwright browser', {
           error: error instanceof Error ? error.message : String(error)
@@ -116,7 +158,7 @@ export class ScreenshotService {
    * Capture only rendered HTML using Playwright (lightweight, no screenshot)
    * Used to supplement API screenshot method with rendered HTML
    */
-  private async captureRenderedHTMLOnly(url: string): Promise<string | undefined> {
+  public async captureRenderedHTMLOnly(url: string): Promise<string | undefined> {
     // Only proceed if Playwright is available
     if (this.browserAvailable === false) {
       return undefined;
@@ -132,9 +174,15 @@ export class ScreenshotService {
       // Use minimal viewport for faster loading
       await page.setViewportSize({ width: 1440, height: 900 });
       
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      );
+      // Set user agent using context options instead of page method
+      await page.route('**/*', (route) => {
+        route.continue({
+          headers: {
+            ...route.request().headers(),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+      });
       
       logger.info('[HTML CAPTURE] Starting rendered HTML capture for API screenshot path', { 
         url,
@@ -147,17 +195,37 @@ export class ScreenshotService {
         timeout: 30000
       });
       
-      // Wait for JavaScript frameworks to render
-      await page.waitForTimeout(2000);
+      // Wait for JavaScript frameworks to render - increased for complex JS apps
+      await page.waitForTimeout(3000);
+      
+      // Additional wait for dynamic content that might load after initial render
+      try {
+        // Wait for common CTA-related selectors to appear
+        await page.waitForSelector('button, .btn, [class*="button"], [class*="cta"], a[href*="contact"], a[href*="learn"]', { 
+          timeout: 2000 
+        }).catch(() => {
+          // If specific selectors don't appear, just continue
+          logger.info('No specific CTA selectors found, proceeding with capture', { url });
+        });
+      } catch (e) {
+        // Ignore timeout - proceed anyway
+      }
       
       // Extract the rendered HTML
       const renderedHtml = await page.content();
+      
+      // Check for specific CTA-related content that might be JavaScript-generated
+      const ctaKeywords = ['GET TO KNOW US', 'View more work', 'Contact Us', 'Learn More', 'Get Started', 'Book Now', 'Sign Up'];
+      const foundCTAKeywords = ctaKeywords.filter(keyword => renderedHtml.toLowerCase().includes(keyword.toLowerCase()));
       
       logger.info('[HTML CAPTURE] Successfully captured rendered HTML for prompts', {
         url,
         htmlLength: renderedHtml.length,
         hasInteractiveElements: renderedHtml.includes('button') || renderedHtml.includes('btn'),
         hasJavaScriptContent: renderedHtml.includes('</script>') || renderedHtml.includes('onclick'),
+        foundCTAKeywords: foundCTAKeywords.length > 0 ? foundCTAKeywords : 'none',
+        buttonCount: (renderedHtml.match(/<button/gi) || []).length,
+        linkCount: (renderedHtml.match(/<a\s+[^>]*href/gi) || []).length,
         purpose: 'ai-prompt-analysis'
       });
       
@@ -196,20 +264,23 @@ export class ScreenshotService {
 
       logger.info('Using Screenshotone.com API for screenshot', { url });
       
-      // Screenshotone.com API endpoint
+      // Screenshotone.com API endpoint with optimized parameters for complex sites
       const apiUrl = new URL('https://api.screenshotone.com/take');
       apiUrl.searchParams.append('access_key', apiKey);
       apiUrl.searchParams.append('url', url);
       apiUrl.searchParams.append('viewport_width', '1440');
       apiUrl.searchParams.append('viewport_height', '900');
       apiUrl.searchParams.append('format', 'png');
-      apiUrl.searchParams.append('image_quality', '90');
+      apiUrl.searchParams.append('image_quality', '85');
       apiUrl.searchParams.append('cache', 'true'); // Use cache for repeated requests
       apiUrl.searchParams.append('cache_ttl', '86400'); // 24 hour cache
       apiUrl.searchParams.append('block_ads', 'true');
       apiUrl.searchParams.append('block_cookie_banners', 'true');
-      apiUrl.searchParams.append('wait_until', 'networkidle2'); // Wait for page to load (networkidle2 is valid)
-      apiUrl.searchParams.append('delay', '2'); // 2 second delay for JS rendering
+      apiUrl.searchParams.append('block_trackers', 'true'); // Block trackers for faster loading
+      apiUrl.searchParams.append('wait_until', 'networkidle2'); // Wait for network idle
+      apiUrl.searchParams.append('delay', '3'); // 3 second delay for complex animations
+      apiUrl.searchParams.append('timeout', '60'); // 60 second timeout (matches fetch timeout)
+      apiUrl.searchParams.append('navigation_timeout', '30'); // 30 second navigation timeout
       
       // Fetch screenshot from API
       const response = await fetch(apiUrl.toString(), {
@@ -217,7 +288,7 @@ export class ScreenshotService {
         headers: {
           'Accept': 'image/png'
         },
-        signal: AbortSignal.timeout(45000) // 45 seconds for API
+        signal: AbortSignal.timeout(60000) // 60 seconds for API
       });
 
       if (!response.ok) {
@@ -246,24 +317,19 @@ export class ScreenshotService {
         throw new Error('Screenshot file was not created');
       }
 
-      // ADD THIS: Capture rendered HTML since API doesn't provide it
-      const renderedHtml = await this.captureRenderedHTMLOnly(url);
-
       logger.info('Screenshot captured successfully via API', {
         url,
         screenshotPath,
         fileSize: fileStats.size,
-        method: 'screenshotone',
-        hasRenderedHtml: !!renderedHtml,
-        renderedHtmlLength: renderedHtml?.length || 0
+        method: 'screenshotone'
       });
 
       return {
         screenshotPath,
         screenshotUrl,
         fallbackUsed: false,
-        screenshotMethod: 'api',
-        renderedHtml  // ADD THIS: Include the captured HTML
+        screenshotMethod: 'api'
+        // NOTE: No renderedHtml here - API is for screenshots only
       };
     } catch (error) {
       logger.error('Screenshotone API failed', {
@@ -284,7 +350,7 @@ export class ScreenshotService {
   /**
    * Capture full-page screenshot using Screenshotone.com API with optimized parameters
    */
-  private async captureFullPageWithAPI(url: string, outputDir: string, baseFilename?: string): Promise<{
+  public async captureFullPageWithAPI(url: string, outputDir: string, baseFilename?: string): Promise<{
     fullPageScreenshotPath: string;
     fullPageScreenshotUrl: string;
     fullPageError?: string;
@@ -302,36 +368,39 @@ export class ScreenshotService {
 
       logger.info('Capturing full-page screenshot with Screenshotone API', { url });
       
-      // Use optimized full-page parameters from working test
+      // Optimized full-page parameters based on Screenshotone best practices
       const apiUrl = new URL('https://api.screenshotone.com/take');
       apiUrl.searchParams.append('access_key', apiKey);
       apiUrl.searchParams.append('url', url);
       
-      // Full-page specific parameters (from test_screenshot_openai.ts)
+      // Full-page specific parameters optimized for reliability
       apiUrl.searchParams.append('full_page', 'true');
       apiUrl.searchParams.append('full_page_scroll', 'true');
-      apiUrl.searchParams.append('full_page_algorithm', 'by_sections');
-      apiUrl.searchParams.append('full_page_scroll_delay', '1000');
-      apiUrl.searchParams.append('full_page_scroll_by', '300');
-      apiUrl.searchParams.append('wait_until', 'networkidle0');
-      apiUrl.searchParams.append('delay', '5');
-      apiUrl.searchParams.append('timeout', '60');
+      apiUrl.searchParams.append('full_page_algorithm', 'by_sections'); // Better for complex pages
+      apiUrl.searchParams.append('full_page_scroll_delay', '800'); // Slower for lazy loading
+      apiUrl.searchParams.append('full_page_scroll_by', '400'); // Smaller increments for accuracy
+      apiUrl.searchParams.append('wait_until', 'networkidle2'); // More reliable than networkidle0
+      apiUrl.searchParams.append('delay', '3'); // 3 second delay for animations
+      apiUrl.searchParams.append('timeout', '60'); // 60 second timeout
+      apiUrl.searchParams.append('navigation_timeout', '30'); // 30 second navigation timeout
       
-      // Standard parameters
+      // Standard parameters optimized for performance
       apiUrl.searchParams.append('viewport_width', '1440');
       apiUrl.searchParams.append('viewport_height', '900');
       apiUrl.searchParams.append('format', 'png');
-      apiUrl.searchParams.append('image_quality', '90');
+      apiUrl.searchParams.append('image_quality', '85'); // Reduced for faster processing
       apiUrl.searchParams.append('cache', 'true');
       apiUrl.searchParams.append('cache_ttl', '86400');
       apiUrl.searchParams.append('block_ads', 'true');
       apiUrl.searchParams.append('block_cookie_banners', 'true');
+      apiUrl.searchParams.append('block_trackers', 'true'); // Additional blocking
+      // Note: fail_if_request_failed parameter removed - was causing API validation error
       
       // Fetch full-page screenshot (may take 20-30 seconds)
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
         headers: { 'Accept': 'image/png' },
-        signal: AbortSignal.timeout(45000) // 45 second timeout for full-page
+        signal: AbortSignal.timeout(60000) // 60 second timeout for full-page
       });
 
       if (!response.ok) {
@@ -400,11 +469,15 @@ export class ScreenshotService {
       captureFullPage = false
     } = options;
 
-    // Try API first (more reliable in cloud environments)
+    // Try API first for screenshots (more reliable in cloud environments)
     const apiKey = process.env.SCREENSHOTONE_API_KEY;
     if (apiKey) {
       const apiResult = await this.captureWithAPI(url, outputDir, filename);
       if (!apiResult.error) {
+        
+        // ALWAYS capture rendered HTML via Playwright (regardless of screenshot method)
+        const renderedHtml = await this.captureRenderedHTMLOnly(url);
+        
         // If above-fold screenshot succeeded and full-page is requested, capture that too
         if (captureFullPage) {
           logger.info('Above-fold screenshot successful, now capturing full-page', { url });
@@ -413,12 +486,17 @@ export class ScreenshotService {
           // Merge results - full-page failure doesn't break above-fold success
           return {
             ...apiResult,
+            renderedHtml,  // Add rendered HTML from Playwright
             fullPageScreenshotPath: fullPageResult.fullPageScreenshotPath,
             fullPageScreenshotUrl: fullPageResult.fullPageScreenshotUrl,
             fullPageError: fullPageResult.fullPageError
           };
         }
-        return apiResult;
+        
+        return {
+          ...apiResult,
+          renderedHtml  // Add rendered HTML from Playwright
+        };
       }
       logger.warn('API screenshot failed, trying Playwright fallback', { url });
     }
@@ -444,9 +522,15 @@ export class ScreenshotService {
       await page.setViewportSize(viewport);
 
       // Set user agent
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      );
+      // Set user agent using context options instead of page method
+      await page.route('**/*', (route) => {
+        route.continue({
+          headers: {
+            ...route.request().headers(),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+      });
 
       logger.info('Loading page for screenshot', { url, viewport });
 
