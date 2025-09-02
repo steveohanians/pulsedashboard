@@ -823,60 +823,64 @@ export default function Dashboard() {
                   id={`metric-${metricName.replace(/\s+/g, "-").toLowerCase()}`}
                 >
                   <CardHeader>
-                    <CardTitle className="text-lg lg:text-xl">
-                      {metricName}
-                      {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
-                        <div className="flex flex-col gap-2 mt-2">
-                          {(() => {
-                            // Only show comparison chips for target metrics
-                            const targetMetrics = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
-                            const showComparisons = targetMetrics.includes(metricName) && metricData.Client;
-                            
-                            if (showComparisons) {
-                              const competitors = getCompetitorChartData(metricName);
-                              const comparisonData = generateComparisonData(
-                                metricData.Client,
-                                metricData.Industry_Avg || 0,
-                                competitors,
-                                metricName
-                              );
+                    <CardTitle className="text-lg lg:text-xl flex justify-between items-start">
+                      <div className="flex flex-col gap-2">
+                        <span>{metricName}</span>
+                        {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
+                          <div>
+                            {(() => {
+                              // Only show comparison chips for target metrics
+                              const targetMetrics = ["Bounce Rate", "Session Duration", "Pages per Session", "Sessions per User"];
+                              const showComparisons = targetMetrics.includes(metricName) && metricData.Client;
                               
-                              return (
-                                <div className="flex flex-wrap items-center gap-1">
-                                  {comparisonData.industry && (
-                                    <ComparisonChip
-                                      label="Industry Avg"
-                                      percentage={comparisonData.industry.percentage}
-                                      isOutperforming={comparisonData.industry.isOutperforming}
-                                      className="text-xs"
-                                      data-testid={`industry-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
-                                    />
-                                  )}
-                                  {comparisonData.bestCompetitor && (
-                                    <ComparisonChip
-                                      label="Best Comp"
-                                      percentage={comparisonData.bestCompetitor.percentage}
-                                      isOutperforming={comparisonData.bestCompetitor.isOutperforming}
-                                      className="text-xs"
-                                      data-testid={`competitor-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
-                                    />
-                                  )}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                          <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary">
-                            {metricData.Client
-                              ? `${Math.round(metricData.Client * 10) / 10}${
-                                  metricName.includes("Rate") ? "%" : 
-                                  metricName.includes("Session Duration") ? " min" :
-                                  metricName.includes("Pages per Session") ? " pages" :
-                                  metricName.includes("Sessions per User") ? " sessions" : ""
-                                }`
-                              : "N/A"}
-                          </span>
-                        </div>
+                              if (showComparisons) {
+                                const competitors = getCompetitorChartData(metricName);
+                                const comparisonData = generateComparisonData(
+                                  metricData.Client,
+                                  metricData.Industry_Avg || 0,
+                                  competitors,
+                                  metricName
+                                );
+                                
+                                return (
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    {comparisonData.industry && (
+                                      <ComparisonChip
+                                        label="Industry Avg"
+                                        percentage={comparisonData.industry.percentage}
+                                        isOutperforming={comparisonData.industry.isOutperforming}
+                                        className="text-xs"
+                                        data-testid={`industry-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
+                                      />
+                                    )}
+                                    {comparisonData.bestCompetitor && (
+                                      <ComparisonChip
+                                        label="Best Comp"
+                                        percentage={comparisonData.bestCompetitor.percentage}
+                                        isOutperforming={comparisonData.bestCompetitor.isOutperforming}
+                                        className="text-xs"
+                                        data-testid={`competitor-chip-${metricName.replace(/\s+/g, '-').toLowerCase()}`}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                      {!["Traffic Channels", "Device Distribution", "Website Effectiveness"].includes(metricName) && (
+                        <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0">
+                          {metricData.Client
+                            ? `${Math.round(metricData.Client * 10) / 10}${
+                                metricName.includes("Rate") ? "%" : 
+                                metricName.includes("Session Duration") ? " min" :
+                                metricName.includes("Pages per Session") ? " pages" :
+                                metricName.includes("Sessions per User") ? " sessions" : ""
+                              }`
+                            : "N/A"}
+                        </span>
                       )}
                     </CardTitle>
                   </CardHeader>
