@@ -11,6 +11,35 @@ import logger from "../../../utils/logging/logger";
 import { getEffectivenessPrompt } from "../promptManager";
 import { callOpenAIWithVision } from "../visionHelper";
 
+function calculateFallbackCTAs(ctaContent: string): {
+  score: number;
+  analysis: any;
+} {
+  const analysis = {
+    cta_present: /get started|contact|sign up|learn more|buy now|book now|request|download|subscribe|register/i.test(ctaContent),
+    cta_above_fold: ctaContent.substring(0, 1000).match(/get started|contact|sign up|learn more|buy now|book now|request|download/i) !== null,
+    cta_page_end: ctaContent.substring(ctaContent.length - 1000).match(/contact|get started|sign up|learn more/i) !== null,
+    cta_block_closure: (ctaContent.match(/get started|contact|sign up|learn more|buy now|book now|request|download/gi) || []).length >= 2,
+    cta_conflict: false,
+    confidence: 0.3,
+    fallback: true,
+    cta_strength_score: 0,
+    cta_evidence: 'Fallback assessment based on pattern matching',
+    cta_primary_examples: ctaContent.match(/get started|contact|sign up|learn more|buy now|book now|request|download/gi) || [],
+    cta_secondary_examples: [],
+    extraction_issues: ['fallback_analysis']
+  };
+
+  let score = 2;
+  if (analysis.cta_present) score += 2;
+  if (analysis.cta_above_fold) score += 2;
+  if (analysis.cta_page_end) score += 1;
+  if (analysis.cta_block_closure) score += 1.5;
+
+  analysis.cta_strength_score = score / 10;
+  return { score: Math.min(10, score), analysis };
+}
+
 export async function scoreCTAs(
   context: ScoringContext,
   config: ScoringConfig,
@@ -109,7 +138,58 @@ export async function scoreCTAs(
           error: visionError instanceof Error ? visionError.message : String(visionError)
         });
         
-        // Fallback to text-only analysis
+        try {
+          // Fallback to text-only analysis
+          const response = await openai.chat.completions.create({
+            model: config.openai.model,
+            temperature: config.openai.temperature,
+            messages: [
+              {
+                role: 'system',
+                content: effectivenessPrompt.systemPrompt
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 500
+          });
+          
+          analysisText = response.choices[0]?.message?.content?.trim() || '';
+        } catch (openaiError) {
+          logger.warn("OpenAI analysis failed, using rule-based fallback", {
+            url: context.websiteUrl,
+            error: openaiError instanceof Error ? openaiError.message : String(openaiError)
+          });
+          
+          const fallbackResult = calculateFallbackCTAs(ctaContent);
+          return {
+            criterion: 'ctas',
+            score: fallbackResult.score,
+            evidence: {
+              description: `Rule-based CTA analysis: ${fallbackResult.score}/10`,
+              details: {
+                ctaContent: ctaContent.substring(0, 300) + '...',
+                analysis: fallbackResult.analysis,
+                fallbackUsed: true
+              },
+              reasoning: 'AI analysis unavailable, used pattern-based scoring'
+            },
+            passes: {
+              passed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === true && key !== 'fallback').map(([key]) => key),
+              failed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === false).map(([key]) => key)
+            }
+          };
+        }
+      }
+    } else {
+      try {
+        // Text-only analysis when no screenshot available
+        logger.info("Using text-only CTA analysis (no screenshot)", {
+          url: context.websiteUrl
+        });
+        
         const response = await openai.chat.completions.create({
           model: config.openai.model,
           temperature: config.openai.temperature,
@@ -127,30 +207,31 @@ export async function scoreCTAs(
         });
         
         analysisText = response.choices[0]?.message?.content?.trim() || '';
-      }
-    } else {
-      // Text-only analysis when no screenshot available
-      logger.info("Using text-only CTA analysis (no screenshot)", {
-        url: context.websiteUrl
-      });
-      
-      const response = await openai.chat.completions.create({
-        model: config.openai.model,
-        temperature: config.openai.temperature,
-        messages: [
-          {
-            role: 'system',
-            content: effectivenessPrompt.systemPrompt
+      } catch (openaiError) {
+        logger.warn("OpenAI analysis failed, using rule-based fallback", {
+          url: context.websiteUrl,
+          error: openaiError instanceof Error ? openaiError.message : String(openaiError)
+        });
+        
+        const fallbackResult = calculateFallbackCTAs(ctaContent);
+        return {
+          criterion: 'ctas',
+          score: fallbackResult.score,
+          evidence: {
+            description: `Rule-based CTA analysis: ${fallbackResult.score}/10`,
+            details: {
+              ctaContent: ctaContent.substring(0, 300) + '...',
+              analysis: fallbackResult.analysis,
+              fallbackUsed: true
+            },
+            reasoning: 'AI analysis unavailable, used pattern-based scoring'
           },
-          {
-            role: 'user',
-            content: prompt
+          passes: {
+            passed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === true && key !== 'fallback').map(([key]) => key),
+            failed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === false).map(([key]) => key)
           }
-        ],
-        max_tokens: 500
-      });
-      
-      analysisText = response.choices[0]?.message?.content?.trim() || '';
+        };
+      }
     }
 
     if (!analysisText) {

@@ -250,6 +250,15 @@ export class TieredCriterionExecutor {
       timeout: `${tierDef.timeout}ms`
     });
 
+    // Add timeout monitor that logs if tier takes too long
+    const tierTimeout = setTimeout(() => {
+      logger.warn(`[TIMEOUT] Tier ${tierDef.tier} taking longer than expected`, {
+        tier: tierDef.tier,
+        elapsed: Date.now() - tierStartTime,
+        expected: tierDef.timeout
+      });
+    }, tierDef.timeout);
+
     // Check data availability for this tier
     const hasHTML = context.html && context.html.length > 100;
     const hasInitialHTML = context.initialHtml && context.initialHtml.length > 100;
@@ -345,6 +354,9 @@ export class TieredCriterionExecutor {
     tierResult.duration = Date.now() - tierStartTime;
     tierResult.completedAt = new Date();
     tierResult.partialScore = this.calculateTierScore(criterionResults);
+
+    // Clear the timeout monitor since tier completed
+    clearTimeout(tierTimeout);
 
     return tierResult;
   }

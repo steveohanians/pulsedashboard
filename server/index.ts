@@ -15,6 +15,7 @@ import { generalLimiter } from "./middleware/rateLimiter";
 import { setupPreloading } from "./middleware/preload";
 // Compression handled by Vite in production
 import logger from "./utils/logging/logger";
+import { setupProcessHandlers } from "./utils/processHandlers";
 
 // Make boot time available globally
 (global as any).SERVER_BOOT_TIME = SERVER_BOOT_TIME;
@@ -134,6 +135,17 @@ app.use((req, res, next) => {
     // Graceful shutdown handlers
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received: starting graceful shutdown`);
+      
+      try {
+        // Clean up browser resources first
+        const { screenshotService } = await import('./services/effectiveness/screenshot');
+        await screenshotService.cleanup();
+        logger.info('Browser resources cleaned up successfully');
+      } catch (cleanupError) {
+        logger.error('Browser cleanup failed during shutdown', {
+          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+        });
+      }
       
       // Close the server to stop accepting new connections
       server.close(() => {

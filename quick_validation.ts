@@ -54,11 +54,10 @@ async function quickValidation() {
   console.log('4. Environment...');
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasScreenshot = !!process.env.SCREENSHOTONE_API_KEY;
-  const enhancedEnabled = process.env.USE_ENHANCED_SCORING === 'true';
   
   console.log('   📝 OpenAI API Key:', hasOpenAI ? 'Configured' : 'Missing');
   console.log('   📝 Screenshot API Key:', hasScreenshot ? 'Configured' : 'Missing (fallback will be used)');
-  console.log('   📝 Enhanced Scoring:', enhancedEnabled ? 'Enabled' : 'Disabled');
+  console.log('   📝 Enhanced Scoring: Enabled (Default)');
 
   console.log('\n🎯 System Status:');
   console.log('   ✅ Core components compiled and initialized');

@@ -11,6 +11,35 @@ import logger from "../../../utils/logging/logger";
 import { getEffectivenessPrompt } from "../promptManager";
 import { callOpenAIWithVision } from "../visionHelper";
 
+function calculateFallbackBrandStory(storyContent: string): {
+  score: number;
+  analysis: any;
+} {
+  const analysis = {
+    pov_present: /who we are|what we do|why we exist|our mission|our vision|our purpose/i.test(storyContent),
+    mechanism_named: /our approach|our philosophy|how we work|our process|our method/i.test(storyContent),
+    outcomes_stated: /help|enable|improve|increase|reduce|transform|achieve|deliver|results/i.test(storyContent),
+    proof_elements: /\d+\+?\s*(years|clients|projects|companies)|since\s+\d{4}|\d+%\s*(growth|increase)/i.test(storyContent),
+    visual_supports_story: storyContent.length > 200,
+    confidence: 0.3,
+    fallback: true,
+    pov_evidence: storyContent.match(/who we are|what we do|why we exist|our mission|our vision|our purpose/i)?.[0] || 'none found',
+    mechanism_evidence: storyContent.match(/our approach|our philosophy|how we work|our process|our method/i)?.[0] || 'none found',
+    outcomes_evidence: storyContent.match(/help|enable|improve|increase|reduce|transform|achieve|deliver|results/i)?.[0] || 'none found',
+    proof_evidence: storyContent.match(/\d+\+?\s*(years|clients|projects|companies)|since\s+\d{4}|\d+%\s*(growth|increase)/i)?.[0] || 'none found',
+    visual_supports_evidence: 'Fallback assessment based on content length'
+  };
+
+  let score = 2;
+  if (analysis.pov_present) score += 2;
+  if (analysis.mechanism_named) score += 1.5;
+  if (analysis.outcomes_stated) score += 1.5;
+  if (analysis.proof_elements) score += 2;
+  if (analysis.visual_supports_story) score += 1;
+
+  return { score: Math.min(10, score), analysis };
+}
+
 export async function scoreBrandStory(
   context: ScoringContext,
   config: ScoringConfig,
@@ -219,7 +248,54 @@ export async function scoreBrandStory(
           error: visionError instanceof Error ? visionError.message : String(visionError)
         });
         
-        // Fallback to text-only analysis
+        try {
+          // Fallback to text-only analysis
+          const response = await openai.chat.completions.create({
+            model: config.openai.model,
+            temperature: config.openai.temperature,
+            messages: [
+              {
+                role: 'system',
+                content: effectivenessPrompt.systemPrompt
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 500
+          });
+          
+          analysisText = response.choices[0]?.message?.content?.trim() || '';
+        } catch (openaiError) {
+          logger.warn("OpenAI analysis failed, using rule-based fallback", {
+            url: context.websiteUrl,
+            error: openaiError instanceof Error ? openaiError.message : String(openaiError)
+          });
+          
+          const fallbackResult = calculateFallbackBrandStory(storyContent);
+          return {
+            criterion: 'brand_story',
+            score: fallbackResult.score,
+            evidence: {
+              description: `Rule-based brand story analysis: ${fallbackResult.score}/10`,
+              details: {
+                storyContent: storyContent.substring(0, 300) + '...',
+                analysis: fallbackResult.analysis,
+                fallbackUsed: true
+              },
+              reasoning: 'AI analysis unavailable, used pattern-based scoring'
+            },
+            passes: {
+              passed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === true && key !== 'fallback').map(([key]) => key),
+              failed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === false).map(([key]) => key)
+            }
+          };
+        }
+      }
+    } else {
+      try {
+        // Text-only analysis when no screenshot available
         const response = await openai.chat.completions.create({
           model: config.openai.model,
           temperature: config.openai.temperature,
@@ -237,26 +313,31 @@ export async function scoreBrandStory(
         });
         
         analysisText = response.choices[0]?.message?.content?.trim() || '';
-      }
-    } else {
-      // Text-only analysis when no screenshot available
-      const response = await openai.chat.completions.create({
-        model: config.openai.model,
-        temperature: config.openai.temperature,
-        messages: [
-          {
-            role: 'system',
-            content: effectivenessPrompt.systemPrompt
+      } catch (openaiError) {
+        logger.warn("OpenAI analysis failed, using rule-based fallback", {
+          url: context.websiteUrl,
+          error: openaiError instanceof Error ? openaiError.message : String(openaiError)
+        });
+        
+        const fallbackResult = calculateFallbackBrandStory(storyContent);
+        return {
+          criterion: 'brand_story',
+          score: fallbackResult.score,
+          evidence: {
+            description: `Rule-based brand story analysis: ${fallbackResult.score}/10`,
+            details: {
+              storyContent: storyContent.substring(0, 300) + '...',
+              analysis: fallbackResult.analysis,
+              fallbackUsed: true
+            },
+            reasoning: 'AI analysis unavailable, used pattern-based scoring'
           },
-          {
-            role: 'user',
-            content: prompt
+          passes: {
+            passed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === true && key !== 'fallback').map(([key]) => key),
+            failed: Object.entries(fallbackResult.analysis).filter(([key, value]) => value === false).map(([key]) => key)
           }
-        ],
-        max_tokens: 500
-      });
-      
-      analysisText = response.choices[0]?.message?.content?.trim() || '';
+        };
+      }
     }
 
     if (!analysisText) {

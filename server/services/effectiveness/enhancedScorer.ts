@@ -14,7 +14,7 @@ import { storage } from "../../storage";
 import logger from "../../utils/logging/logger";
 
 export interface ProgressCallback {
-  (status: string, progress: string, results?: Partial<EffectivenessResult>): Promise<void>;
+  (status: string, progress: string, results?: Partial<EffectivenessResult>, progressDetail?: any): Promise<void>;
 }
 
 export class EnhancedWebsiteEffectivenessScorer {
@@ -48,9 +48,16 @@ export class EnhancedWebsiteEffectivenessScorer {
         targetDuration: "45-75s"
       });
 
-      // Update status: Data collection starting
+      // Phase 1: Data Collection - Starting
       if (progressCallback) {
-        await progressCallback("scraping", "Collecting website data in parallel...");
+        await progressCallback("scraping", "Collecting website data", undefined, {
+          phase: 'data_collection',
+          subPhase: 'fetching_html',
+          progress: 10,
+          completedItems: [],
+          currentItem: 'HTML content',
+          estimatedTimeRemaining: 60
+        });
       }
 
       // Phase 1: Parallel Data Collection (15-45s)
@@ -69,6 +76,23 @@ export class EnhancedWebsiteEffectivenessScorer {
         screenshotError: dataResult.screenshotError,
         fullPageScreenshotError: dataResult.fullPageScreenshotError
       };
+
+      // Phase 1: Data Collection - Complete
+      const completedItems = [];
+      if (dataResult.initialHtml) completedItems.push('HTML');
+      if (dataResult.screenshotUrl) completedItems.push('Screenshots');
+      if (dataResult.webVitals) completedItems.push('Web Vitals');
+      
+      if (progressCallback) {
+        await progressCallback("scraping", "Data collection complete", undefined, {
+          phase: 'data_collection',
+          subPhase: 'complete',
+          progress: 25,
+          completedItems,
+          currentItem: 'Starting analysis',
+          estimatedTimeRemaining: 45
+        });
+      }
 
       logger.info("Data collection completed", {
         websiteUrl,
@@ -105,32 +129,102 @@ export class EnhancedWebsiteEffectivenessScorer {
             fullPageScreenshotError: context.fullPageScreenshotError
           };
 
+          // Progress mapping for each tier
+          const progressMap = {
+            1: { progress: 40, message: 'Basic analysis complete', remaining: 35 },
+            2: { progress: 70, message: 'AI analysis complete', remaining: 20 },
+            3: { progress: 90, message: 'Performance analysis complete', remaining: 5 }
+          };
+
+          // Send detailed progress update via callback
+          if (progressCallback) {
+            const tierProgress = progressMap[tierResult.tier as keyof typeof progressMap];
+            await progressCallback("analyzing", tierProgress.message, partialResult, {
+              phase: 'criterion_analysis',
+              subPhase: `tier_${tierResult.tier}_complete`,
+              progress: tierProgress.progress,
+              completedItems: progressive.tiers.slice(0, tierResult.tier).map(t => `Tier ${t.tier}`),
+              currentItem: tierResult.tier < 3 ? `Starting Tier ${tierResult.tier + 1}` : 'Finalizing results',
+              estimatedTimeRemaining: tierProgress.remaining,
+              tierDetails: {
+                tier: tierResult.tier,
+                completedCriteria: progressive.completedCriteria,
+                totalCriteria: progressive.totalCriteria,
+                overallScore: progressive.overallScore
+              }
+            });
+          }
+
           // Update database with progressive status if runId provided
           if (runId && storage) {
             try {
               // Update tier completion timestamps
               const tierCompletionUpdate: any = {};
+              const tierProgress = progressMap[tierResult.tier as keyof typeof progressMap];
+              
               if (tierResult.tier === 1) {
                 tierCompletionUpdate.tier1CompletedAt = tierResult.completedAt;
+                // Embed progressDetail in progress field for serialization
+                const progressMessage = `Quick analysis complete - ${tierResult.results.length} criteria scored`;
+                const progressData = {
+                  message: progressMessage,
+                  progressDetail: {
+                    phase: 'criterion_analysis',
+                    subPhase: 'tier_1_complete',
+                    progress: tierProgress.progress,
+                    completedTiers: 1,
+                    totalTiers: 3,
+                    overallScore: progressive.overallScore
+                  }
+                };
+                
                 await storage.updateEffectivenessRun(runId, {
                   status: 'tier1_complete',
-                  progress: `Quick analysis complete - ${tierResult.results.length} criteria scored`,
+                  progress: JSON.stringify(progressData),
                   overallScore: progressive.overallScore,
                   ...tierCompletionUpdate
                 });
               } else if (tierResult.tier === 2) {
                 tierCompletionUpdate.tier2CompletedAt = tierResult.completedAt;
+                // Embed progressDetail in progress field for serialization
+                const progressMessage = `Enhanced analysis complete - ${progressive.completedCriteria} criteria scored`;
+                const progressData = {
+                  message: progressMessage,
+                  progressDetail: {
+                    phase: 'criterion_analysis',
+                    subPhase: 'tier_2_complete',
+                    progress: tierProgress.progress,
+                    completedTiers: 2,
+                    totalTiers: 3,
+                    overallScore: progressive.overallScore
+                  }
+                };
+                
                 await storage.updateEffectivenessRun(runId, {
                   status: 'tier2_complete', 
-                  progress: `Enhanced analysis complete - ${progressive.completedCriteria} criteria scored`,
+                  progress: JSON.stringify(progressData),
                   overallScore: progressive.overallScore,
                   ...tierCompletionUpdate
                 });
               } else if (tierResult.tier === 3) {
                 tierCompletionUpdate.tier3CompletedAt = tierResult.completedAt;
+                // Embed progressDetail in progress field for serialization
+                const progressMessage = `Full analysis complete - ${progressive.completedCriteria}/${progressive.totalCriteria} criteria scored`;
+                const progressData = {
+                  message: progressMessage,
+                  progressDetail: {
+                    phase: 'criterion_analysis',
+                    subPhase: 'complete',
+                    progress: 100,
+                    completedTiers: 3,
+                    totalTiers: 3,
+                    overallScore: progressive.overallScore
+                  }
+                };
+                
                 await storage.updateEffectivenessRun(runId, {
                   status: 'completed',
-                  progress: `Full analysis complete - ${progressive.completedCriteria}/${progressive.totalCriteria} criteria scored`,
+                  progress: JSON.stringify(progressData),
                   overallScore: progressive.overallScore,
                   ...tierCompletionUpdate
                 });
@@ -172,10 +266,26 @@ export class EnhancedWebsiteEffectivenessScorer {
               3: `Full analysis complete - ${progressive.completedCriteria}/${progressive.totalCriteria} criteria scored`
             };
 
+            // Include progressDetail in this callback too to maintain consistency
+            const progressPercentages = { 1: 40, 2: 70, 3: 100 };
             await progressCallback(
               statusMap[tierResult.tier as keyof typeof statusMap] || 'analyzing',
               progressMap[tierResult.tier as keyof typeof progressMap] || 'Processing...',
-              partialResult
+              partialResult,
+              {
+                phase: 'criterion_analysis',
+                subPhase: `tier_${tierResult.tier}_complete`,
+                progress: progressPercentages[tierResult.tier as keyof typeof progressPercentages] || 50,
+                completedItems: progressive.tiers.slice(0, tierResult.tier).map(t => `Tier ${t.tier}`),
+                currentItem: tierResult.tier < 3 ? `Starting Tier ${tierResult.tier + 1}` : 'Finalizing results',
+                estimatedTimeRemaining: tierResult.tier < 3 ? (3 - tierResult.tier) * 15 : 5,
+                tierDetails: {
+                  tier: tierResult.tier,
+                  completedCriteria: progressive.completedCriteria,
+                  totalCriteria: progressive.totalCriteria,
+                  overallScore: progressive.overallScore
+                }
+              }
             );
           }
         }

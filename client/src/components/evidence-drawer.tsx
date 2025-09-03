@@ -17,11 +17,18 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider 
+} from "@/components/ui/tooltip";
+import { 
   X, 
   Image as ImageIcon, 
   Gauge, 
   CheckCircle, 
   AlertTriangle,
+  AlertCircle,
   Eye,
   Accessibility,
   Search
@@ -216,6 +223,33 @@ function findEvidenceForCheck(checkName: string, evidenceDetails: any): string |
   
   return null;
 }
+
+// Fallback detection logic
+const isFallbackScore = (criterion: CriterionScore): boolean => {
+  return !!(criterion.evidence?.details?.fallback || 
+           criterion.evidence?.details?.fallbackUsed ||
+           criterion.evidence?.details?.screenshotQuality === 'placeholder' ||
+           criterion.evidence?.details?.htmlQuality === 'fallback' ||
+           criterion.evidence?.details?.apiStatus === 'fallback_used');
+};
+
+// Helper function to explain fallback reason
+const getFallbackReason = (criterion: CriterionScore): string => {
+  const details = criterion.evidence?.details;
+  if (details?.screenshotQuality === 'placeholder') {
+    return 'Screenshot unavailable - visual analysis limited';
+  }
+  if (details?.htmlQuality === 'fallback') {
+    return 'Website content unavailable - using estimated data';
+  }
+  if (details?.apiStatus === 'fallback_used') {
+    return 'Performance data estimated - API unavailable';
+  }
+  if (details?.fallback || details?.fallbackUsed) {
+    return 'Analyzed using backup methods due to service limitations';
+  }
+  return 'Score calculated with limited data';
+};
 
 interface CriterionScore {
   id: string;
@@ -515,6 +549,7 @@ export function EvidenceDrawer({
 
   const renderCriterionCard = (score: CriterionScore) => {
     const Icon = getCriterionIcon(score.criterion);
+    const isUsingFallback = isFallbackScore(score);
     
     return (
       <Card key={score.id} className="mb-4">
@@ -530,10 +565,35 @@ export function EvidenceDrawer({
                   .replace(/\bSeo\b/g, 'SEO');
               })()}
             </CardTitle>
-            <div className="text-2xl lg:text-3xl font-light text-primary">
-              {score.score}
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "text-2xl lg:text-3xl font-light text-primary",
+                isUsingFallback ? "opacity-75" : ""
+              )}>
+                {score.score}
+              </div>
+              {isUsingFallback && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Limited Data
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Score based on limited data - some services were unavailable</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
+          {isUsingFallback && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              {getFallbackReason(score)}
+            </div>
+          )}
         </CardHeader>
         
         <CardContent>
@@ -819,6 +879,22 @@ export function EvidenceDrawer({
               </TabsList>
 
               <div className="mt-6">
+                {/* Fallback Summary Alert */}
+                {(() => {
+                  const fallbackCount = (currentRunData?.criterionScores || []).filter(isFallbackScore).length;
+                  return fallbackCount > 0 ? (
+                    <Alert className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Limited Data Available</AlertTitle>
+                      <AlertDescription>
+                        {fallbackCount} {fallbackCount === 1 ? 'criterion was' : 'criteria were'} scored 
+                        using backup methods due to temporary service limitations. Scores may be more 
+                        conservative than usual.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null;
+                })()}
+                
                 <TabsContent value="screenshot">
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-4">

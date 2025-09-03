@@ -16,7 +16,17 @@
       "Bash(echo $REACT_APP_LOADKIT_ENABLED)",
       "Bash(echo $REACT_APP_LOADKIT_CARDS)",
       "Bash(pkill:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(NODE_ENV=development npx tsx server/utils/testCompleteSystem.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(NODE_ENV=development npx tsx server/utils/diagnoseCompletionIssues.ts)",
+      "Bash(NODE_ENV=development npx tsx server/utils/testAIFallback.ts)",
+      "Bash(NODE_ENV=development npx tsx server/utils/verifyCompleteSystem.ts)",
+      "Bash(NODE_ENV=development npx tsx server/utils/fullSystemDiagnostic.ts)",
+      "Bash(NODE_ENV=development npx tsx server/utils/verifyFixes.ts)",
+      "Bash(NODE_ENV=development npx tsx server/utils/testProgressDetailFix.ts)",
+      "Bash(NODE_ENV=development npx tsx server/index.ts)",
+      "Bash(NODE_ENV=development npx tsc --noEmit server/routes/effectivenessRoutes.ts)"
     ],
     "deny": [],
     "ask": [],

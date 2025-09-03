@@ -32,8 +32,13 @@ interface EffectivenessRun {
   overallScore: number;
   status: 'pending' | 'initializing' | 'scraping' | 'analyzing' | 'tier1_analyzing' | 'tier1_complete' | 'tier2_analyzing' | 'tier2_complete' | 'tier3_analyzing' | 'completed' | 'failed' | 'generating_insights';
   progress?: string;
+  progressDetail?: string | any;
   createdAt: string;
   criterionScores: CriterionScore[];
+  screenshotUrl?: string;
+  fullPageScreenshotUrl?: string;
+  aiInsights?: any;
+  insightsGeneratedAt?: string;
 }
 
 interface EffectivenessData {
@@ -107,7 +112,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   useEffect(() => {
     return () => {
       if (pollingInterval) {
-        clearInterval(pollingInterval);
+        clearTimeout(pollingInterval); // Changed to clearTimeout since we now use setTimeout
       }
     };
   }, [pollingInterval]);
@@ -136,9 +141,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       return response.json();
     },
     refetchInterval: (query) => {
-      // Refetch every 5 seconds if status is in progress (pending, initializing, scraping, analyzing)
       const status = query.state.data?.run?.status;
-      return status && ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(status) ? 3000 : false;
+      
+      if (!status) return false;
+      
+      const inProgressStatuses = ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'];
+      
+      if (!inProgressStatuses.includes(status)) return false;
+      
+      // Faster polling during active analysis phases
+      const activeAnalysisStatuses = ['scraping', 'analyzing', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing'];
+      const isActivelyAnalyzing = activeAnalysisStatuses.includes(status);
+      
+      return isActivelyAnalyzing ? 1000 : 3000; // 1 second during analysis, 3 seconds during initialization/completion phases
     },
     placeholderData: (previousData) => previousData, // Keep showing previous data while loading
     retry: (failureCount, error) => {
@@ -214,10 +229,10 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   const startPolling = () => {
     if (pollingInterval) {
-      clearInterval(pollingInterval);
+      clearTimeout(pollingInterval); // Use clearTimeout since we now use setTimeout
     }
     
-    const interval = setInterval(async () => {
+    const pollWithDynamicInterval = async () => {
       try {
         const response = await fetch(`/api/effectiveness/latest/${clientId}`, {
           credentials: 'include'
@@ -230,17 +245,34 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           queryClient.setQueryData(['effectiveness', clientId, 'v2'], data);
           
           // Stop polling if status is completed or failed
-          if (data.run && !['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(data.run.status)) {
-            clearInterval(interval);
-            setPollingInterval(null);
+          const inProgressStatuses = ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'];
+          
+          if (data.run && !inProgressStatuses.includes(data.run.status)) {
+            if (pollingInterval) {
+              clearTimeout(pollingInterval); // Use clearTimeout since we now use setTimeout
+              setPollingInterval(null);
+            }
+            return;
           }
+          
+          // Schedule next poll with dynamic interval based on current status
+          const activeAnalysisStatuses = ['scraping', 'analyzing', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing'];
+          const isActivelyAnalyzing = activeAnalysisStatuses.includes(data.run?.status);
+          const nextInterval = isActivelyAnalyzing ? 1000 : 3000; // 1 second during analysis, 3 seconds otherwise
+          
+          const timeoutId = setTimeout(pollWithDynamicInterval, nextInterval);
+          setPollingInterval(timeoutId);
         }
       } catch (error) {
         console.warn('Polling failed:', error);
+        // Retry with longer interval on error
+        const timeoutId = setTimeout(pollWithDynamicInterval, 5000);
+        setPollingInterval(timeoutId);
       }
-    }, 3000); // Poll every 3 seconds
+    };
     
-    setPollingInterval(interval);
+    // Start polling immediately
+    pollWithDynamicInterval();
   };
 
   const handleRefresh = () => {
@@ -288,10 +320,40 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
+  // Parse progressDetail for enhanced progress display
+  // First try to parse from embedded progress field (new format)
+  const progressData = run?.progress ? 
+    (typeof run.progress === 'string' && run.progress.startsWith('{') ? 
+      (() => {
+        try {
+          return JSON.parse(run.progress);
+        } catch {
+          return { message: run.progress };
+        }
+      })() : 
+      { message: run.progress }) : 
+    null;
+
+  // Fallback to old progressDetail field if available
+  const fallbackProgressDetail = run?.progressDetail ? 
+    (typeof run.progressDetail === 'string' ? 
+      (() => {
+        try {
+          return JSON.parse(run.progressDetail);
+        } catch {
+          return null;
+        }
+      })() : 
+      run.progressDetail) : null;
+
+  // Use progressDetail from embedded format or fallback
+  const progressDetail = progressData?.progressDetail || fallbackProgressDetail;
+  const progressMessage = progressData?.message || run?.progress;
+
   // Progressive toast notifications for milestone completions
   useProgressiveToasts({
     status: run?.status,
-    progress: run?.progress,
+    progress: progressMessage,
     overallScore: run?.overallScore,
     criterionScores: run?.criterionScores
   }, data?.client?.name);
@@ -303,7 +365,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           <CardTitle className="text-lg lg:text-xl flex justify-between items-start">
             <div className="flex flex-col gap-2">
               <span>Website Effectiveness Engine™ Audit</span>
-              {run && run.status === 'completed' && (
+              {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
                 <span 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 w-fit"
                   data-testid="effectiveness-status-chip"
@@ -315,7 +377,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </span>
               )}
             </div>
-            {run && run.status === 'completed' && (
+            {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
               <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0">
                 {run.overallScore}
               </span>
@@ -348,7 +410,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {data && !run && (
+          {data && !run && data.hasData === false && (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
                 No effectiveness data available
@@ -368,73 +430,91 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
           {run && isAnalyzing && (
             <div className="text-center py-8">
-              <div className="space-y-2">
-                <p className="text-muted-foreground font-medium flex items-center justify-center gap-2">
-                  <ButtonLoadingSpinner size="sm" />
-                  {run.status === 'initializing' && 'Preparing analysis...'}
-                  {run.status === 'scraping' && 'Collecting website data...'}
-                  {run.status === 'analyzing' && 'Scoring criteria...'}
-                  {run.status === 'pending' && 'Starting analysis...'}
-                  {run.status === 'tier1_analyzing' && 'Quick analysis in progress...'}
-                  {run.status === 'tier1_complete' && 'Quick analysis complete! 📊'}
-                  {run.status === 'tier2_analyzing' && 'Enhanced AI analysis...'}
-                  {run.status === 'tier2_complete' && 'Enhanced analysis complete! 🤖'}  
-                  {run.status === 'tier3_analyzing' && 'Performance analysis...'}
-                  {run.status === 'generating_insights' && 'Generating AI insights...'}
-                </p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <ButtonLoadingSpinner size="sm" />
+                    <span className="text-muted-foreground font-medium">
+                      {progressMessage || 'Processing...'}
+                    </span>
+                    {progressDetail?.progress && (
+                      <span className="text-sm text-muted-foreground">
+                        {progressDetail.progress}%
+                      </span>
+                    )}
+                  </div>
+                  
+                  {progressDetail && (
+                    <>
+                      {/* Progress bar */}
+                      <div className="w-full max-w-md mx-auto bg-secondary rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${progressDetail.progress || 0}%` }}
+                        />
+                      </div>
+                      
+                      {/* Phase and current item */}
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        {progressDetail.currentItem && (
+                          <div>Currently: {progressDetail.currentItem}</div>
+                        )}
+                        {progressDetail.estimatedTimeRemaining && (
+                          <div>
+                            ~{Math.round(progressDetail.estimatedTimeRemaining / 1000)}s remaining
+                          </div>
+                        )}
+                        {progressDetail.phase && (
+                          <div>Phase: {progressDetail.phase.replace(/_/g, ' ')}</div>
+                        )}
+                      </div>
+                      
+                      {/* Completed items */}
+                      {progressDetail.completedItems?.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          ✓ {progressDetail.completedItems.join(', ')}
+                        </div>
+                      )}
+                      
+                      {/* Tier progress details */}
+                      {progressDetail.tierDetails && (
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>Tier {progressDetail.tierDetails.tier} - {progressDetail.tierDetails.completedCriteria}/{progressDetail.tierDetails.totalCriteria} criteria</div>
+                          {progressDetail.tierDetails.overallScore && (
+                            <div>Current Score: {progressDetail.tierDetails.overallScore}/10</div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Overall progress summary */}
+                      {progressDetail.completedTiers && progressDetail.totalTiers && (
+                        <div className="text-xs text-muted-foreground">
+                          Completed Tiers: {progressDetail.completedTiers}/{progressDetail.totalTiers}
+                          {progressDetail.overallScore && (
+                            <span> • Score: {progressDetail.overallScore}/10</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Competitor progress */}
+                      {progressDetail.currentCompetitor && progressDetail.totalCompetitors && (
+                        <div className="text-xs text-muted-foreground">
+                          Competitor {progressDetail.currentCompetitor}/{progressDetail.totalCompetitors}
+                          {progressDetail.competitorName && (
+                            <span>: {progressDetail.competitorName}</span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                
                 <p 
                   className="text-sm text-muted-foreground transition-opacity duration-500 ease-in-out"
                   style={{ opacity: isAnalyzing ? messageOpacity : 1 }}
                 >
-                  {isAnalyzing ? funMessages[currentMessageIndex] : run.progress}
+                  {isAnalyzing ? funMessages[currentMessageIndex] : progressMessage}
                 </p>
-                
-                {/* Progressive completion indicator */}
-                {run.status && ['tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status) && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex justify-center items-center space-x-4 text-sm">
-                      <div className={`flex items-center space-x-1 ${
-                        ['tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status) 
-                          ? 'text-green-600' : 'text-muted-foreground'
-                      }`}>
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span>Quick Analysis</span>
-                      </div>
-                      
-                      <div className={`flex items-center space-x-1 ${
-                        ['tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status)
-                          ? 'text-green-600' : 'text-muted-foreground'
-                      }`}>
-                        <div className={`w-2 h-2 rounded-full ${
-                          ['tier2_complete', 'tier3_analyzing', 'completed'].includes(run.status)
-                            ? 'bg-green-500' : 'bg-gray-300'
-                        }`}></div>
-                        <span>AI Analysis</span>
-                      </div>
-                      
-                      <div className={`flex items-center space-x-1 ${
-                        run.status === 'completed' ? 'text-green-600' : 'text-muted-foreground'
-                      }`}>
-                        <div className={`w-2 h-2 rounded-full ${
-                          run.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
-                        }`}></div>
-                        <span>Performance</span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress bar */}
-                    <div className="w-48 mx-auto bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-in-out"
-                        style={{
-                          width: run.status === 'tier1_complete' ? '33%' :
-                                 ['tier2_analyzing', 'tier2_complete'].includes(run.status) ? '66%' :
-                                 ['tier3_analyzing', 'completed'].includes(run.status) ? '100%' : '0%'
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -442,8 +522,28 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           {run && run.status === 'failed' && (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-2">Analysis failed</p>
-              {run.progress && (
-                <p className="text-sm text-red-600 mb-4">{run.progress}</p>
+              {progressMessage && (
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm text-red-600">{progressMessage}</p>
+                  {progressDetail && (
+                    <div className="text-xs text-muted-foreground">
+                      {progressDetail.phase && (
+                        <div>Failed during: {progressDetail.phase.replace(/_/g, ' ')}</div>
+                      )}
+                      {progressDetail.currentCompetitor && progressDetail.totalCompetitors && (
+                        <div>
+                          Progress: Competitor {progressDetail.currentCompetitor}/{progressDetail.totalCompetitors}
+                          {progressDetail.competitorName && (
+                            <span> ({progressDetail.competitorName})</span>
+                          )}
+                        </div>
+                      )}
+                      {progressDetail.error && (
+                        <div className="text-red-500 mt-1">Error: {progressDetail.error}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               <Button onClick={handleRefresh} disabled={!canRefresh}>
                 {refreshMutation.isPending ? (
@@ -461,7 +561,27 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && run.status === 'completed' && (
+          {run && run.status === 'completed' && (!run.criterionScores || run.criterionScores.length === 0) && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-2">Analysis completed but no scores available</p>
+              <p className="text-sm text-amber-600 mb-4">There may have been an issue during scoring</p>
+              <Button onClick={handleRefresh} disabled={!canRefresh}>
+                {refreshMutation.isPending ? (
+                  <>
+                    <ButtonLoadingSpinner size="sm" className="mr-2" />
+                    Scoring Website...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Retry Analysis
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
             <div className="space-y-4">
               {/* Two-column layout */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
@@ -540,7 +660,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       </Card>
 
       {/* Evidence Drawer */}
-      {run && run.status === 'completed' && (
+      {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
         <EvidenceDrawer
           isOpen={showEvidence}
           onClose={() => setShowEvidence(false)}

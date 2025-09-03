@@ -12,6 +12,29 @@ import { getEffectivenessPrompt } from "../promptManager";
 import { callOpenAIWithVision } from "../visionHelper";
 import * as path from "path";
 
+// Fallback scoring when OpenAI is unavailable
+function calculateFallbackPositioning(heroContent: string): {
+  score: number;
+  analysis: any;
+} {
+  const analysis = {
+    audience_named: /for\s+(companies|businesses|teams|leaders|enterprises)/i.test(heroContent),
+    outcome_present: /help|enable|improve|increase|reduce|transform/i.test(heroContent),
+    capability_clear: /we\s+(help|provide|deliver|create|build)/i.test(heroContent),
+    brevity_check: heroContent.split(' ').length < 50,
+    confidence: 0.3,
+    fallback: true
+  };
+  
+  let score = 3; // Base conservative score
+  if (analysis.audience_named) score += 1.5;
+  if (analysis.outcome_present) score += 1.5;
+  if (analysis.capability_clear) score += 1.5;
+  if (analysis.brevity_check) score += 1;
+  
+  return { score: Math.min(7, score), analysis };
+}
+
 export async function scorePositioning(
   context: ScoringContext,
   config: ScoringConfig,
@@ -189,36 +212,58 @@ export async function scorePositioning(
       .replace('{subheading}', contentForAI.subheading)
       .replace('{firstParagraph}', contentForAI.subheading); // Use same as subheading
     
-    let analysisText: string;
+    let analysis;
+    let analysisText: string = '';
 
-    // Try vision-enhanced analysis if full-page screenshot is available
-    if (context.fullPageScreenshot && config.openai.model === 'gpt-4o') {
-      try {
-        // Convert screenshot URL to file path
-        const screenshotFilename = context.fullPageScreenshot.split('/').pop();
-        const screenshotPath = path.join('uploads', 'screenshots', screenshotFilename);
-        
-        logger.info('Using vision-enhanced positioning analysis', {
-          url: context.websiteUrl,
-          screenshotPath: screenshotFilename
-        });
+    try {
+      // Try vision-enhanced analysis if full-page screenshot is available
+      if (context.fullPageScreenshot && config.openai.model === 'gpt-4o') {
+        try {
+          // Convert screenshot URL to file path
+          const screenshotFilename = context.fullPageScreenshot.split('/').pop();
+          const screenshotPath = path.join('uploads', 'screenshots', screenshotFilename);
+          
+          logger.info('Using vision-enhanced positioning analysis', {
+            url: context.websiteUrl,
+            screenshotPath: screenshotFilename
+          });
 
-        analysisText = await callOpenAIWithVision(
-          heroContent,
-          screenshotPath,
-          effectivenessPrompt.promptTemplate,
-          effectivenessPrompt.systemPrompt,
-          openai,
-          300
-        );
+          analysisText = await callOpenAIWithVision(
+            heroContent,
+            screenshotPath,
+            effectivenessPrompt.promptTemplate,
+            effectivenessPrompt.systemPrompt,
+            openai,
+            300
+          );
 
-      } catch (visionError) {
-        logger.warn('Vision analysis failed, falling back to text-only', {
-          url: context.websiteUrl,
-          error: visionError instanceof Error ? visionError.message : String(visionError)
-        });
-        
-        // Fallback to text-only analysis
+        } catch (visionError) {
+          logger.warn('Vision analysis failed, falling back to text-only', {
+            url: context.websiteUrl,
+            error: visionError instanceof Error ? visionError.message : String(visionError)
+          });
+          
+          // Fallback to text-only analysis
+          const response = await openai.chat.completions.create({
+            model: config.openai.model,
+            temperature: config.openai.temperature,
+            messages: [
+              {
+                role: 'system',
+                content: effectivenessPrompt.systemPrompt
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 200
+          });
+
+          analysisText = response.choices[0]?.message?.content?.trim() || '';
+        }
+      } else {
+        // Standard text-only analysis
         const response = await openai.chat.completions.create({
           model: config.openai.model,
           temperature: config.openai.temperature,
@@ -237,42 +282,50 @@ export async function scorePositioning(
 
         analysisText = response.choices[0]?.message?.content?.trim() || '';
       }
-    } else {
-      // Standard text-only analysis
-      const response = await openai.chat.completions.create({
-        model: config.openai.model,
-        temperature: config.openai.temperature,
-        messages: [
-          {
-            role: 'system',
-            content: effectivenessPrompt.systemPrompt
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 200
-      });
 
-      analysisText = response.choices[0]?.message?.content?.trim() || '';
-    }
+      if (!analysisText) {
+        throw new Error('No response from OpenAI positioning analysis');
+      }
 
-    if (!analysisText) {
-      throw new Error('No response from OpenAI positioning analysis');
-    }
-
-    let analysis;
-    try {
       // Extract JSON from markdown code blocks if present
       const cleanJsonText = analysisText.replace(/^```json\s*|\s*```$/g, '').trim();
       analysis = JSON.parse(cleanJsonText);
-    } catch (parseError) {
-      logger.error('Failed to parse OpenAI positioning response', {
-        response: analysisText,
-        error: parseError
+
+    } catch (error) {
+      logger.warn('AI analysis failed, using fallback', { 
+        criterion: 'positioning', 
+        error: error instanceof Error ? error.message : String(error),
+        url: context.websiteUrl
       });
-      throw new Error('Invalid JSON response from positioning analysis');
+      
+      const fallback = calculateFallbackPositioning(heroContent);
+      analysis = fallback.analysis;
+      
+      // Continue with fallback scoring logic
+      return {
+        criterion: 'positioning',
+        score: fallback.score,
+        evidence: {
+          description: `Positioning analysis using fallback pattern matching`,
+          details: {
+            audience_named: analysis.audience_named,
+            outcome_present: analysis.outcome_present,
+            capability_clear: analysis.capability_clear,
+            brevity_check: analysis.brevity_check,
+            heroContent: heroContent.substring(0, 200) + '...'
+          },
+          reasoning: 'Fallback analysis due to AI unavailability. Conservative scoring based on content patterns.',
+          fallbackUsed: true
+        },
+        passes: {
+          passed: Object.entries(analysis).filter(([key, value]) => 
+            key !== 'confidence' && key !== 'fallback' && value === true
+          ).map(([key]) => key),
+          failed: Object.entries(analysis).filter(([key, value]) => 
+            key !== 'confidence' && key !== 'fallback' && value === false
+          ).map(([key]) => key)
+        }
+      };
     }
 
     // Check for buzzwords (reduces score)
