@@ -55,7 +55,7 @@ export class EnhancedWebsiteEffectivenessScorer {
           subPhase: 'fetching_html',
           progress: 10,
           completedItems: [],
-          currentItem: 'HTML content',
+          currentItem: 'Getting started',
           estimatedTimeRemaining: 60
         });
       }
@@ -131,9 +131,9 @@ export class EnhancedWebsiteEffectivenessScorer {
 
           // Progress mapping for each tier
           const progressMap = {
-            1: { progress: 40, message: 'Basic analysis complete', remaining: 35 },
-            2: { progress: 70, message: 'AI analysis complete', remaining: 20 },
-            3: { progress: 90, message: 'Performance analysis complete', remaining: 5 }
+            1: { progress: 40, message: 'Analyzing your site...', remaining: 35 },
+            2: { progress: 70, message: 'Analyzing your site...', remaining: 20 },
+            3: { progress: 90, message: 'Almost finished...', remaining: 5 }
           };
 
           // Send detailed progress update via callback
@@ -143,8 +143,8 @@ export class EnhancedWebsiteEffectivenessScorer {
               phase: 'criterion_analysis',
               subPhase: `tier_${tierResult.tier}_complete`,
               progress: tierProgress.progress,
-              completedItems: progressive.tiers.slice(0, tierResult.tier).map(t => `Tier ${t.tier}`),
-              currentItem: tierResult.tier < 3 ? `Starting Tier ${tierResult.tier + 1}` : 'Finalizing results',
+              completedItems: [],
+              currentItem: tierResult.tier < 3 ? 'Analyzing your site...' : 'Almost finished...',
               estimatedTimeRemaining: tierProgress.remaining,
               tierDetails: {
                 tier: tierResult.tier,
@@ -165,7 +165,7 @@ export class EnhancedWebsiteEffectivenessScorer {
               if (tierResult.tier === 1) {
                 tierCompletionUpdate.tier1CompletedAt = tierResult.completedAt;
                 // Embed progressDetail in progress field for serialization
-                const progressMessage = `Quick analysis complete - ${tierResult.results.length} criteria scored`;
+                const progressMessage = `Analyzing your site...`;
                 const progressData = {
                   message: progressMessage,
                   progressDetail: {
@@ -187,7 +187,7 @@ export class EnhancedWebsiteEffectivenessScorer {
               } else if (tierResult.tier === 2) {
                 tierCompletionUpdate.tier2CompletedAt = tierResult.completedAt;
                 // Embed progressDetail in progress field for serialization
-                const progressMessage = `Enhanced analysis complete - ${progressive.completedCriteria} criteria scored`;
+                const progressMessage = `Analyzing your site...`;
                 const progressData = {
                   message: progressMessage,
                   progressDetail: {
@@ -209,7 +209,7 @@ export class EnhancedWebsiteEffectivenessScorer {
               } else if (tierResult.tier === 3) {
                 tierCompletionUpdate.tier3CompletedAt = tierResult.completedAt;
                 // Embed progressDetail in progress field for serialization
-                const progressMessage = `Full analysis complete - ${progressive.completedCriteria}/${progressive.totalCriteria} criteria scored`;
+                const progressMessage = `Analysis complete`;
                 const progressData = {
                   message: progressMessage,
                   progressDetail: {
@@ -230,16 +230,77 @@ export class EnhancedWebsiteEffectivenessScorer {
                 });
               }
 
-              // Save criterion scores for this tier
-              for (const result of tierResult.results) {
-                await storage.createCriterionScore({
+              // Save criterion scores for this tier with retry logic
+              const savePromises = tierResult.results.map(async (result, index) => {
+                let attempts = 0;
+                const maxAttempts = 3;
+                
+                while (attempts < maxAttempts) {
+                  try {
+                    await storage.createCriterionScore({
+                      runId,
+                      criterion: result.criterion,
+                      score: result.score,
+                      evidence: result.evidence,
+                      passes: result.passes,
+                      tier: tierResult.tier,
+                      completedAt: tierResult.completedAt
+                    });
+                    
+                    logger.info("Criterion score saved successfully", {
+                      runId,
+                      criterion: result.criterion,
+                      tier: tierResult.tier,
+                      attempt: attempts + 1
+                    });
+                    break; // Success, exit retry loop
+                    
+                  } catch (saveError) {
+                    attempts++;
+                    logger.warn("Criterion score save failed, retrying", {
+                      runId,
+                      criterion: result.criterion,
+                      tier: tierResult.tier,
+                      attempt: attempts,
+                      maxAttempts,
+                      error: saveError instanceof Error ? saveError.message : String(saveError)
+                    });
+                    
+                    if (attempts >= maxAttempts) {
+                      logger.error("Criterion score save failed after max attempts", {
+                        runId,
+                        criterion: result.criterion,
+                        tier: tierResult.tier,
+                        attempts: maxAttempts,
+                        error: saveError instanceof Error ? saveError.message : String(saveError)
+                      });
+                      // Don't throw - continue with other scores
+                    } else {
+                      // Wait before retry (exponential backoff)
+                      await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempts - 1)));
+                    }
+                  }
+                }
+              });
+              
+              // Wait for all criterion score saves to complete
+              const saveResults = await Promise.allSettled(savePromises);
+              
+              // Verify all scores were saved successfully
+              const failedSaves = saveResults.filter(result => result.status === 'rejected');
+              if (failedSaves.length > 0) {
+                logger.error("Some criterion scores failed to save", {
                   runId,
-                  criterion: result.criterion,
-                  score: result.score,
-                  evidence: result.evidence,
-                  passes: result.passes,
                   tier: tierResult.tier,
-                  completedAt: tierResult.completedAt
+                  totalScores: tierResult.results.length,
+                  failedCount: failedSaves.length,
+                  successCount: saveResults.length - failedSaves.length
+                });
+              } else {
+                logger.info("All criterion scores saved successfully", {
+                  runId,
+                  tier: tierResult.tier,
+                  totalScores: tierResult.results.length
                 });
               }
 
@@ -261,9 +322,9 @@ export class EnhancedWebsiteEffectivenessScorer {
             };
             
             const progressMap = {
-              1: `Quick analysis complete - ${progressive.completedCriteria} criteria scored`,
-              2: `Enhanced analysis complete - ${progressive.completedCriteria} criteria scored`,
-              3: `Full analysis complete - ${progressive.completedCriteria}/${progressive.totalCriteria} criteria scored`
+              1: `Analyzing your site...`,
+              2: `Analyzing your site...`,
+              3: `Analysis complete`
             };
 
             // Include progressDetail in this callback too to maintain consistency
@@ -276,8 +337,8 @@ export class EnhancedWebsiteEffectivenessScorer {
                 phase: 'criterion_analysis',
                 subPhase: `tier_${tierResult.tier}_complete`,
                 progress: progressPercentages[tierResult.tier as keyof typeof progressPercentages] || 50,
-                completedItems: progressive.tiers.slice(0, tierResult.tier).map(t => `Tier ${t.tier}`),
-                currentItem: tierResult.tier < 3 ? `Starting Tier ${tierResult.tier + 1}` : 'Finalizing results',
+                completedItems: [],
+                currentItem: tierResult.tier < 3 ? 'Analyzing your site...' : 'Finalizing results',
                 estimatedTimeRemaining: tierResult.tier < 3 ? (3 - tierResult.tier) * 15 : 5,
                 tierDetails: {
                   tier: tierResult.tier,

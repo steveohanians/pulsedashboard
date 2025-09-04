@@ -462,18 +462,17 @@ export class ParallelDataCollector {
         throw new Error('Full-page screenshots require Screenshotone API key');
       }
 
-      // Add 55s timeout for full-page screenshot operations
-      const fullPagePromise = requestThrottler.throttle('screenshotone', async () => {
-        return await screenshotService.captureFullPageWithAPI(
-          url,
-          'uploads/screenshots'
-        );
-      });
+      // Full-page screenshots can take longer, allow 150s for API + Playwright fallback
+      // Don't throttle full-page calls as they have internal fallback logic
+      const fullPagePromise = screenshotService.captureFullPageWithAPI(
+        url,
+        'uploads/screenshots'
+      );
       
       const result = await Promise.race([
         fullPagePromise,
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Full-page screenshot timeout after 55s')), 55000)
+          setTimeout(() => reject(new Error('Full-page screenshot timeout after 150s')), 150000)
         )
       ]);
 

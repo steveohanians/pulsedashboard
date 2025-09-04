@@ -55,18 +55,7 @@ async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number =
         
         if (progressDetail && typeof progressDetail === 'object') {
           try {
-            // Add progress percentage and phase info to the progress text
-            const percentage = progressDetail.progress || 0;
-            const phase = progressDetail.phase || '';
-            const currentItem = progressDetail.currentItem || '';
-            
-            if (percentage > 0) {
-              enhancedProgress = `${progress} (${percentage}%)`;
-            }
-            
-            if (currentItem) {
-              enhancedProgress += ` - ${currentItem}`;
-            }
+            // Use the clean progress messages from enhancedScorer - no modifications needed
             
             logger.info('Enhanced progress detail received', { 
               runId, 
@@ -108,6 +97,22 @@ async function scoreWithTimeoutBasic(url: string, timeoutMs: number = 90000): Pr
       setTimeout(() => reject(new Error(`Scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
     )
   ]);
+}
+
+/**
+ * Classify competitor error for better retry logic
+ */
+function classifyCompetitorError(errorMessage: string): string {
+  const message = errorMessage.toLowerCase();
+  
+  if (message.includes('timeout')) return 'timeout';
+  if (message.includes('screenshot')) return 'screenshot_failure';
+  if (message.includes('network') || message.includes('fetch')) return 'network_error';
+  if (message.includes('browser') || message.includes('playwright')) return 'browser_error';
+  if (message.includes('50') || message.includes('server')) return 'server_error';
+  if (message.includes('ai') || message.includes('openai')) return 'ai_error';
+  
+  return 'unknown_error';
 }
 
 /**
@@ -331,36 +336,31 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
         
         overallStatus = 'analyzing';
         
-        // Map competitor status to user-friendly progress message
-        switch (activeRun.status) {
-          case 'pending':
-          case 'initializing':
-            overallProgress = `Starting ${competitorName} analysis...`;
-            break;
-          case 'scraping':
-            overallProgress = `Collecting ${competitorName} data...`;
-            break;
-          case 'analyzing':
-          case 'tier1_analyzing':
-            overallProgress = `Scoring ${competitorName} criteria...`;
-            break;
-          case 'tier1_complete':
-            overallProgress = `${competitorName} quick analysis complete`;
-            break;
-          case 'tier2_analyzing':
-            overallProgress = `Enhanced ${competitorName} analysis...`;
-            break;
-          case 'tier2_complete':
-            overallProgress = `${competitorName} enhanced analysis complete`;
-            break;
-          case 'tier3_analyzing':
-            overallProgress = `${competitorName} performance analysis...`;
-            break;
-          case 'generating_insights':
-            overallProgress = `Generating ${competitorName} insights...`;
-            break;
-          default:
-            overallProgress = `Analyzing ${competitorName}...`;
+        // Use existing progress if it exists, otherwise generate standard message
+        if (activeRun.progress) {
+          overallProgress = activeRun.progress;
+        } else {
+          // Simple, consistent progress messages
+          switch (activeRun.status) {
+            case 'pending':
+            case 'initializing':
+            case 'scraping':
+              overallProgress = `Analyzing competitors...`;
+              break;
+            case 'analyzing':
+            case 'tier1_analyzing':
+            case 'tier1_complete':
+            case 'tier2_analyzing':
+            case 'tier2_complete':
+            case 'tier3_analyzing':
+              overallProgress = `Analyzing competitors...`;
+              break;
+            case 'generating_insights':
+              overallProgress = `Finishing competitor analysis...`;
+              break;
+            default:
+              overallProgress = `Analyzing competitors...`;
+          }
         }
       } else if (latestRun.status === 'completed') {
         // Client is done, no active competitors, check if all competitors are done
@@ -643,7 +643,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           for (let index = 0; index < competitors.length; index++) {
             const competitor = competitors[index];
             let competitorAttempts = 0;
-            const maxCompetitorRetries = 2;
+            const maxCompetitorRetries = 3; // Increased for better reliability
             let competitorSuccess = false;
             let competitorRun;
             
@@ -692,7 +692,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
                 // Add delay between competitors to avoid rate limiting and database conflicts
                 if (index > 0) {
-                  await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
+                  await new Promise(resolve => setTimeout(resolve, retryDelay)); // 3 second delay
                 }
                 
                 // Small additional delay to prevent database race conditions
@@ -744,39 +744,47 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   }
                 }
 
-                // Save competitor results atomically to prevent partial data
+                // Save competitor results atomically using transaction to prevent partial data
                 try {
-                  // Save competitor criterion scores (basic scoring doesn't auto-save)
-                  for (const criterionResult of competitorResult.criterionResults) {
-                    await storage.createCriterionScore({
-                      runId: competitorRun.id,
-                      criterion: criterionResult.criterion,
-                      score: criterionResult.score.toString(),
-                      evidence: criterionResult.evidence,
-                      passes: criterionResult.passes,
-                      tier: getCriterionTier(criterionResult.criterion),
-                      completedAt: new Date()
-                    });
-                  }
+                  await db.transaction(async (tx) => {
+                    // Save competitor criterion scores atomically
+                    for (const criterionResult of competitorResult.criterionResults) {
+                      await storage.createCriterionScoreInTransaction(tx, {
+                        runId: competitorRun.id,
+                        criterion: criterionResult.criterion,
+                        score: criterionResult.score.toString(),
+                        evidence: criterionResult.evidence,
+                        passes: criterionResult.passes,
+                        tier: getCriterionTier(criterionResult.criterion),
+                        completedAt: new Date()
+                      });
+                    }
 
-                  // Update competitor run with results (only after all scores saved)
-                  await storage.updateEffectivenessRun(competitorRun.id, {
-                    status: 'completed',
-                    overallScore: competitorResult.overallScore.toString(),
-                    progress: 'Competitor analysis completed',
-                    progressDetail: JSON.stringify({
-                      phase: 'competitor_analysis',
-                      subPhase: 'completed',
-                      competitorName: competitor.label || competitor.domain,
-                      overallScore: competitorResult.overallScore,
-                      attempt: competitorAttempts
-                    }),
-                    screenshotUrl: competitorResult.screenshotUrl,
-                    fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl,
-                    webVitals: competitorResult.webVitals,
-                    screenshotMethod: competitorResult.screenshotMethod || null,
-                    screenshotError: competitorResult.screenshotError || null,
-                    fullPageScreenshotError: competitorResult.fullPageScreenshotError || null
+                    // Update competitor run with results (only after all scores saved)
+                    await storage.updateEffectivenessRunInTransaction(tx, competitorRun.id, {
+                      status: 'completed',
+                      overallScore: competitorResult.overallScore.toString(),
+                      progress: 'Competitor analysis completed',
+                      progressDetail: JSON.stringify({
+                        phase: 'competitor_analysis',
+                        subPhase: 'completed',
+                        competitorName: competitor.label || competitor.domain,
+                        overallScore: competitorResult.overallScore,
+                        attempt: competitorAttempts
+                      }),
+                      screenshotUrl: competitorResult.screenshotUrl,
+                      fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl,
+                      webVitals: competitorResult.webVitals,
+                      screenshotMethod: competitorResult.screenshotMethod || null,
+                      screenshotError: competitorResult.screenshotError || null,
+                      fullPageScreenshotError: competitorResult.fullPageScreenshotError || null
+                    });
+                    
+                    logger.info('Competitor results saved atomically', {
+                      runId: competitorRun.id,
+                      criterionCount: competitorResult.criterionResults.length,
+                      overallScore: competitorResult.overallScore
+                    });
                   });
 
                 } catch (dbSaveError) {
@@ -845,8 +853,13 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                     attempts: competitorAttempts
                   });
                 } else {
-                  // Wait before retry
-                  logger.info(`Retrying competitor ${competitor.domain} in 3 seconds (attempt ${competitorAttempts + 1}/${maxCompetitorRetries})`, {
+                  // Calculate exponential backoff delay
+                  const retryDelay = Math.min(1000 * Math.pow(2, competitorAttempts - 1), 10000); // 1s, 2s, 4s max
+                  const errorType = classifyCompetitorError(competitorError instanceof Error ? competitorError.message : String(competitorError));
+                  
+                  logger.info(`Retrying competitor ${competitor.domain} with exponential backoff (attempt ${competitorAttempts + 1}/${maxCompetitorRetries})`, {
+                    delay: retryDelay,
+                    errorType,
                     clientId,
                     competitorId: competitor.id
                   });

@@ -46,12 +46,78 @@ export class ScreenshotService {
   private pageCount: number = 0;
   private lastRecycleTime: number = Date.now();
   private maxPagesBeforeRecycle: number = 10;
+  private activePagesCount: number = 0;
+  private browserLock: Promise<void> = Promise.resolve();
+  
+  // Retry configuration
+  private readonly maxRetryAttempts = 3;
+  private readonly baseRetryDelay = 1000; // 1 second
 
   public static getInstance(): ScreenshotService {
     if (!ScreenshotService.instance) {
       ScreenshotService.instance = new ScreenshotService();
     }
     return ScreenshotService.instance;
+  }
+
+  /**
+   * Determine if an error should trigger a retry
+   */
+  private shouldRetryScreenshotError(errorMessage: string): boolean {
+    const retryableErrors = [
+      'timeout',
+      'aborted', 
+      '500',
+      '502',
+      '503',
+      '504',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'network error'
+    ];
+    
+    return retryableErrors.some(error => 
+      errorMessage.toLowerCase().includes(error.toLowerCase())
+    );
+  }
+
+  /**
+   * Calculate exponential backoff delay with jitter
+   */
+  private calculateRetryDelay(attempt: number): number {
+    const exponentialDelay = this.baseRetryDelay * Math.pow(2, attempt - 1);
+    const jitter = Math.random() * exponentialDelay * 0.3; // 30% jitter
+    return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
+  }
+
+  /**
+   * Classify error type for better logging
+   */
+  private getErrorType(errorMessage: string): string {
+    if (errorMessage.includes('timeout')) return 'timeout';
+    if (errorMessage.includes('50')) return 'server_error';
+    if (errorMessage.includes('aborted')) return 'connection_aborted';
+    if (errorMessage.includes('network')) return 'network_error';
+    return 'unknown_error';
+  }
+
+  /**
+   * Determine if an HTML capture error should trigger a retry
+   */
+  private shouldRetryHTMLCapture(errorMessage: string): boolean {
+    const retryableErrors = [
+      'browser has been closed',
+      'context has been closed',
+      'page has been closed',
+      'timeout',
+      'navigation failed',
+      'net::ERR_',
+      'Protocol error'
+    ];
+    
+    return retryableErrors.some(error => 
+      errorMessage.toLowerCase().includes(error.toLowerCase())
+    );
   }
 
   /**
@@ -137,106 +203,138 @@ export class ScreenshotService {
   }
 
   /**
-   * Initialize browser instance
+   * Initialize browser instance with proper locking
    */
   private async ensureBrowser(): Promise<Browser | null> {
     if (!await this.checkBrowserAvailability()) {
       return null;
     }
 
-    // Check if browser needs recycling due to health or usage
-    if (this.browser) {
-      const shouldRecycle = 
-        this.pageCount >= this.maxPagesBeforeRecycle ||
-        (Date.now() - this.lastRecycleTime) > 5 * 60 * 1000 || // 5 minutes
-        !await this.checkBrowserHealth();
-      
-      if (shouldRecycle) {
-        logger.info('[BROWSER] Recycling browser instance', {
-          reason: this.pageCount >= this.maxPagesBeforeRecycle ? 'page-limit' : 
-                  (Date.now() - this.lastRecycleTime) > 5 * 60 * 1000 ? 'time-limit' : 'health-check',
-          pageCount: this.pageCount,
-          uptime: Date.now() - this.lastRecycleTime
-        });
-        await this.cleanup();
-      }
-    }
-
-    if (!this.browser) {
-      try {
-        logger.info('Launching Playwright browser for screenshots');
-        
-        // Try with Nix browser path first (Replit environment)
-        const nixBrowserPath = '/nix/store/0n9rl5l9syy808xi9bk4f6dhnfrvhkww-playwright-browsers-chromium/chromium-1080/chrome-linux/chrome';
-        
-        try {
-          this.browser = await chromium.launch({
-            headless: true,
-            executablePath: nixBrowserPath,
-            args: [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-gpu',
-            ]
-          });
-          logger.info('Launched Nix browser for Playwright');
-        } catch (nixError) {
-          // Fallback to default Playwright installation
-          this.browser = await chromium.launch({
-            headless: true,
-            args: [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-gpu',
-            ]
-          });
-          logger.info('Launched default Playwright browser');
+    // Use lock to prevent concurrent browser operations
+    return new Promise((resolve) => {
+      this.browserLock = this.browserLock.then(async () => {
+        // Check if browser needs recycling due to health or usage
+        if (this.browser) {
+          const shouldRecycle = 
+            this.pageCount >= this.maxPagesBeforeRecycle ||
+            (Date.now() - this.lastRecycleTime) > 5 * 60 * 1000; // 5 minutes
+          
+          // Only recycle if no active pages to prevent race conditions
+          if (shouldRecycle && this.activePagesCount === 0) {
+            logger.info('[BROWSER] Recycling browser instance', {
+              reason: this.pageCount >= this.maxPagesBeforeRecycle ? 'page-limit' : 'time-limit',
+              pageCount: this.pageCount,
+              uptime: Date.now() - this.lastRecycleTime,
+              activePagesCount: this.activePagesCount
+            });
+            await this.cleanup();
+          } else if (shouldRecycle && this.activePagesCount > 0) {
+            logger.info('[BROWSER] Deferring browser recycle - active pages detected', {
+              activePagesCount: this.activePagesCount,
+              pageCount: this.pageCount
+            });
+          }
         }
-        
-        // Reset counters after successful browser creation
-        this.pageCount = 0;
-        this.lastRecycleTime = Date.now();
-        logger.info('[BROWSER] Browser launched successfully, counters reset');
-        
-      } catch (error) {
-        logger.error('Failed to launch Playwright browser', {
-          error: error instanceof Error ? error.message : String(error)
-        });
-        this.browserAvailable = false;
-        return null;
-      }
-    }
-    return this.browser;
+
+        if (!this.browser) {
+          try {
+            logger.info('Launching Playwright browser for screenshots');
+            
+            // Try with Nix browser path first (Replit environment)
+            const nixBrowserPath = '/nix/store/0n9rl5l9syy808xi9bk4f6dhnfrvhkww-playwright-browsers-chromium/chromium-1080/chrome-linux/chrome';
+            
+            try {
+              this.browser = await chromium.launch({
+                headless: true,
+                executablePath: nixBrowserPath,
+                args: [
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-dev-shm-usage',
+                  '--disable-gpu',
+                ]
+              });
+              logger.info('Launched Nix browser for Playwright');
+            } catch (nixError) {
+              // Fallback to default Playwright installation
+              this.browser = await chromium.launch({
+                headless: true,
+                args: [
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-dev-shm-usage',
+                  '--disable-gpu',
+                ]
+              });
+              logger.info('Launched default Playwright browser');
+            }
+            
+            // Reset counters after successful browser creation
+            this.pageCount = 0;
+            this.activePagesCount = 0;
+            this.lastRecycleTime = Date.now();
+            logger.info('[BROWSER] Browser launched successfully, counters reset');
+            
+          } catch (error) {
+            logger.error('Failed to launch Playwright browser', {
+              error: error instanceof Error ? error.message : String(error)
+            });
+            this.browserAvailable = false;
+            return null;
+          }
+        }
+        resolve(this.browser);
+      });
+    });
   }
 
   /**
    * Capture only rendered HTML using Playwright (lightweight, no screenshot)
    * Used to supplement API screenshot method with rendered HTML
    */
-  public async captureRenderedHTMLOnly(url: string): Promise<string | undefined> {
+  public async captureRenderedHTMLOnly(url: string, retryCount = 0): Promise<string | undefined> {
     // Only proceed if Playwright is available
     if (this.browserAvailable === false) {
       return undefined;
     }
 
-    let page: Page | null = null;
     const browser = await this.ensureBrowser();
     if (!browser) return undefined;
 
     try {
-      // Wrap entire operation in 30s timeout
-      return await Promise.race([
+      // Wrap entire operation in 30s timeout with retry logic
+      const htmlResult = await Promise.race([
         this.performHTMLCapture(url, browser),
         new Promise<string | undefined>((_, reject) => 
           setTimeout(() => reject(new Error('HTML capture timeout after 30s')), 30000)
         )
       ]);
+
+      return htmlResult;
+
     } catch (error) {
-      logger.warn('Failed to capture rendered HTML', {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Retry logic for browser-related errors
+      if (this.shouldRetryHTMLCapture(errorMessage) && retryCount < 2) {
+        const retryDelay = this.calculateRetryDelay(retryCount + 1);
+        
+        logger.warn('HTML capture failed, retrying', {
+          url,
+          attempt: retryCount + 1,
+          maxRetries: 2,
+          delay: retryDelay,
+          error: errorMessage
+        });
+
+        await new Promise(r => setTimeout(r, retryDelay));
+        return this.captureRenderedHTMLOnly(url, retryCount + 1);
+      }
+
+      logger.warn('Failed to capture rendered HTML after retries', {
         url,
-        error: error instanceof Error ? error.message : String(error)
+        attempts: retryCount + 1,
+        error: errorMessage
       });
       return undefined;
     }
@@ -249,12 +347,15 @@ export class ScreenshotService {
     let page: Page | null = null;
     
     try {
+      // Increment active pages counter before creating page
+      this.activePagesCount++;
       page = await browser.newPage();
       
       // Increment page count when creating page
       this.pageCount++;
       logger.info('[BROWSER] Created new page', { 
-        pageCount: this.pageCount, 
+        pageCount: this.pageCount,
+        activePagesCount: this.activePagesCount,
         url 
       });
       
@@ -329,8 +430,10 @@ export class ScreenshotService {
       if (page) {
         try {
           await page.close();
+          this.activePagesCount = Math.max(0, this.activePagesCount - 1);
           logger.info('[BROWSER] Page closed successfully', { 
-            pageCount: this.pageCount, 
+            pageCount: this.pageCount,
+            activePagesCount: this.activePagesCount,
             url 
           });
         } catch (closeError) {
@@ -338,6 +441,9 @@ export class ScreenshotService {
             error: closeError instanceof Error ? closeError.message : String(closeError)
           });
         }
+      } else {
+        // Decrement active pages even if page creation failed
+        this.activePagesCount = Math.max(0, this.activePagesCount - 1);
       }
     }
   }
@@ -394,8 +500,8 @@ export class ScreenshotService {
       apiUrl.searchParams.append('block_trackers', 'true'); // Block trackers for faster loading
       apiUrl.searchParams.append('wait_until', 'networkidle2'); // Wait for network idle
       apiUrl.searchParams.append('delay', '3'); // 3 second delay for complex animations
-      apiUrl.searchParams.append('timeout', '45'); // 45 second timeout
-      apiUrl.searchParams.append('navigation_timeout', '20'); // 20 second navigation timeout
+      apiUrl.searchParams.append('timeout', '90'); // 90 second timeout (max allowed)
+      apiUrl.searchParams.append('navigation_timeout', '30'); // 30 second navigation timeout (max allowed)
       
       // Fetch screenshot from API
       const response = await fetch(apiUrl.toString(), {
@@ -403,7 +509,7 @@ export class ScreenshotService {
         headers: {
           'Accept': 'image/png'
         },
-        signal: AbortSignal.timeout(50000) // 50 seconds for API
+        signal: AbortSignal.timeout(120000) // 120 seconds for API call (includes processing time)
       });
 
       if (!response.ok) {
@@ -450,10 +556,17 @@ export class ScreenshotService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Retry logic for aborted/503 errors
-      if ((errorMessage.includes('aborted') || errorMessage.includes('503')) && !retryCount) {
-        logger.info('[SCREENSHOT] Retrying aborted/503 request', { url, attempt: 2 });
-        await new Promise(r => setTimeout(r, 3000));
+      // Enhanced retry logic with exponential backoff
+      if (this.shouldRetryScreenshotError(errorMessage) && !retryCount) {
+        const retryDelay = this.calculateRetryDelay(1); // First retry
+        logger.info('[SCREENSHOT] Retrying screenshot request with exponential backoff', { 
+          url, 
+          attempt: 2, 
+          delay: retryDelay,
+          errorType: this.getErrorType(errorMessage)
+        });
+        
+        await new Promise(r => setTimeout(r, retryDelay));
         // Recursive call with retry flag
         return this.captureWithAPI(url, outputDir, filename, true);
       }
@@ -461,7 +574,9 @@ export class ScreenshotService {
       logger.error('Screenshotone API failed', {
         url,
         error: errorMessage,
-        retried: retryCount
+        retried: retryCount,
+        errorType: this.getErrorType(errorMessage),
+        fallbackAvailable: true
       });
       
       return {
@@ -508,8 +623,8 @@ export class ScreenshotService {
       apiUrl.searchParams.append('full_page_scroll_by', '400'); // Smaller increments for accuracy
       apiUrl.searchParams.append('wait_until', 'networkidle2'); // More reliable than networkidle0
       apiUrl.searchParams.append('delay', '3'); // 3 second delay for animations
-      apiUrl.searchParams.append('timeout', '45'); // 45 second timeout
-      apiUrl.searchParams.append('navigation_timeout', '20'); // 20 second navigation timeout
+      apiUrl.searchParams.append('timeout', '90'); // 90 second timeout (max allowed)
+      apiUrl.searchParams.append('navigation_timeout', '30'); // 30 second navigation timeout (max allowed)
       
       // Standard parameters optimized for performance
       apiUrl.searchParams.append('viewport_width', '1440');
@@ -527,7 +642,7 @@ export class ScreenshotService {
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
         headers: { 'Accept': 'image/png' },
-        signal: AbortSignal.timeout(50000) // 50 second timeout for full-page
+        signal: AbortSignal.timeout(120000) // 120 second timeout for full-page (matches above-fold)
       });
 
       if (!response.ok) {
@@ -571,16 +686,91 @@ export class ScreenshotService {
       };
 
     } catch (error) {
-      logger.error('Full-page screenshot capture failed', {
+      logger.error('Full-page API failed, trying Playwright fallback', {
         url,
         error: error instanceof Error ? error.message : String(error)
       });
       
-      return {
-        fullPageScreenshotPath: '',
-        fullPageScreenshotUrl: '',
-        fullPageError: `Full-page screenshot failed: ${error instanceof Error ? error.message : String(error)}`
-      };
+      // Try Playwright fallback for full-page screenshots
+      try {
+        const browser = await this.ensureBrowser();
+        if (!browser) {
+          return {
+            fullPageScreenshotPath: '',
+            fullPageScreenshotUrl: '',
+            fullPageError: `Full-page screenshot failed: API timeout and no browser available`
+          };
+        }
+
+        let page = null;
+        try {
+          page = await browser.newPage();
+          await page.setViewportSize({ width: 1440, height: 900 });
+          
+          logger.info('Using Playwright fallback for full-page screenshot', { url });
+          
+          await page.goto(url, { 
+            waitUntil: 'networkidle', 
+            timeout: 30000 
+          });
+          await page.waitForTimeout(2000);
+
+          // Generate filename for full-page screenshot
+          const timestamp = new Date().getTime();
+          const randomId = Math.random().toString(36).substr(2, 9);
+          const fullPageFilename = baseFilename 
+            ? `fullpage_${baseFilename}` 
+            : `fullpage_${timestamp}_${randomId}.png`;
+          
+          const fullPageScreenshotPath = path.join(outputDir, fullPageFilename);
+          const fullPageScreenshotUrl = `/screenshots/${fullPageFilename}`;
+
+          // Ensure output directory exists
+          await fs.mkdir(outputDir, { recursive: true });
+          
+          // Take full-page screenshot with Playwright
+          await page.screenshot({ 
+            path: fullPageScreenshotPath, 
+            fullPage: true 
+          });
+          
+          // Verify file was created
+          const fileStats = await fs.stat(fullPageScreenshotPath).catch(() => null);
+          
+          if (!fileStats) {
+            throw new Error('Playwright full-page screenshot file was not created');
+          }
+
+          logger.info('Full-page screenshot captured via Playwright fallback', {
+            url,
+            fullPageScreenshotPath,
+            fileSize: Math.round(fileStats.size / 1024 / 1024 * 100) / 100 + ' MB'
+          });
+
+          return {
+            fullPageScreenshotPath,
+            fullPageScreenshotUrl
+          };
+
+        } finally {
+          if (page) {
+            await page.close().catch(() => {});
+          }
+        }
+        
+      } catch (fallbackError) {
+        logger.error('Both API and Playwright failed for full-page screenshot', {
+          url,
+          apiError: error instanceof Error ? error.message : String(error),
+          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        });
+        
+        return {
+          fullPageScreenshotPath: '',
+          fullPageScreenshotUrl: '',
+          fullPageError: `Full-page screenshot failed: API timeout, Playwright fallback also failed`
+        };
+      }
     }
   }
 
@@ -855,30 +1045,57 @@ export class ScreenshotService {
   }
 
   /**
-   * Cleanup and close browser
+   * Cleanup and close browser with proper locking
    */
   public async cleanup(): Promise<void> {
-    if (this.browser) {
-      try {
-        logger.info('[BROWSER] Closing Playwright browser', {
-          pageCount: this.pageCount,
-          uptime: Date.now() - this.lastRecycleTime
-        });
-        
-        await this.browser.close();
-        logger.info('[BROWSER] Browser closed successfully');
-      } catch (error) {
-        logger.error('[BROWSER] Error closing browser', { 
-          error: error instanceof Error ? error.message : String(error) 
-        });
-      } finally {
-        // Always reset state even if close fails
-        this.browser = null;
-        this.pageCount = 0;
-        this.lastRecycleTime = Date.now();
-        logger.info('[BROWSER] Browser state reset');
-      }
-    }
+    // Use lock to ensure cleanup doesn't interfere with active operations
+    return new Promise((resolve) => {
+      this.browserLock = this.browserLock.then(async () => {
+        if (this.browser) {
+          // Wait for active pages to finish before cleanup
+          let waitAttempts = 0;
+          const maxWaitAttempts = 10; // 5 seconds max wait
+          
+          while (this.activePagesCount > 0 && waitAttempts < maxWaitAttempts) {
+            logger.info('[BROWSER] Waiting for active pages to finish before cleanup', {
+              activePagesCount: this.activePagesCount,
+              waitAttempts
+            });
+            await new Promise(r => setTimeout(r, 500));
+            waitAttempts++;
+          }
+          
+          if (this.activePagesCount > 0) {
+            logger.warn('[BROWSER] Force closing browser with active pages', {
+              activePagesCount: this.activePagesCount
+            });
+          }
+          
+          try {
+            logger.info('[BROWSER] Closing Playwright browser', {
+              pageCount: this.pageCount,
+              activePagesCount: this.activePagesCount,
+              uptime: Date.now() - this.lastRecycleTime
+            });
+            
+            await this.browser.close();
+            logger.info('[BROWSER] Browser closed successfully');
+          } catch (error) {
+            logger.error('[BROWSER] Error closing browser', { 
+              error: error instanceof Error ? error.message : String(error) 
+            });
+          } finally {
+            // Always reset state even if close fails
+            this.browser = null;
+            this.pageCount = 0;
+            this.activePagesCount = 0;
+            this.lastRecycleTime = Date.now();
+            logger.info('[BROWSER] Browser state reset');
+          }
+        }
+        resolve();
+      });
+    });
   }
 
   /**

@@ -171,6 +171,10 @@ export interface IStorage {
   getCriterionScores(runId: string): Promise<any[]>;
   createCriterionScore(score: any): Promise<any>;
   
+  // Transaction-aware versions for atomic operations
+  updateEffectivenessRunInTransaction(tx: any, runId: string, updates: any): Promise<any>;
+  createCriterionScoreInTransaction(tx: any, score: any): Promise<any>;
+  
   // Effectiveness Insights
   getEffectivenessInsights(clientId: string, runId: string): Promise<any>;
   createEffectivenessInsights(insights: any): Promise<any>;
@@ -2625,6 +2629,26 @@ export class DatabaseStorage implements IStorage {
 
   async createCriterionScore(score: any): Promise<any> {
     const results = await db
+      .insert(criterionScores)
+      .values(score)
+      .returning();
+    
+    return results[0];
+  }
+
+  // Transaction-aware versions for atomic operations
+  async updateEffectivenessRunInTransaction(tx: any, runId: string, updates: any): Promise<any> {
+    const results = await tx
+      .update(effectivenessRuns)
+      .set(updates)
+      .where(eq(effectivenessRuns.id, runId))
+      .returning();
+    
+    return results[0];
+  }
+
+  async createCriterionScoreInTransaction(tx: any, score: any): Promise<any> {
+    const results = await tx
       .insert(criterionScores)
       .values(score)
       .returning();

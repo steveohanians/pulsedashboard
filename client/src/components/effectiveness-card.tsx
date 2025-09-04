@@ -71,7 +71,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showEvidence, setShowEvidence] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  // Removed manual polling state - using React Query refetchInterval instead
 
   // Fun rotating messages for analysis progress
   const funMessages = [
@@ -108,14 +108,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     return () => clearInterval(interval);
   }, [funMessages.length]);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearTimeout(pollingInterval); // Changed to clearTimeout since we now use setTimeout
-      }
-    };
-  }, [pollingInterval]);
+  // No manual cleanup needed - React Query handles polling lifecycle
 
   // Fetch effectiveness data
   const { data, isLoading, error } = useQuery<EffectivenessData>({
@@ -149,11 +142,8 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       
       if (!inProgressStatuses.includes(status)) return false;
       
-      // Faster polling during active analysis phases
-      const activeAnalysisStatuses = ['scraping', 'analyzing', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing'];
-      const isActivelyAnalyzing = activeAnalysisStatuses.includes(status);
-      
-      return isActivelyAnalyzing ? 1000 : 3000; // 1 second during analysis, 3 seconds during initialization/completion phases
+      // Consistent 2-second polling during any analysis phase
+      return 2000;
     },
     placeholderData: (previousData) => previousData, // Keep showing previous data while loading
     retry: (failureCount, error) => {
@@ -161,10 +151,10 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       if (error?.message?.includes('Access denied') || error?.message?.includes('not found')) {
         return false;
       }
-      // Retry server errors up to 3 times with exponential backoff
+      // Retry server errors and network issues up to 3 times with exponential backoff
       return failureCount < 3;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1s, 2s, 4s, max 30s
     staleTime: 30000,
     enabled: !!clientId
   });
@@ -227,58 +217,11 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     }
   });
 
-  const startPolling = () => {
-    if (pollingInterval) {
-      clearTimeout(pollingInterval); // Use clearTimeout since we now use setTimeout
-    }
-    
-    const pollWithDynamicInterval = async () => {
-      try {
-        const response = await fetch(`/api/effectiveness/latest/${clientId}`, {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Update query cache with new data
-          queryClient.setQueryData(['effectiveness', clientId, 'v2'], data);
-          
-          // Stop polling if status is completed or failed
-          const inProgressStatuses = ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'];
-          
-          if (data.run && !inProgressStatuses.includes(data.run.status)) {
-            if (pollingInterval) {
-              clearTimeout(pollingInterval); // Use clearTimeout since we now use setTimeout
-              setPollingInterval(null);
-            }
-            return;
-          }
-          
-          // Schedule next poll with dynamic interval based on current status
-          const activeAnalysisStatuses = ['scraping', 'analyzing', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing'];
-          const isActivelyAnalyzing = activeAnalysisStatuses.includes(data.run?.status);
-          const nextInterval = isActivelyAnalyzing ? 1000 : 3000; // 1 second during analysis, 3 seconds otherwise
-          
-          const timeoutId = setTimeout(pollWithDynamicInterval, nextInterval);
-          setPollingInterval(timeoutId);
-        }
-      } catch (error) {
-        console.warn('Polling failed:', error);
-        // Retry with longer interval on error
-        const timeoutId = setTimeout(pollWithDynamicInterval, 5000);
-        setPollingInterval(timeoutId);
-      }
-    };
-    
-    // Start polling immediately
-    pollWithDynamicInterval();
-  };
+  // Manual polling removed - using React Query refetchInterval instead
 
   const handleRefresh = () => {
     refreshMutation.mutate();
-    // Start polling after triggering refresh
-    startPolling();
+    // React Query handles polling automatically
   };
 
   const handleViewEvidence = () => {
@@ -349,6 +292,47 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   // Use progressDetail from embedded format or fallback
   const progressDetail = progressData?.progressDetail || fallbackProgressDetail;
   const progressMessage = progressData?.message || run?.progress;
+  
+  // Calculate consistent progress percentage that never goes backward
+  const calculateProgressPercentage = () => {
+    // If we have detailed progress, use it but ensure forward progression
+    if (progressDetail?.progress && typeof progressDetail.progress === 'number') {
+      return Math.max(progressDetail.progress, 20);
+    }
+    
+    // Smart status mapping that understands the analysis flow
+    const status = run?.status;
+    const overallStatus = data?.overallStatus;  // This tells us the overall state
+    
+    // If everything is truly complete (client done + all competitors done)
+    if (status === 'completed' && overallStatus === 'completed') {
+      return 100;
+    }
+    
+    // If we're analyzing competitors after client is complete, show higher progress
+    if (overallStatus === 'analyzing' && status === 'completed') {
+      // Client is done, competitors are running - show 80-95% range
+      return 85;
+    }
+    
+    const statusProgressMap = {
+      'pending': 10,
+      'initializing': 15, 
+      'scraping': 25,
+      'analyzing': overallStatus === 'analyzing' ? 80 : 40, // Higher during competitor analysis  
+      'tier1_analyzing': 40,
+      'tier1_complete': 50,
+      'tier2_analyzing': 60,
+      'tier2_complete': 70,
+      'tier3_analyzing': 80,
+      'generating_insights': 90,
+      'completed': 100  // Always 100% when individual status is completed
+    };
+    
+    return statusProgressMap[status as keyof typeof statusProgressMap] || 20;
+  };
+  
+  const progressPercentage = calculateProgressPercentage();
 
   // Progressive toast notifications for milestone completions
   useProgressiveToasts({
@@ -437,76 +421,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     <span className="text-muted-foreground font-medium">
                       {progressMessage || 'Processing...'}
                     </span>
-                    {progressDetail?.progress && (
-                      <span className="text-sm text-muted-foreground">
-                        {progressDetail.progress}%
-                      </span>
-                    )}
                   </div>
                   
-                  {progressDetail && (
-                    <>
-                      {/* Progress bar */}
-                      <div className="w-full max-w-md mx-auto bg-secondary rounded-full h-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progressDetail.progress || 0}%` }}
-                        />
-                      </div>
-                      
-                      {/* Phase and current item */}
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {progressDetail.currentItem && (
-                          <div>Currently: {progressDetail.currentItem}</div>
-                        )}
-                        {progressDetail.estimatedTimeRemaining && (
-                          <div>
-                            ~{Math.round(progressDetail.estimatedTimeRemaining / 1000)}s remaining
-                          </div>
-                        )}
-                        {progressDetail.phase && (
-                          <div>Phase: {progressDetail.phase.replace(/_/g, ' ')}</div>
-                        )}
-                      </div>
-                      
-                      {/* Completed items */}
-                      {progressDetail.completedItems?.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          ✓ {progressDetail.completedItems.join(', ')}
-                        </div>
-                      )}
-                      
-                      {/* Tier progress details */}
-                      {progressDetail.tierDetails && (
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div>Tier {progressDetail.tierDetails.tier} - {progressDetail.tierDetails.completedCriteria}/{progressDetail.tierDetails.totalCriteria} criteria</div>
-                          {progressDetail.tierDetails.overallScore && (
-                            <div>Current Score: {progressDetail.tierDetails.overallScore}/10</div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Overall progress summary */}
-                      {progressDetail.completedTiers && progressDetail.totalTiers && (
-                        <div className="text-xs text-muted-foreground">
-                          Completed Tiers: {progressDetail.completedTiers}/{progressDetail.totalTiers}
-                          {progressDetail.overallScore && (
-                            <span> • Score: {progressDetail.overallScore}/10</span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Competitor progress */}
-                      {progressDetail.currentCompetitor && progressDetail.totalCompetitors && (
-                        <div className="text-xs text-muted-foreground">
-                          Competitor {progressDetail.currentCompetitor}/{progressDetail.totalCompetitors}
-                          {progressDetail.competitorName && (
-                            <span>: {progressDetail.competitorName}</span>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
+                  {/* Simple progress bar - always visible during analysis */}
+                  <div className="w-full max-w-md mx-auto bg-secondary rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
                 </div>
                 
                 <p 
@@ -525,24 +448,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               {progressMessage && (
                 <div className="space-y-2 mb-4">
                   <p className="text-sm text-red-600">{progressMessage}</p>
-                  {progressDetail && (
-                    <div className="text-xs text-muted-foreground">
-                      {progressDetail.phase && (
-                        <div>Failed during: {progressDetail.phase.replace(/_/g, ' ')}</div>
-                      )}
-                      {progressDetail.currentCompetitor && progressDetail.totalCompetitors && (
-                        <div>
-                          Progress: Competitor {progressDetail.currentCompetitor}/{progressDetail.totalCompetitors}
-                          {progressDetail.competitorName && (
-                            <span> ({progressDetail.competitorName})</span>
-                          )}
-                        </div>
-                      )}
-                      {progressDetail.error && (
-                        <div className="text-red-500 mt-1">Error: {progressDetail.error}</div>
-                      )}
-                    </div>
-                  )}
+                  {/* Keep error messages simple - no technical details */}
                 </div>
               )}
               <Button onClick={handleRefresh} disabled={!canRefresh}>
