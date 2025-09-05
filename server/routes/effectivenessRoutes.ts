@@ -651,17 +651,13 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
               try {
                 competitorAttempts++;
                 
-                // Update progress for this competitor
-                await storage.updateEffectivenessRun(newRun.id, {
-                  progress: `Analyzing competitor ${index + 1}/${competitors.length}: ${competitor.label || competitor.domain} (attempt ${competitorAttempts})`,
-                  progressDetail: JSON.stringify({
-                    phase: 'competitor_analysis',
-                    currentCompetitor: index + 1,
-                    totalCompetitors: competitors.length,
-                    competitorName: competitor.label || competitor.domain,
-                    attempt: competitorAttempts,
-                    maxRetries: maxCompetitorRetries
-                  })
+                // Don't update client run progress during competitor analysis
+                // This was causing the progress bar to go backward
+                logger.info('Processing competitor', {
+                  competitorIndex: index + 1,
+                  totalCompetitors: competitors.length,
+                  competitorName: competitor.label || competitor.domain,
+                  attempt: competitorAttempts
                 });
 
                 // Only skip if there's an active pending run (to avoid duplicates)
