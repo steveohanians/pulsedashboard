@@ -16,6 +16,13 @@ import { z } from 'zod';
 import { db } from '../db';
 import { effectivenessRuns } from '@shared/schema';
 import { and, eq, or, desc, sql, isNotNull } from 'drizzle-orm';
+import { 
+  saveEffectivenessResultAtomically, 
+  updateRunProgressAtomically,
+  saveAIInsightsAtomically,
+  markRunFailedAtomically,
+  retryTransactionWithBackoff
+} from "../services/effectiveness/atomicTransactions";
 
 const router = Router();
 const enhancedScorer = new EnhancedWebsiteEffectivenessScorer();
@@ -491,37 +498,32 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           screenshotError: result.screenshotError
         });
         
-        // Enhanced scoring saves criterion scores progressively during execution
-        // Criteria completion is handled via progress callbacks during execution
-
-        // AI insights will be generated after all competitor analysis is complete
-
-        // Complete the run with all results (AI insights added later)
+        // ✅ ATOMIC FIX: Save complete scoring result (run + all criteria) in single transaction
+        // This replaces the previous approach where criterion scores were missing from client runs
         
-        // Log what we're about to save
-        logger.info('Updating effectiveness run with results', {
+        const atomicSaveResult = await retryTransactionWithBackoff(async () => {
+          return await saveEffectivenessResultAtomically(newRun.id, result, {
+            status: 'completed',
+            progress: tracker.getProgressString(),
+            progressDetail: JSON.stringify(tracker.getState()),
+            screenshotMethod: result.screenshotMethod || null,
+            screenshotError: result.screenshotError || null,
+            fullPageScreenshotError: result.fullPageScreenshotError || null
+          });
+        });
+
+        if (!atomicSaveResult.success) {
+          throw new Error(`Failed to save scoring results atomically: ${atomicSaveResult.error?.message}`);
+        }
+
+        logger.info('Client effectiveness result saved atomically', {
           runId: newRun.id,
           overallScore: result.overallScore,
-          hasScreenshotUrl: !!result.screenshotUrl,
-          screenshotUrl: result.screenshotUrl,
-          hasFullPageScreenshotUrl: !!result.fullPageScreenshotUrl,
-          fullPageScreenshotUrl: result.fullPageScreenshotUrl
-        });
-        
-        await storage.updateEffectivenessRun(newRun.id, {
-          status: 'completed',
-          overallScore: result.overallScore.toString(),
-          progress: tracker.getProgressString(),
-          progressDetail: JSON.stringify(tracker.getState()),
-          screenshotUrl: result.screenshotUrl,
-          fullPageScreenshotUrl: result.fullPageScreenshotUrl,
-          webVitals: result.webVitals,
-          screenshotMethod: result.screenshotMethod || null,
-          screenshotError: result.screenshotError || null,
-          fullPageScreenshotError: result.fullPageScreenshotError || null
+          criteriaCount: result.criterionResults.length,
+          hasScreenshots: !!(result.screenshotUrl || result.fullPageScreenshotUrl)
         });
 
-        // Update client with last run time
+        // Update client with last run time (outside transaction to keep it simple)
         await storage.updateClient(clientId, {
           lastEffectivenessRun: new Date()
         });
@@ -864,10 +866,11 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   'Admin'
                 );
                 
-                await storage.updateEffectivenessRun(newRun.id, {
-                  aiInsights: insights.insights,
-                  insightsGeneratedAt: new Date()
-                });
+                // ✅ ATOMIC: Save AI insights with transaction
+                const insightsResult = await saveAIInsightsAtomically(newRun.id, insights.insights);
+                if (!insightsResult.success) {
+                  throw new Error(`Failed to save AI insights atomically: ${insightsResult.error?.message}`);
+                }
                 
                 logger.info('AI insights generated successfully', {
                   clientId,
@@ -1026,12 +1029,14 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   tracker.complete();
                 }
                 
-                await storage.updateEffectivenessRun(newRun.id, {
-                  aiInsights: insights.insights,
-                  insightsGeneratedAt: new Date(),
+                // ✅ ATOMIC: Save AI insights with progress update in transaction
+                const insightsResult = await saveAIInsightsAtomically(newRun.id, insights.insights, {
                   progress: tracker ? tracker.getProgressString() : 'Analysis complete',
                   progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
                 });
+                if (!insightsResult.success) {
+                  throw new Error(`Failed to save AI insights atomically: ${insightsResult.error?.message}`);
+                }
                 
                 logger.info('AI insights generated successfully for client-only analysis', {
                   clientId,
@@ -1145,20 +1150,17 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           error: scoringError instanceof Error ? scoringError.message : String(scoringError)
         });
         
-        // Always mark as failed
-        await storage.updateEffectivenessRun(newRun.id, {
-          status: 'failed',
-          progress: `Analysis failed: ${scoringError instanceof Error ? scoringError.message : 'Unknown error'}`
-        });
+        // ✅ ATOMIC: Mark run as failed with transaction
+        await markRunFailedAtomically(newRun.id, 
+          `Analysis failed: ${scoringError instanceof Error ? scoringError.message : 'Unknown error'}`
+        );
       } finally {
         // Ensure we don't leave runs in pending state
         if (!runFailed) {
           const finalRun = await storage.getEffectivenessRun(newRun.id);
           if (finalRun && ['pending', 'initializing', 'scraping', 'analyzing'].includes(finalRun.status)) {
-            await storage.updateEffectivenessRun(newRun.id, {
-              status: 'failed',
-              progress: 'Run did not complete properly'
-            });
+            // ✅ ATOMIC: Mark incomplete run as failed
+            await markRunFailedAtomically(newRun.id, 'Run did not complete properly');
           }
         }
         
@@ -1370,11 +1372,14 @@ router.post('/:runId/insights', requireAuth, async (req, res) => {
     // Generate insights
     const result = await insightsService.generateInsights(run.clientId, runId, req.user?.clientId, req.user?.role);
 
-    // Update run with insights
-    await storage.updateEffectivenessRun(runId, {
-      aiInsights: result.insights,
-      insightsGeneratedAt: new Date()
-    });
+    // ✅ ATOMIC: Update run with insights in transaction
+    const insightsResult = await saveAIInsightsAtomically(runId, result.insights);
+    if (!insightsResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: `Failed to save insights: ${insightsResult.error?.message}`
+      });
+    }
 
     res.json({
       runId,
