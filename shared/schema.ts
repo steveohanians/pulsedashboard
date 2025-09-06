@@ -350,6 +350,7 @@ export const effectivenessRuns = pgTable("effectiveness_runs", {
   overallScore: decimal("overall_score", { precision: 3, scale: 1 }), // e.g., 8.5 out of 10
   status: effectivenessRunStatusEnum("status").notNull().default("pending"),
   progress: text("progress"), // Current progress message
+  progressDetail: jsonb("progress_detail"), // Detailed progress state from ProgressTracker
   // Progressive completion tracking
   tier1CompletedAt: timestamp("tier1_completed_at"), // When Tier 1 (fast criteria) completed
   tier2CompletedAt: timestamp("tier2_completed_at"), // When Tier 2 (AI criteria) completed  

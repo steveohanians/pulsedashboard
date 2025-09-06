@@ -57,9 +57,13 @@ async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number =
           // A criterion just completed - update tracker
           const criterionName = progressDetail.criterionName || 'unknown';
           tracker.completeCriterion(criterionName, true);
-          logger.info('Progress tracker: criterion completed via callback', { criterionName });
+          logger.info('Progress tracker: criterion completed via callback', { 
+            criterionName,
+            currentPercent: tracker.getState().overallPercent 
+          });
         }
         
+        // Always save the full tracker state
         await storage.updateEffectivenessRun(runId, {
           status,
           progress: tracker.getProgressString(),
@@ -300,92 +304,35 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
       }
     }
 
-    // Aggregate progress from client run + all active competitor runs
-    let overallStatus = latestRun.status;
-    let overallProgress = latestRun.progress;
-    
-    // Get all recent competitor runs with their current status
-    const activeCompetitorRuns = competitors.length > 0 ? await db
-        .select()
-        .from(effectivenessRuns)
-        .where(and(
-          eq(effectivenessRuns.clientId, clientId),
-          isNotNull(effectivenessRuns.competitorId),
-          sql`created_at >= NOW() - INTERVAL '${sql.raw('2')} minutes'`
-        ))
-        .orderBy(desc(effectivenessRuns.createdAt)) : [];
-    
-    if (competitors.length > 0) {
-
-      // Find the most recent active competitor run in sequential order
-      // Priority: currently running > most recently created
-      const runningStates = ['pending', 'initializing', 'scraping', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing'];
-      const completedStates = ['tier1_complete', 'tier2_complete', 'generating_insights'];
-      
-      // First try to find a currently running competitor
-      let activeRun = activeCompetitorRuns.find(run => runningStates.includes(run.status));
-      
-      // If no running competitors, check for recently completed ones showing progress
-      if (!activeRun) {
-        activeRun = activeCompetitorRuns.find(run => completedStates.includes(run.status));
-      }
-
-      if (activeRun) {
-        // Show progress from the active competitor run
-        const competitor = competitors.find(c => c.id === activeRun.competitorId);
-        const competitorName = competitor?.label || competitor?.domain || 'competitor';
-        
-        overallStatus = 'analyzing';
-        
-        // Use progressTracker state if available, otherwise fall back to run progress
-        const tracker = getProgressTracker();
-        if (tracker) {
-          overallProgress = tracker.getProgressString();
-        } else if (activeRun.progress) {
-          overallProgress = activeRun.progress;
-        } else {
-          overallProgress = 'Analysis in progress';
-        }
-      } else if (latestRun.status === 'completed') {
-        // Client is done, no active competitors, check if all competitors are done
-        const allCompletedOrFailed = activeCompetitorRuns.length === 0 || 
-          activeCompetitorRuns.every(run => ['completed', 'failed'].includes(run.status));
-        
-        if (allCompletedOrFailed) {
-          // All analysis truly complete
-          overallProgress = latestRun.progress || `All analysis completed - ${client.name} and ${competitors.length} competitor${competitors.length > 1 ? 's' : ''} analyzed`;
-        } else {
-          // Some competitors might still be pending/queued
-          const pendingCount = activeCompetitorRuns.filter(run => 
-            !['completed', 'failed'].includes(run.status)
-          ).length;
-          overallProgress = `Preparing competitor analysis... (${pendingCount} pending)`;
-          overallStatus = 'analyzing';
-        }
-      }
-    }
+    // Use database values directly - progressTracker has already set status and progress correctly
     
     const response = {
       client,
       run: {
         ...latestRun,
-        // Override status and progress to reflect overall completion
-        status: overallStatus,
-        progress: overallProgress,
+        // Use status and progress directly from database (set by progressTracker)
         criterionScores
       },
       competitorEffectivenessData,
       hasData: true
     };
 
-    // Debug logging for status transitions
+    // Debug logging for the effectiveness response
+    logger.info('Sending effectiveness response', {
+      clientId,
+      hasProgressDetail: !!response.run?.progressDetail,
+      progressDetailSample: response.run?.progressDetail ? 
+        JSON.stringify(response.run.progressDetail).substring(0, 100) : 'none',
+      runStatus: response.run?.status,
+      runProgress: response.run?.progress
+    });
+
+    // Debug logging for status transitions  
     logger.info('Status aggregation result', {
       clientId,
       clientRunStatus: latestRun.status,
-      overallStatus,
-      overallProgress,
-      activeCompetitorRunsCount: competitors.length > 0 ? activeCompetitorRuns.length : 0,
-      competitorStatuses: competitors.length > 0 ? activeCompetitorRuns.map(run => ({
+      activeCompetitorRunsCount: competitors.length > 0 ? activeCompetitorRuns?.length : 0,
+      competitorStatuses: competitors.length > 0 ? activeCompetitorRuns?.map(run => ({
         competitorId: run.competitorId,
         status: run.status,
         createdAt: run.createdAt
@@ -673,6 +620,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
                 // Update progress tracker for this competitor
                 tracker.startCompetitor(competitor.label || competitor.domain, index);
+                
+                await storage.updateEffectivenessRun(newRun.id, {
+                  status: 'analyzing',
+                  progress: tracker.getProgressString(),
+                  progressDetail: JSON.stringify(tracker.getState())
+                });
 
                 logger.info('Scoring competitor website', {
                   clientId,
@@ -736,7 +689,6 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                     await storage.updateEffectivenessRunInTransaction(tx, competitorRun.id, {
                       status: 'completed',
                       overallScore: competitorResult.overallScore.toString(),
-                      progress: 'Competitor analysis completed',
                       progressDetail: JSON.stringify({
                         phase: 'competitor_analysis',
                         subPhase: 'completed',
@@ -793,6 +745,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
                 // Mark competitor as completed in progress tracker
                 tracker.completeCompetitor();
+                
+                await storage.updateEffectivenessRun(newRun.id, {
+                  status: 'analyzing',
+                  progress: tracker.getProgressString(),
+                  progressDetail: JSON.stringify(tracker.getState())
+                });
 
                 competitorSuccess = true;
                 
@@ -880,6 +838,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
             // Generate AI insights after all competitor analysis is complete
             tracker.startInsights();
+            
+            await storage.updateEffectivenessRun(newRun.id, {
+              status: 'generating_insights',
+              progress: tracker.getProgressString(),
+              progressDetail: JSON.stringify(tracker.getState())
+            });
             
             logger.info('Starting AI insights generation', {
               clientId,
@@ -993,14 +957,15 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           // Track final memory usage
           const finalMemory = process.memoryUsage();
           
-          // Update final progress with failure details
-          const finalProgressMessage = failedCompetitors.length > 0 
-            ? `Analysis completed - ${client.name} and ${successfulCompetitors}/${competitors.length} competitors analyzed (${failedCompetitors.length} failed)`
-            : `All analysis completed - ${client.name} and ${competitors.length} competitor${competitors.length > 1 ? 's' : ''} analyzed`;
+          // Update final progress using tracker (don't override message)
+          const tracker = getProgressTracker();
+          if (tracker) {
+            tracker.complete();
+          }
           
           await storage.updateEffectivenessRun(newRun.id, {
-            progress: finalProgressMessage,
-            progressDetail: JSON.stringify({
+            progress: tracker ? tracker.getProgressString() : 'Analysis complete',
+            progressDetail: tracker ? JSON.stringify(tracker.getState()) : JSON.stringify({
               phase: 'complete',
               subPhase: 'finished',
               totalCompetitors: competitors.length,
@@ -1028,6 +993,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           // No competitors - generate AI insights for client-only analysis
           tracker.startInsights();
           
+          await storage.updateEffectivenessRun(newRun.id, {
+            status: 'generating_insights',
+            progress: tracker.getProgressString(),
+            progressDetail: JSON.stringify(tracker.getState())
+          });
+          
           try {
             // Generate AI insights for client-only analysis
             logger.info('Starting AI insights generation for client-only analysis', {
@@ -1049,10 +1020,17 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   'Admin'
                 );
                 
+                // Mark insights complete and use tracker message
+                const tracker = getProgressTracker();
+                if (tracker) {
+                  tracker.complete();
+                }
+                
                 await storage.updateEffectivenessRun(newRun.id, {
                   aiInsights: insights.insights,
                   insightsGeneratedAt: new Date(),
-                  progress: `Analysis completed - ${client.name} analyzed`
+                  progress: tracker ? tracker.getProgressString() : 'Analysis complete',
+                  progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
                 });
                 
                 logger.info('AI insights generated successfully for client-only analysis', {
@@ -1060,8 +1038,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   runId: newRun.id
                 });
                 
-                // Mark analysis as complete
-                tracker.complete();
+                // tracker.complete() already called above
                 
               } catch (openAIError) {
                 logger.error('OpenAI insights generation failed, using fallback for client-only analysis', {
@@ -1102,10 +1079,17 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   fallback: true
                 };
                 
+                // Use tracker for progress message
+                const tracker = getProgressTracker();
+                if (tracker) {
+                  tracker.complete();
+                }
+                
                 await storage.updateEffectivenessRun(newRun.id, {
                   aiInsights: fallbackInsights,
                   insightsGeneratedAt: new Date(),
-                  progress: `Analysis completed - ${client.name} analyzed`
+                  progress: tracker ? tracker.getProgressString() : 'Analysis complete',
+                  progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
                 });
                 
                 logger.info('Fallback insights generated for client-only analysis', {
@@ -1130,10 +1114,17 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                 fallback: true
               };
               
+              // Use tracker for progress message
+              const tracker = getProgressTracker();
+              if (tracker) {
+                tracker.complete();
+              }
+              
               await storage.updateEffectivenessRun(newRun.id, {
                 aiInsights: minimalInsights,
                 insightsGeneratedAt: new Date(),
-                progress: `Analysis completed - ${client.name} analyzed`
+                progress: tracker ? tracker.getProgressString() : 'Analysis complete',
+                progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
               });
             }
           } catch (insightsError) {

@@ -263,16 +263,46 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
-  // Parse the new progress data structure
-  const progressState = run?.progressDetail ? 
-    (typeof run.progressDetail === 'string' ? 
-      JSON.parse(run.progressDetail) : run.progressDetail) : null;
+  // Parse progress detail with better error handling
+  let progressState = null;
+  if (run?.progressDetail) {
+    try {
+      progressState = typeof run.progressDetail === 'string' 
+        ? JSON.parse(run.progressDetail) 
+        : run.progressDetail;
+      console.log('Parsed progress state:', progressState); // Debug log
+    } catch (e) {
+      console.error('Failed to parse progressDetail:', e);
+    }
+  }
 
-  // Use the new progress percentage from tracker
-  const progressPercentage = progressState?.overallPercent || 0;
+  // Use the overallPercent from progressState, with status-based fallbacks
+  const progressPercentage = progressState?.overallPercent ?? 
+    (run?.status === 'initializing' ? 5 :
+     run?.status === 'scraping' ? 15 :
+     run?.status === 'tier1_analyzing' ? 30 :
+     run?.status === 'tier1_complete' ? 40 :
+     run?.status === 'tier2_analyzing' ? 55 :
+     run?.status === 'tier2_complete' ? 70 :
+     run?.status === 'tier3_analyzing' ? 85 :
+     run?.status === 'generating_insights' ? 95 : 0);
+
+  console.log('Progress percentage:', progressPercentage); // Debug log
   
   // Use the user-friendly message from tracker
   const progressMessage = progressState?.message || run?.progress || 'Starting analysis...';
+
+  // Debug logging for progress changes
+  useEffect(() => {
+    if (run?.status && isAnalyzing) {
+      console.log('Run status update:', {
+        status: run.status,
+        progress: run.progress,
+        progressDetail: run.progressDetail,
+        progressPercentage
+      });
+    }
+  }, [run?.status, run?.progress, progressPercentage, isAnalyzing]);
 
   // Show time information after 30 seconds
   const showTimeInfo = progressState && progressState.timeElapsed > 30000;
@@ -372,12 +402,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   </div>
                   
                   {/* Progress bar with percentage */}
-                  <div className="w-full max-w-md mx-auto bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
+                  {progressPercentage > 0 && (
+                    <div className="w-full max-w-md mx-auto">
+                      <div className="bg-secondary rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-center text-muted-foreground mt-1">
+                        {progressPercentage}% complete
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Time remaining info after 30 seconds */}
                   {showTimeInfo && progressState.timeRemaining > 0 && (
