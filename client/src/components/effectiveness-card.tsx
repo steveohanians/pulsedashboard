@@ -272,7 +272,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const progressPercentage = progressState?.overallPercent || 0;
   
   // Use the user-friendly message from tracker
-  const progressMessage = progressState?.message || run?.progress || 'Processing...';
+  const progressMessage = progressState?.message || run?.progress || 'Starting analysis...';
 
   // Show time information after 30 seconds
   const showTimeInfo = progressState && progressState.timeElapsed > 30000;
@@ -362,8 +362,13 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   <div className="flex items-center justify-center gap-2">
                     <ButtonLoadingSpinner size="sm" />
                     <span className="text-muted-foreground font-medium">
-                      {progressMessage || 'Processing...'}
+                      {progressMessage || 'Starting analysis...'}
                     </span>
+                    {progressPercentage > 0 && (
+                      <span className="text-xs font-mono text-muted-foreground">
+                        {progressPercentage}%
+                      </span>
+                    )}
                   </div>
                   
                   {/* Progress bar with percentage */}
@@ -524,7 +529,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           onClose={() => setShowEvidence(false)}
           clientId={clientId}
           clientRun={run}
-          competitorData={data?.competitorEffectivenessData || []}
+          competitorData={data?.competitorEffectivenessData?.map(item => ({
+            ...item,
+            run: {
+              ...item.run,
+              id: `competitor-${item.competitor.id}`,
+              createdAt: new Date().toISOString(),
+              status: 'completed' as const
+            }
+          })) || []}
         />
       )}
     </>

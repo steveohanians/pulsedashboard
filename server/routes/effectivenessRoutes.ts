@@ -338,31 +338,14 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
         
         overallStatus = 'analyzing';
         
-        // Use existing progress if it exists, otherwise generate standard message
-        if (activeRun.progress) {
+        // Use progressTracker state if available, otherwise fall back to run progress
+        const tracker = getProgressTracker();
+        if (tracker) {
+          overallProgress = tracker.getProgressString();
+        } else if (activeRun.progress) {
           overallProgress = activeRun.progress;
         } else {
-          // Simple, consistent progress messages
-          switch (activeRun.status) {
-            case 'pending':
-            case 'initializing':
-            case 'scraping':
-              overallProgress = `Analyzing competitors...`;
-              break;
-            case 'analyzing':
-            case 'tier1_analyzing':
-            case 'tier1_complete':
-            case 'tier2_analyzing':
-            case 'tier2_complete':
-            case 'tier3_analyzing':
-              overallProgress = `Analyzing competitors...`;
-              break;
-            case 'generating_insights':
-              overallProgress = `Finishing competitor analysis...`;
-              break;
-            default:
-              overallProgress = `Analyzing competitors...`;
-          }
+          overallProgress = `Running analysis...`;
         }
       } else if (latestRun.status === 'completed') {
         // Client is done, no active competitors, check if all competitors are done
@@ -563,6 +546,13 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
         });
         
         // Enhanced scoring saves criterion scores progressively during execution
+
+        // Mark all criteria as complete in progress tracker
+        if (tracker && result.criterionResults) {
+          result.criterionResults.forEach(criterion => {
+            tracker.completeCriterion(criterion.criterion, true);
+          });
+        }
 
         // AI insights will be generated after all competitor analysis is complete
 
