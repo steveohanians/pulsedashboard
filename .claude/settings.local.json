@@ -8,7 +8,16 @@
       "Bash(awk:*)",
       "Bash(sed:*)",
       "Bash(git stash:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm install:*)",
+      "Bash(NODE_ENV=development npx tsx test_effectiveness_complete.ts demo-client-id)",
+      "Bash(NODE_ENV=development timeout 120 npx tsx test_effectiveness_complete.ts demo-client-id)",
+      "Bash(NODE_ENV=development npx tsc --noEmit /home/runner/workspace/test_effectiveness_complete.ts)",
+      "Bash(NODE_ENV=development timeout 30 npx tsx test_effectiveness_complete.ts demo-client-id)",
+      "Bash(NODE_ENV=development timeout 60 npx tsx test_effectiveness_complete.ts demo-client-id)",
+      "Bash(env)"
     ],
     "deny": [],
     "ask": [],

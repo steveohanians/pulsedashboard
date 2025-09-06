@@ -263,76 +263,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
   const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(run.status) : false;
   const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
-  // Parse progressDetail for enhanced progress display
-  // First try to parse from embedded progress field (new format)
-  const progressData = run?.progress ? 
-    (typeof run.progress === 'string' && run.progress.startsWith('{') ? 
-      (() => {
-        try {
-          return JSON.parse(run.progress);
-        } catch {
-          return { message: run.progress };
-        }
-      })() : 
-      { message: run.progress }) : 
-    null;
-
-  // Fallback to old progressDetail field if available
-  const fallbackProgressDetail = run?.progressDetail ? 
+  // Parse the new progress data structure
+  const progressState = run?.progressDetail ? 
     (typeof run.progressDetail === 'string' ? 
-      (() => {
-        try {
-          return JSON.parse(run.progressDetail);
-        } catch {
-          return null;
-        }
-      })() : 
-      run.progressDetail) : null;
+      JSON.parse(run.progressDetail) : run.progressDetail) : null;
 
-  // Use progressDetail from embedded format or fallback
-  const progressDetail = progressData?.progressDetail || fallbackProgressDetail;
-  const progressMessage = progressData?.message || run?.progress;
+  // Use the new progress percentage from tracker
+  const progressPercentage = progressState?.overallPercent || 0;
   
-  // Calculate consistent progress percentage that never goes backward
-  const calculateProgressPercentage = () => {
-    // If we have detailed progress, use it but ensure forward progression
-    if (progressDetail?.progress && typeof progressDetail.progress === 'number') {
-      return Math.max(progressDetail.progress, 20);
-    }
-    
-    // Smart status mapping that understands the analysis flow
-    const status = run?.status;
-    const overallStatus = data?.overallStatus;  // This tells us the overall state
-    
-    // If everything is truly complete (client done + all competitors done)
-    if (status === 'completed' && overallStatus === 'completed') {
-      return 100;
-    }
-    
-    // If we're analyzing competitors after client is complete, show higher progress
-    if (overallStatus === 'analyzing' && status === 'completed') {
-      // Client is done, competitors are running - show 80-95% range
-      return 85;
-    }
-    
-    const statusProgressMap = {
-      'pending': 10,
-      'initializing': 15, 
-      'scraping': 25,
-      'analyzing': overallStatus === 'analyzing' ? 80 : 40, // Higher during competitor analysis  
-      'tier1_analyzing': 40,
-      'tier1_complete': 50,
-      'tier2_analyzing': 60,
-      'tier2_complete': 70,
-      'tier3_analyzing': 80,
-      'generating_insights': 90,
-      'completed': 100  // Always 100% when individual status is completed
-    };
-    
-    return statusProgressMap[status as keyof typeof statusProgressMap] || 20;
-  };
-  
-  const progressPercentage = calculateProgressPercentage();
+  // Use the user-friendly message from tracker
+  const progressMessage = progressState?.message || run?.progress || 'Processing...';
+
+  // Show time information after 30 seconds
+  const showTimeInfo = progressState && progressState.timeElapsed > 30000;
 
   // Progressive toast notifications for milestone completions
   useProgressiveToasts({
@@ -423,20 +366,29 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     </span>
                   </div>
                   
-                  {/* Simple progress bar - always visible during analysis */}
+                  {/* Progress bar with percentage */}
                   <div className="w-full max-w-md mx-auto bg-secondary rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full transition-all duration-300"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
+                  
+                  {/* Time remaining info after 30 seconds */}
+                  {showTimeInfo && progressState.timeRemaining > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {Math.ceil(progressState.timeRemaining / 1000)} seconds remaining
+                      {progressState.pace === 'slower' && ' (running slower than usual)'}
+                    </div>
+                  )}
                 </div>
                 
+                {/* Keep the rotating fun messages for engagement */}
                 <p 
                   className="text-sm text-muted-foreground transition-opacity duration-500 ease-in-out"
-                  style={{ opacity: isAnalyzing ? messageOpacity : 1 }}
+                  style={{ opacity: messageOpacity }}
                 >
-                  {isAnalyzing ? funMessages[currentMessageIndex] : progressMessage}
+                  {funMessages[currentMessageIndex]}
                 </p>
               </div>
             </div>

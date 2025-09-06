@@ -10,6 +10,7 @@ import { storage } from '../storage';
 import { EnhancedWebsiteEffectivenessScorer } from '../services/effectiveness/enhancedScorer';
 import { EffectivenessConfigManager } from '../services/effectiveness/config';
 import { screenshotService } from '../services/effectiveness/screenshot';
+import { createProgressTracker, getProgressTracker, clearProgressTracker } from '../services/effectiveness/progressTracker';
 import logger from '../utils/logging/logger';
 import { z } from 'zod';
 import { db } from '../db';
@@ -46,40 +47,27 @@ const refreshRequestSchema = z.object({
  * Score a website with timeout protection and progressive updates
  */
 async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number = 90000): Promise<any> {
+  const tracker = getProgressTracker();
+  
   return Promise.race([
     enhancedScorer.scoreWebsiteProgressive(url, runId, async (status, progress, results, progressDetail) => {
-      // Update database with progress (progressDetail will be added to UI via real-time updates)
-      if (runId) {
-        // Create enhanced progress message that includes detail info when available
-        let enhancedProgress = progress;
-        
-        if (progressDetail && typeof progressDetail === 'object') {
-          try {
-            // Use the clean progress messages from enhancedScorer - no modifications needed
-            
-            logger.info('Enhanced progress detail received', { 
-              runId, 
-              originalProgress: progress,
-              enhancedProgress,
-              progressDetail 
-            });
-          } catch (error) {
-            logger.warn('Failed to enhance progress message', { runId, error });
+      if (runId && tracker) {
+        // Update tracker based on progress details
+        if (progressDetail?.phase === 'criterion_analysis') {
+          if (progressDetail?.tierDetails?.tier && progressDetail.tierDetails.completedCriteria) {
+            // A criterion just completed - update tracker
+            const criterionName = progressDetail.criterionName || 'unknown';
+            tracker.completeCriterion(criterionName, true);
           }
         }
         
-        // Save both enhanced progress text and progressDetail for serialization testing
-        const progressData = {
-          message: enhancedProgress,
-          progressDetail: progressDetail
-        };
-        
         await storage.updateEffectivenessRun(runId, {
           status,
-          progress: JSON.stringify(progressData)
+          progress: tracker.getProgressString(),
+          progressDetail: JSON.stringify(tracker.getState())
         });
       }
-      logger.info('Progressive scoring update', { url, runId, status, progress, progressDetail });
+      logger.info('Progressive scoring update', { url, runId, status, progress });
     }),
     new Promise((_, reject) => 
       setTimeout(() => reject(new Error(`Scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
@@ -205,6 +193,20 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
 
     // Get latest effectiveness run
     const latestRun = await storage.getLatestEffectivenessRun(clientId);
+    
+    // Debug logging for screenshot URLs
+    if (latestRun) {
+      logger.info('Latest run screenshot data', {
+        clientId,
+        runId: latestRun.id,
+        hasScreenshotUrl: !!latestRun.screenshotUrl,
+        screenshotUrl: latestRun.screenshotUrl,
+        hasFullPageScreenshotUrl: !!latestRun.fullPageScreenshotUrl,
+        fullPageScreenshotUrl: latestRun.fullPageScreenshotUrl,
+        screenshotMethod: latestRun.screenshotMethod,
+        screenshotError: latestRun.screenshotError
+      });
+    }
     
     if (!latestRun) {
       return res.json({
@@ -537,69 +539,50 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
         // Clean up any stuck runs first
         await cleanupStuckRuns(clientId);
 
-        // Update progress: Initializing (with JSON format)
-        const initProgressData = {
-          message: `Starting ${client.name} analysis...`,
-          progressDetail: {
-            phase: 'initialization',
-            subPhase: 'preparing',
-            progress: 5,
-            completedItems: [],
-            currentItem: 'Initializing analysis',
-            estimatedTimeRemaining: 60
-          }
-        };
+        // Create progress tracker for this run
+        const tracker = createProgressTracker();
+        tracker.startClient(client.name);
         
         await storage.updateEffectivenessRun(newRun.id, {
           status: 'initializing',
-          progress: JSON.stringify(initProgressData)
-        });
-        
-        // Update progress: Scraping website (with JSON format) 
-        const scrapingProgressData = {
-          message: `Collecting ${client.name} data...`,
-          progressDetail: {
-            phase: 'data_collection',
-            subPhase: 'starting',
-            progress: 10,
-            completedItems: [],
-            currentItem: 'Starting data collection',
-            estimatedTimeRemaining: 50
-          }
-        };
-        
-        await storage.updateEffectivenessRun(newRun.id, {
-          status: 'scraping',
-          progress: JSON.stringify(scrapingProgressData)
+          progress: tracker.getProgressString(),
+          progressDetail: JSON.stringify(tracker.getState())
         });
         
         // Score with enhanced approach (90s timeout, includes progressive updates)
         const result = await scoreWithTimeout(client.websiteUrl, newRun.id, 90000);
+        
+        // Log screenshot URLs for debugging
+        logger.info('Client scoring result screenshots', {
+          clientId,
+          runId: newRun.id,
+          screenshotUrl: result.screenshotUrl,
+          fullPageScreenshotUrl: result.fullPageScreenshotUrl,
+          screenshotMethod: result.screenshotMethod,
+          screenshotError: result.screenshotError
+        });
         
         // Enhanced scoring saves criterion scores progressively during execution
 
         // AI insights will be generated after all competitor analysis is complete
 
         // Complete the run with all results (AI insights added later)
-        // Preserve JSON format for progress with embedded progressDetail
-        const completionProgressMessage = `${client.name} analysis completed. Starting competitor analysis...`;
-        const completionProgressData = {
-          message: completionProgressMessage,
-          progressDetail: {
-            phase: 'competitor_analysis',
-            subPhase: 'starting',
-            progress: 100,
-            completedItems: ['Client Analysis'],
-            currentItem: 'Starting competitor analysis',
-            estimatedTimeRemaining: 30,
-            overallScore: result.overallScore
-          }
-        };
+        
+        // Log what we're about to save
+        logger.info('Updating effectiveness run with results', {
+          runId: newRun.id,
+          overallScore: result.overallScore,
+          hasScreenshotUrl: !!result.screenshotUrl,
+          screenshotUrl: result.screenshotUrl,
+          hasFullPageScreenshotUrl: !!result.fullPageScreenshotUrl,
+          fullPageScreenshotUrl: result.fullPageScreenshotUrl
+        });
         
         await storage.updateEffectivenessRun(newRun.id, {
           status: 'completed',
           overallScore: result.overallScore.toString(),
-          progress: JSON.stringify(completionProgressData),
+          progress: tracker.getProgressString(),
+          progressDetail: JSON.stringify(tracker.getState()),
           screenshotUrl: result.screenshotUrl,
           fullPageScreenshotUrl: result.fullPageScreenshotUrl,
           webVitals: result.webVitals,
@@ -630,6 +613,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
         // Score competitors if any
         const competitors = await storage.getCompetitorsByClient(clientId);
+        
+        // Update tracker with competitor count
+        tracker.setCompetitorCount(competitors.length);
         
         if (competitors.length > 0) {
           logger.info('Starting competitor scoring', {
@@ -688,7 +674,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
                 // Add delay between competitors to avoid rate limiting and database conflicts
                 if (index > 0) {
-                  await new Promise(resolve => setTimeout(resolve, retryDelay)); // 3 second delay
+                  await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
                 }
                 
                 // Small additional delay to prevent database race conditions
@@ -701,6 +687,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   status: 'pending',
                   overallScore: null
                 });
+
+                // Update progress tracker for this competitor
+                tracker.startCompetitor(competitor.label || competitor.domain, index);
 
                 logger.info('Scoring competitor website', {
                   clientId,
@@ -749,7 +738,11 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                         runId: competitorRun.id,
                         criterion: criterionResult.criterion,
                         score: criterionResult.score.toString(),
-                        evidence: criterionResult.evidence,
+                        evidence: {
+                          ...criterionResult.evidence,
+                          screenshotUrl: competitorResult.screenshotUrl,
+                          fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl
+                        },
                         passes: criterionResult.passes,
                         tier: getCriterionTier(criterionResult.criterion),
                         completedAt: new Date()
@@ -815,7 +808,25 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   attempt: competitorAttempts
                 });
 
+                // Mark competitor as completed in progress tracker
+                tracker.completeCompetitor();
+
                 competitorSuccess = true;
+                
+                // Clean up browser after every 2 competitors to prevent resource exhaustion
+                if ((index + 1) % 2 === 0) {
+                  try {
+                    await screenshotService.cleanup();
+                    logger.info('Browser recycled after competitor batch', {
+                      competitorIndex: index + 1,
+                      totalCompetitors: competitors.length
+                    });
+                  } catch (cleanupError) {
+                    logger.warn('Browser cleanup failed during competitor processing', {
+                      error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+                    });
+                  }
+                }
 
               } catch (competitorError) {
                 logger.error('Competitor attempt failed', {
@@ -885,6 +896,8 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             });
 
             // Generate AI insights after all competitor analysis is complete
+            tracker.startInsights();
+            
             logger.info('Starting AI insights generation', {
               clientId,
               runId: newRun.id,
@@ -914,6 +927,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   runId: newRun.id
                 });
                 
+                // Mark analysis as complete
+                tracker.complete();
+                
               } catch (openAIError) {
                 logger.error('OpenAI insights generation failed, using fallback', {
                   clientId,
@@ -923,6 +939,16 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                 
                 // Generate fallback insights
                 const criterionScores = await storage.getCriterionScores(newRun.id);
+                
+                // Check if we have scores before trying to use them
+                if (!criterionScores || criterionScores.length === 0) {
+                  logger.warn('No criterion scores available for fallback insights', {
+                    clientId,
+                    runId: newRun.id
+                  });
+                  throw new Error('No criterion scores available');
+                }
+                
                 const lowestScore = criterionScores.reduce((min, c) => 
                   c.score < min.score ? c : min
                 );
@@ -1017,6 +1043,8 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
           });
         } else {
           // No competitors - generate AI insights for client-only analysis
+          tracker.startInsights();
+          
           try {
             // Generate AI insights for client-only analysis
             logger.info('Starting AI insights generation for client-only analysis', {
@@ -1049,6 +1077,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                   runId: newRun.id
                 });
                 
+                // Mark analysis as complete
+                tracker.complete();
+                
               } catch (openAIError) {
                 logger.error('OpenAI insights generation failed, using fallback for client-only analysis', {
                   clientId,
@@ -1058,6 +1089,16 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
                 
                 // Generate fallback insights
                 const criterionScores = await storage.getCriterionScores(newRun.id);
+                
+                // Check if we have scores before trying to use them
+                if (!criterionScores || criterionScores.length === 0) {
+                  logger.warn('No criterion scores available for fallback insights', {
+                    clientId,
+                    runId: newRun.id
+                  });
+                  throw new Error('No criterion scores available');
+                }
+                
                 const lowestScore = criterionScores.reduce((min, c) => 
                   c.score < min.score ? c : min
                 );
@@ -1157,6 +1198,9 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
             error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
           });
         }
+        
+        // Clear progress tracker
+        clearProgressTracker();
       }
     });
 
@@ -1265,10 +1309,26 @@ router.get('/:runId/evidence/all', requireAuth, async (req, res) => {
     // Get all criterion scores for this run
     const criterionScores = await storage.getCriterionScores(runId);
     
+    // Ensure all expected fields are included in the response
+    // The frontend expects these fields to be present (even if null/undefined)
     res.json({
       run: {
-        ...run,
-        criterionScores
+        id: run.id,
+        clientId: run.clientId,
+        competitorId: run.competitorId,
+        overallScore: run.overallScore,
+        status: run.status,
+        progress: run.progress,
+        createdAt: run.createdAt,
+        screenshotUrl: run.screenshotUrl || null,
+        fullPageScreenshotUrl: run.fullPageScreenshotUrl || null,
+        webVitals: run.webVitals || null,
+        screenshotError: run.screenshotError || null,
+        fullPageScreenshotError: run.fullPageScreenshotError || null,
+        screenshotMethod: run.screenshotMethod || null,
+        aiInsights: run.aiInsights || null,
+        insightsGeneratedAt: run.insightsGeneratedAt || null,
+        criterionScores: criterionScores || []
       }
     });
 

@@ -129,23 +129,12 @@ export class EnhancedWebsiteEffectivenessScorer {
             fullPageScreenshotError: context.fullPageScreenshotError
           };
 
-          // Progress mapping for each tier
-          const progressMap = {
-            1: { progress: 40, message: 'Analyzing your site...', remaining: 35 },
-            2: { progress: 70, message: 'Analyzing your site...', remaining: 20 },
-            3: { progress: 90, message: 'Almost finished...', remaining: 5 }
-          };
-
-          // Send detailed progress update via callback
+          // Send detailed progress update via callback (progressTracker handles messages)
           if (progressCallback) {
-            const tierProgress = progressMap[tierResult.tier as keyof typeof progressMap];
-            await progressCallback("analyzing", tierProgress.message, partialResult, {
+            await progressCallback("analyzing", "", partialResult, {
               phase: 'criterion_analysis',
               subPhase: `tier_${tierResult.tier}_complete`,
-              progress: tierProgress.progress,
               completedItems: [],
-              currentItem: tierResult.tier < 3 ? 'Analyzing your site...' : 'Almost finished...',
-              estimatedTimeRemaining: tierProgress.remaining,
               tierDetails: {
                 tier: tierResult.tier,
                 completedCriteria: progressive.completedCriteria,
@@ -155,54 +144,7 @@ export class EnhancedWebsiteEffectivenessScorer {
             });
           }
 
-          // Update database with progressive status if runId provided
-          if (runId && storage) {
-            try {
-              // Update tier completion timestamps
-              const tierCompletionUpdate: any = {};
-              const tierProgress = progressMap[tierResult.tier as keyof typeof progressMap];
-              
-              if (tierResult.tier === 1) {
-                tierCompletionUpdate.tier1CompletedAt = tierResult.completedAt;
-                // Embed progressDetail in progress field for serialization
-                const progressMessage = `Analyzing your site...`;
-                const progressData = {
-                  message: progressMessage,
-                  progressDetail: {
-                    phase: 'criterion_analysis',
-                    subPhase: 'tier_1_complete',
-                    progress: tierProgress.progress,
-                    completedTiers: 1,
-                    totalTiers: 3,
-                    overallScore: progressive.overallScore
-                  }
-                };
-                
-                await storage.updateEffectivenessRun(runId, {
-                  status: 'tier1_complete',
-                  progress: JSON.stringify(progressData),
-                  overallScore: progressive.overallScore,
-                  ...tierCompletionUpdate
-                });
-              } else if (tierResult.tier === 2) {
-                tierCompletionUpdate.tier2CompletedAt = tierResult.completedAt;
-                // Embed progressDetail in progress field for serialization
-                const progressMessage = `Analyzing your site...`;
-                const progressData = {
-                  message: progressMessage,
-                  progressDetail: {
-                    phase: 'criterion_analysis',
-                    subPhase: 'tier_2_complete',
-                    progress: tierProgress.progress,
-                    completedTiers: 2,
-                    totalTiers: 3,
-                    overallScore: progressive.overallScore
-                  }
-                };
-                
-                await storage.updateEffectivenessRun(runId, {
-                  status: 'tier2_complete', 
-                  progress: JSON.stringify(progressData),
+          // Database updates are handled by progressTracker via effectivenessRoutes
                   overallScore: progressive.overallScore,
                   ...tierCompletionUpdate
                 });
@@ -241,7 +183,11 @@ export class EnhancedWebsiteEffectivenessScorer {
                       runId,
                       criterion: result.criterion,
                       score: result.score,
-                      evidence: result.evidence,
+                      evidence: {
+                        ...result.evidence,
+                        screenshotUrl: context.screenshot,
+                        fullPageScreenshotUrl: context.fullPageScreenshot
+                      },
                       passes: result.passes,
                       tier: tierResult.tier,
                       completedAt: tierResult.completedAt
@@ -313,42 +259,7 @@ export class EnhancedWebsiteEffectivenessScorer {
             }
           }
 
-          // Progress callback for real-time UI updates
-          if (progressCallback) {
-            const statusMap = {
-              1: 'tier1_complete',
-              2: 'tier2_complete', 
-              3: 'completed'
-            };
-            
-            const progressMap = {
-              1: `Analyzing your site...`,
-              2: `Analyzing your site...`,
-              3: `Analysis complete`
-            };
-
-            // Include progressDetail in this callback too to maintain consistency
-            const progressPercentages = { 1: 40, 2: 70, 3: 100 };
-            await progressCallback(
-              statusMap[tierResult.tier as keyof typeof statusMap] || 'analyzing',
-              progressMap[tierResult.tier as keyof typeof progressMap] || 'Processing...',
-              partialResult,
-              {
-                phase: 'criterion_analysis',
-                subPhase: `tier_${tierResult.tier}_complete`,
-                progress: progressPercentages[tierResult.tier as keyof typeof progressPercentages] || 50,
-                completedItems: [],
-                currentItem: tierResult.tier < 3 ? 'Analyzing your site...' : 'Finalizing results',
-                estimatedTimeRemaining: tierResult.tier < 3 ? (3 - tierResult.tier) * 15 : 5,
-                tierDetails: {
-                  tier: tierResult.tier,
-                  completedCriteria: progressive.completedCriteria,
-                  totalCriteria: progressive.totalCriteria,
-                  overallScore: progressive.overallScore
-                }
-              }
-            );
-          }
+          // Progress updates are handled by progressTracker in effectivenessRoutes
         }
       );
 
