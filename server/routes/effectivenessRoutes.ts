@@ -53,12 +53,11 @@ async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number =
     enhancedScorer.scoreWebsiteProgressive(url, runId, async (status, progress, results, progressDetail) => {
       if (runId && tracker) {
         // Update tracker based on progress details
-        if (progressDetail?.phase === 'criterion_analysis') {
-          if (progressDetail?.tierDetails?.tier && progressDetail.tierDetails.completedCriteria) {
-            // A criterion just completed - update tracker
-            const criterionName = progressDetail.criterionName || 'unknown';
-            tracker.completeCriterion(criterionName, true);
-          }
+        if (progressDetail?.phase === 'criterion_analysis' && progressDetail?.subPhase === 'criterion_complete') {
+          // A criterion just completed - update tracker
+          const criterionName = progressDetail.criterionName || 'unknown';
+          tracker.completeCriterion(criterionName, true);
+          logger.info('Progress tracker: criterion completed via callback', { criterionName });
         }
         
         await storage.updateEffectivenessRun(runId, {
@@ -345,7 +344,7 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
         } else if (activeRun.progress) {
           overallProgress = activeRun.progress;
         } else {
-          overallProgress = `Running analysis...`;
+          overallProgress = 'Analysis in progress';
         }
       } else if (latestRun.status === 'completed') {
         // Client is done, no active competitors, check if all competitors are done
@@ -546,13 +545,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
         });
         
         // Enhanced scoring saves criterion scores progressively during execution
-
-        // Mark all criteria as complete in progress tracker
-        if (tracker && result.criterionResults) {
-          result.criterionResults.forEach(criterion => {
-            tracker.completeCriterion(criterion.criterion, true);
-          });
-        }
+        // Criteria completion is handled via progress callbacks during execution
 
         // AI insights will be generated after all competitor analysis is complete
 

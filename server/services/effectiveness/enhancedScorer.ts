@@ -89,7 +89,7 @@ export class EnhancedWebsiteEffectivenessScorer {
           subPhase: 'complete',
           progress: 25,
           completedItems,
-          currentItem: 'Starting analysis',
+          currentItem: 'Analysis started',
           estimatedTimeRemaining: 45
         });
       }
@@ -129,19 +129,21 @@ export class EnhancedWebsiteEffectivenessScorer {
             fullPageScreenshotError: context.fullPageScreenshotError
           };
 
-          // Send detailed progress update via callback (progressTracker handles messages)
+          // Send progress update for each criterion that completed in this tier
           if (progressCallback) {
-            await progressCallback("analyzing", "", partialResult, {
-              phase: 'criterion_analysis',
-              subPhase: `tier_${tierResult.tier}_complete`,
-              completedItems: [],
-              tierDetails: {
-                tier: tierResult.tier,
-                completedCriteria: progressive.completedCriteria,
-                totalCriteria: progressive.totalCriteria,
-                overallScore: progressive.overallScore
-              }
-            });
+            for (const criterionResult of tierResult.results) {
+              await progressCallback("analyzing", "", partialResult, {
+                phase: 'criterion_analysis',
+                subPhase: 'criterion_complete',
+                criterionName: criterionResult.criterion,
+                tierDetails: {
+                  tier: tierResult.tier,
+                  completedCriteria: progressive.completedCriteria,
+                  totalCriteria: progressive.totalCriteria,
+                  overallScore: progressive.overallScore
+                }
+              });
+            }
           }
 
           // Database updates and progress tracking are handled by progressTracker via effectivenessRoutes
