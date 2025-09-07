@@ -1,7 +1,8 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { ButtonLoadingSpinner } from '@/components/loading';
+import { useEffectivenessInsights } from '@/hooks/useEffectivenessInsights';
+import { EffectivenessErrorBoundary } from './EffectivenessErrorBoundary';
 
 interface EffectivenessAIInsightsProps {
   clientId: string;
@@ -42,32 +43,20 @@ export function EffectivenessAIInsights({
   aiInsights,
   insightsGeneratedAt
 }: EffectivenessAIInsightsProps) {
-  // Only fetch insights if not provided (fallback for missing/failed insights)
-  const shouldFetchInsights = !aiInsights;
   
-  const { data: insightsData, isLoading, error, refetch } = useQuery<InsightsResponse>({
-    queryKey: ['effectiveness-insights', clientId, runId],
-    queryFn: async () => {
-      const response = await fetch(`/api/effectiveness/insights/${clientId}/${runId}`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate insights');
-      }
-      
-      return response.json();
-    },
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    retry: 1,
-    enabled: shouldFetchInsights // Only run query if no insights provided
-  });
-
-  // Use stored insights if available, otherwise use API data
-  const insights = aiInsights || insightsData?.insights;
-  const isApiLoading = shouldFetchInsights && isLoading;
-  const hasError = shouldFetchInsights && (error || !insightsData?.success);
+  // Use the new insights hook
+  const {
+    generateInsights,
+    canGenerateInsights,
+    isGenerating,
+    generateError,
+    lastGenerated
+  } = useEffectivenessInsights(clientId, runId);
+  
+  // Use stored insights if available, otherwise use generated insights
+  const insights = aiInsights || lastGenerated?.insights;
+  const isApiLoading = isGenerating;
+  const hasError = generateError;
 
   if (isApiLoading) {
     return (
@@ -87,7 +76,7 @@ export function EffectivenessAIInsights({
           <AlertCircle className="h-4 w-4" />
           <span className="text-xs">Unable to load insights</span>
           <button 
-            onClick={() => refetch()} 
+            onClick={() => generateInsights()} 
             className="ml-2 p-1 hover:bg-red-50 rounded"
             title="Retry"
           >
@@ -111,7 +100,19 @@ export function EffectivenessAIInsights({
   }
 
   return (
-    <div className={`space-y-3 ${className || ''}`}>
+    <EffectivenessErrorBoundary 
+      clientName={clientName}
+      fallback={
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 text-red-600 mb-2">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">AI Insights Unavailable</span>
+          </div>
+          <p className="text-xs text-red-500">Unable to load AI insights. The analysis data is still available.</p>
+        </div>
+      }
+    >
+      <div className={`space-y-3 ${className || ''}`}>
       {/* Main Insight - match AI insights font size */}
       <div className="text-sm text-slate-600 leading-relaxed">
         <div dangerouslySetInnerHTML={{ 
@@ -144,5 +145,6 @@ export function EffectivenessAIInsights({
         </div>
       </div>
     </div>
+    </EffectivenessErrorBoundary>
   );
 }

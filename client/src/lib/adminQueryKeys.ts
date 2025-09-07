@@ -17,6 +17,16 @@ export const AdminQueryKeys = {
   ga4PropertyAccessClient: (clientId: string) => ["/api/admin/ga4-property-access/client", clientId] as const,
   
   /**
+   * Effectiveness query keys with consistent patterns
+   */
+  effectivenessLatest: (clientId: string) => ["/api/effectiveness/latest", clientId] as const,
+  effectivenessEvidence: (runId: string, criterion: string) => ["/api/effectiveness/evidence", runId, criterion] as const,
+  effectivenessAllEvidence: (runId: string) => ["/api/effectiveness/evidence", runId, "all"] as const,
+  effectivenessInsights: (runId: string) => ["/api/effectiveness/insights", runId] as const,
+  effectivenessPromptTemplates: () => ["/api/admin/effectiveness-prompt-templates"] as const,
+  effectivenessPromptTemplate: (criterion: string) => ["/api/admin/effectiveness-prompt-template", criterion] as const,
+
+  /**
    * Generic admin cache invalidation helpers
    */
   allDashboards: () => ["/api/dashboard"] as const,

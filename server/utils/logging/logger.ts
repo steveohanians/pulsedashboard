@@ -33,7 +33,15 @@ class Logger {
     const baseMsg = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
     
     if (meta) {
-      return `${baseMsg} ${JSON.stringify(meta)}`;
+      try {
+        return `${baseMsg} ${JSON.stringify(meta)}`;
+      } catch (error) {
+        // Handle circular references and other serialization issues
+        if (error instanceof TypeError && error.message.includes('circular')) {
+          return `${baseMsg} [Circular object - ${Object.prototype.toString.call(meta)}]`;
+        }
+        return `${baseMsg} [Serialization error: ${error.message}]`;
+      }
     }
     
     return baseMsg;

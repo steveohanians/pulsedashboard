@@ -12,6 +12,7 @@ import { EffectivenessConfigManager } from '../services/effectiveness/config';
 import { screenshotService } from '../services/effectiveness/screenshot';
 import { createProgressTracker, getProgressTracker, clearProgressTracker } from '../services/effectiveness/progressTracker';
 import logger from '../utils/logging/logger';
+import { effectivenessService } from '../services/EffectivenessService';
 import { z } from 'zod';
 import { db } from '../db';
 import { effectivenessRuns } from '@shared/schema';
@@ -338,18 +339,12 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
     logger.info('Status aggregation result', {
       clientId,
       clientRunStatus: latestRun.status,
-      activeCompetitorRunsCount: competitors.length > 0 ? activeCompetitorRuns?.length : 0,
-      competitorStatuses: competitors.length > 0 ? activeCompetitorRuns?.map(run => ({
-        competitorId: run.competitorId,
-        status: run.status,
-        createdAt: run.createdAt
-      })) : []
+      competitorCount: competitors.length,
+      competitorEffectivenessDataCount: competitorEffectivenessData.length
     });
 
     logger.info('Effectiveness data response prepared', {
       clientId,
-      overallStatus,
-      overallProgress,
       clientRunStatus: latestRun.status,
       criteriaCount: criterionScores.length,
       hasInsights: !!latestRun.aiInsights,
@@ -449,28 +444,15 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       }
     }
 
-    // Create new run record
-    const newRun = await storage.createEffectivenessRun({
-      clientId,
-      status: 'pending',
-      overallScore: null
-    });
+    // Use the new clean EffectivenessService
+    const result = await effectivenessService.startAnalysis(clientId, force);
 
-    // Start scoring process asynchronously
-    setImmediate(async () => {
-      let runFailed = false;
-      try {
-        // Track memory usage at start
-        const startMemory = process.memoryUsage();
-        logger.info('Starting effectiveness scoring', { 
-          clientId, 
-          runId: newRun.id,
-          memoryMB: {
-            rss: Math.round(startMemory.rss / 1024 / 1024),
-            heapUsed: Math.round(startMemory.heapUsed / 1024 / 1024),
-            heapTotal: Math.round(startMemory.heapTotal / 1024 / 1024)
-          }
-        });
+    // Return HONEST response - analysis has started, not completed!
+    res.json({
+      message: 'Effectiveness analysis started',
+      runId: result.runId,
+      status: 'pending'
+    });
         
         // Clean up any stuck runs first
         await cleanupStuckRuns(clientId);
@@ -1180,10 +1162,11 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       }
     });
 
+    // Return HONEST response - analysis has started, not completed!
     res.json({
-      message: 'Effectiveness scoring completed',
+      message: 'Effectiveness analysis started',
       runId: newRun.id,
-      status: 'completed'
+      status: 'pending'
     });
 
   } catch (error) {
@@ -1194,7 +1177,7 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
 
     res.status(500).json({
       code: 'INTERNAL_ERROR',
-      message: 'Failed to start effectiveness scoring'
+      message: 'Failed to start effectiveness analysis'
     });
   }
 });

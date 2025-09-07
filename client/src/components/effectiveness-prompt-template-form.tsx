@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,10 @@ import { Loader2, Eye, AlertCircle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { AdminQueryKeys } from "@/lib/adminQueryKeys";
+import { errorHandler, AppError, NetworkError, AuthError } from "@/services/error/ErrorHandler";
+import { effectivenessApi } from "@/services/api/EffectivenessApiService";
+import { EffectivenessErrorBoundary } from './EffectivenessErrorBoundary';
 
 interface EffectivenessPromptTemplate {
   id: string;
@@ -24,6 +28,7 @@ interface EffectivenessPromptTemplate {
 export function EffectivenessPromptTemplateForm() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const isUnmountedRef = useRef(false);
   const [selectedCriterion, setSelectedCriterion] = useState('positioning');
   const [formData, setFormData] = useState({
     promptTemplate: '',
@@ -33,15 +38,21 @@ export function EffectivenessPromptTemplateForm() {
   const [previewResult, setPreviewResult] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+    };
+  }, []);
+
   // Fetch templates
   const { data: templates, isLoading } = useQuery<EffectivenessPromptTemplate[]>({
-    queryKey: ['effectiveness-prompt-templates'],
+    queryKey: AdminQueryKeys.effectivenessPromptTemplates(),
     queryFn: async () => {
-      const response = await fetch('/api/admin/effectiveness-prompt-templates', {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to fetch templates');
-      return response.json();
+      if (isUnmountedRef.current) {
+        throw new AppError('Component unmounted', 'COMPONENT_UNMOUNTED');
+      }
+      return await effectivenessApi.getPromptTemplates();
     }
   });
 
@@ -64,17 +75,10 @@ export function EffectivenessPromptTemplateForm() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch(`/api/admin/effectiveness-prompt-template/${selectedCriterion}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update template');
-      return response.json();
+      return await effectivenessApi.updatePromptTemplate(selectedCriterion, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['effectiveness-prompt-templates'] });
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.effectivenessPromptTemplates() });
       setIsDirty(false);
       toast({
         title: "Template saved",
@@ -82,29 +86,19 @@ export function EffectivenessPromptTemplateForm() {
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error saving template",
-        description: error instanceof Error ? error.message : "Failed to update template",
-        variant: "destructive",
-      });
+      errorHandler.handleError(error, 'save prompt template');
     }
   });
 
   // Preview mutation
   const previewMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/admin/effectiveness-prompt-template/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          ...data,
-          criterion: selectedCriterion,
-          sampleContent: getSampleContent(selectedCriterion)
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to generate preview');
-      return response.json();
+      const previewData = {
+        ...data,
+        criterion: selectedCriterion,
+        sampleContent: getSampleContent(selectedCriterion)
+      };
+      return await effectivenessApi.previewPromptTemplate(previewData);
     },
     onSuccess: (data) => {
       setPreviewResult(data.preview);
@@ -114,11 +108,7 @@ export function EffectivenessPromptTemplateForm() {
       });
     },
     onError: (error) => {
-      toast({
-        title: "Preview failed",
-        description: error instanceof Error ? error.message : "Failed to generate preview",
-        variant: "destructive",
-      });
+      errorHandler.handleError(error, 'preview prompt template');
     }
   });
 
@@ -164,7 +154,21 @@ export function EffectivenessPromptTemplateForm() {
   const currentTemplate = templates?.find(t => t.criterion === selectedCriterion);
 
   return (
-    <div className="space-y-6">
+    <EffectivenessErrorBoundary 
+      fallback={
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center gap-2 text-red-600 mb-4">
+            <AlertCircle className="h-5 w-5" />
+            <span className="font-medium">Prompt Template Form Error</span>
+          </div>
+          <p className="text-sm text-red-600 mb-4">Unable to load the prompt template management form.</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Refresh Page
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Effectiveness Scoring Prompts</CardTitle>
@@ -280,5 +284,6 @@ export function EffectivenessPromptTemplateForm() {
         </CardContent>
       </Card>
     </div>
+    </EffectivenessErrorBoundary>
   );
 }

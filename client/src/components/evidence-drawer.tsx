@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ButtonLoadingSpinner } from "@/components/loading";
+import { useEffectivenessEvidence } from "@/hooks/useEffectivenessEvidence";
 import {
   Drawer,
   DrawerContent,
@@ -31,7 +31,8 @@ import {
   AlertCircle,
   Eye,
   Accessibility,
-  Search
+  Search,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -470,36 +471,42 @@ export function EvidenceDrawer({
   const [activeTab, setActiveTab] = useState("screenshot");
   const [selectedRunId, setSelectedRunId] = useState(clientRun.id);
   const [selectedRunType, setSelectedRunType] = useState<'client' | 'competitor'>('client');
+  const isUnmountedRef = useRef(false);
 
   // Find current run data
   const currentRunData = selectedRunType === 'client' 
     ? clientRun
     : competitorData.find(comp => comp.run.id === selectedRunId)?.run;
 
-  // Reset selection when drawer opens
+  // Reset selection when drawer opens with cleanup
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isUnmountedRef.current) {
       setSelectedRunId(clientRun.id);
       setSelectedRunType('client');
+      setActiveTab("screenshot");
     }
   }, [isOpen, clientRun.id]);
 
-  // Fetch detailed evidence when drawer opens
-  const { data: evidenceData, isLoading, error } = useQuery({
-    queryKey: ['effectiveness-evidence', selectedRunId],
-    queryFn: async () => {
-      const response = await fetch(`/api/effectiveness/${selectedRunId}/evidence/all`, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      return response.json();
-    },
-    enabled: isOpen && !!selectedRunId && !!currentRunData
-  });
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+    };
+  }, []);
+
+  // Use embedded evidence from criterion scores (no API call needed)
+  const { 
+    evidence: evidenceData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useEffectivenessEvidence(
+    currentRunData?.criterionScores || null, // Use embedded criterion scores
+    undefined, // Get all evidence, not specific criterion
+    {
+      enabled: isOpen && !!currentRunData
+    }
+  );
 
   // Group criteria by category for different tabs
   const categorizedScores = React.useMemo(() => {
@@ -512,6 +519,21 @@ export function EvidenceDrawer({
       seo: scores.filter(s => s.criterion === 'seo')
     };
   }, [currentRunData?.criterionScores]);
+
+  // Memoized callback for safe run selection
+  const handleRunSelection = useCallback((runId: string, runType: 'client' | 'competitor') => {
+    if (!isUnmountedRef.current) {
+      setSelectedRunId(runId);
+      setSelectedRunType(runType);
+    }
+  }, []);
+
+  // Memoized callback for safe tab changes
+  const handleTabChange = useCallback((tabValue: string) => {
+    if (!isUnmountedRef.current) {
+      setActiveTab(tabValue);
+    }
+  }, []);
 
   // Get criterion color based on score
   const getCriterionColor = (score: number) => {
@@ -598,17 +620,19 @@ export function EvidenceDrawer({
         
         <CardContent>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {score.evidence.description}
-            </p>
+            {score.evidence?.description && (
+              <p className="text-sm text-muted-foreground">
+                {score.evidence.description}
+              </p>
+            )}
             
-            {score.passes.passed.length > 0 && (
+            {score.passes?.passed?.length > 0 && (
               <div>
                 <div className="mb-2">
                   <span className="text-sm font-medium text-green-600">Passed Checks</span>
                 </div>
                 <div className="space-y-2">
-                  {score.passes.passed.map((check, index) => {
+                  {score.passes?.passed?.map((check, index) => {
                     // Updated evidence key mapping for new brand story logic
                     let evidenceKey = '';
                     let evidence = null;
@@ -630,7 +654,7 @@ export function EvidenceDrawer({
                         'capability_breadth': 'bonusPoints'
                       };
                       evidenceKey = evidenceMapping[check] || check;
-                      evidence = score.evidence.details[evidenceKey];
+                      evidence = score.evidence?.details?.[evidenceKey];
                     } else if (score.criterion === 'ctas') {
                       // CTA specific mappings (advanced system - 5 separate checks)
                       const evidenceMapping: Record<string, string> = {
@@ -655,13 +679,13 @@ export function EvidenceDrawer({
                         'ctas_present': 'message_evidence'
                       };
                       evidenceKey = evidenceMapping[check] || check;
-                      evidence = score.evidence.details[evidenceKey];
+                      evidence = score.evidence?.details?.[evidenceKey];
                       
                       // Enhanced CTA evidence handling
-                      if (check === 'cta_present' && score.evidence.details.cta_primary_examples) {
-                        const primaryCTAs = score.evidence.details.cta_primary_examples;
-                        const secondaryCTAs = score.evidence.details.cta_secondary_examples || [];
-                        const groups = score.evidence.details.primary_cta_groups_used || [];
+                      if (check === 'cta_present' && score.evidence?.details.cta_primary_examples) {
+                        const primaryCTAs = score.evidence?.details.cta_primary_examples;
+                        const secondaryCTAs = score.evidence?.details.cta_secondary_examples || [];
+                        const groups = score.evidence?.details.primary_cta_groups_used || [];
                         
                         let ctaDetails = `Primary CTAs: ${primaryCTAs.join(', ')}`;
                         if (secondaryCTAs.length > 0) {
@@ -673,18 +697,18 @@ export function EvidenceDrawer({
                         evidence = ctaDetails;
                       } else if (check === 'cta_above_fold') {
                         // Show primary CTAs found above fold
-                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        const primaryCTAs = score.evidence?.details.cta_primary_examples || [];
                         evidence = primaryCTAs.length > 0 
                           ? `Above-fold primary CTAs: ${primaryCTAs.join(', ')}`
                           : 'Primary CTA found above the fold';
                       } else if (check === 'cta_page_end') {
                         // Show page-end specific evidence
-                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        const primaryCTAs = score.evidence?.details.cta_primary_examples || [];
                         evidence = `Page-end CTAs: ${primaryCTAs.join(', ')}`;
                       } else if (check === 'cta_block_closure') {
                         // Show block closure specific evidence
-                        const blockExamples = score.evidence.details.cta_block_examples || [];
-                        const primaryCTAs = score.evidence.details.cta_primary_examples || [];
+                        const blockExamples = score.evidence?.details.cta_block_examples || [];
+                        const primaryCTAs = score.evidence?.details.cta_primary_examples || [];
                         
                         if (blockExamples.length > 0) {
                           evidence = `Block closure in: ${blockExamples.join(', ')} with CTAs: ${primaryCTAs.join(', ')}`;
@@ -693,14 +717,14 @@ export function EvidenceDrawer({
                         }
                       } else if (check === 'cta_reinforcement') {
                         // Show reinforcement evidence
-                        const strengthScore = score.evidence.details.cta_strength_score || 0;
+                        const strengthScore = score.evidence?.details.cta_strength_score || 0;
                         evidence = `Reinforcement detected (strength: ${(strengthScore * 10).toFixed(1)}/10)`;
                       }
                       
                       // Special handling for trust media coverage
                       if (check === 'major_media_coverage' || check === 'media_coverage') {
-                        const featuredCount = score.evidence.details.featuredInSections || 0;
-                        const hasMajor = score.evidence.details.hasMajorMedia || false;
+                        const featuredCount = score.evidence?.details.featuredInSections || 0;
+                        const hasMajor = score.evidence?.details.hasMajorMedia || false;
                         if (hasMajor) {
                           evidence = `Featured in major media outlets (${featuredCount} sections found)`;
                         } else if (featuredCount > 0) {
@@ -710,18 +734,18 @@ export function EvidenceDrawer({
                       
                       // Special handling for trust metrics
                       if (check === 'sufficient_logos' || check === 'some_logos') {
-                        const logoCount = score.evidence.details.customerLogos || 0;
+                        const logoCount = score.evidence?.details.customerLogos || 0;
                         evidence = `${logoCount} client/partner logos found`;
                       }
                       
                       if (check === 'multiple_case_stories' || check === 'some_case_stories') {
-                        const testimonials = score.evidence.details.testimonials || 0;
-                        const caseStudies = score.evidence.details.caseStudies || 0;
+                        const testimonials = score.evidence?.details.testimonials || 0;
+                        const caseStudies = score.evidence?.details.caseStudies || 0;
                         evidence = `${testimonials} testimonials, ${caseStudies} case studies`;
                       }
                       
                       if (check === 'trust_language' || check === 'some_trust_language') {
-                        const metrics = score.evidence.details.numberMatches || [];
+                        const metrics = score.evidence?.details.numberMatches || [];
                         if (metrics.length > 0) {
                           evidence = `Trust indicators: ${metrics.slice(0, 2).join(', ')}`;
                         }
@@ -729,31 +753,31 @@ export function EvidenceDrawer({
                       
                       // Special handling for bonus points
                       if (check === 'industry_focus' || check === 'capability_breadth') {
-                        evidence = `Bonus points awarded: +${score.evidence.details.bonusPoints || 0}`;
+                        evidence = `Bonus points awarded: +${score.evidence?.details.bonusPoints || 0}`;
                       }
                     } else if (score.criterion === 'ux') {
                       // Special handling for UX metrics
                       if (check === 'excellent_layout' || check === 'good_layout') {
-                        const modernScore = score.evidence.details.modernUXScore || 0;
+                        const modernScore = score.evidence?.details.modernUXScore || 0;
                         evidence = `${modernScore} modern UX patterns detected`;
                       } else if (check === 'readable_content') {
                         evidence = 'Optimized content width for readability';
                       } else if (check === 'rich_interactivity' || check === 'adequate_interactivity') {
-                        const elements = score.evidence.details.interactiveElements || 0;
-                        const buttons = score.evidence.details.meaningfulButtons || 0;
+                        const elements = score.evidence?.details.interactiveElements || 0;
+                        const buttons = score.evidence?.details.meaningfulButtons || 0;
                         evidence = `${elements} interactive elements${buttons > 0 ? ` (${buttons} CTAs)` : ''}`;
                       } else if (check === 'mobile_optimized' || check === 'basic_mobile_support') {
                         evidence = 'Mobile viewport and responsive design detected';
                       } else if (check === 'modern_styling') {
                         evidence = 'Modern CSS patterns and framework detected';
                       } else if (check === 'accessibility_features' || check === 'some_accessibility') {
-                        const altTexts = score.evidence.details.altTexts || 0;
-                        const ariaLabels = score.evidence.details.ariaLabels || 0;
+                        const altTexts = score.evidence?.details.altTexts || 0;
+                        const ariaLabels = score.evidence?.details.ariaLabels || 0;
                         evidence = `${altTexts} alt texts, ${ariaLabels} ARIA labels`;
                       }
                     } else {
                       // Smart dynamic evidence mapping for all other criteria
-                      evidence = findEvidenceForCheck(check, score.evidence.details);
+                      evidence = findEvidenceForCheck(check, score.evidence?.details);
                     }
                     
                     return (
@@ -775,13 +799,13 @@ export function EvidenceDrawer({
               </div>
             )}
             
-            {score.passes.failed.length > 0 && (
+            {score.passes?.failed?.length > 0 && (
               <div>
                 <div className="mb-2">
                   <span className="text-sm font-medium text-red-600">Failed Checks</span>
                 </div>
                 <div className="space-y-2">
-                  {score.passes.failed.map((check, index) => (
+                  {score.passes?.failed?.map((check, index) => (
                     <div key={index} className="flex items-start gap-2">
                       <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
                         {check.replace(/_/g, ' ')}
@@ -798,14 +822,16 @@ export function EvidenceDrawer({
             
             <div className="text-xs text-muted-foreground bg-gray-50 p-2 rounded">
               <strong>Analysis:</strong>{" "}
-              <span 
-                dangerouslySetInnerHTML={{
-                  __html: formatMarkdown(score.evidence.reasoning)
-                }}
-              />
-              {score.criterion === 'ctas' && score.evidence.details.cta_strength_score !== undefined && (
+              {score.evidence?.reasoning && (
+                <span 
+                  dangerouslySetInnerHTML={{
+                    __html: formatMarkdown(score.evidence.reasoning)
+                  }}
+                />
+              )}
+              {score.criterion === 'ctas' && score.evidence?.details.cta_strength_score !== undefined && (
                 <span className="ml-2 font-medium">
-                  | Strength Score: {(score.evidence.details.cta_strength_score * 10).toFixed(1)}/10
+                  | Strength Score: {(score.evidence?.details.cta_strength_score * 10).toFixed(1)}/10
                 </span>
               )}
             </div>
@@ -844,10 +870,7 @@ export function EvidenceDrawer({
                 clientRun={clientRun}
                 competitorData={competitorData}
                 selectedRunId={selectedRunId}
-                onRunChange={(runId, runType) => {
-                  setSelectedRunId(runId);
-                  setSelectedRunType(runType);
-                }}
+                onRunChange={handleRunSelection}
               />
             </div>
           )}
@@ -862,7 +885,7 @@ export function EvidenceDrawer({
                 </div>
               </div>
             ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="screenshot">
                   Screenshot
@@ -918,14 +941,27 @@ export function EvidenceDrawer({
                         />
                       )}
 
-                      {/* Add general query error display */}
+                      {/* Add general query error display with retry */}
                       {error && (
-                        <ErrorDisplay
-                          title="Failed to Load Evidence"
-                          message="Unable to fetch evidence data for this analysis"
-                          details={error instanceof Error ? error.message : String(error)}
-                          type="error"
-                        />
+                        <div className="space-y-3">
+                          <ErrorDisplay
+                            title="Failed to Load Evidence"
+                            message="Unable to fetch evidence data for this analysis"
+                            details={error instanceof Error ? error.message : String(error)}
+                            type="error"
+                          />
+                          <div className="flex justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => refetch()}
+                              className="gap-2"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Retry Loading Evidence
+                            </Button>
+                          </div>
+                        </div>
                       )}
 
                     {evidenceData?.run?.screenshotUrl && evidenceData.run.screenshotUrl !== '' ? (

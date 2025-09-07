@@ -9,6 +9,7 @@ import { Building2, Plus, Trash2, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import { cacheManager } from "@/services/cache/CacheManager";
 import ValidationWarnings from "@/components/ui/validation-warnings";
 
 /** Competitor data structure for management interface */
@@ -105,12 +106,7 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
       });
       
       // Invalidate effectiveness data to refresh radar chart with new competitors
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0]?.toString() || '';
-          return queryKey.includes('effectiveness');
-        }
-      });
+      cacheManager.invalidate('effectiveness');
       
       // Clear form inputs after successful addition
       setDomain("");
@@ -172,12 +168,7 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
       });
       
       // Invalidate effectiveness data to refresh radar chart after competitor removal
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0]?.toString() || '';
-          return queryKey.includes('effectiveness');
-        }
-      });
+      cacheManager.invalidate('effectiveness');
       
       toast({
         title: "Competitor removed from analysis",

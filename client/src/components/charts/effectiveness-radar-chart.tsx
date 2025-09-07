@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { getTimeSeriesColors } from '@/utils/chartUtils';
+import { EffectivenessErrorBoundary } from '../EffectivenessErrorBoundary';
+import { AlertCircle } from 'lucide-react';
 
 interface CriterionScore {
   id: string;
@@ -177,7 +179,18 @@ export function EffectivenessRadarChart({
   const visibleEntities = allEntities.filter(entity => !hiddenEntities.has(entity));
 
   return (
-    <div className={className}>
+    <EffectivenessErrorBoundary 
+      clientName={clientName}
+      fallback={
+        <div className={`w-full h-64 flex items-center justify-center ${className}`}>
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-sm text-red-600">Unable to load effectiveness radar chart</p>
+          </div>
+        </div>
+      }
+    >
+      <div className={className}>
       {/* Radar Chart */}
       <ResponsiveContainer width="100%" height={322}>
         <RadarChart data={data} style={{ backgroundColor: 'white' }}>
@@ -296,5 +309,6 @@ export function EffectivenessRadarChart({
         })}
       </div>
     </div>
+    </EffectivenessErrorBoundary>
   );
 }

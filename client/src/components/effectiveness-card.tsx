@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,60 +6,17 @@ import { RefreshCw, Eye, Clock, TrendingUp, RotateCcw, Sparkles } from "lucide-r
 import { ButtonLoadingSpinner } from "@/components/loading";
 import { useToast } from "@/hooks/use-toast";
 import { useProgressiveToasts } from "@/hooks/useProgressiveToasts";
+import { useEffectivenessData } from "@/hooks/useEffectivenessData";
+import { useEffectivenessActions } from "@/hooks/useEffectivenessActions";
 import { cn } from "@/lib/utils";
-import { EvidenceDrawer } from "./evidence-drawer";
-import { EffectivenessRadarChart } from "./charts/effectiveness-radar-chart";
-import { EffectivenessAIInsights } from "./effectiveness-ai-insights";
+import { EffectivenessErrorBoundary } from "./EffectivenessErrorBoundary";
 
-interface CriterionScore {
-  id: string;
-  criterion: string;
-  score: number;
-  evidence: {
-    description: string;
-    details: Record<string, any>;
-    reasoning: string;
-  };
-  passes: {
-    passed: string[];
-    failed: string[];
-  };
-}
+// Lazy load non-critical components to optimize bundle size
+const EvidenceDrawer = React.lazy(() => import("./evidence-drawer").then(module => ({ default: module.EvidenceDrawer })));
+const EffectivenessRadarChart = React.lazy(() => import("./charts/effectiveness-radar-chart").then(module => ({ default: module.EffectivenessRadarChart })));
+const EffectivenessAIInsights = React.lazy(() => import("./effectiveness-ai-insights").then(module => ({ default: module.EffectivenessAIInsights })));
 
-interface EffectivenessRun {
-  id: string;
-  overallScore: number;
-  status: 'pending' | 'initializing' | 'scraping' | 'analyzing' | 'tier1_analyzing' | 'tier1_complete' | 'tier2_analyzing' | 'tier2_complete' | 'tier3_analyzing' | 'completed' | 'failed' | 'generating_insights';
-  progress?: string;
-  progressDetail?: string | any;
-  createdAt: string;
-  criterionScores: CriterionScore[];
-  screenshotUrl?: string;
-  fullPageScreenshotUrl?: string;
-  aiInsights?: any;
-  insightsGeneratedAt?: string;
-}
 
-interface EffectivenessData {
-  client: {
-    id: string;
-    name: string;
-    websiteUrl: string;
-  };
-  run: EffectivenessRun | null;
-  competitorEffectivenessData?: {
-    competitor: {
-      id: string;
-      domain: string;
-      label: string;
-    };
-    run: {
-      overallScore: number;
-      criterionScores: CriterionScore[];
-    };
-  }[];
-  hasData: boolean;
-}
 
 interface EffectivenessCardProps {
   clientId: string;
@@ -69,9 +25,7 @@ interface EffectivenessCardProps {
 
 export function EffectivenessCard({ clientId, className }: EffectivenessCardProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [showEvidence, setShowEvidence] = useState(false);
-  // Removed manual polling state - using React Query refetchInterval instead
 
   // Fun rotating messages for analysis progress
   const funMessages = [
@@ -110,133 +64,46 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   // No manual cleanup needed - React Query handles polling lifecycle
 
-  // Fetch effectiveness data
-  const { data, isLoading, error } = useQuery<EffectivenessData>({
-    queryKey: ['effectiveness', clientId, 'v2'], // Add version to bust cache
-    queryFn: async () => {
-      const response = await fetch(`/api/effectiveness/latest/${clientId}`, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-        if (response.status === 403) {
-          throw new Error('Access denied');
-        } else if (response.status === 404) {
-          throw new Error('Client not found');
-        } else if (response.status >= 500) {
-          throw new Error('Server error - please try again later');
-        } else {
-          throw new Error(errorData.message || `HTTP ${response.status}`);
-        }
-      }
-      
-      return response.json();
-    },
-    refetchInterval: (query) => {
-      const status = query.state.data?.run?.status;
-      
-      if (!status) return false;
-      
-      const inProgressStatuses = ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'];
-      
-      if (!inProgressStatuses.includes(status)) return false;
-      
-      // Consistent 2-second polling during any analysis phase
-      return 2000;
-    },
-    placeholderData: (previousData) => previousData, // Keep showing previous data while loading
-    retry: (failureCount, error) => {
-      // Don't retry on client errors (4xx) except for brief network issues
-      if (error?.message?.includes('Access denied') || error?.message?.includes('not found')) {
-        return false;
-      }
-      // Retry server errors and network issues up to 3 times with exponential backoff
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1s, 2s, 4s, max 30s
-    staleTime: 30000,
-    enabled: !!clientId
-  });
+  // Use new simple data layer hooks
+  const { 
+    data, 
+    run, 
+    client, 
+    competitorData,
+    isInProgress,
+    isCompleted,
+    isFailed,
+    hasData,
+    progress,
+    progressString,
+    progressDetail,
+    isLoading,
+    isError,
+    error,
+    isRefetching
+  } = useEffectivenessData(clientId);
 
-  // Refresh mutation
-  const refreshMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/effectiveness/refresh/${clientId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-        
-        if (response.status === 429) {
-          // Cooldown active
-          const hours = errorData.remainingHours || 'several';
-          throw new Error(`Please wait ${hours} hours before requesting another analysis`);
-        } else if (response.status === 403) {
-          throw new Error('Access denied');
-        } else if (response.status === 404) {
-          throw new Error('Website not found');
-        } else if (response.status >= 500) {
-          throw new Error('Server error - please try again later');
-        } else {
-          throw new Error(errorData.message || 'Failed to start analysis');
-        }
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Scoring Started",
-        description: "Website effectiveness scoring has been initiated. Results will appear shortly.",
-        duration: 5000
-      });
-      
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['effectiveness', clientId, 'v2'] });
-    },
-    onError: (error: Error) => {
-      let title = "Scoring Failed";
-      let description = error.message;
-      
-      // Special handling for cooldown errors
-      if (error.message.includes('wait') && error.message.includes('hours')) {
-        title = "Too Soon to Re-analyze";
-        description = error.message;
-      }
-      
-      toast({
-        title,
-        description,
-        variant: "destructive",
-        duration: 8000
-      });
-    }
-  });
+  // Use new simple actions hook
+  const {
+    startAnalysis,
+    forceRestartAnalysis,
+    refreshData,
+    isStarting,
+    startError
+  } = useEffectivenessActions(clientId);
 
   // Manual polling removed - using React Query refetchInterval instead
 
   const handleRefresh = () => {
-    refreshMutation.mutate();
-    // React Query handles polling automatically
+    startAnalysis();
   };
 
-  const handleViewEvidence = () => {
+  // Memoize callback functions to prevent child re-renders
+  const handleViewEvidence = React.useCallback(() => {
     setShowEvidence(true);
-  };
+  }, []);
 
-  // Get criterion color based on score
-  const getCriterionColor = (score: number) => {
-    if (score >= 8) return 'bg-green-100 text-green-800 border-green-300';
-    if (score >= 6) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-    return 'bg-red-100 text-red-800 border-red-300';
-  };
-
-  // Format date for display - matches AI insights timestamp format
-  const formatDate = (dateString: string | undefined) => {
+  const formatDate = React.useCallback((dateString: string | undefined) => {
     if (!dateString) return 'Unknown date';
     return new Date(dateString).toLocaleString("en-US", {
       month: "short",
@@ -246,10 +113,9 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       minute: "2-digit",
       hour12: true,
     });
-  };
+  }, []);
 
-  // Get effectiveness status based on score
-  const getEffectivenessStatus = (score: number) => {
+  const getEffectivenessStatus = React.useCallback((score: number) => {
     if (score > 7.99) {
       return { text: "Very Effective", color: "text-green-600" };
     } else if (score > 3.99) {
@@ -257,54 +123,29 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     } else {
       return { text: "Not Effective", color: "text-red-600" };
     }
-  };
+  }, []);
+  
+  const canRefresh = !isInProgress && !isStarting;
 
-  const run = data?.run;
-  const isAnalyzing = run?.status ? ['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier1_complete', 'tier2_analyzing', 'tier2_complete', 'tier3_analyzing', 'generating_insights'].includes(run.status) : false;
-  const canRefresh = !isAnalyzing && !refreshMutation.isPending;
 
-  // Parse progress detail with better error handling
+  // Parse progress detail for enhanced display
   let progressState = null;
-  if (run?.progressDetail) {
+  if (progressDetail) {
     try {
-      progressState = typeof run.progressDetail === 'string' 
-        ? JSON.parse(run.progressDetail) 
-        : run.progressDetail;
-      console.log('Parsed progress state:', progressState); // Debug log
+      progressState = typeof progressDetail === 'string' 
+        ? JSON.parse(progressDetail) 
+        : progressDetail;
     } catch (e) {
-      console.error('Failed to parse progressDetail:', e);
+      // Keep as string if parsing fails
+      progressState = null;
     }
   }
 
-  // Use the overallPercent from progressState, with status-based fallbacks
-  const progressPercentage = progressState?.overallPercent ?? 
-    (run?.status === 'initializing' ? 5 :
-     run?.status === 'scraping' ? 15 :
-     run?.status === 'tier1_analyzing' ? 30 :
-     run?.status === 'tier1_complete' ? 40 :
-     run?.status === 'tier2_analyzing' ? 55 :
-     run?.status === 'tier2_complete' ? 70 :
-     run?.status === 'tier3_analyzing' ? 85 :
-     run?.status === 'generating_insights' ? 95 : 0);
+  // Use progress from hook (already parsed as percentage)
+  const progressPercentage = progress;
+  const progressMessage = progressString || 'Starting analysis...';
 
-  console.log('Progress percentage:', progressPercentage); // Debug log
-  
-  // Use the user-friendly message from tracker
-  const progressMessage = progressState?.message || run?.progress || 'Starting analysis...';
-
-  // Debug logging for progress changes
-  useEffect(() => {
-    if (run?.status && isAnalyzing) {
-      console.log('Run status update:', {
-        status: run.status,
-        progress: run.progress,
-        progressDetail: run.progressDetail,
-        progressPercentage
-      });
-    }
-  }, [run?.status, run?.progress, progressPercentage, isAnalyzing]);
-
-  // Show time information after 30 seconds
+  // Show time information if available
   const showTimeInfo = progressState && progressState.timeElapsed > 30000;
 
   // Progressive toast notifications for milestone completions
@@ -313,29 +154,40 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     progress: progressMessage,
     overallScore: run?.overallScore,
     criterionScores: run?.criterionScores
-  }, data?.client?.name);
+  }, client?.name);
 
   return (
-    <>
-      <Card className={cn("relative", className)}>
+    <EffectivenessErrorBoundary clientName={client?.name}>
+      <Card 
+        className={cn("relative", className)}
+        role="region"
+        aria-label="Website Effectiveness Analysis"
+        aria-describedby="effectiveness-description"
+      >
         <CardHeader className="pb-3">
           <CardTitle className="text-lg lg:text-xl flex justify-between items-start">
             <div className="flex flex-col gap-2">
-              <span>Website Effectiveness Engine™ Audit</span>
-              {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
+              <span id="effectiveness-description">Website Effectiveness Engine™ Audit</span>
+              {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
                 <span 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 w-fit"
                   data-testid="effectiveness-status-chip"
+                  role="status"
+                  aria-label={`Website effectiveness rating: ${getEffectivenessStatus(run.overallScore).text}`}
                 >
-                  <span>Your Website is</span>
+                  <span aria-hidden="true">Your Website is</span>
                   <span className={`font-semibold ${getEffectivenessStatus(run.overallScore).color}`}>
                     {getEffectivenessStatus(run.overallScore).text}
                   </span>
                 </span>
               )}
             </div>
-            {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
-              <span className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0">
+            {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+              <span 
+                className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0"
+                role="status"
+                aria-label={`Overall effectiveness score: ${run.overallScore} out of 10`}
+              >
                 {run.overallScore}
               </span>
             )}
@@ -344,25 +196,86 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
         <CardContent>
           {isLoading && (
-            <div className="flex items-center justify-center py-8">
+            <div 
+              className="flex items-center justify-center py-8"
+              role="status"
+              aria-live="polite"
+              aria-label="Loading effectiveness data"
+            >
               <ButtonLoadingSpinner size="md" />
+              <span className="sr-only">Loading website effectiveness analysis...</span>
             </div>
           )}
 
           {error && (
-            <div className="text-center py-8">
+            <div 
+              className="text-center py-8"
+              role="alert"
+              aria-live="assertive"
+            >
               <div className="mb-3">
                 <p className="text-muted-foreground text-sm">
                   {error.message?.includes('Access denied') ? 'Access denied' :
                    error.message?.includes('not found') ? 'Data not available' :
                    error.message?.includes('Server error') ? 'Server temporarily unavailable' :
+                   error.message?.includes('VALIDATION_ERROR') ? 'Data validation failed - please retry' :
+                   error.message?.includes('NETWORK_ERROR') ? 'Network connection issue - please check your connection' :
+                   error.message?.includes('timeout') ? 'Request timed out - please try again' :
                    'Failed to load effectiveness data'}
                 </p>
                 {!error.message?.includes('Access denied') && (
-                  <Button variant="outline" onClick={() => window.location.reload()} className="mt-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.reload()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        window.location.reload();
+                      }
+                    }}
+                    className="mt-3"
+                    aria-describedby="refresh-page-description"
+                    tabIndex={0}
+                  >
                     Refresh Page
                   </Button>
                 )}
+                <span id="refresh-page-description" className="sr-only">
+                  This will reload the entire page to resolve the error
+                </span>
+              </div>
+            </div>
+          )}
+
+          {run && !run.criterionScores && (
+            <div className="text-center py-8">
+              <div className="mb-3">
+                <p className="text-muted-foreground text-sm">
+                  Effectiveness data appears incomplete. This may be due to a recent run or data processing issue.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefresh} 
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && canRefresh) {
+                      e.preventDefault();
+                      handleRefresh();
+                    }
+                  }}
+                  disabled={!canRefresh} 
+                  className="mt-3"
+                  aria-label="Refresh effectiveness data"
+                  tabIndex={0}
+                >
+                  {isStarting ? (
+                    <>
+                      <ButtonLoadingSpinner size="sm" className="mr-2" />
+                      Refreshing...
+                    </>
+                  ) : (
+                    "Refresh Data"
+                  )}
+                </Button>
               </div>
             </div>
           )}
@@ -372,8 +285,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <p className="text-muted-foreground mb-4">
                 No effectiveness data available
               </p>
-              <Button onClick={handleRefresh} disabled={!canRefresh}>
-                {refreshMutation.isPending ? (
+              <Button 
+                onClick={handleRefresh} 
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && canRefresh) {
+                    e.preventDefault();
+                    handleRefresh();
+                  }
+                }}
+                disabled={!canRefresh}
+                aria-label="Start website effectiveness analysis"
+                tabIndex={0}
+              >
+                {isStarting ? (
                   <>
                     <ButtonLoadingSpinner size="sm" className="mr-2" />
                     Scoring Website...
@@ -385,17 +309,29 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && isAnalyzing && (
-            <div className="text-center py-8">
+          {run && isInProgress && (
+            <div 
+              className="text-center py-8"
+              role="status"
+              aria-live="polite"
+              aria-label="Effectiveness analysis in progress"
+            >
               <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2">
                     <ButtonLoadingSpinner size="sm" />
-                    <span className="text-muted-foreground font-medium">
+                    <span 
+                      className="text-muted-foreground font-medium"
+                      id="progress-status"
+                      role="status"
+                    >
                       {progressMessage || 'Starting analysis...'}
                     </span>
                     {progressPercentage > 0 && (
-                      <span className="text-xs font-mono text-muted-foreground">
+                      <span 
+                        className="text-xs font-mono text-muted-foreground"
+                        aria-label={`Analysis ${progressPercentage} percent complete`}
+                      >
                         {progressPercentage}%
                       </span>
                     )}
@@ -404,13 +340,24 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   {/* Progress bar with percentage */}
                   {progressPercentage > 0 && (
                     <div className="w-full max-w-md mx-auto">
-                      <div className="bg-secondary rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-secondary rounded-full h-2 overflow-hidden"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.min(progressPercentage, 100)}
+                        aria-labelledby="progress-status"
+                        aria-describedby="progress-description"
+                      >
                         <div 
                           className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
                           style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                         />
                       </div>
-                      <div className="text-xs text-center text-muted-foreground mt-1">
+                      <div 
+                        className="text-xs text-center text-muted-foreground mt-1"
+                        id="progress-description"
+                      >
                         {progressPercentage}% complete
                       </div>
                     </div>
@@ -418,7 +365,11 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   
                   {/* Time remaining info after 30 seconds */}
                   {showTimeInfo && progressState.timeRemaining > 0 && (
-                    <div className="text-xs text-muted-foreground">
+                    <div 
+                      className="text-xs text-muted-foreground"
+                      role="status"
+                      aria-live="polite"
+                    >
                       {Math.ceil(progressState.timeRemaining / 1000)} seconds remaining
                       {progressState.pace === 'slower' && ' (running slower than usual)'}
                     </div>
@@ -446,7 +397,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </div>
               )}
               <Button onClick={handleRefresh} disabled={!canRefresh}>
-                {refreshMutation.isPending ? (
+                {isStarting ? (
                   <>
                     <ButtonLoadingSpinner size="sm" className="mr-2" />
                     Scoring Website...
@@ -466,7 +417,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <p className="text-muted-foreground mb-2">Analysis completed but no scores available</p>
               <p className="text-sm text-amber-600 mb-4">There may have been an issue during scoring</p>
               <Button onClick={handleRefresh} disabled={!canRefresh}>
-                {refreshMutation.isPending ? (
+                {isStarting ? (
                   <>
                     <ButtonLoadingSpinner size="sm" className="mr-2" />
                     Scoring Website...
@@ -481,7 +432,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
+          {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
             <div className="space-y-4">
               {/* Two-column layout */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
@@ -490,19 +441,26 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-gray-900" />
-                      Pulse AI Insights for {data.client.name}
+                      Pulse AI Insights for {client?.name || 'Unknown Client'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="h-full flex flex-col">
-                    <EffectivenessAIInsights
-                      clientId={clientId}
-                      runId={run.id}
-                      clientName={data.client.name}
-                      overallScore={run.overallScore}
-                      className="flex-1"
-                      aiInsights={run.aiInsights}
-                      insightsGeneratedAt={run.insightsGeneratedAt}
-                    />
+                    <React.Suspense fallback={
+                      <div className="flex items-center justify-center h-32">
+                        <ButtonLoadingSpinner size="sm" />
+                        <span className="ml-2 text-sm text-muted-foreground">Loading insights...</span>
+                      </div>
+                    }>
+                      <EffectivenessAIInsights
+                        clientId={clientId}
+                        runId={run.id}
+                        clientName={client?.name || 'Unknown Client'}
+                        overallScore={run.overallScore}
+                        className="flex-1"
+                        aiInsights={run.aiInsights}
+                        insightsGeneratedAt={run.insightsGeneratedAt}
+                      />
+                    </React.Suspense>
                   </CardContent>
                 </Card>
 
@@ -512,12 +470,19 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     <CardTitle className="text-base">Effectiveness Scores</CardTitle>
                   </CardHeader>
                   <CardContent className="h-full flex flex-col">
-                    <EffectivenessRadarChart 
-                      criterionScores={run.criterionScores}
-                      competitorEffectivenessData={data.competitorEffectivenessData || []}
-                      clientName={data.client.name}
-                      className="w-full"
-                    />
+                    <React.Suspense fallback={
+                      <div className="flex items-center justify-center h-32">
+                        <ButtonLoadingSpinner size="sm" />
+                        <span className="ml-2 text-sm text-muted-foreground">Loading chart...</span>
+                      </div>
+                    }>
+                      <EffectivenessRadarChart 
+                        criterionScores={run.criterionScores}
+                        competitorEffectivenessData={competitorData || []}
+                        clientName={client?.name || 'Unknown Client'}
+                        className="w-full"
+                      />
+                    </React.Suspense>
                   </CardContent>
                 </Card>
               </div>
@@ -526,8 +491,16 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               <div className="pt-2 flex justify-center">
                 <Button
                   onClick={handleViewEvidence}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleViewEvidence();
+                    }
+                  }}
                   className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white transition-all duration-200"
                   size="default"
+                  aria-label="View detailed effectiveness analysis report"
+                  tabIndex={0}
                 >
                   View Detailed Report
                 </Button>
@@ -546,7 +519,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     disabled={!canRefresh}
                     className="text-slate-500 hover:text-slate-700 h-7 px-2"
                   >
-                    {refreshMutation.isPending ? (
+                    {isStarting ? (
                       <ButtonLoadingSpinner size="sm" />
                     ) : (
                       <RotateCcw className="h-3 w-3" />
@@ -560,23 +533,25 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       </Card>
 
       {/* Evidence Drawer */}
-      {run && run.status === 'completed' && run.criterionScores && run.criterionScores.length > 0 && (
-        <EvidenceDrawer
-          isOpen={showEvidence}
-          onClose={() => setShowEvidence(false)}
-          clientId={clientId}
-          clientRun={run}
-          competitorData={data?.competitorEffectivenessData?.map(item => ({
-            ...item,
-            run: {
-              ...item.run,
-              id: `competitor-${item.competitor.id}`,
-              createdAt: new Date().toISOString(),
-              status: 'completed' as const
-            }
-          })) || []}
-        />
+      {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+        <React.Suspense fallback={null}>
+          <EvidenceDrawer
+            isOpen={showEvidence}
+            onClose={() => setShowEvidence(false)}
+            clientId={clientId}
+            clientRun={run}
+            competitorData={competitorData?.map(item => ({
+              ...item,
+              run: {
+                ...item.run,
+                id: `competitor-${item.competitor.id}`,
+                createdAt: new Date().toISOString(),
+                status: 'completed' as const
+              }
+            })) || []}
+          />
+        </React.Suspense>
       )}
-    </>
+    </EffectivenessErrorBoundary>
   );
 }

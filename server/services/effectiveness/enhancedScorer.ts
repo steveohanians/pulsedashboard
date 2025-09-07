@@ -54,6 +54,7 @@ export class EnhancedWebsiteEffectivenessScorer {
       // ✅ CHECKPOINT RECOVERY: Check if we can continue from a previous checkpoint
       let skipToPhase: string | null = null;
       let existingResults: Partial<EffectivenessResult> = {};
+      let progressiveResults: ProgressiveResults;
       
       if (runId) {
         const recovery = await smartTimeoutManager.canContinueFromCheckpoint(runId);
@@ -227,7 +228,7 @@ export class EnhancedWebsiteEffectivenessScorer {
       ) : '';
 
       try {
-        const progressiveResults = runId ?
+        progressiveResults = runId ?
           await smartTimeoutManager.createTimeoutPromise(
             this.tieredExecutor.executeAllTiers(
               context,

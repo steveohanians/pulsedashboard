@@ -166,12 +166,22 @@ app.use((req, res, next) => {
     
     // Handle uncaught errors
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
+      logger.error('Uncaught Exception:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       process.exit(1);
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection:', { promise, reason });
+      logger.error('Unhandled Rejection:', { 
+        reason: reason instanceof Error ? {
+          message: reason.message,
+          stack: reason.stack,
+          name: reason.name
+        } : reason
+      });
       process.exit(1);
     });
 

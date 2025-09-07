@@ -2490,7 +2490,26 @@ export class DatabaseStorage implements IStorage {
 
   // Website Effectiveness Scoring Methods
   async getLatestEffectivenessRun(clientId: string): Promise<any> {
-    const results = await db
+    // First try to get the latest completed run
+    const completedResults = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        isNull(effectivenessRuns.competitorId), // Only client runs, not competitor runs
+        eq(effectivenessRuns.status, 'completed')
+      ))
+      .orderBy(desc(effectivenessRuns.createdAt))
+      .limit(1);
+    
+    // If we have a completed run, return it
+    if (completedResults.length > 0) {
+      return completedResults[0];
+    }
+    
+    // If no completed run exists, fall back to latest run of any status
+    // This handles cases where there's an in-progress run or only failed runs
+    const allResults = await db
       .select()
       .from(effectivenessRuns)
       .where(and(
@@ -2500,7 +2519,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(effectivenessRuns.createdAt))
       .limit(1);
     
-    return results[0];
+    return allResults[0];
   }
 
   async getLatestEffectivenessRunByCompetitor(clientId: string, competitorId: string): Promise<any> {

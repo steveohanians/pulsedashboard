@@ -11,7 +11,8 @@ export type CacheEntity =
   | 'ga4'
   | 'insight'
   | 'dashboard'
-  | 'metric';
+  | 'metric'
+  | 'effectiveness';
 
 interface InvalidationRule {
   entities: CacheEntity[];
@@ -129,6 +130,17 @@ export class CacheManager {
         () => [...AdminQueryKeys.allDashboards()],
         () => ['/api/dashboard'],
         () => ['/api/filters']
+      ]
+    });
+
+    // When effectiveness changes
+    this.invalidationRules.set('effectiveness', {
+      entities: [],
+      queryKeys: [
+        () => ['/api/effectiveness/latest'],
+        () => ['/api/effectiveness/evidence'],
+        () => ['/api/effectiveness/insights'],
+        () => [...AdminQueryKeys.effectivenessPromptTemplates()]
       ]
     });
   }
