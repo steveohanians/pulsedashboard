@@ -591,7 +591,6 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
               ...item,
               run: {
                 ...item.run,
-                id: `competitor-${item.competitor.id}`,
                 createdAt: item.run?.createdAt || new Date().toISOString(),
                 status: item.run?.status || 'completed' as const
               }

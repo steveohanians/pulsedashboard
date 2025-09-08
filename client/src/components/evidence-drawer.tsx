@@ -487,19 +487,6 @@ export function EvidenceDrawer({
     ? clientRun
     : competitorData.find(comp => comp.run.id === selectedRunId)?.run;
   
-  // Debug: Log screenshot URLs when switching to competitor
-  useEffect(() => {
-    if (selectedRunType === 'competitor' && currentRunData) {
-      console.log('Competitor run data:', {
-        id: currentRunData.id,
-        screenshotUrl: currentRunData.screenshotUrl,
-        fullPageScreenshotUrl: currentRunData.fullPageScreenshotUrl,
-        hasScreenshot: !!currentRunData.screenshotUrl,
-        screenshotLength: currentRunData.screenshotUrl?.length
-      });
-    }
-  }, [selectedRunType, currentRunData]);
-
   // Reset selection when drawer opens with cleanup
   useEffect(() => {
     if (isOpen && !isUnmountedRef.current) {
@@ -874,7 +861,7 @@ export function EvidenceDrawer({
                   Website Effectiveness Report
                 </DrawerTitle>
                 <DrawerDescription className="text-left">
-                  Detailed analysis and evidence for {currentRunData?.overallScore} score • {formatDate(currentRunData?.createdAt || '')}
+                  Detailed analysis and evidence for <span className="font-bold text-black">{currentRunData?.overallScore}</span> score • {formatDate(currentRunData?.createdAt || '')}
                 </DrawerDescription>
               </div>
               <DrawerClose asChild>
@@ -1087,32 +1074,63 @@ export function EvidenceDrawer({
                         />
                       )}
                       
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">Core Web Vitals</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {/* Check if speed criterion has API error */}
-                            {categorizedScores.performance.length > 0 && 
-                             categorizedScores.performance[0].evidence?.details?.apiStatus === 'failed' ? (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-orange-600 border-orange-200">
-                                    Data Unavailable
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {categorizedScores.performance[0].evidence?.details?.error === 'quota_exceeded' 
-                                    ? "PageSpeed API quota exceeded. Web Vitals cannot be retrieved at this time."
-                                    : "Unable to fetch Core Web Vitals data from PageSpeed API."}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Please try again later or check API configuration.
-                                </p>
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">Speed</CardTitle>
+                            {categorizedScores.performance.length > 0 && (
+                              <div className="text-2xl lg:text-3xl font-light text-primary">
+                                {categorizedScores.performance[0].score}
                               </div>
-                            ) : (
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {/* Check if speed criterion has API error */}
+                          {categorizedScores.performance.length > 0 && 
+                           categorizedScores.performance[0].evidence?.details?.apiStatus === 'failed' ? (
                             <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-orange-600 border-orange-200">
+                                  Data Unavailable
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {categorizedScores.performance[0].evidence?.details?.error === 'quota_exceeded' 
+                                  ? "PageSpeed API quota exceeded. Performance metrics cannot be retrieved at this time."
+                                  : "Unable to fetch performance data from PageSpeed API."}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Please try again later or check API configuration.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {/* Performance Score */}
+                              {categorizedScores.performance.length > 0 && 
+                               categorizedScores.performance[0].evidence?.details?.performanceScore && (
+                                <div className="pb-3 border-b">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium">PageSpeed Score</span>
+                                    <Badge 
+                                      variant="outline"
+                                      className={cn(
+                                        categorizedScores.performance[0].evidence.details.performanceScore >= 80 ? "text-green-600 border-green-200" :
+                                        categorizedScores.performance[0].evidence.details.performanceScore >= 50 ? "text-yellow-600 border-yellow-200" : 
+                                        "text-red-600 border-red-200"
+                                      )}
+                                    >
+                                      {Math.round(categorizedScores.performance[0].evidence.details.performanceScore)}/100
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Based on PageSpeed Insights analysis
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Core Web Vitals */}
+                              <div className="space-y-3">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">Largest Contentful Paint</span>
                                 {(() => {
@@ -1173,66 +1191,11 @@ export function EvidenceDrawer({
                                   );
                                 })()}
                               </div>
+                              </div>
                             </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">Performance Score</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {categorizedScores.performance.length > 0 ? (
-                              categorizedScores.performance[0].evidence?.details?.apiStatus === 'failed' ? (
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-red-600 border-red-200">
-                                      API Error
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {categorizedScores.performance[0].evidence.description || "Performance data unavailable"}
-                                  </p>
-                                  {categorizedScores.performance[0].evidence?.details?.error === 'quota_exceeded' && (
-                                    <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
-                                      PageSpeed API quota exceeded. Try again later or check API limits.
-                                    </div>
-                                  )}
-                                </div>
-                              ) : categorizedScores.performance[0].evidence?.details?.performanceScore ? (
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm">PageSpeed Score</span>
-                                    <Badge 
-                                      variant="outline"
-                                      className={cn(
-                                        "text-lg font-semibold px-3 py-1",
-                                        categorizedScores.performance[0].evidence.details.performanceScore >= 80 ? "text-green-600 border-green-200" :
-                                        categorizedScores.performance[0].evidence.details.performanceScore >= 50 ? "text-yellow-600 border-yellow-200" : 
-                                        "text-red-600 border-red-200"
-                                      )}
-                                    >
-                                      {Math.round(categorizedScores.performance[0].evidence.details.performanceScore)}/100
-                                    </Badge>
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Based on PageSpeed Insights analysis
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  Performance metrics will be populated from PageSpeed Insights API integration
-                                </p>
-                              )
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                Performance metrics will be populated from PageSpeed Insights API integration
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+                          )}
+                        </CardContent>
+                      </Card>
 
                       {/* Speed criterion details removed from Web Vitals tab */}
                     </div>
