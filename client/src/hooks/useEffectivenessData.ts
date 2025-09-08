@@ -6,8 +6,10 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
 import { effectivenessApi, EffectivenessData } from "@/services/api/EffectivenessApiService";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
+import { deriveEffectiveStatus, shouldContinuePolling, type EffectiveStatus } from "@/utils/status-utils";
 
 // Timing constants based on actual test results
 const POLLING_CONFIG = {
@@ -24,22 +26,40 @@ const POLLING_CONFIG = {
   staleTime: 30000,
 };
 
-// Status groups for polling logic
-const IN_PROGRESS_STATUSES = [
-  'pending', 
-  'initializing', 
-  'scraping', 
-  'analyzing',
-  'tier1_analyzing', 
-  'tier1_complete',
-  'tier2_analyzing', 
-  'tier2_complete', 
-  'tier3_analyzing',
-  'generating_insights'
-] as const;
+// Status constants moved to status-utils.ts for centralized management
 
-const COMPLETED_STATUSES = ['completed'] as const;
-const FAILED_STATUSES = ['failed'] as const;
+/**
+ * Progress smoothing utility - prevents backward progress jumps
+ * Ensures progress only moves forward and handles completion transitions properly
+ */
+function useSmoothProgress(currentProgress: number, status: EffectiveStatus, runId?: string) {
+  const progressRef = useRef<{lastProgress: number, lastRunId?: string}>({
+    lastProgress: 0,
+    lastRunId: undefined
+  });
+
+  // Reset if this is a new run
+  if (runId !== progressRef.current.lastRunId) {
+    progressRef.current = {
+      lastProgress: 0,
+      lastRunId: runId
+    };
+  }
+
+  // For completed/failed runs, show 100%
+  if (status === 'completed' || status === 'failed') {
+    progressRef.current.lastProgress = 100;
+    return 100;
+  }
+
+  // Ensure progress never goes backward (unless resetting for new run)
+  const smoothedProgress = Math.max(currentProgress, progressRef.current.lastProgress);
+  
+  // Update our reference for next time
+  progressRef.current.lastProgress = smoothedProgress;
+  
+  return smoothedProgress;
+}
 
 interface UseEffectivenessDataOptions {
   /** Enable automatic polling for in-progress runs */
@@ -69,34 +89,28 @@ export function useEffectivenessData(
       return await effectivenessApi.getLatestEffectiveness(clientId);
     },
     
-    // Polling logic based on run status
+    // Polling logic based on effective status
     refetchInterval: (query) => {
       if (!enablePolling) return false;
       
-      const status = query.state.data?.run?.status;
-      if (!status) return false;
+      const run = query.state.data?.run;
+      const effectiveStatus = deriveEffectiveStatus(run);
       
-      // Don't poll completed or failed runs
-      if (COMPLETED_STATUSES.includes(status as any) || 
-          FAILED_STATUSES.includes(status as any)) {
+      // Use status utility to determine if polling should continue
+      if (!shouldContinuePolling(effectiveStatus)) {
         return false;
       }
       
-      // Poll in-progress runs
-      if (IN_PROGRESS_STATUSES.includes(status as any)) {
-        // Use custom interval or default based on progress
-        if (pollInterval) return pollInterval;
-        
-        // Faster polling for early stages, slower for completion
-        const progress = query.state.data?.run?.progress || '0%';
-        const progressNum = parseInt(progress.replace('%', '')) || 0;
-        
-        return progressNum > 90 ? 
-          POLLING_CONFIG.completionInterval : 
-          POLLING_CONFIG.activeInterval;
-      }
+      // Use custom interval or default based on progress
+      if (pollInterval) return pollInterval;
       
-      return false;
+      // Faster polling for early stages, slower for completion
+      const progress = run?.progress || '0%';
+      const progressNum = parseInt(progress.replace('%', '')) || 0;
+      
+      return progressNum > 90 ? 
+        POLLING_CONFIG.completionInterval : 
+        POLLING_CONFIG.activeInterval;
     },
     
     // Stop polling after max duration to prevent infinite loops
@@ -104,7 +118,7 @@ export function useEffectivenessData(
     
     // Cache settings
     staleTime: POLLING_CONFIG.staleTime,
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime in React Query v5)
     
     // Retry logic
     retry: (failureCount, error) => {
@@ -122,16 +136,22 @@ export function useEffectivenessData(
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
   });
 
-  // Derived state
+  // Derived state using status utility
   const run = query.data?.run;
-  const isInProgress = run?.status ? IN_PROGRESS_STATUSES.includes(run.status as any) : false;
-  const isCompleted = run?.status ? COMPLETED_STATUSES.includes(run.status as any) : false;
-  const isFailed = run?.status ? FAILED_STATUSES.includes(run.status as any) : false;
+  const effectiveStatus = deriveEffectiveStatus(run);
+  
+  // Legacy compatibility flags (derived from effective status)
+  const isInProgress = effectiveStatus === 'running';
+  const isCompleted = effectiveStatus === 'completed';
+  const isFailed = effectiveStatus === 'failed';
+  const isPartial = effectiveStatus === 'partial';
+  
   const hasData = query.data?.hasData || false;
   
-  // Progress parsing
+  // Progress parsing with smoothing to prevent backward jumps
   const progressString = run?.progress || '0%';
-  const progressPercent = parseInt(progressString.replace('%', '')) || 0;
+  const rawProgressPercent = parseInt(progressString.replace('%', '')) || 0;
+  const smoothedProgress = useSmoothProgress(rawProgressPercent, effectiveStatus, run?.id);
   
   // Progress detail parsing - handle both string and object formats
   let progressDetail = null;
@@ -152,16 +172,21 @@ export function useEffectivenessData(
     client: query.data?.client,
     competitorData: query.data?.competitorEffectivenessData,
     
-    // Status flags
+    // Enhanced status system
+    effectiveStatus,
+    
+    // Legacy status flags (for backward compatibility)
     isInProgress,
     isCompleted,
     isFailed,
+    isPartial,
     hasData,
     
-    // Progress info
-    progress: progressPercent,
+    // Progress info (smoothed to prevent backward jumps)
+    progress: smoothedProgress,
     progressString,
     progressDetail,
+    rawProgress: rawProgressPercent, // Keep raw progress for debugging
     
     // Query state
     isLoading: query.isLoading,

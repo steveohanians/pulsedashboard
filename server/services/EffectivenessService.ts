@@ -14,6 +14,7 @@ import { parallelDataCollector } from './effectiveness/parallelDataCollector.js'
 import { EffectivenessConfigManager } from './effectiveness/config.js';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { logger } from '../utils/logging/logger.js';
+import { createProgressTracker, getProgressTracker, clearProgressTracker } from './effectiveness/progressTracker.js';
 
 interface AnalysisProgress {
   runId: string;
@@ -141,30 +142,34 @@ class EffectivenessService {
    * Follows the exact step structure from test_effectiveness_complete.ts
    */
   private async processAnalysisAsync(runId: string, client: any): Promise<void> {
+    const tracker = createProgressTracker();
+    
     try {
       logger.info('Starting async analysis processing', { runId, clientId: client.id });
 
-      // Update progress
-      await this.updateProgress(runId, 'initializing', 5, 'Initializing analysis...');
-
-      // Get competitors
+      // Get competitors and initialize tracker
       const competitors = await storage.getCompetitorsByClient(client.id);
+      tracker.setCompetitorCount(competitors.length);
       
+      // Update initial progress
+      await this.syncProgressFromTracker(runId, tracker);
+
       // Process client (main analysis)
-      await this.processClient(runId, client);
+      await this.processClient(runId, client, tracker);
 
       // Process competitors
-      await this.processCompetitors(runId, client.id, competitors);
+      await this.processCompetitors(runId, client.id, competitors, tracker);
 
       // Complete analysis
-      await this.completeAnalysis(runId);
+      await this.completeAnalysis(runId, tracker);
 
     } catch (error) {
       logger.error('Analysis failed', { runId, error: error instanceof Error ? error.message : String(error) });
       
       await storage.updateEffectivenessRun(runId, {
         status: 'failed',
-        progress: `Analysis failed: ${error instanceof Error ? error.message : String(error)}`
+        progress: '0%',
+        progressDetail: `Analysis failed: ${error instanceof Error ? error.message : String(error)}`
       });
 
       // Update in-memory tracking
@@ -174,6 +179,9 @@ class EffectivenessService {
         job.progressDetail = `Failed: ${error instanceof Error ? error.message : String(error)}`;
       }
     } finally {
+      // Clean up progress tracker
+      clearProgressTracker();
+      
       // Clean up in-memory tracking after completion/failure
       setTimeout(() => this.runningJobs.delete(runId), 60000); // Keep for 1 minute for status checks
     }
@@ -182,110 +190,296 @@ class EffectivenessService {
   /**
    * Process client analysis - Extracted from test file
    */
-  private async processClient(runId: string, client: any): Promise<void> {
+  private async processClient(runId: string, client: any, tracker: any): Promise<void> {
     const url = client.websiteUrl;
     
-    // Step 1: Data Collection (10% -> 25%)
-    await this.updateProgress(runId, 'scraping', 10, 'Collecting website data...');
+    // Start client analysis
+    tracker.startClient(client.domain || client.websiteUrl);
+    await this.syncProgressFromTracker(runId, tracker);
     
     const config = await this.configManager.getConfig();
     const dataResult = await parallelDataCollector.collectAllData(url, config);
     
-    // Step 2: Tier 1 Analysis (25% -> 40%)
-    await this.updateProgress(runId, 'tier1_analyzing', 25, 'Running fast HTML analysis...');
-    
-    const tier1Results = await this.scorer.runTier1Analysis(url, dataResult);
-    
-    await this.updateProgress(runId, 'tier1_complete', 40, 'Tier 1 analysis complete');
+    // Run Progressive Analysis - now without progress conflicts
+    const finalResults = await this.scorer.scoreWebsiteProgressive(url, runId);
 
-    // Step 3: Tier 2 AI Analysis (40% -> 70%)
-    await this.updateProgress(runId, 'tier2_analyzing', 40, 'Running AI-powered analysis...');
-    
-    const tier2Results = await this.scorer.runTier2Analysis(url, dataResult, tier1Results);
-    
-    await this.updateProgress(runId, 'tier2_complete', 70, 'Tier 2 analysis complete');
+    // Mark all 8 criteria as complete for client
+    for (let i = 0; i < 8; i++) {
+      tracker.completeCriterion(`criterion_${i+1}`, true);
+    }
+    await this.syncProgressFromTracker(runId, tracker);
 
-    // Step 4: Tier 3 External APIs (70% -> 85%)
-    await this.updateProgress(runId, 'tier3_analyzing', 70, 'Running external API analysis...');
-    
-    const tier3Results = await this.scorer.runTier3Analysis(url, dataResult);
-
-    // Step 5: Final Scoring (85% -> 95%)
-    await this.updateProgress(runId, 'analyzing', 85, 'Calculating final scores...');
-    
-    const finalResults = await this.scorer.aggregateResults({
-      ...tier1Results,
-      ...tier2Results, 
-      ...tier3Results
+    // Log results structure for debugging
+    logger.info('Scorer returned results', { 
+      runId, 
+      hasOverallScore: !!finalResults.overallScore,
+      hasCriterionResults: !!finalResults.criterionResults,
+      criteriaCount: finalResults.criterionResults?.length,
+      hasScreenshotUrl: !!finalResults.screenshotUrl,
+      hasFullPageUrl: !!finalResults.fullPageScreenshotUrl
     });
 
-    // Save to database atomically
-    await this.saveClientResults(runId, finalResults, dataResult);
-    
-    await this.updateProgress(runId, 'analyzing', 95, 'Client analysis complete');
+    // Save to database atomically - use finalResults for screenshot URLs since scorer handles its own data collection
+    await this.saveClientResults(runId, finalResults, finalResults);
   }
 
   /**
-   * Process competitors - Simplified version
+   * Process competitors - Run effectiveness analysis on competitor URLs
    */
-  private async processCompetitors(runId: string, clientId: string, competitors: any[]): Promise<void> {
+  private async processCompetitors(mainRunId: string, clientId: string, competitors: any[], tracker: any): Promise<void> {
     if (competitors.length === 0) {
-      logger.info('No competitors to process', { runId });
+      logger.info('No competitors to process', { mainRunId });
       return;
     }
 
-    logger.info('Processing competitors', { runId, count: competitors.length });
+    logger.info('Processing competitors', { mainRunId, count: competitors.length });
     
-    // For now, just log - competitor processing can be added later
-    // The main client analysis is the priority
+    // Process competitors sequentially with incremental progress updates
+    let successful = 0;
+    
+    for (let i = 0; i < competitors.length; i++) {
+      const competitor = competitors[i];
+      tracker.startCompetitor(competitor.domain, i);
+      await this.syncProgressFromTracker(mainRunId, tracker);
+      
+      try {
+        logger.info('Starting competitor analysis', { 
+          mainRunId, 
+          competitorId: competitor.id, 
+          competitorDomain: competitor.domain,
+          progress: `${i + 1}/${competitors.length}`
+        });
+
+        // Create competitor effectiveness run
+        const competitorRun = await storage.createEffectivenessRun({
+          clientId,
+          competitorId: competitor.id,
+          status: 'pending',
+          overallScore: null
+        });
+
+        // Process competitor website using same analysis flow as client
+        const competitorUrl = competitor.domain.startsWith('http') 
+          ? competitor.domain 
+          : `https://${competitor.domain}`;
+
+        // Get config for analysis
+        const config = await this.configManager.getConfig();
+        
+        // Collect data for competitor
+        const dataResult = await parallelDataCollector.collectAllData(competitorUrl, config);
+        
+        // Run progressive analysis without progress callback to avoid conflicts
+        const finalResults = await this.scorer.scoreWebsiteProgressive(competitorUrl, competitorRun.id);
+
+        // Save competitor results using same structure as client
+        await this.saveCompetitorResults(competitorRun.id, finalResults, dataResult);
+        
+        logger.info('Competitor analysis completed', {
+          mainRunId,
+          competitorId: competitor.id,
+          competitorRunId: competitorRun.id,
+          overallScore: finalResults.overallScore
+        });
+
+        successful++;
+        
+        // Mark competitor as complete and update main run progress
+        tracker.completeCompetitor();
+        await this.syncProgressFromTracker(mainRunId, tracker);
+        
+        // Also update with traditional progress for compatibility
+        const progressPercent = 40 + ((i + 1) / competitors.length) * 50; // 40% to 90%
+        await this.updateProgress(mainRunId, 'analyzing', progressPercent, 
+          `Analyzed ${i + 1} of ${competitors.length} competitors`);
+
+      } catch (error) {
+        logger.error('Competitor analysis failed', {
+          mainRunId,
+          competitorId: competitor.id,
+          competitorDomain: competitor.domain,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        // Continue with next competitor
+      }
+    }
+    
+    logger.info('All competitor analyses completed', {
+      mainRunId,
+      total: competitors.length,
+      successful,
+      failed: competitors.length - successful
+    });
   }
 
   /**
-   * Complete analysis
+   * Complete analysis - Only mark as completed if client actually has full results
    */
-  private async completeAnalysis(runId: string): Promise<void> {
-    await storage.updateEffectivenessRun(runId, {
-      status: 'completed',
-      progress: 'Analysis completed successfully'
-    });
-
+  private async completeAnalysis(runId: string, tracker: any): Promise<void> {
+    // Add mutex check - prevent double completion
     const job = this.runningJobs.get(runId);
-    if (job) {
-      job.status = 'completed';
-      job.progress = 100;
-      job.progressDetail = 'Analysis completed successfully';
+    if (job?.status === 'completed') {
+      return; // Already completed, don't update again
     }
 
-    logger.info('Analysis completed', { runId });
+    tracker.startInsights();
+    await this.syncProgressFromTracker(runId, tracker);
+    
+    // Small delay to simulate insights generation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    tracker.complete();
+    await this.syncProgressFromTracker(runId, tracker);
+    // Check if client run actually completed successfully
+    const run = await storage.getEffectivenessRun(runId);
+    if (!run) {
+      logger.error('Cannot complete analysis - run not found', { runId });
+      return;
+    }
+
+    // Get criterion scores to check completeness
+    const scores = await db.select().from(criterionScores).where(eq(criterionScores.runId, runId));
+    const expectedCriteria = 8; // We expect 8 criteria for complete analysis
+    const hasCompleteResults = scores.length >= expectedCriteria;
+
+    if (hasCompleteResults) {
+      // Truly completed - all criteria succeeded
+      await storage.updateEffectivenessRun(runId, {
+        status: 'completed',
+        progress: '100%',
+        progressDetail: 'Analysis completed successfully'
+      });
+
+      const job = this.runningJobs.get(runId);
+      if (job) {
+        job.status = 'completed';
+        job.progress = 100;
+        job.progressDetail = 'Analysis completed successfully';
+      }
+
+      logger.info('Analysis completed successfully', { runId, criteriaCompleted: scores.length });
+    } else {
+      // Partial results - mark as failed but results exist (will be handled as "partial" by frontend)
+      await storage.updateEffectivenessRun(runId, {
+        status: 'failed',
+        progress: `${Math.round((scores.length / expectedCriteria) * 100)}%`,
+        progressDetail: `Analysis completed with limitations - ${scores.length}/${expectedCriteria} criteria`
+      });
+
+      const job = this.runningJobs.get(runId);
+      if (job) {
+        job.status = 'failed';
+        job.progress = 95; // High progress but not complete
+        job.progressDetail = `Partial results available - ${scores.length}/${expectedCriteria} criteria completed`;
+      }
+
+      logger.info('Analysis completed with partial results', { 
+        runId, 
+        criteriaCompleted: scores.length, 
+        expectedCriteria,
+        status: 'partial_success' 
+      });
+    }
+  }
+
+  /**
+   * Save competitor results atomically - Same structure as client results
+   */
+  private async saveCompetitorResults(runId: string, results: any, dataResult: any): Promise<void> {
+    try {
+      logger.info('Starting competitor database save transaction', { 
+        runId, 
+        overallScore: results.overallScore, 
+        criteriaCount: results.criterionResults?.length 
+      });
+      
+      await db.transaction(async (tx) => {
+        // Update run with final score
+        await tx.update(effectivenessRuns)
+          .set({
+            overallScore: results.overallScore.toString(),
+            status: 'completed',
+            screenshotUrl: dataResult.screenshotUrl,
+            fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
+          })
+          .where(eq(effectivenessRuns.id, runId));
+
+        logger.info('Updated competitor effectiveness run with final results', { runId });
+
+        // Save criterion scores
+        for (const criterion of results.criterionResults) {
+          await tx.insert(criterionScores).values({
+            runId: runId,
+            criterion: criterion.criterion,
+            score: criterion.score.toString(),
+            evidence: criterion.evidence,
+            passes: criterion.passes,
+            tier: criterion.tier || 1
+          });
+        }
+        
+        logger.info('Saved competitor criterion scores', { runId, count: results.criterionResults.length });
+      });
+      
+      logger.info('Competitor database transaction completed successfully', { runId });
+    } catch (error) {
+      logger.error('Competitor database save transaction failed', { 
+        runId, 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   /**
    * Save client results atomically - Based on test patterns
    */
   private async saveClientResults(runId: string, results: any, dataResult: any): Promise<void> {
-    await db.transaction(async (tx) => {
-      // Update run with final score
-      await tx.update(effectivenessRuns)
-        .set({
-          overallScore: results.overallScore.toString(),
-          status: 'analyzing', // Still processing
-          screenshotUrl: dataResult.screenshotUrl,
-          fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
-        })
-        .where(eq(effectivenessRuns.id, runId));
+    try {
+      logger.info('Starting database save transaction', { 
+        runId, 
+        overallScore: results.overallScore, 
+        criteriaCount: results.criterionResults?.length 
+      });
+      
+      await db.transaction(async (tx) => {
+        // Update run with final score
+        await tx.update(effectivenessRuns)
+          .set({
+            overallScore: results.overallScore.toString(),
+            // status: 'completed',  // REMOVE THIS LINE - let progress tracker handle status
+            screenshotUrl: dataResult.screenshotUrl,
+            fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
+          })
+          .where(eq(effectivenessRuns.id, runId));
 
-      // Save criterion scores
-      for (const criterion of results.criterionResults) {
-        await tx.insert(criterionScores).values({
-          runId: runId,
-          criterion: criterion.criterion,
-          score: criterion.score.toString(),
-          evidence: criterion.evidence,
-          passes: criterion.passes,
-          tier: criterion.tier || 1
-        });
-      }
-    });
+        logger.info('Updated effectiveness run with final results', { runId });
+
+        // Save criterion scores
+        for (const criterion of results.criterionResults) {
+          await tx.insert(criterionScores).values({
+            runId: runId,
+            criterion: criterion.criterion,
+            score: criterion.score.toString(),
+            evidence: criterion.evidence,
+            passes: criterion.passes,
+            tier: criterion.tier || 1
+          });
+        }
+        
+        logger.info('Saved criterion scores', { runId, count: results.criterionResults.length });
+      });
+      
+      logger.info('Database transaction completed successfully', { runId });
+    } catch (error) {
+      logger.error('Database save transaction failed', { 
+        runId, 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   /**
@@ -300,13 +494,62 @@ class EffectivenessService {
       job.progressDetail = detail;
     }
 
-    // Update database
+    // Update database - SAVE BOTH progress and progressDetail
     await storage.updateEffectivenessRun(runId, {
       status,
-      progress: `${progress}%`
+      progress: `${progress}%`,
+      progressDetail: detail  // ADD THIS LINE - save the actual progress text!
     });
 
-    logger.info('Progress updated', { runId, status, progress, detail });
+    logger.info('Progress updated', { 
+      runId: runId.slice(0, 8), 
+      status, 
+      progress, 
+      detail 
+    });
+  }
+
+  /**
+   * Sync progress from tracker to database and in-memory tracking atomically
+   */
+  private async syncProgressFromTracker(runId: string, tracker: any): Promise<void> {
+    const state = tracker.getState();
+    
+    try {
+      // Update database with smooth progress - use atomic transaction to prevent race conditions
+      await db.transaction(async (tx) => {
+        await tx.update(effectivenessRuns)
+          .set({
+            status: state.currentPhase === 'completed' ? 'completed' : 'analyzing',
+            progress: `${state.overallPercent}%`,  // PERCENTAGE, not message!
+            progressDetail: state.message,          // Message goes in progressDetail
+            updatedAt: new Date()
+          })
+          .where(eq(effectivenessRuns.id, runId));
+      });
+
+      // Update in-memory tracking after successful database update
+      const job = this.runningJobs.get(runId);
+      if (job) {
+        job.status = state.currentPhase === 'completed' ? 'completed' : 'analyzing';
+        job.progress = state.overallPercent;
+        job.progressDetail = state.message;
+        job.currentStep = state.currentOperation;
+      }
+
+      logger.info('Progress synced from tracker', { 
+        runId: runId.slice(0, 8), 
+        percent: state.overallPercent,
+        phase: state.currentPhase,
+        message: state.message 
+      });
+    } catch (error) {
+      logger.error('Failed to sync progress from tracker', {
+        runId: runId.slice(0, 8),
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Don't throw - progress sync failures shouldn't break the analysis
+    }
   }
 
   /**

@@ -7,148 +7,132 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth';
 import { storage } from '../storage';
-import { EnhancedWebsiteEffectivenessScorer } from '../services/effectiveness/enhancedScorer';
 import { EffectivenessConfigManager } from '../services/effectiveness/config';
-import { screenshotService } from '../services/effectiveness/screenshot';
-import { createProgressTracker, getProgressTracker, clearProgressTracker } from '../services/effectiveness/progressTracker';
 import logger from '../utils/logging/logger';
 import { effectivenessService } from '../services/EffectivenessService';
 import { z } from 'zod';
 import { db } from '../db';
-import { effectivenessRuns } from '@shared/schema';
+import { effectivenessRuns, competitors } from '@shared/schema';
 import { and, eq, or, desc, sql, isNotNull } from 'drizzle-orm';
-import { 
-  saveEffectivenessResultAtomically, 
-  updateRunProgressAtomically,
-  saveAIInsightsAtomically,
-  markRunFailedAtomically,
-  retryTransactionWithBackoff
-} from "../services/effectiveness/atomicTransactions";
 
 const router = Router();
-const enhancedScorer = new EnhancedWebsiteEffectivenessScorer();
-const configManager = EffectivenessConfigManager.getInstance();
 
-/**
- * Get tier number for a criterion
- */
-function getCriterionTier(criterion: string): number {
-  const tierMap: Record<string, number> = {
-    'ux': 1,
-    'trust': 1,
-    'accessibility': 1,
-    'seo': 1,
-    'positioning': 2,
-    'brand_story': 2,
-    'ctas': 2,
-    'speed': 3
-  };
-  return tierMap[criterion] || 1;
+// Define the standard error response type
+interface ApiError {
+  code: string;
+  message: string;
+  [key: string]: any;
 }
 
-// Request/Response schemas
-const refreshRequestSchema = z.object({
-  force: z.boolean().optional()
-});
+// Helper function to get competitor effectiveness data
+async function getCompetitorEffectivenessData(clientId: string) {
+  try {
+    // Get latest competitor runs with complete data
+    const competitorRuns = await db
+      .select({
+        runId: effectivenessRuns.id,
+        competitorId: effectivenessRuns.competitorId,
+        overallScore: effectivenessRuns.overallScore,
+        status: effectivenessRuns.status,
+        createdAt: effectivenessRuns.createdAt,
+        screenshotUrl: effectivenessRuns.screenshotUrl,
+        fullPageScreenshotUrl: effectivenessRuns.fullPageScreenshotUrl,
+        webVitals: effectivenessRuns.webVitals,
+        screenshotError: effectivenessRuns.screenshotError,
+        fullPageScreenshotError: effectivenessRuns.fullPageScreenshotError,
+        // Competitor details
+        competitorDomain: competitors.domain,
+        competitorLabel: competitors.label
+      })
+      .from(effectivenessRuns)
+      .innerJoin(competitors, eq(effectivenessRuns.competitorId, competitors.id))
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        isNotNull(effectivenessRuns.competitorId),
+        eq(effectivenessRuns.status, 'completed')
+      ))
+      .orderBy(desc(effectivenessRuns.createdAt))
+      .limit(10);
 
-/**
- * Score a website with timeout protection and progressive updates
- */
-async function scoreWithTimeout(url: string, runId?: string, timeoutMs: number = 90000): Promise<any> {
-  const tracker = getProgressTracker();
-  
-  return Promise.race([
-    enhancedScorer.scoreWebsiteProgressive(url, runId, async (status, progress, results, progressDetail) => {
-      if (runId && tracker) {
-        // Update tracker based on progress details
-        if (progressDetail?.phase === 'criterion_analysis' && progressDetail?.subPhase === 'criterion_complete') {
-          // A criterion just completed - update tracker
-          const criterionName = progressDetail.criterionName || 'unknown';
-          tracker.completeCriterion(criterionName, true);
-          logger.info('Progress tracker: criterion completed via callback', { 
-            criterionName,
-            currentPercent: tracker.getState().overallPercent 
-          });
+    // Get criterion scores for each competitor run
+    const competitorData = [];
+    for (const run of competitorRuns) {
+      const criterionScores = await storage.getCriterionScores(run.runId);
+      
+      competitorData.push({
+        competitor: {
+          id: run.competitorId,
+          domain: run.competitorDomain,
+          label: run.competitorLabel
+        },
+        run: {
+          id: run.runId,
+          overallScore: parseFloat(run.overallScore || '0'),
+          status: run.status,
+          createdAt: run.createdAt.toISOString(),
+          criterionScores: criterionScores,
+          screenshotUrl: run.screenshotUrl,
+          fullPageScreenshotUrl: run.fullPageScreenshotUrl,
+          webVitals: run.webVitals,
+          screenshotError: run.screenshotError,
+          fullPageScreenshotError: run.fullPageScreenshotError
         }
-        
-        // Always save the full tracker state
-        await storage.updateEffectivenessRun(runId, {
-          status,
-          progress: tracker.getProgressString(),
-          progressDetail: JSON.stringify(tracker.getState())
-        });
-      }
-      logger.info('Progressive scoring update', { url, runId, status, progress });
-    }),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error(`Scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
-    )
-  ]);
+      });
+    }
+
+    logger.info('Retrieved competitor effectiveness data', { 
+      clientId, 
+      competitorCount: competitorData.length 
+    });
+
+    return competitorData;
+    
+  } catch (error) {
+    logger.error('Error fetching competitor data', { 
+      clientId,
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    return [];
+  }
 }
 
-/**
- * Score a website without progressive updates (for competitors)
- */
-async function scoreWithTimeoutBasic(url: string, timeoutMs: number = 90000): Promise<any> {
-  return Promise.race([
-    enhancedScorer.scoreWebsite(url),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error(`Scoring timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
-    )
-  ]);
-}
-
-/**
- * Classify competitor error for better retry logic
- */
-function classifyCompetitorError(errorMessage: string): string {
-  const message = errorMessage.toLowerCase();
-  
-  if (message.includes('timeout')) return 'timeout';
-  if (message.includes('screenshot')) return 'screenshot_failure';
-  if (message.includes('network') || message.includes('fetch')) return 'network_error';
-  if (message.includes('browser') || message.includes('playwright')) return 'browser_error';
-  if (message.includes('50') || message.includes('server')) return 'server_error';
-  if (message.includes('ai') || message.includes('openai')) return 'ai_error';
-  
-  return 'unknown_error';
-}
-
-/**
- * Clean up stuck runs older than threshold
- */
-async function cleanupStuckRuns(clientId: string): Promise<void> {
-  const stuckThreshold = 5; // 5 minutes
-  
-  const stuckRuns = await db.update(effectivenessRuns)
-    .set({
-      status: 'failed',
-      progress: 'Run timed out after 5 minutes - please retry'
-    })
+// Helper function to clean up stuck runs
+async function cleanupStuckRuns(clientId: string) {
+  const stuckRuns = await db
+    .select()
+    .from(effectivenessRuns)
     .where(and(
       eq(effectivenessRuns.clientId, clientId),
       or(
         eq(effectivenessRuns.status, 'pending'),
         eq(effectivenessRuns.status, 'initializing'),
-        eq(effectivenessRuns.status, 'scraping'),
-        eq(effectivenessRuns.status, 'analyzing'),
-        eq(effectivenessRuns.status, 'generating_insights')
+        eq(effectivenessRuns.status, 'in_progress')
       ),
-      sql`created_at < NOW() - INTERVAL '${sql.raw(stuckThreshold.toString())} minutes'`
+      sql`${effectivenessRuns.createdAt} < NOW() - INTERVAL '5 minutes'`
     ));
-  
-  if (stuckRuns.rowCount > 0) {
-    logger.info('Cleaned up stuck runs', {
+
+  if (stuckRuns.length > 0) {
+    logger.info('Cleaning up stuck runs', {
       clientId,
-      count: stuckRuns.rowCount
+      stuckRunIds: stuckRuns.map(r => r.id)
     });
+
+    await db
+      .update(effectivenessRuns)
+      .set({ 
+        status: 'failed',
+        progressDetail: JSON.stringify({ error: 'Run timed out after 5 minutes' })
+      })
+      .where(
+        and(
+          eq(effectivenessRuns.clientId, clientId),
+          or(...stuckRuns.map(r => eq(effectivenessRuns.id, r.id)))
+        )
+      );
   }
 }
 
-/**
- * GET /api/effectiveness/:clientId/latest
- * Get the most recent effectiveness score for a client
- */
+// GET /latest/:clientId - Get latest effectiveness score for a client
 router.get('/latest/:clientId', requireAuth, async (req, res) => {
   try {
     const { clientId } = req.params;
@@ -173,214 +157,59 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
     }
 
     // Auto-fail runs stuck for more than 5 minutes
-    const stuckRuns = await db
-      .select()
-      .from(effectivenessRuns)
-      .where(and(
-        eq(effectivenessRuns.clientId, clientId),
-        or(
-          eq(effectivenessRuns.status, 'pending'),
-          eq(effectivenessRuns.status, 'initializing'),
-          eq(effectivenessRuns.status, 'scraping'),
-          eq(effectivenessRuns.status, 'analyzing')
-        ),
-        sql`created_at < NOW() - INTERVAL '${sql.raw('5')} minutes'`
-      ));
-
-    if (stuckRuns.length > 0) {
-      // Mark stuck runs as failed
-      for (const stuckRun of stuckRuns) {
-        await storage.updateEffectivenessRun(stuckRun.id, {
-          status: 'failed',
-          progress: 'Run timed out - please retry'
-        });
-      }
-      
-      logger.warn('Auto-failed stuck runs', {
-        clientId,
-        stuckRunIds: stuckRuns.map(r => r.id)
-      });
-    }
+    await cleanupStuckRuns(clientId);
 
     // Get latest effectiveness run
-    const latestRun = await storage.getLatestEffectivenessRun(clientId);
-    
-    // Debug logging for screenshot URLs
-    if (latestRun) {
-      logger.info('Latest run screenshot data', {
-        clientId,
-        runId: latestRun.id,
-        hasScreenshotUrl: !!latestRun.screenshotUrl,
-        screenshotUrl: latestRun.screenshotUrl,
-        hasFullPageScreenshotUrl: !!latestRun.fullPageScreenshotUrl,
-        fullPageScreenshotUrl: latestRun.fullPageScreenshotUrl,
-        screenshotMethod: latestRun.screenshotMethod,
-        screenshotError: latestRun.screenshotError
-      });
-    }
-    
-    if (!latestRun) {
+    const runs = await db
+      .select()
+      .from(effectivenessRuns)
+      .where(eq(effectivenessRuns.clientId, clientId))
+      .orderBy(desc(effectivenessRuns.createdAt))
+      .limit(1);
+
+    if (runs.length === 0) {
       return res.json({
-        client,
-        run: null,
-        hasData: false
+        hasData: false,
+        message: 'No effectiveness data available'
       });
     }
 
-    // Get criterion scores for the run
+    const latestRun = runs[0];
+
+    // Get all criterion scores for this run
     const criterionScores = await storage.getCriterionScores(latestRun.id);
-    
-    // Ensure we have valid data to show
-    if (!criterionScores || criterionScores.length === 0) {
-      logger.warn('No criterion scores found for latest run', {
-        clientId,
-        runId: latestRun.id,
-        runStatus: latestRun.status,
-        runCreatedAt: latestRun.createdAt
-      });
-      
-      // If the run is still in progress, show it with empty scores
-      if (['pending', 'initializing', 'scraping', 'analyzing', 'tier1_analyzing', 'tier2_analyzing', 'tier3_analyzing', 'generating_insights'].includes(latestRun.status)) {
-        logger.info('Run is still in progress, showing with empty scores', { clientId, runId: latestRun.id });
-      } else {
-        // Run is complete but has no scores - this is a problem
-        logger.error('Completed run has no criterion scores - data corruption?', {
-          clientId,
-          runId: latestRun.id,
-          status: latestRun.status
-        });
-      }
-    }
-    
+
     // Get competitor effectiveness data
-    logger.info('Fetching competitor effectiveness data', {
-      clientId,
-      function: 'getLatestEffectiveness',
-      step: 'fetchingCompetitors'
-    });
+    const competitorData = await getCompetitorEffectivenessData(clientId);
 
-    const competitors = await storage.getCompetitorsByClient(clientId);
-    
-    logger.info('Found competitors for client', {
-      clientId,
-      competitorCount: competitors.length,
-      competitors: competitors.map(c => ({
-        id: c.id,
-        domain: c.domain,
-        label: c.label,
-        status: c.status
-      }))
-    });
-
-    const competitorEffectivenessData = [];
-    
-    for (const competitor of competitors) {
-      logger.info('Processing competitor effectiveness data', {
-        clientId,
-        competitorId: competitor.id,
-        competitorDomain: competitor.domain,
-        competitorLabel: competitor.label
-      });
-
-      const competitorRun = await storage.getLatestEffectivenessRunByCompetitor(clientId, competitor.id);
-      
-      if (competitorRun) {
-        const competitorScores = await storage.getCriterionScores(competitorRun.id);
-        
-        logger.info('Found competitor effectiveness run', {
-          clientId,
-          competitorId: competitor.id,
-          runId: competitorRun.id,
-          status: competitorRun.status,
-          overallScore: competitorRun.overallScore,
-          criterionScoresCount: competitorScores.length
-        });
-        
-        competitorEffectivenessData.push({
-          competitor,
-          run: {
-            ...competitorRun,
-            criterionScores: competitorScores
-          }
-        });
-      } else {
-        logger.info('No effectiveness run found for competitor', {
-          clientId,
-          competitorId: competitor.id,
-          competitorDomain: competitor.domain
-        });
-      }
-    }
-
-    // Use database values directly - progressTracker has already set status and progress correctly
-    
-    const response = {
-      client,
+    res.json({
+      hasData: true,
       run: {
-        ...latestRun,
-        // Use status and progress directly from database (set by progressTracker)
-        criterionScores
+        id: latestRun.id,
+        status: latestRun.status,
+        overallScore: latestRun.overallScore,
+        progress: latestRun.progress,
+        progressDetail: latestRun.progressDetail,
+        createdAt: latestRun.createdAt,
+        criterionScores: criterionScores,
+        screenshotUrl: latestRun.screenshotUrl,
+        fullPageScreenshotUrl: latestRun.fullPageScreenshotUrl,
+        aiInsights: latestRun.aiInsights,
+        insightsGeneratedAt: latestRun.insightsGeneratedAt
       },
-      competitorEffectivenessData,
-      hasData: true
-    };
-
-    // Debug logging for the effectiveness response
-    logger.info('Sending effectiveness response', {
-      clientId,
-      hasProgressDetail: !!response.run?.progressDetail,
-      progressDetailSample: response.run?.progressDetail ? 
-        JSON.stringify(response.run.progressDetail).substring(0, 100) : 'none',
-      runStatus: response.run?.status,
-      runProgress: response.run?.progress
-    });
-
-    // Debug logging for status transitions  
-    logger.info('Status aggregation result', {
-      clientId,
-      clientRunStatus: latestRun.status,
-      competitorCount: competitors.length,
-      competitorEffectivenessDataCount: competitorEffectivenessData.length
-    });
-
-    logger.info('Effectiveness data response prepared', {
-      clientId,
-      clientRunStatus: latestRun.status,
-      criteriaCount: criterionScores.length,
-      hasInsights: !!latestRun.aiInsights,
-      competitorEffectivenessDataCount: competitorEffectivenessData.length,
-      finalResponse: {
-        hasData: response.hasData,
-        clientOverallScore: response.run?.overallScore,
-        competitorData: competitorEffectivenessData.map(cd => ({
-          competitorLabel: cd.competitor.label,
-          overallScore: cd.run.overallScore,
-          criterionScoresCount: cd.run.criterionScores.length
-        }))
+      competitorEffectivenessData: competitorData,
+      client: {
+        id: client.id,
+        name: client.name,
+        websiteUrl: client.websiteUrl
       }
     });
-
-    // Add comprehensive response debugging
-    logger.info('API Response Summary', {
-      clientId,
-      hasData: response.hasData,
-      runExists: !!response.run,
-      runStatus: response.run?.status,
-      runProgress: response.run?.progress,
-      criterionScoresCount: response.run?.criterionScores?.length || 0,
-      competitorDataCount: response.competitorEffectivenessData?.length || 0,
-      overallScore: response.run?.overallScore,
-      hasAiInsights: !!response.run?.aiInsights
-    });
-
-    res.json(response);
 
   } catch (error) {
-    logger.error('Failed to fetch effectiveness data', {
-      clientId: req.params.clientId,
-      error: error instanceof Error ? error.message : String(error)
+    logger.error('Error fetching latest effectiveness score', { 
+      error: error instanceof Error ? error.message : String(error),
+      clientId: req.params.clientId
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to fetch effectiveness data'
@@ -388,24 +217,11 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * POST /api/effectiveness/:clientId/refresh  
- * Trigger new effectiveness scoring for a client
- */
+// POST /refresh/:clientId - Start a new effectiveness analysis
 router.post('/refresh/:clientId', requireAuth, async (req, res) => {
   try {
     const { clientId } = req.params;
-    const body = refreshRequestSchema.safeParse(req.body);
-    
-    if (!body.success) {
-      return res.status(400).json({
-        code: 'INVALID_REQUEST',
-        message: 'Invalid request body',
-        details: body.error.errors
-      });
-    }
-
-    const { force = false } = body.data;
+    const { force = false } = req.body;
 
     logger.info('Effectiveness refresh requested', { clientId, force });
 
@@ -426,25 +242,39 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       });
     }
 
-    // Check cooldown (24 hours) unless forced or user is admin
-    if (!force && req.user?.role !== 'Admin' && client.lastEffectivenessRun) {
-      const cooldownHours = 24;
-      const timeSinceLastRun = Date.now() - new Date(client.lastEffectivenessRun).getTime();
-      const cooldownMs = cooldownHours * 60 * 60 * 1000;
-      
-      if (timeSinceLastRun < cooldownMs) {
-        const remainingMs = cooldownMs - timeSinceLastRun;
-        const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+    // Check if there's already a run in progress
+    if (!force) {
+      const activeRuns = await db
+        .select()
+        .from(effectivenessRuns)
+        .where(and(
+          eq(effectivenessRuns.clientId, clientId),
+          or(
+            eq(effectivenessRuns.status, 'pending'),
+            eq(effectivenessRuns.status, 'initializing'),
+            eq(effectivenessRuns.status, 'in_progress')
+          )
+        ))
+        .orderBy(desc(effectivenessRuns.createdAt))
+        .limit(1);
+
+      if (activeRuns.length > 0) {
+        const activeRun = activeRuns[0];
+        const timeDiff = Date.now() - activeRun.createdAt.getTime();
         
-        return res.status(429).json({
-          code: 'COOLDOWN_ACTIVE',
-          message: `Effectiveness scoring is on cooldown. Try again in ${remainingHours} hours.`,
-          remainingHours
-        });
+        if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+          return res.json({
+            message: 'Analysis already in progress',
+            runId: activeRun.id,
+            status: activeRun.status
+          });
+        }
       }
     }
 
-    // Use the new clean EffectivenessService
+    // Cooldown protection removed for testing
+
+    // Use the clean EffectivenessService
     const result = await effectivenessService.startAnalysis(clientId, force);
 
     // Return HONEST response - analysis has started, not completed!
@@ -453,728 +283,12 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
       runId: result.runId,
       status: 'pending'
     });
-        
-        // Clean up any stuck runs first
-        await cleanupStuckRuns(clientId);
-
-        // Create progress tracker for this run
-        const tracker = createProgressTracker();
-        tracker.startClient(client.name);
-        
-        await storage.updateEffectivenessRun(newRun.id, {
-          status: 'initializing',
-          progress: tracker.getProgressString(),
-          progressDetail: JSON.stringify(tracker.getState())
-        });
-        
-        // Score with enhanced approach (90s timeout, includes progressive updates)
-        const result = await scoreWithTimeout(client.websiteUrl, newRun.id, 90000);
-        
-        // Log screenshot URLs for debugging
-        logger.info('Client scoring result screenshots', {
-          clientId,
-          runId: newRun.id,
-          screenshotUrl: result.screenshotUrl,
-          fullPageScreenshotUrl: result.fullPageScreenshotUrl,
-          screenshotMethod: result.screenshotMethod,
-          screenshotError: result.screenshotError
-        });
-        
-        // ✅ ATOMIC FIX: Save complete scoring result (run + all criteria) in single transaction
-        // This replaces the previous approach where criterion scores were missing from client runs
-        
-        const atomicSaveResult = await retryTransactionWithBackoff(async () => {
-          return await saveEffectivenessResultAtomically(newRun.id, result, {
-            status: 'completed',
-            progress: tracker.getProgressString(),
-            progressDetail: JSON.stringify(tracker.getState()),
-            screenshotMethod: result.screenshotMethod || null,
-            screenshotError: result.screenshotError || null,
-            fullPageScreenshotError: result.fullPageScreenshotError || null
-          });
-        });
-
-        if (!atomicSaveResult.success) {
-          throw new Error(`Failed to save scoring results atomically: ${atomicSaveResult.error?.message}`);
-        }
-
-        logger.info('Client effectiveness result saved atomically', {
-          runId: newRun.id,
-          overallScore: result.overallScore,
-          criteriaCount: result.criterionResults.length,
-          hasScreenshots: !!(result.screenshotUrl || result.fullPageScreenshotUrl)
-        });
-
-        // Update client with last run time (outside transaction to keep it simple)
-        await storage.updateClient(clientId, {
-          lastEffectivenessRun: new Date()
-        });
-
-        // Track memory usage after client completion
-        const clientMemory = process.memoryUsage();
-        logger.info('Client effectiveness scoring completed', {
-          clientId,
-          runId: newRun.id,
-          overallScore: result.overallScore,
-          criteriaCount: result.criterionResults.length,
-          hasInsights: false, // Will be set to true after insights generation
-          memoryMB: {
-            rss: Math.round(clientMemory.rss / 1024 / 1024),
-            heapUsed: Math.round(clientMemory.heapUsed / 1024 / 1024),
-            heapTotal: Math.round(clientMemory.heapTotal / 1024 / 1024)
-          }
-        });
-
-        // Score competitors if any
-        const competitors = await storage.getCompetitorsByClient(clientId);
-        
-        // Update tracker with competitor count
-        tracker.setCompetitorCount(competitors.length);
-        
-        if (competitors.length > 0) {
-          logger.info('Starting competitor scoring', {
-            clientId,
-            competitorCount: competitors.length
-          });
-
-          const failedCompetitors = [];
-          
-          // Wrap each competitor in comprehensive error handling
-          for (let index = 0; index < competitors.length; index++) {
-            const competitor = competitors[index];
-            let competitorAttempts = 0;
-            const maxCompetitorRetries = 3; // Increased for better reliability
-            let competitorSuccess = false;
-            let competitorRun;
-            
-            while (competitorAttempts < maxCompetitorRetries && !competitorSuccess) {
-              try {
-                competitorAttempts++;
-                
-                // Don't update client run progress during competitor analysis
-                // This was causing the progress bar to go backward
-                logger.info('Processing competitor', {
-                  competitorIndex: index + 1,
-                  totalCompetitors: competitors.length,
-                  competitorName: competitor.label || competitor.domain,
-                  attempt: competitorAttempts
-                });
-
-                // Only skip if there's an active pending run (to avoid duplicates)
-                // Always create new runs for completed runs since this is a user-requested action
-                const activePendingRun = await db
-                  .select()
-                  .from(effectivenessRuns)
-                  .where(and(
-                    eq(effectivenessRuns.clientId, clientId),
-                    eq(effectivenessRuns.competitorId, competitor.id),
-                    eq(effectivenessRuns.status, 'pending'),
-                    sql`created_at > NOW() - INTERVAL '${sql.raw('5')} minutes'` // Changed from 1 hour
-                  ))
-                  .orderBy(desc(effectivenessRuns.createdAt))
-                  .limit(1);
-
-                if (activePendingRun.length > 0) {
-                  logger.info('Skipping competitor - active pending run exists', {
-                    clientId,
-                    competitorId: competitor.id,
-                    competitorDomain: competitor.domain,
-                    pendingRunId: activePendingRun[0].id,
-                    pendingRunCreated: activePendingRun[0].createdAt
-                  });
-                  competitorSuccess = true;
-                  continue;
-                }
-
-                // Add delay between competitors to avoid rate limiting and database conflicts
-                if (index > 0) {
-                  await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
-                }
-                
-                // Small additional delay to prevent database race conditions
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Create new run for competitor
-                competitorRun = await storage.createEffectivenessRun({
-                  clientId,
-                  competitorId: competitor.id,
-                  status: 'pending',
-                  overallScore: null
-                });
-
-                // Update progress tracker for this competitor
-                tracker.startCompetitor(competitor.label || competitor.domain, index);
-                
-                await storage.updateEffectivenessRun(newRun.id, {
-                  status: 'analyzing',
-                  progress: tracker.getProgressString(),
-                  progressDetail: JSON.stringify(tracker.getState())
-                });
-
-                logger.info('Scoring competitor website', {
-                  clientId,
-                  competitorId: competitor.id,
-                  competitorDomain: competitor.domain,
-                  runId: competitorRun.id,
-                  attempt: competitorAttempts,
-                  hasScreenshotKey: !!process.env.SCREENSHOTONE_API_KEY
-                });
-
-                // Score competitor website
-                let competitorUrl = competitor.domain;
-                if (!competitorUrl.startsWith('http://') && !competitorUrl.startsWith('https://')) {
-                  competitorUrl = `https://${competitorUrl}`;
-                }
-
-                // Score competitor with progressive timeout handling for problematic domains
-                let timeoutMs = 90000; // Start with 90s
-                let competitorResult;
-                
-                try {
-                  competitorResult = await scoreWithTimeoutBasic(competitorUrl, timeoutMs);
-                } catch (timeoutError) {
-                  if (timeoutError instanceof Error && timeoutError.message.includes('timeout')) {
-                    logger.warn(`Competitor scoring timeout, retrying with extended timeout`, {
-                      clientId,
-                      competitorDomain: competitor.domain,
-                      initialTimeout: timeoutMs,
-                      retryTimeout: 150000 // 2.5 minutes
-                    });
-                    
-                    // Retry with longer timeout for problematic domains
-                    timeoutMs = 150000;
-                    competitorResult = await scoreWithTimeoutBasic(competitorUrl, timeoutMs);
-                  } else {
-                    throw timeoutError;
-                  }
-                }
-
-                // Save competitor results atomically using transaction to prevent partial data
-                try {
-                  await db.transaction(async (tx) => {
-                    // Save competitor criterion scores atomically
-                    for (const criterionResult of competitorResult.criterionResults) {
-                      await storage.createCriterionScoreInTransaction(tx, {
-                        runId: competitorRun.id,
-                        criterion: criterionResult.criterion,
-                        score: criterionResult.score.toString(),
-                        evidence: {
-                          ...criterionResult.evidence,
-                          screenshotUrl: competitorResult.screenshotUrl,
-                          fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl
-                        },
-                        passes: criterionResult.passes,
-                        tier: getCriterionTier(criterionResult.criterion),
-                        completedAt: new Date()
-                      });
-                    }
-
-                    // Update competitor run with results (only after all scores saved)
-                    await storage.updateEffectivenessRunInTransaction(tx, competitorRun.id, {
-                      status: 'completed',
-                      overallScore: competitorResult.overallScore.toString(),
-                      progressDetail: JSON.stringify({
-                        phase: 'competitor_analysis',
-                        subPhase: 'completed',
-                        competitorName: competitor.label || competitor.domain,
-                        overallScore: competitorResult.overallScore,
-                        attempt: competitorAttempts
-                      }),
-                      screenshotUrl: competitorResult.screenshotUrl,
-                      fullPageScreenshotUrl: competitorResult.fullPageScreenshotUrl,
-                      webVitals: competitorResult.webVitals,
-                      screenshotMethod: competitorResult.screenshotMethod || null,
-                      screenshotError: competitorResult.screenshotError || null,
-                      fullPageScreenshotError: competitorResult.fullPageScreenshotError || null
-                    });
-                    
-                    logger.info('Competitor results saved atomically', {
-                      runId: competitorRun.id,
-                      criterionCount: competitorResult.criterionResults.length,
-                      overallScore: competitorResult.overallScore
-                    });
-                  });
-
-                } catch (dbSaveError) {
-                  logger.error('Failed to save competitor results to database', {
-                    clientId,
-                    competitorId: competitor.id,
-                    competitorDomain: competitor.domain,
-                    runId: competitorRun.id,
-                    error: dbSaveError instanceof Error ? dbSaveError.message : String(dbSaveError)
-                  });
-                  
-                  // Mark run as failed if database save fails
-                  await storage.updateEffectivenessRun(competitorRun.id, {
-                    status: 'failed',
-                    progress: `Database save failed: ${dbSaveError instanceof Error ? dbSaveError.message : String(dbSaveError)}`
-                  }).catch(updateError => {
-                    logger.error('Failed to mark competitor run as failed after DB error', {
-                      competitorId: competitor.id,
-                      runId: competitorRun.id,
-                      updateError: updateError instanceof Error ? updateError.message : String(updateError)
-                    });
-                  });
-                  
-                  throw dbSaveError;
-                }
-
-                logger.info('Competitor scoring completed', {
-                  clientId,
-                  competitorId: competitor.id,
-                  competitorDomain: competitor.domain,
-                  overallScore: competitorResult.overallScore,
-                  attempt: competitorAttempts
-                });
-
-                // Mark competitor as completed in progress tracker
-                tracker.completeCompetitor();
-                
-                await storage.updateEffectivenessRun(newRun.id, {
-                  status: 'analyzing',
-                  progress: tracker.getProgressString(),
-                  progressDetail: JSON.stringify(tracker.getState())
-                });
-
-                competitorSuccess = true;
-                
-                // Clean up browser after every 2 competitors to prevent resource exhaustion
-                if ((index + 1) % 2 === 0) {
-                  try {
-                    await screenshotService.cleanup();
-                    logger.info('Browser recycled after competitor batch', {
-                      competitorIndex: index + 1,
-                      totalCompetitors: competitors.length
-                    });
-                  } catch (cleanupError) {
-                    logger.warn('Browser cleanup failed during competitor processing', {
-                      error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
-                    });
-                  }
-                }
-
-              } catch (competitorError) {
-                logger.error('Competitor attempt failed', {
-                  competitor: competitor.domain,
-                  attempt: competitorAttempts,
-                  error: competitorError instanceof Error ? competitorError.message : String(competitorError)
-                });
-                
-                if (competitorAttempts >= maxCompetitorRetries) {
-                  // Mark as failed but continue with other competitors
-                  if (competitorRun) {
-                    await storage.updateEffectivenessRun(competitorRun.id, {
-                      status: 'failed',
-                      progress: `Failed after ${competitorAttempts} attempts: ${competitorError instanceof Error ? competitorError.message : String(competitorError)}`,
-                      progressDetail: JSON.stringify({
-                        phase: 'competitor_analysis',
-                        subPhase: 'failed',
-                        competitorName: competitor.label || competitor.domain,
-                        error: competitorError instanceof Error ? competitorError.message : String(competitorError),
-                        finalAttempt: competitorAttempts
-                      })
-                    });
-                  }
-                  
-                  // Add to failed list for UI
-                  failedCompetitors.push({
-                    id: competitor.id,
-                    domain: competitor.domain,
-                    label: competitor.label,
-                    reason: competitorError instanceof Error ? competitorError.message : String(competitorError),
-                    attempts: competitorAttempts
-                  });
-                } else {
-                  // Calculate exponential backoff delay
-                  const retryDelay = Math.min(1000 * Math.pow(2, competitorAttempts - 1), 10000); // 1s, 2s, 4s max
-                  const errorType = classifyCompetitorError(competitorError instanceof Error ? competitorError.message : String(competitorError));
-                  
-                  logger.info(`Retrying competitor ${competitor.domain} with exponential backoff (attempt ${competitorAttempts + 1}/${maxCompetitorRetries})`, {
-                    delay: retryDelay,
-                    errorType,
-                    clientId,
-                    competitorId: competitor.id
-                  });
-                  await new Promise(r => setTimeout(r, 3000));
-                }
-              }
-            }
-          }
-
-          // After all competitors, log summary
-          const successfulCompetitors = competitors.length - failedCompetitors.length;
-          if (failedCompetitors.length > 0) {
-            logger.info('Some competitors failed, generating insights with partial data', {
-              clientId,
-              successful: successfulCompetitors,
-              failed: failedCompetitors.length,
-              failedCompetitors: failedCompetitors.map(fc => ({ domain: fc.domain, reason: fc.reason }))
-            });
-          }
-          
-          // Generate AI insights after all competitor analysis is complete
-          try {
-            logger.info('Generating AI insights after competitor analysis', {
-              clientId,
-              runId: newRun.id,
-              competitorCount: competitors.length
-            });
-
-            // Generate AI insights after all competitor analysis is complete
-            tracker.startInsights();
-            
-            await storage.updateEffectivenessRun(newRun.id, {
-              status: 'generating_insights',
-              progress: tracker.getProgressString(),
-              progressDetail: JSON.stringify(tracker.getState())
-            });
-            
-            logger.info('Starting AI insights generation', {
-              clientId,
-              runId: newRun.id,
-              hasOpenAI: !!process.env.OPENAI_API_KEY
-            });
-
-            try {
-              const { createInsightsService } = await import('../services/effectiveness');
-              const insightsService = createInsightsService(storage);
-              
-              try {
-                // Try to generate with OpenAI
-                const insights = await insightsService.generateInsights(
-                  clientId, 
-                  newRun.id, 
-                  undefined, 
-                  'Admin'
-                );
-                
-                // ✅ ATOMIC: Save AI insights with transaction
-                const insightsResult = await saveAIInsightsAtomically(newRun.id, insights.insights);
-                if (!insightsResult.success) {
-                  throw new Error(`Failed to save AI insights atomically: ${insightsResult.error?.message}`);
-                }
-                
-                logger.info('AI insights generated successfully', {
-                  clientId,
-                  runId: newRun.id
-                });
-                
-                // Mark analysis as complete
-                tracker.complete();
-                
-              } catch (openAIError) {
-                logger.error('OpenAI insights generation failed, using fallback', {
-                  clientId,
-                  runId: newRun.id,
-                  error: openAIError instanceof Error ? openAIError.message : String(openAIError)
-                });
-                
-                // Generate fallback insights
-                const criterionScores = await storage.getCriterionScores(newRun.id);
-                
-                // Check if we have scores before trying to use them
-                if (!criterionScores || criterionScores.length === 0) {
-                  logger.warn('No criterion scores available for fallback insights', {
-                    clientId,
-                    runId: newRun.id
-                  });
-                  throw new Error('No criterion scores available');
-                }
-                
-                const lowestScore = criterionScores.reduce((min, c) => 
-                  c.score < min.score ? c : min
-                );
-                
-                const fallbackInsights = {
-                  insight: `Website effectiveness score: ${result.overallScore}/10. The primary area for improvement is ${lowestScore.criterion.replace(/_/g, ' ')} (${lowestScore.score}/10). Focus on this area for the most impact.`,
-                  recommendations: [
-                    `Improve ${lowestScore.criterion.replace(/_/g, ' ')} - currently your weakest area`,
-                    'Review detailed evidence in the report for specific improvements',
-                    'Compare with competitor scores to identify competitive gaps',
-                    'Focus on quick wins in higher-scoring areas for immediate gains'
-                  ],
-                  confidence: 0.5,
-                  key_pattern: lowestScore.score < 4 ? 'critical_issues' : 'optimization_needed',
-                  fallback: true
-                };
-                
-                await storage.updateEffectivenessRun(newRun.id, {
-                  aiInsights: fallbackInsights,
-                  insightsGeneratedAt: new Date()
-                });
-                
-                logger.info('Fallback insights generated', {
-                  clientId,
-                  runId: newRun.id
-                });
-              }
-              
-            } catch (criticalError) {
-              logger.error('Critical insights generation failure', {
-                clientId,
-                runId: newRun.id,
-                error: criticalError instanceof Error ? criticalError.message : String(criticalError)
-              });
-              
-              // Absolute fallback - ensure something is saved
-              const minimalInsights = {
-                insight: `Analysis complete with score ${result.overallScore}/10.`,
-                recommendations: ['View detailed scores for improvement areas'],
-                confidence: 0.3,
-                key_pattern: 'analysis_complete',
-                fallback: true
-              };
-              
-              await storage.updateEffectivenessRun(newRun.id, {
-                aiInsights: minimalInsights,
-                insightsGeneratedAt: new Date()
-              });
-            }
-          } catch (insightsError) {
-            logger.error('Failed to generate AI insights after competitor analysis', {
-              clientId,
-              runId: newRun.id,
-              error: insightsError instanceof Error ? insightsError.message : String(insightsError)
-            });
-            // Continue without insights - don't fail the entire run
-          }
-
-          // Track final memory usage
-          const finalMemory = process.memoryUsage();
-          
-          // Update final progress using tracker (don't override message)
-          const tracker = getProgressTracker();
-          if (tracker) {
-            tracker.complete();
-          }
-          
-          await storage.updateEffectivenessRun(newRun.id, {
-            progress: tracker ? tracker.getProgressString() : 'Analysis complete',
-            progressDetail: tracker ? JSON.stringify(tracker.getState()) : JSON.stringify({
-              phase: 'complete',
-              subPhase: 'finished',
-              totalCompetitors: competitors.length,
-              successfulCompetitors,
-              failedCompetitors: failedCompetitors.length,
-              failedCompetitorDetails: failedCompetitors.length > 0 ? failedCompetitors : undefined
-            })
-          });
-
-          logger.info('All effectiveness analysis completed', {
-            clientId,
-            runId: newRun.id,
-            totalCompetitors: competitors.length,
-            finalMemoryMB: {
-              rss: Math.round(finalMemory.rss / 1024 / 1024),
-              heapUsed: Math.round(finalMemory.heapUsed / 1024 / 1024),
-              heapTotal: Math.round(finalMemory.heapTotal / 1024 / 1024)
-            },
-            memoryGrowth: {
-              rss: Math.round((finalMemory.rss - startMemory.rss) / 1024 / 1024),
-              heapUsed: Math.round((finalMemory.heapUsed - startMemory.heapUsed) / 1024 / 1024)
-            }
-          });
-        } else {
-          // No competitors - generate AI insights for client-only analysis
-          tracker.startInsights();
-          
-          await storage.updateEffectivenessRun(newRun.id, {
-            status: 'generating_insights',
-            progress: tracker.getProgressString(),
-            progressDetail: JSON.stringify(tracker.getState())
-          });
-          
-          try {
-            // Generate AI insights for client-only analysis
-            logger.info('Starting AI insights generation for client-only analysis', {
-              clientId,
-              runId: newRun.id,
-              hasOpenAI: !!process.env.OPENAI_API_KEY
-            });
-
-            try {
-              const { createInsightsService } = await import('../services/effectiveness');
-              const insightsService = createInsightsService(storage);
-              
-              try {
-                // Try to generate with OpenAI
-                const insights = await insightsService.generateInsights(
-                  clientId, 
-                  newRun.id, 
-                  undefined, 
-                  'Admin'
-                );
-                
-                // Mark insights complete and use tracker message
-                const tracker = getProgressTracker();
-                if (tracker) {
-                  tracker.complete();
-                }
-                
-                // ✅ ATOMIC: Save AI insights with progress update in transaction
-                const insightsResult = await saveAIInsightsAtomically(newRun.id, insights.insights, {
-                  progress: tracker ? tracker.getProgressString() : 'Analysis complete',
-                  progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
-                });
-                if (!insightsResult.success) {
-                  throw new Error(`Failed to save AI insights atomically: ${insightsResult.error?.message}`);
-                }
-                
-                logger.info('AI insights generated successfully for client-only analysis', {
-                  clientId,
-                  runId: newRun.id
-                });
-                
-                // tracker.complete() already called above
-                
-              } catch (openAIError) {
-                logger.error('OpenAI insights generation failed, using fallback for client-only analysis', {
-                  clientId,
-                  runId: newRun.id,
-                  error: openAIError instanceof Error ? openAIError.message : String(openAIError)
-                });
-                
-                // Generate fallback insights
-                const criterionScores = await storage.getCriterionScores(newRun.id);
-                
-                // Check if we have scores before trying to use them
-                if (!criterionScores || criterionScores.length === 0) {
-                  logger.warn('No criterion scores available for fallback insights', {
-                    clientId,
-                    runId: newRun.id
-                  });
-                  throw new Error('No criterion scores available');
-                }
-                
-                const lowestScore = criterionScores.reduce((min, c) => 
-                  c.score < min.score ? c : min
-                );
-                const highestScore = criterionScores.reduce((max, c) => 
-                  c.score > max.score ? c : max
-                );
-                
-                const fallbackInsights = {
-                  insight: `Website effectiveness score: ${result.overallScore}/10. Your strongest area is ${highestScore.criterion.replace(/_/g, ' ')} (${highestScore.score}/10) and your primary improvement opportunity is ${lowestScore.criterion.replace(/_/g, ' ')} (${lowestScore.score}/10).`,
-                  recommendations: [
-                    `Improve ${lowestScore.criterion.replace(/_/g, ' ')} - currently your weakest area`,
-                    `Maintain your strength in ${highestScore.criterion.replace(/_/g, ' ')}`,
-                    'Review detailed evidence for specific improvement actions',
-                    'Consider adding competitor analysis for benchmarking'
-                  ],
-                  confidence: 0.5,
-                  key_pattern: lowestScore.score < 4 ? 'critical_issues' : 'optimization_needed',
-                  fallback: true
-                };
-                
-                // Use tracker for progress message
-                const tracker = getProgressTracker();
-                if (tracker) {
-                  tracker.complete();
-                }
-                
-                await storage.updateEffectivenessRun(newRun.id, {
-                  aiInsights: fallbackInsights,
-                  insightsGeneratedAt: new Date(),
-                  progress: tracker ? tracker.getProgressString() : 'Analysis complete',
-                  progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
-                });
-                
-                logger.info('Fallback insights generated for client-only analysis', {
-                  clientId,
-                  runId: newRun.id
-                });
-              }
-              
-            } catch (criticalError) {
-              logger.error('Critical insights generation failure for client-only analysis', {
-                clientId,
-                runId: newRun.id,
-                error: criticalError instanceof Error ? criticalError.message : String(criticalError)
-              });
-              
-              // Absolute fallback - ensure something is saved
-              const minimalInsights = {
-                insight: `Analysis complete with score ${result.overallScore}/10 for ${client.name}.`,
-                recommendations: ['View detailed scores for improvement areas', 'Consider adding competitor analysis'],
-                confidence: 0.3,
-                key_pattern: 'analysis_complete',
-                fallback: true
-              };
-              
-              // Use tracker for progress message
-              const tracker = getProgressTracker();
-              if (tracker) {
-                tracker.complete();
-              }
-              
-              await storage.updateEffectivenessRun(newRun.id, {
-                aiInsights: minimalInsights,
-                insightsGeneratedAt: new Date(),
-                progress: tracker ? tracker.getProgressString() : 'Analysis complete',
-                progressDetail: tracker ? JSON.stringify(tracker.getState()) : undefined
-              });
-            }
-          } catch (insightsError) {
-            logger.error('Failed to generate AI insights for client-only analysis', {
-              clientId,
-              runId: newRun.id,
-              error: insightsError instanceof Error ? insightsError.message : String(insightsError)
-            });
-            // Continue without insights - don't fail the entire run
-          }
-        }
-
-      } catch (scoringError) {
-        runFailed = true;
-        logger.error('Effectiveness scoring failed', {
-          clientId,
-          runId: newRun.id,
-          error: scoringError instanceof Error ? scoringError.message : String(scoringError)
-        });
-        
-        // ✅ ATOMIC: Mark run as failed with transaction
-        await markRunFailedAtomically(newRun.id, 
-          `Analysis failed: ${scoringError instanceof Error ? scoringError.message : 'Unknown error'}`
-        );
-      } finally {
-        // Ensure we don't leave runs in pending state
-        if (!runFailed) {
-          const finalRun = await storage.getEffectivenessRun(newRun.id);
-          if (finalRun && ['pending', 'initializing', 'scraping', 'analyzing'].includes(finalRun.status)) {
-            // ✅ ATOMIC: Mark incomplete run as failed
-            await markRunFailedAtomically(newRun.id, 'Run did not complete properly');
-          }
-        }
-        
-        // Clean up browser resources to prevent zombie processes
-        try {
-          await screenshotService.cleanup();
-          logger.info('Browser cleanup completed successfully', { runId: newRun.id });
-        } catch (cleanupError) {
-          logger.error('Browser cleanup failed', { 
-            runId: newRun.id,
-            error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
-          });
-        }
-        
-        // Clear progress tracker
-        clearProgressTracker();
-      }
-    });
-
-    // Return HONEST response - analysis has started, not completed!
-    res.json({
-      message: 'Effectiveness analysis started',
-      runId: newRun.id,
-      status: 'pending'
-    });
 
   } catch (error) {
-    logger.error('Failed to start effectiveness refresh', {
-      clientId: req.params.clientId,
-      error: error instanceof Error ? error.message : String(error)
+    logger.error('Error starting effectiveness analysis', { 
+      error: error instanceof Error ? error.message : String(error),
+      clientId: req.params.clientId
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to start effectiveness analysis'
@@ -1182,14 +296,13 @@ router.post('/refresh/:clientId', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/effectiveness/:runId/evidence/:criterion
- * Get detailed evidence for a specific criterion
- */
+// GET /:runId/evidence/:criterion - Get evidence for a specific criterion
 router.get('/:runId/evidence/:criterion', requireAuth, async (req, res) => {
   try {
     const { runId, criterion } = req.params;
-    
+
+    logger.info('Fetching criterion evidence', { runId, criterion });
+
     // Get the run to verify access
     const run = await storage.getEffectivenessRun(runId);
     if (!run) {
@@ -1207,32 +320,23 @@ router.get('/:runId/evidence/:criterion', requireAuth, async (req, res) => {
       });
     }
 
-    // Get the specific criterion score
-    const scores = await storage.getCriterionScores(runId);
-    const criterionScore = scores.find(s => s.criterion === criterion);
-
+    // Get criterion score with evidence
+    const criterionScore = await storage.getCriterionScore(runId, criterion);
     if (!criterionScore) {
       return res.status(404).json({
-        code: 'EVIDENCE_NOT_FOUND',
-        message: `No evidence found for criterion: ${criterion}`
+        code: 'CRITERION_NOT_FOUND',
+        message: 'Criterion score not found'
       });
     }
 
-    res.json({
-      runId,
-      criterion,
-      score: criterionScore.score,
-      evidence: criterionScore.evidence,
-      passes: criterionScore.passes
-    });
+    res.json(criterionScore);
 
   } catch (error) {
-    logger.error('Failed to fetch evidence', {
+    logger.error('Error fetching criterion evidence', { 
+      error: error instanceof Error ? error.message : String(error),
       runId: req.params.runId,
-      criterion: req.params.criterion,
-      error: error instanceof Error ? error.message : String(error)
+      criterion: req.params.criterion
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to fetch evidence'
@@ -1240,14 +344,13 @@ router.get('/:runId/evidence/:criterion', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/effectiveness/:runId/evidence/all
- * Get all evidence data for an effectiveness run (used by evidence drawer)
- */
+// GET /:runId/evidence/all - Get all evidence for a run
 router.get('/:runId/evidence/all', requireAuth, async (req, res) => {
   try {
     const { runId } = req.params;
-    
+
+    logger.info('Fetching all evidence', { runId });
+
     // Get the run to verify access
     const run = await storage.getEffectivenessRun(runId);
     if (!run) {
@@ -1267,52 +370,33 @@ router.get('/:runId/evidence/all', requireAuth, async (req, res) => {
 
     // Get all criterion scores for this run
     const criterionScores = await storage.getCriterionScores(runId);
-    
-    // Ensure all expected fields are included in the response
-    // The frontend expects these fields to be present (even if null/undefined)
+
     res.json({
-      run: {
-        id: run.id,
-        clientId: run.clientId,
-        competitorId: run.competitorId,
-        overallScore: run.overallScore,
-        status: run.status,
-        progress: run.progress,
-        createdAt: run.createdAt,
-        screenshotUrl: run.screenshotUrl || null,
-        fullPageScreenshotUrl: run.fullPageScreenshotUrl || null,
-        webVitals: run.webVitals || null,
-        screenshotError: run.screenshotError || null,
-        fullPageScreenshotError: run.fullPageScreenshotError || null,
-        screenshotMethod: run.screenshotMethod || null,
-        aiInsights: run.aiInsights || null,
-        insightsGeneratedAt: run.insightsGeneratedAt || null,
-        criterionScores: criterionScores || []
-      }
+      runId,
+      evidence: criterionScores
     });
 
   } catch (error) {
-    logger.error('Failed to fetch all evidence', {
-      runId: req.params.runId,
-      error: error instanceof Error ? error.message : String(error)
+    logger.error('Error fetching all evidence', { 
+      error: error instanceof Error ? error.message : String(error),
+      runId: req.params.runId
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
-      message: 'Failed to fetch evidence'
+      message: 'Failed to fetch all evidence'
     });
   }
 });
 
-/**
- * POST /api/effectiveness/:runId/insights
- * Generate AI insights for an effectiveness run
- */
+// POST /:runId/insights - Generate AI insights for a run
 router.post('/:runId/insights', requireAuth, async (req, res) => {
   try {
     const { runId } = req.params;
-    
-    // Get the run to verify access
+    const { clientId } = req.body;
+
+    logger.info('Generating insights', { runId, clientId });
+
+    // Get the run to verify access and completion
     const run = await storage.getEffectivenessRun(runId);
     if (!run) {
       return res.status(404).json({
@@ -1329,53 +413,27 @@ router.post('/:runId/insights', requireAuth, async (req, res) => {
       });
     }
 
-    // Check if run is completed
+    // Ensure run is completed
     if (run.status !== 'completed') {
       return res.status(400).json({
         code: 'RUN_NOT_COMPLETED',
-        message: 'Effectiveness run must be completed before generating insights'
+        message: 'Cannot generate insights for incomplete run'
       });
     }
 
-    // Check if insights already exist
-    if (run.aiInsights) {
-      return res.json({
-        runId,
-        insights: run.aiInsights,
-        generatedAt: run.insightsGeneratedAt
-      });
-    }
-
-    logger.info('Generating AI insights for run', { runId });
-
-    // Import and create insights service
-    const { createInsightsService } = await import('../services/effectiveness');
-    const insightsService = createInsightsService(storage);
-
-    // Generate insights
-    const result = await insightsService.generateInsights(run.clientId, runId, req.user?.clientId, req.user?.role);
-
-    // ✅ ATOMIC: Update run with insights in transaction
-    const insightsResult = await saveAIInsightsAtomically(runId, result.insights);
-    if (!insightsResult.success) {
-      return res.status(500).json({
-        success: false,
-        error: `Failed to save insights: ${insightsResult.error?.message}`
-      });
-    }
+    // Use EffectivenessService to generate insights
+    const insights = await effectivenessService.generateInsights(clientId, runId);
 
     res.json({
       runId,
-      insights: result.insights,
-      generatedAt: new Date()
+      insights
     });
 
   } catch (error) {
-    logger.error('Failed to generate insights', {
-      runId: req.params.runId,
-      error: error instanceof Error ? error.message : String(error)
+    logger.error('Error generating insights', { 
+      error: error instanceof Error ? error.message : String(error),
+      runId: req.params.runId
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to generate insights'
@@ -1383,19 +441,15 @@ router.post('/:runId/insights', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/effectiveness/config
- * Get effectiveness scoring configuration (admin only)
- */
+// GET /config - Get effectiveness configuration (admin only)
 router.get('/config', requireAdmin, async (req, res) => {
   try {
-    const config = await configManager.getConfig();
+    const config = EffectivenessConfigManager.getConfig();
     res.json(config);
   } catch (error) {
-    logger.error('Failed to fetch effectiveness config', {
+    logger.error('Error fetching effectiveness config', { 
       error: error instanceof Error ? error.message : String(error)
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to fetch configuration'
@@ -1403,19 +457,18 @@ router.get('/config', requireAdmin, async (req, res) => {
   }
 });
 
-/**
- * PUT /api/effectiveness/config
- * Update effectiveness scoring configuration (admin only)
- */
+// PUT /config - Update effectiveness configuration (admin only)
 router.put('/config', requireAdmin, async (req, res) => {
   try {
-    const updated = await configManager.updateConfig(req.body);
-    res.json(updated);
+    const updatedConfig = EffectivenessConfigManager.updateConfig(req.body);
+    res.json({
+      message: 'Configuration updated successfully',
+      config: updatedConfig
+    });
   } catch (error) {
-    logger.error('Failed to update effectiveness config', {
+    logger.error('Error updating effectiveness config', { 
       error: error instanceof Error ? error.message : String(error)
     });
-
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to update configuration'

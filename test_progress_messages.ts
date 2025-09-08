@@ -1,93 +1,95 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
+
 /**
- * Test progress messages during effectiveness analysis
- * Monitor the actual message flow users see
+ * Quick Test: Progress Message Flow
+ * 
+ * Tests the new centralized progress tracking system to ensure
+ * it provides smooth, forward-only progress updates.
  */
 
-import { storage } from './server/storage';
+import { effectivenessService } from './server/services/EffectivenessService.js';
 
-// Mock progress callback to capture messages
-const progressMessages: string[] = [];
-let currentMessage = '';
+async function testProgressFlow() {
+  console.log('\n========================================');
+  console.log('  PROGRESS TRACKING TEST');
+  console.log('========================================\n');
 
-function mockProgressCallback(status: string, message: string, data?: any, details?: any) {
-  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-  const logEntry = `[${timestamp}] ${status}: ${message}`;
-  
-  progressMessages.push(logEntry);
-  currentMessage = message;
-  console.log(`📢 ${logEntry}`);
-  
-  if (details) {
-    console.log(`   Details: ${JSON.stringify(details, null, 2)}`);
-  }
-}
-
-async function testProgressMessages() {
-  console.log('🔍 Testing progress message flow during effectiveness analysis\n');
-  
   try {
-    // Get demo client
-    const clients = await storage.getClients();
-    const client = clients.find(c => c.id === 'demo-client-id');
-    
-    if (!client) {
-      console.log('❌ Demo client not found');
-      return;
-    }
-    
-    const websiteUrl = client.websiteUrl || 'https://cleardigital.com';
-    console.log(`📊 Testing with client: ${client.name} (${websiteUrl})`);
-    console.log('📝 Monitoring all progress messages...\n');
-    
-    // Import the enhanced scorer with progress callback
-    const { EnhancedWebsiteEffectivenessScorer } = await import('./server/services/effectiveness/enhancedScorer');
-    const enhancedScorer = new EnhancedWebsiteEffectivenessScorer();
-    
-    // Run a simplified scoring test to observe progress messages
+    // Start analysis for demo client
+    console.log('🚀 Starting analysis...');
+    const { runId } = await effectivenessService.startAnalysis('demo-client-id', true);
+    console.log(`✓ Analysis started with runId: ${runId.slice(0, 8)}\n`);
+
+    // Monitor progress for 30 seconds
+    const progressHistory: Array<{time: number, progress: number, message: string}> = [];
     const startTime = Date.now();
     
-    try {
-      const result = await enhancedScorer.scoreWebsiteProgressive(
-        websiteUrl,
-        mockProgressCallback
-      );
+    console.log('📊 Monitoring progress (30 seconds)...\n');
+    
+    const monitorInterval = setInterval(async () => {
+      const progress = await effectivenessService.getProgress(runId);
       
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      if (progress) {
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        progressHistory.push({
+          time: elapsed,
+          progress: progress.progress,
+          message: progress.progressDetail
+        });
+        
+        console.log(`[${elapsed}s] ${progress.progress}% | ${progress.progressDetail}`);
+        
+        if (progress.status === 'completed' || progress.status === 'failed') {
+          clearInterval(monitorInterval);
+          console.log('\n✓ Analysis completed!');
+          analyzeProgressSmoothing();
+        }
+      }
+    }, 2000);
+
+    // Stop monitoring after 30 seconds
+    setTimeout(() => {
+      clearInterval(monitorInterval);
+      console.log('\n⏰ Monitoring stopped after 30 seconds');
+      analyzeProgressSmoothing();
+    }, 30000);
+
+    function analyzeProgressSmoothing() {
+      console.log('\n📈 PROGRESS ANALYSIS:');
+      console.log('──────────────────────');
       
-      console.log(`\n✅ Analysis completed in ${duration}s`);
-      console.log(`📈 Final score: ${result.overallScore}/10`);
-      console.log(`🎯 Status: ${result.status}`);
+      let hadBackwardJump = false;
+      let maxProgress = 0;
       
-      console.log(`\n📋 Progress Message Summary (${progressMessages.length} messages):`);
-      progressMessages.forEach((msg, i) => {
-        console.log(`  ${i + 1}. ${msg}`);
+      for (let i = 0; i < progressHistory.length; i++) {
+        const curr = progressHistory[i];
+        if (curr.progress < maxProgress) {
+          console.log(`❌ Backward jump detected: ${maxProgress}% → ${curr.progress}% at ${curr.time}s`);
+          hadBackwardJump = true;
+        }
+        maxProgress = Math.max(maxProgress, curr.progress);
+      }
+      
+      if (!hadBackwardJump && progressHistory.length > 0) {
+        console.log('✅ No backward progress jumps detected');
+        console.log(`✅ Progress range: 0% → ${maxProgress}%`);
+      }
+      
+      console.log(`✅ Total progress updates: ${progressHistory.length}`);
+      console.log('\n📋 PROGRESS HISTORY:');
+      progressHistory.forEach(p => {
+        console.log(`  ${p.time}s: ${p.progress}% - ${p.message}`);
       });
       
-      // Analyze message helpfulness
-      console.log(`\n🔍 Message Analysis:`);
-      console.log(`   - Total messages: ${progressMessages.length}`);
-      console.log(`   - First message: "${progressMessages[0]?.split(': ')[1] || 'NONE'}"`);
-      console.log(`   - Last message: "${progressMessages[progressMessages.length - 1]?.split(': ')[1] || 'NONE'}"`);
-      console.log(`   - Messages contain helpful info: ${progressMessages.some(m => m.includes('screenshot') || m.includes('analyzing') || m.includes('complete'))}`);
-      
-    } catch (error) {
-      console.log(`❌ Scoring failed: ${error.message}`);
-      console.log(`📝 Messages before failure: ${progressMessages.length}`);
+      console.log('\n🎉 Progress tracking test completed!');
+      process.exit(0);
     }
-    
+
   } catch (error) {
-    console.log(`❌ Test setup failed: ${error.message}`);
+    console.error('❌ Test failed:', error instanceof Error ? error.message : String(error));
+    process.exit(1);
   }
 }
 
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
-if (isMainModule) {
-  testProgressMessages().then(() => {
-    console.log('\n🏁 Progress message test completed');
-    process.exit(0);
-  }).catch(error => {
-    console.error('Test failed:', error);
-    process.exit(1);
-  });
-}
+// Run test
+testProgressFlow().catch(console.error);

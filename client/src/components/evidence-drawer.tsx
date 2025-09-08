@@ -41,6 +41,15 @@ const formatMarkdown = (text: string) => {
   return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 };
 
+// Extract web vitals from speed criterion evidence
+const extractWebVitals = (currentRunData: any) => {
+  const speedCriterion = currentRunData?.criterionScores?.find((c: any) => c.criterion === 'speed');
+  if (speedCriterion?.evidence?.details?.webVitals) {
+    return speedCriterion.evidence.details.webVitals;
+  }
+  return null;
+};
+
 // Generate appropriate messages for failed checks instead of generic "Not found in content"
 const getFailedCheckMessage = (check: string): string => {
   const messages: Record<string, string> = {
@@ -922,17 +931,17 @@ export function EvidenceDrawer({
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-4">
                       {/* Add error display for screenshot errors */}
-                      {evidenceData?.run?.screenshotError && (
+                      {currentRunData?.screenshotError && (
                         <ErrorDisplay
                           title="Screenshot Capture Failed"
                           message="Unable to capture website screenshot"
-                          details={evidenceData.run.screenshotError}
+                          details={currentRunData.screenshotError}
                           type="warning"
                         />
                       )}
                       
                       {/* Add timeout error display */}
-                      {evidenceData?.run?.progress?.includes('timeout') && (
+                      {currentRunData?.progress?.includes('timeout') && (
                         <ErrorDisplay
                           title="Analysis Timeout"
                           message="Website analysis timed out during processing"
@@ -964,7 +973,7 @@ export function EvidenceDrawer({
                         </div>
                       )}
 
-                    {evidenceData?.run?.screenshotUrl && evidenceData.run.screenshotUrl !== '' ? (
+                    {currentRunData?.screenshotUrl && currentRunData.screenshotUrl !== '' ? (
                       <div className="space-y-4">
                         <div className="rounded-lg border bg-white p-4">
                           <div className="text-sm font-medium text-gray-900 mb-3">
@@ -972,32 +981,32 @@ export function EvidenceDrawer({
                           </div>
                           <div className="relative border rounded-lg overflow-hidden bg-gray-50">
                             <ScreenshotDisplay 
-                              url={evidenceData.run.screenshotUrl}
-                              runData={evidenceData.run}
+                              url={currentRunData.screenshotUrl}
+                              runData={currentRunData}
                             />
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Captured on {formatDate(evidenceData.run.createdAt)} • Shows website as visitors first see it
+                            Captured on {formatDate(currentRunData.createdAt)} • Shows website as visitors first see it
                           </p>
                         </div>
 
                         {/* Full-Page Screenshot Section */}
-                        {evidenceData?.run?.fullPageScreenshotUrl && evidenceData.run.fullPageScreenshotUrl !== '' ? (
+                        {currentRunData?.fullPageScreenshotUrl && currentRunData.fullPageScreenshotUrl !== '' ? (
                           <div className="rounded-lg border bg-white p-4">
                             <div className="text-sm font-medium text-gray-900 mb-3">
                               Full-Page Website Screenshot
                             </div>
                             <div className="relative border rounded-lg overflow-hidden bg-gray-50">
                               <ScreenshotDisplay 
-                                url={evidenceData.run.fullPageScreenshotUrl}
-                                runData={evidenceData.run}
+                                url={currentRunData.fullPageScreenshotUrl}
+                                runData={currentRunData}
                               />
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                              Captured on {formatDate(evidenceData.run.createdAt)} • Shows complete website layout and content flow
+                              Captured on {formatDate(currentRunData.createdAt)} • Shows complete website layout and content flow
                             </p>
                           </div>
-                        ) : evidenceData?.run?.fullPageScreenshotError && (
+                        ) : currentRunData?.fullPageScreenshotError && (
                           <div className="rounded-lg border bg-yellow-50 p-4">
                             <div className="text-sm font-medium text-yellow-800 mb-2">
                               Full-Page Screenshot Unavailable
@@ -1026,7 +1035,7 @@ export function EvidenceDrawer({
                             Screenshots help visualize the analyzed website but are not required for scoring.
                           </p>
                         )}
-                        {evidenceData?.run?.screenshotError && (
+                        {currentRunData?.screenshotError && (
                           <details className="mt-4 text-xs text-gray-500">
                             <summary className="cursor-pointer hover:text-gray-700">
                               Why did this happen?
@@ -1093,54 +1102,63 @@ export function EvidenceDrawer({
                             <div className="space-y-3">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">Largest Contentful Paint</span>
-                                {evidenceData?.run?.webVitals?.lcp ? (
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn(
-                                      evidenceData.run.webVitals.lcp <= 2.5 ? "text-green-600 border-green-200" :
-                                      evidenceData.run.webVitals.lcp <= 4.0 ? "text-yellow-600 border-yellow-200" : 
-                                      "text-red-600 border-red-200"
-                                    )}
-                                  >
-                                    {evidenceData.run.webVitals.lcp.toFixed(1)}s
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">Not available</Badge>
-                                )}
+                                {(() => {
+                                  const webVitals = extractWebVitals(currentRunData);
+                                  return webVitals?.lcp ? (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        webVitals.lcp <= 2.5 ? "text-green-600 border-green-200" :
+                                        webVitals.lcp <= 4.0 ? "text-yellow-600 border-yellow-200" : 
+                                        "text-red-600 border-red-200"
+                                      )}
+                                    >
+                                      {webVitals.lcp.toFixed(1)}s
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not available</Badge>
+                                  );
+                                })()}
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">Cumulative Layout Shift</span>
-                                {evidenceData?.run?.webVitals?.cls !== undefined ? (
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn(
-                                      evidenceData.run.webVitals.cls <= 0.1 ? "text-green-600 border-green-200" :
-                                      evidenceData.run.webVitals.cls <= 0.25 ? "text-yellow-600 border-yellow-200" : 
-                                      "text-red-600 border-red-200"
-                                    )}
-                                  >
-                                    {evidenceData.run.webVitals.cls.toFixed(2)}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">Not available</Badge>
-                                )}
+                                {(() => {
+                                  const webVitals = extractWebVitals(currentRunData);
+                                  return webVitals?.cls !== undefined ? (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        webVitals.cls <= 0.1 ? "text-green-600 border-green-200" :
+                                        webVitals.cls <= 0.25 ? "text-yellow-600 border-yellow-200" : 
+                                        "text-red-600 border-red-200"
+                                      )}
+                                    >
+                                      {webVitals.cls.toFixed(2)}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not available</Badge>
+                                  );
+                                })()}
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-sm">First Input Delay</span>
-                                {evidenceData?.run?.webVitals?.fid !== undefined ? (
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn(
-                                      evidenceData.run.webVitals.fid <= 100 ? "text-green-600 border-green-200" :
-                                      evidenceData.run.webVitals.fid <= 300 ? "text-yellow-600 border-yellow-200" : 
-                                      "text-red-600 border-red-200"
-                                    )}
-                                  >
-                                    {Math.round(evidenceData.run.webVitals.fid)}ms
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">Not available</Badge>
-                                )}
+                                {(() => {
+                                  const webVitals = extractWebVitals(currentRunData);
+                                  return webVitals?.fid !== undefined ? (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        webVitals.fid <= 100 ? "text-green-600 border-green-200" :
+                                        webVitals.fid <= 300 ? "text-yellow-600 border-yellow-200" : 
+                                        "text-red-600 border-red-200"
+                                      )}
+                                    >
+                                      {Math.round(webVitals.fid)}ms
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not available</Badge>
+                                  );
+                                })()}
                               </div>
                             </div>
                             )}

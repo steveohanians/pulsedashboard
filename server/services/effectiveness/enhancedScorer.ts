@@ -14,9 +14,6 @@ import { storage } from "../../storage";
 import logger from "../../utils/logging/logger";
 import { smartTimeoutManager } from "./smartTimeoutManager";
 
-export interface ProgressCallback {
-  (status: string, progress: string, results?: Partial<EffectivenessResult>, progressDetail?: any): Promise<void>;
-}
 
 export class EnhancedWebsiteEffectivenessScorer {
   private openai: OpenAI;
@@ -37,8 +34,7 @@ export class EnhancedWebsiteEffectivenessScorer {
    */
   public async scoreWebsiteProgressive(
     websiteUrl: string,
-    runId?: string,
-    progressCallback?: ProgressCallback
+    runId?: string
   ): Promise<EffectivenessResult> {
     
     const scoringStartTime = Date.now();
@@ -67,9 +63,6 @@ export class EnhancedWebsiteEffectivenessScorer {
           skipToPhase = recovery.lastPhase || null;
           existingResults = recovery.partialResults || {};
           
-          if (progressCallback) {
-            await progressCallback("resuming", `Resuming from ${recovery.lastPhase} phase`, existingResults);
-          }
         }
       }
 
@@ -78,16 +71,6 @@ export class EnhancedWebsiteEffectivenessScorer {
       let config = await this.configManager.getConfig();
       
       if (skipToPhase === null || skipToPhase === 'data_collection') {
-        if (progressCallback) {
-          await progressCallback("scraping", "Collecting website data", undefined, {
-            phase: 'data_collection',
-            subPhase: 'fetching_html',
-            progress: 10,
-            completedItems: [],
-            currentItem: 'Getting started',
-            estimatedTimeRemaining: 60
-          });
-        }
 
         // ✅ TIMEOUT MANAGEMENT: Start data collection with timeout
         const dataTimeoutId = runId ? await smartTimeoutManager.startComponentTimeout(
@@ -106,12 +89,7 @@ export class EnhancedWebsiteEffectivenessScorer {
           // Timeout handler - cleanup and fail gracefully  
           async () => {
             logger.error("Data collection timeout - aborting run", { websiteUrl });
-            if (runId) {
-              await storage.updateEffectivenessRun(runId, {
-                status: 'failed',
-                progress: 'Data collection timeout - website may be unresponsive'
-              });
-            }
+            // Don't update progress directly - let EffectivenessService handle it
           }
         ) : '';
 
@@ -175,16 +153,6 @@ export class EnhancedWebsiteEffectivenessScorer {
       if (context.screenshot) completedItems.push('Screenshots');
       if (context.webVitals) completedItems.push('Web Vitals');
       
-      if (progressCallback && (skipToPhase === null || skipToPhase === 'data_collection')) {
-        await progressCallback("scraping", "Data collection complete", undefined, {
-          phase: 'data_collection',
-          subPhase: 'complete',
-          progress: 25,
-          completedItems,
-          currentItem: 'Analysis started',
-          estimatedTimeRemaining: 45
-        });
-      }
 
       logger.info("Data collection completed", {
         websiteUrl,
@@ -218,103 +186,18 @@ export class EnhancedWebsiteEffectivenessScorer {
         // Timeout handler
         async () => {
           logger.error("Analysis timeout - saving partial results", { websiteUrl });
-          if (runId) {
-            await storage.updateEffectivenessRun(runId, {
-              status: 'failed',
-              progress: 'Analysis timeout - AI processing took too long'
-            });
-          }
+          // Don't update progress directly - let EffectivenessService handle it
         }
       ) : '';
 
       try {
         progressiveResults = runId ?
           await smartTimeoutManager.createTimeoutPromise(
-            this.tieredExecutor.executeAllTiers(
-              context,
-              config,
-              // Real-time tier completion callback with checkpoint saving
-              async (tierResult: TierResult, progressive: ProgressiveResults) => {
-                allCriterionResults = progressive.tiers.flatMap(t => t.results);
-                
-                // Build partial results for this tier
-                const partialResult: EffectivenessResult = {
-                  overallScore: progressive.overallScore,
-                  criterionResults: allCriterionResults,
-                  screenshotUrl: context.screenshot,
-                  fullPageScreenshotUrl: context.fullPageScreenshot,
-                  webVitals: context.webVitals,
-                  screenshotMethod: context.screenshotMethod,
-                  screenshotError: context.screenshotError,
-                  fullPageScreenshotError: context.fullPageScreenshotError
-                };
-
-                // ✅ CHECKPOINT: Save after each tier completion
-                if (runId) {
-                  await smartTimeoutManager.saveCheckpoint(
-                    runId, 
-                    tierResult.tier === 3 ? 'tier_3' : tierResult.tier === 2 ? 'tier_2' : 'tier_1',
-                    progressive.tiers.flatMap(t => t.results.map(r => r.criterion)),
-                    partialResult
-                  );
-                }
-
-                // Send progress update for each criterion that completed in this tier
-                if (progressCallback) {
-                  for (const criterionResult of tierResult.results) {
-                    await progressCallback("analyzing", "", partialResult, {
-                      phase: 'criterion_analysis',
-                      subPhase: 'criterion_complete',
-                      criterionName: criterionResult.criterion,
-                      tierDetails: {
-                        tier: tierResult.tier,
-                        completedCriteria: progressive.completedCriteria,
-                        totalCriteria: progressive.totalCriteria,
-                        overallScore: progressive.overallScore
-                      }
-                    });
-                  }
-                }
-              }
-            ),
+            this.tieredExecutor.executeAllTiers(context, config, null),
             180000, // 3 minutes for all tiers
             'criterion_analysis'
           ) :
-          await this.tieredExecutor.executeAllTiers(
-            context,
-            config,
-            // Real-time tier completion callback (no timeout management for non-runId calls)
-            async (tierResult: TierResult, progressive: ProgressiveResults) => {
-              allCriterionResults = progressive.tiers.flatMap(t => t.results);
-              
-              const partialResult: EffectivenessResult = {
-                overallScore: progressive.overallScore,
-                criterionResults: allCriterionResults,
-                screenshotUrl: context.screenshot,
-                fullPageScreenshotUrl: context.fullPageScreenshot,
-                webVitals: context.webVitals,
-                screenshotMethod: context.screenshotMethod,
-                screenshotError: context.screenshotError,
-                fullPageScreenshotError: context.fullPageScreenshotError
-              };
-
-              if (progressCallback) {
-                for (const criterionResult of tierResult.results) {
-                  await progressCallback("analyzing", "", partialResult, {
-                    phase: 'criterion_analysis',
-                    subPhase: 'criterion_complete',
-                    criterionName: criterionResult.criterion,
-                    tierDetails: {
-                      tier: tierResult.tier,
-                      completedCriteria: progressive.completedCriteria,
-                      totalCriteria: progressive.totalCriteria,
-                      overallScore: progressive.overallScore
-                    }
-                  });
-                }
-              }
-            }
-          );
+          await this.tieredExecutor.executeAllTiers(context, config, null);
 
         // Mark analysis as complete
         if (runId && analysisTimeoutId) {
@@ -334,7 +217,7 @@ export class EnhancedWebsiteEffectivenessScorer {
         criterionResults: progressiveResults.tiers.flatMap(t => t.results),
         screenshotUrl: context.screenshot,
         fullPageScreenshotUrl: context.fullPageScreenshot,
-        webVitals: this.extractBestWebVitals(dataResult.webVitals, progressiveResults),
+        webVitals: this.extractBestWebVitals(context.webVitals, progressiveResults),
         screenshotMethod: context.screenshotMethod,
         screenshotError: context.screenshotError,
         fullPageScreenshotError: context.fullPageScreenshotError
@@ -377,16 +260,8 @@ export class EnhancedWebsiteEffectivenessScorer {
       }
       
       // Update run status to failed if runId provided
-      if (runId && storage) {
-        try {
-          await storage.updateEffectivenessRun(runId, {
-            status: 'failed',
-            progress: `Scoring failed: ${error instanceof Error ? error.message : String(error)}`
-          });
-        } catch (dbError) {
-          logger.error("Failed to update run status to failed", { runId, dbError });
-        }
-      }
+      // Don't update progress directly - let EffectivenessService handle it
+      logger.error("Scoring failed", { runId, error: error instanceof Error ? error.message : String(error) });
       
       throw error;
     } finally {

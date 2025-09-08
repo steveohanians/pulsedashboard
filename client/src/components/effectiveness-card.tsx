@@ -10,6 +10,7 @@ import { useEffectivenessData } from "@/hooks/useEffectivenessData";
 import { useEffectivenessActions } from "@/hooks/useEffectivenessActions";
 import { cn } from "@/lib/utils";
 import { EffectivenessErrorBoundary } from "./EffectivenessErrorBoundary";
+import { getStatusMessaging, hasViewableResults, type EffectiveStatus } from "@/utils/status-utils";
 
 // Lazy load non-critical components to optimize bundle size
 const EvidenceDrawer = React.lazy(() => import("./evidence-drawer").then(module => ({ default: module.EvidenceDrawer })));
@@ -40,7 +41,10 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     "Scoring for 8 effectiveness criteria signals",
     "Predicting how first-time visitors will feel",
     "Asking the big one: does this drive action?",
-    "Packaging clear, do-this-next recommendations"
+    "Packaging clear, do-this-next recommendations",
+    "Also analyzing your competitors in parallel",
+    "Building side-by-side comparisons for you",
+    "Spotting what makes your site unique"
   ];
 
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -64,15 +68,17 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   // No manual cleanup needed - React Query handles polling lifecycle
 
-  // Use new simple data layer hooks
+  // Use enhanced data layer hooks with new status system
   const { 
     data, 
     run, 
     client, 
     competitorData,
+    effectiveStatus,
     isInProgress,
     isCompleted,
     isFailed,
+    isPartial,
     hasData,
     progress,
     progressString,
@@ -82,6 +88,10 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     error,
     isRefetching
   } = useEffectivenessData(clientId);
+
+  // Get status messaging for UI display
+  const statusMessage = getStatusMessaging(effectiveStatus);
+  const showResults = hasViewableResults(effectiveStatus);
 
   // Use new simple actions hook
   const {
@@ -168,7 +178,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
           <CardTitle className="text-lg lg:text-xl flex justify-between items-start">
             <div className="flex flex-col gap-2">
               <span id="effectiveness-description">Website Effectiveness Engine™ Audit</span>
-              {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+              {run && showResults && run.criterionScores && run.criterionScores.length > 0 && (
                 <span 
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-50 border border-slate-200 text-slate-600 w-fit"
                   data-testid="effectiveness-status-chip"
@@ -182,7 +192,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                 </span>
               )}
             </div>
-            {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+            {run && showResults && run.criterionScores && run.criterionScores.length > 0 && (
               <span 
                 className="text-xl sm:text-2xl lg:text-3xl font-light text-primary flex-shrink-0"
                 role="status"
@@ -327,14 +337,6 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     >
                       {progressMessage || 'Starting analysis...'}
                     </span>
-                    {progressPercentage > 0 && (
-                      <span 
-                        className="text-xs font-mono text-muted-foreground"
-                        aria-label={`Analysis ${progressPercentage} percent complete`}
-                      >
-                        {progressPercentage}%
-                      </span>
-                    )}
                   </div>
                   
                   {/* Progress bar with percentage */}
@@ -353,12 +355,6 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                           className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
                           style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                         />
-                      </div>
-                      <div 
-                        className="text-xs text-center text-muted-foreground mt-1"
-                        id="progress-description"
-                      >
-                        {progressPercentage}% complete
                       </div>
                     </div>
                   )}
@@ -387,28 +383,53 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && run.status === 'failed' && (
+          {/* New status-based UI - Partial Success */}
+          {effectiveStatus === 'partial' && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-2">Analysis failed</p>
-              {progressMessage && (
+              <div className="space-y-3">
+                <p className="text-muted-foreground mb-2">{statusMessage.title}</p>
                 <div className="space-y-2 mb-4">
-                  <p className="text-sm text-red-600">{progressMessage}</p>
-                  {/* Keep error messages simple - no technical details */}
+                  <p className="text-sm text-amber-600">Your website analysis completed successfully</p>
+                  <p className="text-xs text-muted-foreground">Some competitor data may be unavailable due to network issues</p>
                 </div>
-              )}
-              <Button onClick={handleRefresh} disabled={!canRefresh}>
-                {isStarting ? (
-                  <>
-                    <ButtonLoadingSpinner size="sm" className="mr-2" />
-                    Scoring Website...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Try Again
-                  </>
+                <div className="text-center">
+                  <p className="text-sm text-green-600 mb-2">✓ Your effectiveness analysis is ready</p>
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    variant="default"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    View Results
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New status-based UI - True Failure */}
+          {effectiveStatus === 'failed' && (
+            <div className="text-center py-8">
+              <div className="space-y-3">
+                <p className="text-muted-foreground mb-2">{statusMessage.title}</p>
+                {progressMessage && (
+                  <div className="space-y-2 mb-4">
+                    <p className="text-sm text-red-600">{progressMessage}</p>
+                  </div>
                 )}
-              </Button>
+                <Button onClick={handleRefresh} disabled={!canRefresh}>
+                  {isStarting ? (
+                    <>
+                      <ButtonLoadingSpinner size="sm" className="mr-2" />
+                      Scoring Website...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Try Again
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -432,7 +453,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+          {run && showResults && run.criterionScores && run.criterionScores.length > 0 && (
             <div className="space-y-4">
               {/* Two-column layout */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
@@ -533,7 +554,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       </Card>
 
       {/* Evidence Drawer */}
-      {run && isCompleted && run.criterionScores && run.criterionScores.length > 0 && (
+      {run && showResults && run.criterionScores && run.criterionScores.length > 0 && (
         <React.Suspense fallback={null}>
           <EvidenceDrawer
             isOpen={showEvidence}
