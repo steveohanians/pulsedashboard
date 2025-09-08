@@ -15,6 +15,7 @@ import benchmarkAdminRouter from "./routes/benchmark-admin";
 import adminUsersRouter from "./routes/admin-users";
 import sovRoutes from "./routes/sovRoutes";
 import effectivenessRoutes from "./routes/effectivenessRoutes";
+import sseRoutes from "./routes/sseRoutes";
 import { debugRoutes } from "./routes/debugRoutes";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema, updateEffectivenessPromptTemplateSchema } from "@shared/schema";
@@ -4550,6 +4551,9 @@ Output: Numbered list with tags.
 
   // Website Effectiveness Scoring routes
   app.use("/api/effectiveness", effectivenessRoutes);
+
+  // Server-Sent Events routes for real-time updates
+  app.use("/api/sse", sseRoutes);
 
   // Debug routes (temporary - enabled for all environments)
   app.use("/api/debug", debugRoutes);

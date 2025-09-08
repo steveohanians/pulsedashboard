@@ -13,7 +13,7 @@ import { effectivenessService } from '../services/EffectivenessService';
 import { z } from 'zod';
 import { db } from '../db';
 import { effectivenessRuns, competitors } from '@shared/schema';
-import { and, eq, or, desc, sql, isNotNull } from 'drizzle-orm';
+import { and, eq, or, desc, sql, isNotNull, isNull } from 'drizzle-orm';
 
 const router = Router();
 
@@ -24,65 +24,71 @@ interface ApiError {
   [key: string]: any;
 }
 
-// Helper function to get competitor effectiveness data
+// Helper function to get competitor effectiveness data - FIXED to get latest run per competitor
 async function getCompetitorEffectivenessData(clientId: string) {
   try {
-    // Get latest competitor runs with complete data
-    const competitorRuns = await db
-      .select({
-        runId: effectivenessRuns.id,
-        competitorId: effectivenessRuns.competitorId,
-        overallScore: effectivenessRuns.overallScore,
-        status: effectivenessRuns.status,
-        createdAt: effectivenessRuns.createdAt,
-        screenshotUrl: effectivenessRuns.screenshotUrl,
-        fullPageScreenshotUrl: effectivenessRuns.fullPageScreenshotUrl,
-        webVitals: effectivenessRuns.webVitals,
-        screenshotError: effectivenessRuns.screenshotError,
-        fullPageScreenshotError: effectivenessRuns.fullPageScreenshotError,
-        // Competitor details
-        competitorDomain: competitors.domain,
-        competitorLabel: competitors.label
-      })
-      .from(effectivenessRuns)
-      .innerJoin(competitors, eq(effectivenessRuns.competitorId, competitors.id))
-      .where(and(
-        eq(effectivenessRuns.clientId, clientId),
-        isNotNull(effectivenessRuns.competitorId),
-        eq(effectivenessRuns.status, 'completed')
-      ))
-      .orderBy(desc(effectivenessRuns.createdAt))
-      .limit(10);
+    // First, get the list of competitors for this client
+    const competitorList = await db
+      .select()
+      .from(competitors)
+      .where(eq(competitors.clientId, clientId));
 
-    // Get criterion scores for each competitor run
     const competitorData = [];
-    for (const run of competitorRuns) {
-      const criterionScores = await storage.getCriterionScores(run.runId);
-      
-      competitorData.push({
-        competitor: {
-          id: run.competitorId,
-          domain: run.competitorDomain,
-          label: run.competitorLabel
-        },
-        run: {
-          id: run.runId,
-          overallScore: parseFloat(run.overallScore || '0'),
-          status: run.status,
-          createdAt: run.createdAt.toISOString(),
-          criterionScores: criterionScores,
-          screenshotUrl: run.screenshotUrl,
-          fullPageScreenshotUrl: run.fullPageScreenshotUrl,
-          webVitals: run.webVitals,
-          screenshotError: run.screenshotError,
-          fullPageScreenshotError: run.fullPageScreenshotError
-        }
-      });
+    
+    // For each competitor, get only their LATEST completed run
+    for (const competitor of competitorList) {
+      const latestRun = await db
+        .select({
+          runId: effectivenessRuns.id,
+          competitorId: effectivenessRuns.competitorId,
+          overallScore: effectivenessRuns.overallScore,
+          status: effectivenessRuns.status,
+          createdAt: effectivenessRuns.createdAt,
+          screenshotUrl: effectivenessRuns.screenshotUrl,
+          fullPageScreenshotUrl: effectivenessRuns.fullPageScreenshotUrl,
+          webVitals: effectivenessRuns.webVitals,
+          screenshotError: effectivenessRuns.screenshotError,
+          fullPageScreenshotError: effectivenessRuns.fullPageScreenshotError
+        })
+        .from(effectivenessRuns)
+        .where(and(
+          eq(effectivenessRuns.clientId, clientId),
+          eq(effectivenessRuns.competitorId, competitor.id),
+          eq(effectivenessRuns.status, 'completed')
+        ))
+        .orderBy(desc(effectivenessRuns.createdAt))
+        .limit(1); // Only get the LATEST run for this competitor
+
+      if (latestRun.length > 0) {
+        const run = latestRun[0];
+        const competitorCriterionScores = await storage.getCriterionScores(run.runId);
+        
+        competitorData.push({
+          competitor: {
+            id: competitor.id,
+            domain: competitor.domain,
+            label: competitor.label
+          },
+          run: {
+            id: run.runId,
+            overallScore: parseFloat(run.overallScore || '0'),
+            status: run.status,
+            createdAt: run.createdAt.toISOString(),
+            criterionScores: competitorCriterionScores,
+            screenshotUrl: run.screenshotUrl,
+            fullPageScreenshotUrl: run.fullPageScreenshotUrl,
+            webVitals: run.webVitals,
+            screenshotError: run.screenshotError,
+            fullPageScreenshotError: run.fullPageScreenshotError
+          }
+        });
+      }
     }
 
-    logger.info('Retrieved competitor effectiveness data', { 
+    logger.info('Retrieved latest competitor effectiveness data', { 
       clientId, 
-      competitorCount: competitorData.length 
+      totalCompetitors: competitorList.length,
+      competitorDataCount: competitorData.length 
     });
 
     return competitorData;
@@ -159,11 +165,14 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
     // Auto-fail runs stuck for more than 5 minutes
     await cleanupStuckRuns(clientId);
 
-    // Get latest effectiveness run
+    // Get latest CLIENT effectiveness run (not competitor runs)
     const runs = await db
       .select()
       .from(effectivenessRuns)
-      .where(eq(effectivenessRuns.clientId, clientId))
+      .where(and(
+        eq(effectivenessRuns.clientId, clientId),
+        isNull(effectivenessRuns.competitorId)  // CRITICAL: Only get client's own run, not competitor runs
+      ))
       .orderBy(desc(effectivenessRuns.createdAt))
       .limit(1);
 
@@ -176,11 +185,20 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
 
     const latestRun = runs[0];
 
-    // Get all criterion scores for this run
-    const criterionScores = await storage.getCriterionScores(latestRun.id);
+    // Get all criterion scores for this CLIENT run
+    const clientCriterionScores = await storage.getCriterionScores(latestRun.id);
 
     // Get competitor effectiveness data
     const competitorData = await getCompetitorEffectivenessData(clientId);
+
+    // Completely disable HTTP caching to force fresh fetches
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache', 
+      'Expires': '0',
+      'ETag': `"${Date.now()}"`, // Force new ETag each time
+      'Last-Modified': new Date().toUTCString()
+    });
 
     res.json({
       hasData: true,
@@ -191,7 +209,7 @@ router.get('/latest/:clientId', requireAuth, async (req, res) => {
         progress: latestRun.progress,
         progressDetail: latestRun.progressDetail,
         createdAt: latestRun.createdAt,
-        criterionScores: criterionScores,
+        criterionScores: clientCriterionScores,
         screenshotUrl: latestRun.screenshotUrl,
         fullPageScreenshotUrl: latestRun.fullPageScreenshotUrl,
         aiInsights: latestRun.aiInsights,

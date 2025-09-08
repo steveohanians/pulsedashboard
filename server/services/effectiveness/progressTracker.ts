@@ -6,6 +6,7 @@
  */
 
 import logger from '../../utils/logging/logger';
+import { sseEventEmitter } from '../sse/sseEventEmitter';
 
 export interface ProgressState {
   // Overall progress
@@ -33,6 +34,14 @@ export interface ProgressState {
 export class ProgressTracker {
   private startTime: number;
   private state: ProgressState;
+  private totalSteps: number = 0;
+  private completedSteps: number = 0;
+  private steps: Map<string, boolean> = new Map();
+  private clientId: string = '';
+  private clientName: string = ''; // Store client name for display
+  private competitorDomains: Map<number, string> = new Map(); // Map competitor indices to domains
+  
+  // Historical timing data for time estimates
   private historicalAverages = {
     screenshot: 8000,       // 8s for screenshots
     tier1Total: 800,        // 0.8s per Tier 1 criterion (HTML analysis)
@@ -41,9 +50,14 @@ export class ProgressTracker {
     insights: 4000,         // 4s for insights generation
     competitorTotal: 45000  // 45s per competitor (full analysis)
   };
+  
+  // Step types for clearer tracking
+  private readonly DATA_COLLECTION_STEPS = ['initial_html', 'screenshot', 'fullpage_screenshot', 'rendered_html', 'web_vitals'];
+  private readonly CRITERIA_STEPS = 8; // Total criteria per entity
 
-  constructor() {
+  constructor(clientId?: string) {
     this.startTime = Date.now();
+    this.clientId = clientId || '';
     this.state = {
       overallPercent: 0,
       timeElapsed: 0,
@@ -61,75 +75,209 @@ export class ProgressTracker {
     };
   }
 
-  // Called when competitors are discovered
-  setCompetitorCount(count: number): void {
-    this.state.competitorsTotal = count;
-    logger.info('Progress tracker: competitor count set', { count });
+  setTotalSteps(clientCount: number = 1, competitorCount: number = 0): void {
+    // Each entity has: 5 data collection steps + 8 criteria = 13 steps
+    const stepsPerEntity = this.DATA_COLLECTION_STEPS.length + this.CRITERIA_STEPS;
+    this.totalSteps = (clientCount + competitorCount) * stepsPerEntity + 1; // +1 for insights
+    
+    this.state.competitorsTotal = competitorCount;
+    
+    logger.info('Progress tracker: total steps calculated', {
+      clientCount,
+      competitorCount, 
+      stepsPerEntity,
+      totalSteps: this.totalSteps
+    });
+    
     this.recalculate();
   }
 
-  // Called when starting client analysis
+  /**
+   * Register competitor domain for display purposes
+   */
+  setCompetitorDomain(index: number, domain: string): void {
+    this.competitorDomains.set(index, domain);
+    logger.debug('Progress tracker: competitor domain registered', {
+      index,
+      domain
+    });
+  }
+
+  markStepComplete(stepId: string): void {
+    if (!this.steps.has(stepId)) {
+      this.steps.set(stepId, true);
+      this.completedSteps++;
+      this.state.overallPercent = Math.round((this.completedSteps / this.totalSteps) * 100);
+      
+      logger.info('Progress step completed', {
+        stepId,
+        completed: this.completedSteps,
+        total: this.totalSteps,
+        percent: this.state.overallPercent
+      });
+      
+      this.updateCurrentOperation(stepId);
+      this.recalculate();
+    }
+  }
+
+  /**
+   * Capitalize criterion names properly for display
+   */
+  private capitalizeCriterion(criterion: string): string {
+    const criterionMap: { [key: string]: string } = {
+      'seo': 'SEO',
+      'ctas': 'CTA', 
+      'ux': 'UX',
+      'trust': 'Trust',
+      'speed': 'Speed',
+      'accessibility': 'Accessibility',
+      'positioning': 'Positioning',
+      'brand_story': 'Brand Story'
+    };
+    
+    return criterionMap[criterion] || criterion;
+  }
+
+  /**
+   * Get display-friendly entity name (convert competitor IDs to domains)
+   */
+  private getEntityDisplayName(entityId: string): string {
+    if (entityId === 'client') {
+      return this.clientName || 'client';
+    }
+    
+    // Handle competitor_N format by extracting index and looking up domain
+    if (entityId.startsWith('competitor_')) {
+      const indexStr = entityId.replace('competitor_', '');
+      const index = parseInt(indexStr, 10);
+      
+      if (!isNaN(index) && this.competitorDomains.has(index)) {
+        return this.competitorDomains.get(index)!;
+      }
+      
+      // Fallback to generic competitor name
+      return `competitor ${index + 1}`;
+    }
+    
+    return entityId;
+  }
+
+  private updateCurrentOperation(stepId: string): void {
+    // Handle competitor step IDs like "competitor_0_seo" correctly
+    let entityId: string;
+    let step: string;
+    
+    if (stepId.startsWith('competitor_')) {
+      // For competitor steps, find the last underscore to split correctly
+      const lastUnderscoreIndex = stepId.lastIndexOf('_');
+      if (lastUnderscoreIndex > 'competitor_'.length - 1) {
+        entityId = stepId.substring(0, lastUnderscoreIndex);
+        step = stepId.substring(lastUnderscoreIndex + 1);
+      } else {
+        // Fallback to original logic
+        [entityId, step] = stepId.split('_', 2);
+      }
+    } else {
+      // For client or other steps, use original logic
+      [entityId, step] = stepId.split('_', 2);
+    }
+    
+    const displayEntity = this.getEntityDisplayName(entityId);
+    
+    if (step === 'insights') {
+      this.state.currentOperation = 'Generating insights';
+      this.state.currentPhase = 'insights';
+    } else if (this.DATA_COLLECTION_STEPS.includes(step)) {
+      this.state.currentOperation = `Collecting data from ${displayEntity}`;
+      this.state.currentPhase = entityId === 'client' ? 'client' : 'competitors';
+      this.state.currentEntity = entityId;
+    } else {
+      // It's a criterion - capitalize it properly
+      const displayCriterion = this.capitalizeCriterion(step);
+      this.state.currentOperation = `Analyzing ${displayCriterion} for ${displayEntity}`;
+      this.state.currentPhase = entityId === 'client' ? 'client' : 'competitors';  
+      this.state.currentEntity = entityId;
+    }
+  }
+
+  // Legacy methods for backward compatibility - now delegate to step-based system
+  
+  setCompetitorCount(count: number): void {
+    // Delegate to the new setTotalSteps method
+    this.setTotalSteps(1, count);
+  }
+
   startClient(clientName: string): void {
+    // Store client name for display
+    this.clientName = clientName;
+    // Step-based system handles this through markStepComplete
     this.state.currentPhase = 'client';
     this.state.currentEntity = clientName;
-    this.state.currentOperation = 'Analyzing your website';
     logger.info('Progress tracker: client analysis started', { clientName });
-    this.recalculate();
   }
 
-  // Called when a criterion completes
   completeCriterion(criterion: string, isClient: boolean): void {
+    // Convert to step-based tracking
+    const entityId = isClient ? 'client' : `competitor_${this.state.competitorsComplete}`;
+    this.markStepComplete(`${entityId}_${criterion}`);
+    
+    // Update legacy state for compatibility
     if (isClient) {
       this.state.criteriaComplete++;
       if (this.state.criteriaComplete >= 8) {
         this.state.clientComplete = true;
-        logger.info('Progress tracker: client analysis completed');
       }
     }
-    logger.info('Progress tracker: criterion completed', { 
-      criterion, 
-      isClient, 
-      totalComplete: this.state.criteriaComplete 
-    });
-    this.recalculate();
   }
 
-  // Called when starting a competitor
   startCompetitor(competitorName: string, index: number): void {
+    // Step-based system handles this through markStepComplete
     this.state.currentPhase = 'competitors';
     this.state.currentEntity = competitorName;
-    this.state.currentOperation = `Analyzing competitor ${index + 1} of ${this.state.competitorsTotal}`;
     logger.info('Progress tracker: competitor analysis started', { competitorName, index });
-    this.recalculate();
   }
 
-  // Called when a competitor completes
   completeCompetitor(): void {
     this.state.competitorsComplete++;
     logger.info('Progress tracker: competitor completed', { 
       completed: this.state.competitorsComplete,
       total: this.state.competitorsTotal 
     });
-    this.recalculate();
   }
 
-  // Called when starting insights
   startInsights(): void {
-    this.state.currentPhase = 'insights';
-    this.state.currentOperation = 'Generating personalized insights';
-    logger.info('Progress tracker: insights generation started');
-    this.recalculate();
+    // Use step-based tracking
+    this.markStepComplete('insights_generation');
   }
 
-  // Called when everything is done
   complete(): void {
+    // Ensure we're at 100% and mark as completed
     this.state.currentPhase = 'completed';
     this.state.overallPercent = 100;
     this.state.timeRemaining = 0;
     this.state.message = 'Analysis complete';
     logger.info('Progress tracker: analysis completed', { 
-      totalTime: Date.now() - this.startTime 
+      totalTime: Date.now() - this.startTime,
+      completedSteps: this.completedSteps,
+      totalSteps: this.totalSteps
     });
+
+    // Broadcast completion via SSE if we have a clientId
+    if (this.clientId) {
+      try {
+        sseEventEmitter.broadcastCompletion(this.clientId, {
+          overallPercent: 100,
+          message: 'Analysis complete',
+          totalTime: Date.now() - this.startTime
+        });
+      } catch (error) {
+        logger.warn('Failed to broadcast completion via SSE', {
+          clientId: this.clientId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   // Get current state for database/frontend
@@ -144,35 +292,13 @@ export class ProgressTracker {
   }
 
   private recalculate(): void {
-    // Calculate overall percentage
-    let progress = 0;
-    const clientWeight = 40;
-    const competitorWeight = 50;
-    const insightsWeight = 10;
-
-    // Client progress (0-40%)
-    if (this.state.clientComplete) {
-      progress += clientWeight;
+    // Use the actual step-based percentage if we have steps
+    if (this.totalSteps > 0) {
+      this.state.overallPercent = Math.round((this.completedSteps / this.totalSteps) * 100);
     } else {
-      progress += (this.state.criteriaComplete / 8) * clientWeight;
+      // Fallback to old logic during initialization
+      this.state.overallPercent = 0;
     }
-
-    // Competitor progress (0-50%)
-    if (this.state.competitorsTotal > 0) {
-      progress += (this.state.competitorsComplete / this.state.competitorsTotal) * competitorWeight;
-    } else {
-      // No competitors, give the weight to client + insights
-      progress += competitorWeight;
-    }
-
-    // Insights progress (0-10%)
-    if (this.state.currentPhase === 'insights') {
-      progress += insightsWeight / 2; // 5% when starting insights
-    } else if (this.state.currentPhase === 'completed') {
-      progress += insightsWeight;
-    }
-
-    this.state.overallPercent = Math.min(Math.round(progress), 100);
 
     // Calculate time remaining
     const elapsed = Date.now() - this.startTime;
@@ -199,6 +325,20 @@ export class ProgressTracker {
       pace: this.state.pace,
       phase: this.state.currentPhase
     });
+
+    // Broadcast progress via SSE if we have a clientId
+    if (this.clientId) {
+      try {
+        sseEventEmitter.broadcastProgress(this.clientId, {
+          ...this.state
+        });
+      } catch (error) {
+        logger.warn('Failed to broadcast progress via SSE', {
+          clientId: this.clientId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   private estimateTotal(): number {
@@ -225,27 +365,16 @@ export class ProgressTracker {
   }
 
   private generateMessage(): string {
-    const elapsed = Date.now() - this.startTime;
-    const seconds = Math.ceil(this.state.timeRemaining / 1000);
-    
     if (this.state.currentPhase === 'initializing') {
-      return 'Starting analysis (typically 2-3 minutes)';
+      return 'Starting analysis';
     }
     
     if (this.state.currentPhase === 'completed') {
       return 'Analysis complete';
     }
     
-    // After 30 seconds, show time remaining
-    if (elapsed > 30000 && seconds > 0) {
-      if (seconds < 60) {
-        return `${this.state.currentOperation} (about ${seconds} seconds remaining)`;
-      } else {
-        const minutes = Math.ceil(seconds / 60);
-        return `${this.state.currentOperation} (about ${minutes} minute${minutes > 1 ? 's' : ''} remaining)`;
-      }
-    }
-    
+    // Simply return the current operation without time info
+    // The frontend already shows time remaining separately
     return this.state.currentOperation;
   }
 }
@@ -253,9 +382,9 @@ export class ProgressTracker {
 // Singleton instance management
 let progressTracker: ProgressTracker | null = null;
 
-export function createProgressTracker(): ProgressTracker {
-  progressTracker = new ProgressTracker();
-  logger.info('Progress tracker created');
+export function createProgressTracker(clientId?: string): ProgressTracker {
+  progressTracker = new ProgressTracker(clientId);
+  logger.info('Progress tracker created', { clientId });
   return progressTracker;
 }
 

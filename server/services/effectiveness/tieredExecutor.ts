@@ -98,7 +98,7 @@ export class TieredCriterionExecutor {
     {
       tier: 2,
       name: "AI-Powered Analysis", 
-      timeout: 30000, // 30s
+      timeout: 60000, // 60s (increased from 30s to prevent OpenAI timeouts)
       description: "Enhanced analysis using AI and vision capabilities",
       criteria: [
         {
@@ -151,7 +151,7 @@ export class TieredCriterionExecutor {
   public async executeAllTiers(
     context: ScoringContext,
     config: ScoringConfig,
-    onTierComplete?: (tierResult: TierResult, progressiveResults: ProgressiveResults) => void
+    onTierComplete?: (tierResult: TierResult, progressiveResults: ProgressiveResults) => Promise<void> | void
   ): Promise<ProgressiveResults> {
     
     const progressiveResults: ProgressiveResults = {
@@ -192,7 +192,7 @@ export class TieredCriterionExecutor {
 
         // Callback for real-time updates
         if (onTierComplete) {
-          onTierComplete(tierResult, { ...progressiveResults });
+          await onTierComplete(tierResult, { ...progressiveResults });
         }
 
       } catch (tierError) {
@@ -265,21 +265,63 @@ export class TieredCriterionExecutor {
     const hasScreenshot = context.screenshot || context.fullPageScreenshot;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
 
+    // Log Tier 2 specific checks
+    if (tierDef.tier === 2) {
+      logger.info(`[TIER 2 DEBUG] Data availability check`, {
+        url: context.websiteUrl,
+        hasHTML,
+        hasInitialHTML,
+        hasScreenshot,
+        hasOpenAI,
+        htmlLength: context.html?.length || 0,
+        initialHtmlLength: context.initialHtml?.length || 0,
+        openAIKeyLength: process.env.OPENAI_API_KEY?.length || 0
+      });
+    }
+
     // Filter criteria that can run with available data
     const viableCriteria = tierDef.criteria.filter(criterion => {
       if (criterion.requiresHTML && !hasHTML && !hasInitialHTML) {
         tierResult.errors.push(`${criterion.name}: Insufficient HTML data`);
+        if (tierDef.tier === 2) {
+          logger.warn(`[TIER 2] Criterion ${criterion.name} skipped: insufficient HTML`, {
+            hasHTML,
+            hasInitialHTML,
+            htmlLength: context.html?.length || 0
+          });
+        }
         return false;
       }
       if (criterion.requiresAI && !hasOpenAI) {
         tierResult.errors.push(`${criterion.name}: OpenAI API key required`);
+        if (tierDef.tier === 2) {
+          logger.warn(`[TIER 2] Criterion ${criterion.name} skipped: no OpenAI key`, {
+            hasOpenAI,
+            keyLength: process.env.OPENAI_API_KEY?.length || 0
+          });
+        }
         return false;
       }
       return true;
     });
 
     if (viableCriteria.length === 0) {
+      if (tierDef.tier === 2) {
+        logger.error(`[TIER 2 FAILURE] No viable criteria - all filtered out`, {
+          url: context.websiteUrl,
+          totalCriteria: tierDef.criteria.length,
+          errors: tierResult.errors
+        });
+      }
       throw new Error(`No viable criteria for tier ${tierDef.tier} - insufficient data`);
+    }
+
+    // Log Tier 2 execution start
+    if (tierDef.tier === 2) {
+      logger.info(`[TIER 2] Executing ${viableCriteria.length} criteria`, {
+        url: context.websiteUrl,
+        criteria: viableCriteria.map(c => c.name)
+      });
     }
 
     // Execute all viable criteria in parallel with circuit breaker protection
@@ -291,7 +333,7 @@ export class TieredCriterionExecutor {
         serviceName,
         async () => {
           // Apply individual timeout per criterion
-          const timeoutMs = Math.max(10000, tierDef.timeout / viableCriteria.length); // Min 10s per criterion
+          const timeoutMs = Math.max(20000, tierDef.timeout / viableCriteria.length); // Min 20s per criterion (increased from 10s)
           
           const result = await Promise.race([
             criterion.fn(context, config, this.openai),

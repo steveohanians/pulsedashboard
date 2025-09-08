@@ -34,7 +34,8 @@ export class EnhancedWebsiteEffectivenessScorer {
    */
   public async scoreWebsiteProgressive(
     websiteUrl: string,
-    runId?: string
+    runId?: string,
+    onCriterionComplete?: (criterion: string) => Promise<void>
   ): Promise<EffectivenessResult> {
     
     const scoringStartTime = Date.now();
@@ -193,11 +194,33 @@ export class EnhancedWebsiteEffectivenessScorer {
       try {
         progressiveResults = runId ?
           await smartTimeoutManager.createTimeoutPromise(
-            this.tieredExecutor.executeAllTiers(context, config, null),
+            this.tieredExecutor.executeAllTiers(
+              context, 
+              config, 
+              async (tierResult) => {
+                // Notify parent when criteria complete
+                if (onCriterionComplete) {
+                  for (const result of tierResult.results) {
+                    await onCriterionComplete(result.criterion);
+                  }
+                }
+              }
+            ),
             180000, // 3 minutes for all tiers
             'criterion_analysis'
           ) :
-          await this.tieredExecutor.executeAllTiers(context, config, null);
+          await this.tieredExecutor.executeAllTiers(
+            context, 
+            config, 
+            async (tierResult) => {
+              // Notify parent when criteria complete
+              if (onCriterionComplete) {
+                for (const result of tierResult.results) {
+                  await onCriterionComplete(result.criterion);
+                }
+              }
+            }
+          );
 
         // Mark analysis as complete
         if (runId && analysisTimeoutId) {

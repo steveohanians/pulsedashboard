@@ -57,8 +57,18 @@ function transformDataForRadar(
     seo: 'SEO'
   };
 
-  // Get all criteria from client scores
-  const allCriteria = clientScores.map(score => score.criterion);
+  // Get ALL unique criteria from both client and all competitors
+  const criteriaSet = new Set<string>();
+  
+  // Add client criteria
+  clientScores.forEach(score => criteriaSet.add(score.criterion));
+  
+  // Add competitor criteria
+  competitorData.forEach(compData => {
+    compData.run.criterionScores.forEach(score => criteriaSet.add(score.criterion));
+  });
+  
+  const allCriteria = Array.from(criteriaSet);
   
   // Transform data to have one object per criterion with all entities
   return allCriteria.map(criterion => {

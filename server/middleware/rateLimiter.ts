@@ -6,6 +6,22 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
+// Utility to clear rate limit store (useful for development/testing)
+export function clearRateLimit(ip?: string, path?: string): void {
+  if (ip && path) {
+    // Clear specific IP and path combination
+    const key = `${ip}:${path}`;
+    rateLimitStore.delete(key);
+  } else if (ip) {
+    // Clear all entries for specific IP
+    const keysToDelete = Array.from(rateLimitStore.keys()).filter(key => key.startsWith(`${ip}:`));
+    keysToDelete.forEach(key => rateLimitStore.delete(key));
+  } else {
+    // Clear all rate limits
+    rateLimitStore.clear();
+  }
+}
+
 import type { Request, Response, NextFunction } from 'express';
 
 function createRateLimiter(windowMs: number, maxRequests: number, errorMessage: string) {
@@ -48,10 +64,10 @@ function createRateLimiter(windowMs: number, maxRequests: number, errorMessage: 
   };
 }
 
-// General API rate limiting
+// General API rate limiting - Relaxed for development
 export const generalLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 minutes
-  100, // max requests
+  1000, // max requests (increased from 100)
   'Too many requests from this IP, please try again later.'
 );
 
@@ -62,16 +78,16 @@ export const authLimiter = createRateLimiter(
   'Too many login attempts from this IP, please try again later.'
 );
 
-// File upload rate limiting
+// File upload rate limiting - Relaxed for development
 export const uploadLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 hour
-  10, // max requests
+  100, // max requests (increased from 10)
   'Too many file uploads from this IP, please try again later.'
 );
 
-// Admin action rate limiting
+// Admin action rate limiting - Relaxed for development
 export const adminLimiter = createRateLimiter(
   5 * 60 * 1000, // 5 minutes
-  50, // max requests
+  500, // max requests (increased from 50)
   'Too many admin requests from this IP, please try again later.'
 );

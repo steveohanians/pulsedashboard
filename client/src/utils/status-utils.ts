@@ -5,7 +5,7 @@
  * handling cases where backend status may be "failed" but client results exist.
  */
 
-export type EffectiveStatus = 'completed' | 'partial' | 'failed' | 'running';
+export type EffectiveStatus = 'completed' | 'partial' | 'failed' | 'running' | 'idle';
 
 export interface EffectivenessRun {
   status: string;
@@ -37,6 +37,7 @@ const FAILED_STATUSES = ['failed'] as const;
  * @returns EffectiveStatus - The derived status for UI display
  * 
  * Logic:
+ * - idle: No analysis has been run yet (clean state)
  * - completed: Backend status is 'completed' 
  * - partial: Backend status is 'failed' but client results exist (competitor timeouts/failures)
  * - failed: Backend status is 'failed' and no client results exist (true failure)
@@ -44,7 +45,7 @@ const FAILED_STATUSES = ['failed'] as const;
  */
 export function deriveEffectiveStatus(run?: EffectivenessRun | null): EffectiveStatus {
   if (!run || !run.status) {
-    return 'failed';
+    return 'idle';
   }
 
   // Check if we have client results (criterion scores)
@@ -79,7 +80,8 @@ export function shouldContinuePolling(effectiveStatus: EffectiveStatus): boolean
   switch (effectiveStatus) {
     case 'completed':
     case 'partial':
-      return false; // Stop polling - we have final results
+    case 'idle':
+      return false; // Stop polling - we have final results or no run to poll
     case 'running':
     case 'failed':
       return true; // Keep polling - might recover or complete
@@ -96,6 +98,12 @@ export function shouldContinuePolling(effectiveStatus: EffectiveStatus): boolean
  */
 export function getStatusMessaging(effectiveStatus: EffectiveStatus) {
   switch (effectiveStatus) {
+    case 'idle':
+      return {
+        title: 'Ready for Analysis',
+        description: 'Click "Score Website" to analyze your website effectiveness',
+        variant: 'info' as const
+      };
     case 'completed':
       return {
         title: 'Analysis Complete',
@@ -105,7 +113,7 @@ export function getStatusMessaging(effectiveStatus: EffectiveStatus) {
     case 'partial':
       return {
         title: 'Analysis Completed with Some Limitations',
-        description: 'Your website analysis completed successfully. Some competitor data may be unavailable due to network issues.',
+        description: 'Some competitor data may be unavailable due to network issues.',
         variant: 'warning' as const
       };
     case 'failed':

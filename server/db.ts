@@ -1,47 +1,47 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+/**
+ * Enhanced Database Connection with Resilience Features
+ * 
+ * This module provides the main database connection with:
+ * - Automatic retry logic for connection failures
+ * - Heartbeat monitoring during long operations  
+ * - Graceful degradation and reconnection
+ * - Enhanced error handling for Neon serverless
+ */
+
+import { resilientDb, db, testDatabaseConnection } from './db/resilientConnection';
 import logger from "./utils/logging/logger";
 
-// Configure WebSocket for Neon serverless
-neonConfig.webSocketConstructor = ws;
+// Re-export for backward compatibility
+export { db, testDatabaseConnection };
 
-// Handle database connection with better error handling
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Export pool for legacy compatibility (e.g., session storage)
+export const pool = resilientDb.getPool();
+
+// Export resilient connection instance for advanced usage
+export { resilientDb };
+
+/**
+ * Execute database operation with automatic retry on connection failure
+ * Use this for critical operations that need resilience
+ */
+export async function executeWithRetry<T>(
+  operation: () => Promise<T>,
+  context: string = 'database operation'
+): Promise<T> {
+  return resilientDb.executeWithRetry(operation, context);
 }
 
-// Optimized pool configuration for long-running effectiveness analysis
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  // Extended timeout for long effectiveness runs (4-6 minutes)
-  connectionTimeoutMillis: 60000, // 60s
-  // Larger pool for concurrent client + competitor analysis
-  max: 8,
-  // Keep connections alive longer during long runs
-  idleTimeoutMillis: 120000, // 2 minutes
-  // Allow connection reuse for efficiency
-  maxUses: Infinity,
-  // Don't exit on idle to maintain stability during long operations
-  allowExitOnIdle: false,
-  // Add query timeout for individual queries
-  query_timeout: 30000 // 30s per query
-});
+/**
+ * Start enhanced heartbeat monitoring for long-running operations
+ * Call this before starting effectiveness analysis or other long operations
+ */
+export function startLongOperationHeartbeat(operationName: string): void {
+  resilientDb.startLongOperationHeartbeat(operationName);
+}
 
-export const db = drizzle({ client: pool, schema });
-
-// Test database connection function
-export async function testDatabaseConnection(): Promise<boolean> {
-  try {
-    // Simple query to test connection
-    await pool.query('SELECT 1');
-    logger.info('Database connection successful');
-    return true;
-  } catch (error) {
-    logger.error('Database connection failed:', error);
-    return false;
-  }
+/**
+ * Get database connection health status
+ */
+export function getDatabaseHealthStatus() {
+  return resilientDb.getHealthStatus();
 }

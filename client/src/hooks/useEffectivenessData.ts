@@ -70,6 +70,9 @@ interface UseEffectivenessDataOptions {
   
   /** Maximum time to poll before giving up */
   maxPollTime?: number;
+  
+  /** Disable polling when SSE is connected (used by SSE hook) */
+  sseConnected?: boolean;
 }
 
 export function useEffectivenessData(
@@ -79,7 +82,8 @@ export function useEffectivenessData(
   const {
     enablePolling = true,
     pollInterval,
-    maxPollTime = POLLING_CONFIG.maxPollDuration
+    maxPollTime = POLLING_CONFIG.maxPollDuration,
+    sseConnected = false
   } = options;
 
   const query = useQuery<EffectivenessData>({
@@ -91,7 +95,8 @@ export function useEffectivenessData(
     
     // Polling logic based on effective status
     refetchInterval: (query) => {
-      if (!enablePolling) return false;
+      // Disable polling if SSE is connected and handling real-time updates
+      if (!enablePolling || sseConnected) return false;
       
       const run = query.state.data?.run;
       const effectiveStatus = deriveEffectiveStatus(run);
@@ -145,6 +150,7 @@ export function useEffectivenessData(
   const isCompleted = effectiveStatus === 'completed';
   const isFailed = effectiveStatus === 'failed';
   const isPartial = effectiveStatus === 'partial';
+  const isIdle = effectiveStatus === 'idle';
   
   const hasData = query.data?.hasData || false;
   
@@ -180,6 +186,7 @@ export function useEffectivenessData(
     isCompleted,
     isFailed,
     isPartial,
+    isIdle,
     hasData,
     
     // Progress info (smoothed to prevent backward jumps)

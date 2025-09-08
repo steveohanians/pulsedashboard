@@ -65,65 +65,96 @@ export async function callOpenAIWithVision(
   openai: OpenAI,
   maxTokens: number = 500
 ): Promise<string> {
-  try {
-    // Convert screenshot to base64
-    const base64Image = await convertScreenshotToBase64(screenshotPath);
-    
-    // Replace content placeholder in prompt
-    const finalPrompt = promptTemplate.replace('{content}', textContent);
-    
-    logger.info('Making OpenAI vision request', {
-      textContentLength: textContent.length,
-      promptLength: finalPrompt.length,
-      imageSize: Math.round(base64Image.length / 1024) + 'KB',
-      maxTokens
-    });
+  // Retry logic for timeout errors
+  const maxRetries = 1;
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Convert screenshot to base64
+      const base64Image = await convertScreenshotToBase64(screenshotPath);
+      
+      // Replace content placeholder in prompt
+      const finalPrompt = promptTemplate.replace('{content}', textContent);
+      
+      logger.info('Making OpenAI vision request', {
+        textContentLength: textContent.length,
+        promptLength: finalPrompt.length,
+        imageSize: Math.round(base64Image.length / 1024) + 'KB',
+        maxTokens,
+        attempt: attempt + 1,
+        maxRetries: maxRetries + 1
+      });
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: maxTokens,
-      temperature: 0.1,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: finalPrompt
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/png;base64,${base64Image}`,
-                detail: 'high'
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        max_tokens: maxTokens,
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: finalPrompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/png;base64,${base64Image}`,
+                  detail: 'high'
+                }
               }
-            }
-          ]
-        }
-      ]
-    });
+            ]
+          }
+        ]
+      });
 
-    const analysisText = response.choices[0]?.message?.content?.trim();
-    if (!analysisText) {
-      throw new Error('No response from OpenAI vision analysis');
+      const analysisText = response.choices[0]?.message?.content?.trim();
+      if (!analysisText) {
+        throw new Error('No response from OpenAI vision analysis');
+      }
+
+      logger.info('OpenAI vision analysis completed', {
+        responseLength: analysisText.length,
+        tokensUsed: response.usage?.total_tokens || 'unknown',
+        attempt: attempt + 1
+      });
+
+      return analysisText;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const isTimeout = lastError.message.includes('timeout') || 
+                       lastError.message.includes('timed out') ||
+                       lastError.message.includes('ETIMEDOUT') ||
+                       lastError.message.includes('ECONNRESET');
+      
+      if (attempt < maxRetries && isTimeout) {
+        logger.warn('OpenAI vision request timed out, retrying', {
+          attempt: attempt + 1,
+          error: lastError.message,
+          screenshotPath
+        });
+        // Add a small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+      
+      logger.error('OpenAI vision call failed', {
+        error: lastError.message,
+        screenshotPath,
+        attempt: attempt + 1,
+        wasTimeout: isTimeout
+      });
+      throw lastError;
     }
-
-    logger.info('OpenAI vision analysis completed', {
-      responseLength: analysisText.length,
-      tokensUsed: response.usage?.total_tokens || 'unknown'
-    });
-
-    return analysisText;
-
-  } catch (error) {
-    logger.error('OpenAI vision call failed', {
-      error: error instanceof Error ? error.message : String(error),
-      screenshotPath
-    });
-    throw error;
   }
+  
+  // Should never reach here, but TypeScript needs this
+  throw lastError || new Error('OpenAI vision call failed after retries');
 }

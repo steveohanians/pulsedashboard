@@ -7,6 +7,7 @@ import { ButtonLoadingSpinner } from "@/components/loading";
 import { useToast } from "@/hooks/use-toast";
 import { useProgressiveToasts } from "@/hooks/useProgressiveToasts";
 import { useEffectivenessData } from "@/hooks/useEffectivenessData";
+import { useProgressStream } from "@/hooks/useProgressStream";
 import { useEffectivenessActions } from "@/hooks/useEffectivenessActions";
 import { cn } from "@/lib/utils";
 import { EffectivenessErrorBoundary } from "./EffectivenessErrorBoundary";
@@ -68,7 +69,14 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
 
   // No manual cleanup needed - React Query handles polling lifecycle
 
+  // Use SSE for real-time progress updates (only when analysis is running)
+  const sseProgress = useProgressStream(clientId, {
+    enabled: true, // Always try to connect, but only show progress when needed
+    fallbackToPolling: true
+  });
+
   // Use enhanced data layer hooks with new status system
+  // First get the data without SSE optimization
   const { 
     data, 
     run, 
@@ -87,7 +95,12 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     isError,
     error,
     isRefetching
-  } = useEffectivenessData(clientId);
+  } = useEffectivenessData(clientId, {
+    // Disable polling when SSE is connected AND analysis is in progress
+    sseConnected: sseProgress.isConnected && 
+      sseProgress.progressData && 
+      sseProgress.progressData.currentPhase !== 'completed'
+  });
 
   // Get status messaging for UI display
   const statusMessage = getStatusMessaging(effectiveStatus);
@@ -151,12 +164,22 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     }
   }
 
-  // Use progress from hook (already parsed as percentage)
-  const progressPercentage = progress;
-  const progressMessage = progressString || 'Starting analysis...';
+  // Prefer SSE progress data when available and connected
+  const progressPercentage = (sseProgress.isConnected && sseProgress.progressData) 
+    ? sseProgress.progressData.overallPercent 
+    : progress;
+  
+  const progressMessage = (sseProgress.isConnected && sseProgress.progressData) 
+    ? sseProgress.progressData.message 
+    : (progressString || 'Starting analysis...');
+
+  // Use SSE progress state when available, fallback to parsed detail
+  const currentProgressState = (sseProgress.isConnected && sseProgress.progressData) 
+    ? sseProgress.progressData 
+    : progressState;
 
   // Show time information if available
-  const showTimeInfo = progressState && progressState.timeElapsed > 30000;
+  const showTimeInfo = currentProgressState && currentProgressState.timeElapsed > 30000;
 
   // Progressive toast notifications for milestone completions
   useProgressiveToasts({
@@ -290,32 +313,38 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             </div>
           )}
 
-          {data && !run && data.hasData === false && (
+          {/* Idle state - No analysis has been run yet */}
+          {effectiveStatus === 'idle' && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
-                No effectiveness data available
-              </p>
-              <Button 
-                onClick={handleRefresh} 
-                onKeyDown={(e) => {
-                  if ((e.key === 'Enter' || e.key === ' ') && canRefresh) {
-                    e.preventDefault();
-                    handleRefresh();
-                  }
-                }}
-                disabled={!canRefresh}
-                aria-label="Start website effectiveness analysis"
-                tabIndex={0}
-              >
-                {isStarting ? (
-                  <>
-                    <ButtonLoadingSpinner size="sm" className="mr-2" />
-                    Scoring Website...
-                  </>
-                ) : (
-                  "Score Website"
-                )}
-              </Button>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-muted-foreground mb-2">{statusMessage.title}</p>
+                  <p className="text-sm text-muted-foreground">{statusMessage.description}</p>
+                </div>
+                <Button 
+                  onClick={handleRefresh} 
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && canRefresh) {
+                      e.preventDefault();
+                      handleRefresh();
+                    }
+                  }}
+                  disabled={!canRefresh}
+                  aria-label="Start website effectiveness analysis"
+                  tabIndex={0}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {isStarting ? (
+                    <>
+                      <ButtonLoadingSpinner size="sm" className="mr-2" />
+                      Scoring Website...
+                    </>
+                  ) : (
+                    "Score Website"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -337,6 +366,16 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                     >
                       {progressMessage || 'Starting analysis...'}
                     </span>
+                    {/* SSE Connection Indicator (subtle) */}
+                    {sseProgress.isConnected && (
+                      <span 
+                        className="text-xs text-green-600 ml-2"
+                        title={`Real-time updates active${isInProgress ? ' (polling disabled)' : ''}`}
+                        aria-label="Real-time updates connected"
+                      >
+                        ●
+                      </span>
+                    )}
                   </div>
                   
                   {/* Progress bar with percentage */}
@@ -360,14 +399,13 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                   )}
                   
                   {/* Time remaining info after 30 seconds */}
-                  {showTimeInfo && progressState.timeRemaining > 0 && (
+                  {showTimeInfo && currentProgressState.timeRemaining > 0 && (
                     <div 
                       className="text-xs text-muted-foreground"
                       role="status"
                       aria-live="polite"
                     >
-                      {Math.ceil(progressState.timeRemaining / 1000)} seconds remaining
-                      {progressState.pace === 'slower' && ' (running slower than usual)'}
+                      {Math.ceil(currentProgressState.timeRemaining / 1000)} seconds remaining
                     </div>
                   )}
                 </div>
@@ -388,20 +426,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             <div className="text-center py-8">
               <div className="space-y-3">
                 <p className="text-muted-foreground mb-2">{statusMessage.title}</p>
-                <div className="space-y-2 mb-4">
-                  <p className="text-sm text-amber-600">Your website analysis completed successfully</p>
-                  <p className="text-xs text-muted-foreground">Some competitor data may be unavailable due to network issues</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-green-600 mb-2">✓ Your effectiveness analysis is ready</p>
-                  <Button 
-                    onClick={() => window.location.reload()} 
-                    variant="default"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    View Results
-                  </Button>
-                </div>
+                <p className="text-xs text-muted-foreground">{statusMessage.description}</p>
               </div>
             </div>
           )}

@@ -10,7 +10,6 @@ import { db } from '../db.js';
 import { effectivenessRuns, criterionScores } from '../../shared/schema.js';
 import { storage } from '../storage.js';
 import { EnhancedWebsiteEffectivenessScorer } from './effectiveness/enhancedScorer.js';
-import { parallelDataCollector } from './effectiveness/parallelDataCollector.js';
 import { EffectivenessConfigManager } from './effectiveness/config.js';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { logger } from '../utils/logging/logger.js';
@@ -142,7 +141,7 @@ class EffectivenessService {
    * Follows the exact step structure from test_effectiveness_complete.ts
    */
   private async processAnalysisAsync(runId: string, client: any): Promise<void> {
-    const tracker = createProgressTracker();
+    const tracker = createProgressTracker(client.id);
     
     try {
       logger.info('Starting async analysis processing', { runId, clientId: client.id });
@@ -193,21 +192,23 @@ class EffectivenessService {
   private async processClient(runId: string, client: any, tracker: any): Promise<void> {
     const url = client.websiteUrl;
     
-    // Start client analysis
-    tracker.startClient(client.domain || client.websiteUrl);
+    // Start client analysis - use client name for display
+    tracker.startClient(client.name);
     await this.syncProgressFromTracker(runId, tracker);
     
-    const config = await this.configManager.getConfig();
-    const dataResult = await parallelDataCollector.collectAllData(url, config);
-    
-    // Run Progressive Analysis - now without progress conflicts
-    const finalResults = await this.scorer.scoreWebsiteProgressive(url, runId);
+    // Run Progressive Analysis with real-time criterion completion callbacks
+    // Let the scorer handle its own data collection
+    const finalResults = await this.scorer.scoreWebsiteProgressive(
+      url, 
+      runId,
+      async (criterion: string) => {
+        // Update tracker when each criterion completes
+        tracker.completeCriterion(criterion, true);
+        await this.syncProgressFromTracker(runId, tracker);
+      }
+    );
 
-    // Mark all 8 criteria as complete for client
-    for (let i = 0; i < 8; i++) {
-      tracker.completeCriterion(`criterion_${i+1}`, true);
-    }
-    await this.syncProgressFromTracker(runId, tracker);
+    // Criteria completion now handled in real-time by callback above
 
     // Log results structure for debugging
     logger.info('Scorer returned results', { 
@@ -237,9 +238,15 @@ class EffectivenessService {
     // Process competitors sequentially with incremental progress updates
     let successful = 0;
     
+    // Register all competitor names first for proper display
+    for (let i = 0; i < competitors.length; i++) {
+      tracker.setCompetitorDomain(i, competitors[i].label);
+    }
+    
     for (let i = 0; i < competitors.length; i++) {
       const competitor = competitors[i];
-      tracker.startCompetitor(competitor.domain, i);
+      // Use competitor label for display
+      tracker.startCompetitor(competitor.label, i);
       await this.syncProgressFromTracker(mainRunId, tracker);
       
       try {
@@ -263,17 +270,21 @@ class EffectivenessService {
           ? competitor.domain 
           : `https://${competitor.domain}`;
 
-        // Get config for analysis
-        const config = await this.configManager.getConfig();
-        
-        // Collect data for competitor
-        const dataResult = await parallelDataCollector.collectAllData(competitorUrl, config);
-        
-        // Run progressive analysis without progress callback to avoid conflicts
-        const finalResults = await this.scorer.scoreWebsiteProgressive(competitorUrl, competitorRun.id);
+        // Run progressive analysis WITH progress callback for proper tracking
+        // Let the scorer handle its own data collection
+        const finalResults = await this.scorer.scoreWebsiteProgressive(
+          competitorUrl, 
+          competitorRun.id,
+          async (criterion: string) => {
+            // Track competitor criterion completion
+            tracker.completeCriterion(criterion, false); // false = not client
+            await this.syncProgressFromTracker(mainRunId, tracker);
+          }
+        );
 
         // Save competitor results using same structure as client
-        await this.saveCompetitorResults(competitorRun.id, finalResults, dataResult);
+        // Use finalResults for screenshots since scorer collects its own data
+        await this.saveCompetitorResults(competitorRun.id, finalResults, finalResults);
         
         logger.info('Competitor analysis completed', {
           mainRunId,

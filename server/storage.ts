@@ -2507,19 +2507,24 @@ export class DatabaseStorage implements IStorage {
       return completedResults[0];
     }
     
-    // If no completed run exists, fall back to latest run of any status
-    // This handles cases where there's an in-progress run or only failed runs
-    const allResults = await db
+    // If no completed run exists, only return in-progress runs (not failed ones)
+    // This prevents showing old failed results when user expects to see results
+    const inProgressResults = await db
       .select()
       .from(effectivenessRuns)
       .where(and(
         eq(effectivenessRuns.clientId, clientId),
-        isNull(effectivenessRuns.competitorId) // Only client runs, not competitor runs
+        isNull(effectivenessRuns.competitorId), // Only client runs, not competitor runs
+        or(
+          eq(effectivenessRuns.status, 'analyzing'),
+          eq(effectivenessRuns.status, 'pending'),
+          eq(effectivenessRuns.status, 'initializing')
+        )
       ))
       .orderBy(desc(effectivenessRuns.createdAt))
       .limit(1);
     
-    return allResults[0];
+    return inProgressResults[0] || null;
   }
 
   async getLatestEffectivenessRunByCompetitor(clientId: string, competitorId: string): Promise<any> {
