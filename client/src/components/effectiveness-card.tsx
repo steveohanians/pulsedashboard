@@ -586,15 +586,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             onClose={() => setShowEvidence(false)}
             clientId={clientId}
             clientRun={run}
-            competitorData={competitorData?.map(item => ({
-              ...item,
-              run: {
-                ...item.run,
-                id: `competitor-${item.competitor.id}`,
-                createdAt: new Date().toISOString(),
-                status: 'completed' as const
-              }
-            })) || []}
+            competitorData={competitorData || []}
           />
         </React.Suspense>
       )}
