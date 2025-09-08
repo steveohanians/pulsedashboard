@@ -101,6 +101,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
       sseProgress.progressData && 
       sseProgress.progressData.currentPhase !== 'completed'
   });
+  
 
   // Get status messaging for UI display
   const statusMessage = getStatusMessaging(effectiveStatus);
@@ -586,7 +587,15 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
             onClose={() => setShowEvidence(false)}
             clientId={clientId}
             clientRun={run}
-            competitorData={competitorData || []}
+            competitorData={competitorData?.map(item => ({
+              ...item,
+              run: {
+                ...item.run,
+                id: `competitor-${item.competitor.id}`,
+                createdAt: item.run?.createdAt || new Date().toISOString(),
+                status: item.run?.status || 'completed' as const
+              }
+            })) || []}
           />
         </React.Suspense>
       )}

@@ -121,6 +121,14 @@ export class EnhancedWebsiteEffectivenessScorer {
             screenshotError: dataResult.screenshotError,
             fullPageScreenshotError: dataResult.fullPageScreenshotError
           };
+          
+          logger.info('Context created from dataResult', {
+            websiteUrl,
+            hasScreenshot: !!dataResult.screenshotUrl,
+            screenshotUrl: dataResult.screenshotUrl,
+            hasFullPage: !!dataResult.fullPageScreenshotUrl,
+            fullPageUrl: dataResult.fullPageScreenshotUrl
+          });
 
           // ✅ CHECKPOINT: Save after successful data collection
           if (runId) {
@@ -245,6 +253,14 @@ export class EnhancedWebsiteEffectivenessScorer {
         screenshotError: context.screenshotError,
         fullPageScreenshotError: context.fullPageScreenshotError
       };
+      
+      logger.info('Final results built', {
+        websiteUrl,
+        hasScreenshot: !!finalResults.screenshotUrl,
+        screenshotUrl: finalResults.screenshotUrl,
+        hasFullPage: !!finalResults.fullPageScreenshotUrl,
+        fullPageUrl: finalResults.fullPageScreenshotUrl
+      });
 
       const totalDuration = Date.now() - scoringStartTime;
       

@@ -48,10 +48,7 @@ interface CompetitorEffectivenessData {
     domain: string;
     label: string;
   };
-  run: {
-    overallScore: number;
-    criterionScores: CriterionScore[];
-  };
+  run: EffectivenessRun;
 }
 
 interface EffectivenessData {
@@ -291,8 +288,17 @@ class EffectivenessApiService {
         label: item.competitor?.label || item.competitor?.name || item.competitor?.domain || 'Competitor'
       },
       run: {
+        id: item.run?.id || 'unknown',
         overallScore: item.run?.overallScore || 0,
-        criterionScores: item.run?.criterionScores || []
+        status: item.run?.status || 'completed',
+        progress: item.run?.progress,
+        progressDetail: item.run?.progressDetail,
+        createdAt: item.run?.createdAt || new Date().toISOString(),
+        criterionScores: item.run?.criterionScores || [],
+        screenshotUrl: item.run?.screenshotUrl,
+        fullPageScreenshotUrl: item.run?.fullPageScreenshotUrl,
+        aiInsights: item.run?.aiInsights,
+        insightsGeneratedAt: item.run?.insightsGeneratedAt
       }
     }));
   }

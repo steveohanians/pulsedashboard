@@ -338,11 +338,11 @@ function RunSelector({ clientRun, competitorData, selectedRunId, onRunChange }: 
   const selectOptions = [
     {
       value: clientRun.id,
-      label: `Your Site (${clientRun.overallScore}/10)`
+      label: `Your Site (${clientRun.overallScore})`
     },
     ...competitorData.map(compData => ({
       value: compData.run.id,
-      label: `${compData.competitor.label} (${compData.run.overallScore}/10)`
+      label: `${compData.competitor.label} (${compData.run.overallScore})`
     }))
   ];
 
@@ -486,6 +486,19 @@ export function EvidenceDrawer({
   const currentRunData = selectedRunType === 'client' 
     ? clientRun
     : competitorData.find(comp => comp.run.id === selectedRunId)?.run;
+  
+  // Debug: Log screenshot URLs when switching to competitor
+  useEffect(() => {
+    if (selectedRunType === 'competitor' && currentRunData) {
+      console.log('Competitor run data:', {
+        id: currentRunData.id,
+        screenshotUrl: currentRunData.screenshotUrl,
+        fullPageScreenshotUrl: currentRunData.fullPageScreenshotUrl,
+        hasScreenshot: !!currentRunData.screenshotUrl,
+        screenshotLength: currentRunData.screenshotUrl?.length
+      });
+    }
+  }, [selectedRunType, currentRunData]);
 
   // Reset selection when drawer opens with cleanup
   useEffect(() => {
@@ -861,7 +874,7 @@ export function EvidenceDrawer({
                   Website Effectiveness Report
                 </DrawerTitle>
                 <DrawerDescription className="text-left">
-                  Detailed analysis and evidence for {currentRunData?.overallScore}/10 score • {formatDate(currentRunData?.createdAt || '')}
+                  Detailed analysis and evidence for {currentRunData?.overallScore} score • {formatDate(currentRunData?.createdAt || '')}
                 </DrawerDescription>
               </div>
               <DrawerClose asChild>

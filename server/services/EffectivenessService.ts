@@ -221,6 +221,14 @@ class EffectivenessService {
     });
 
     // Save to database atomically - use finalResults for screenshot URLs since scorer handles its own data collection
+    logger.info('Client finalResults before save', {
+      runId,
+      hasScreenshotUrl: !!finalResults.screenshotUrl,
+      screenshotUrl: finalResults.screenshotUrl,
+      hasFullPageUrl: !!finalResults.fullPageScreenshotUrl,
+      fullPageUrl: finalResults.fullPageScreenshotUrl,
+      allKeys: Object.keys(finalResults)
+    });
     await this.saveClientResults(runId, finalResults, finalResults);
   }
 
@@ -284,6 +292,14 @@ class EffectivenessService {
 
         // Save competitor results using same structure as client
         // Use finalResults for screenshots since scorer collects its own data
+        logger.info('Competitor finalResults before save', {
+          competitorRunId: competitorRun.id,
+          hasScreenshotUrl: !!finalResults.screenshotUrl,
+          screenshotUrl: finalResults.screenshotUrl,
+          hasFullPageUrl: !!finalResults.fullPageScreenshotUrl,
+          fullPageUrl: finalResults.fullPageScreenshotUrl,
+          allKeys: Object.keys(finalResults)
+        });
         await this.saveCompetitorResults(competitorRun.id, finalResults, finalResults);
         
         logger.info('Competitor analysis completed', {
@@ -406,13 +422,21 @@ class EffectivenessService {
       
       await db.transaction(async (tx) => {
         // Update run with final score
+        const updateData = {
+          overallScore: results.overallScore.toString(),
+          status: 'completed',
+          screenshotUrl: dataResult.screenshotUrl,
+          fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
+        };
+        
+        logger.info('Saving competitor screenshots to DB', {
+          runId,
+          screenshotUrl: updateData.screenshotUrl,
+          fullPageScreenshotUrl: updateData.fullPageScreenshotUrl
+        });
+        
         await tx.update(effectivenessRuns)
-          .set({
-            overallScore: results.overallScore.toString(),
-            status: 'completed',
-            screenshotUrl: dataResult.screenshotUrl,
-            fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
-          })
+          .set(updateData)
           .where(eq(effectivenessRuns.id, runId));
 
         logger.info('Updated competitor effectiveness run with final results', { runId });
@@ -456,13 +480,21 @@ class EffectivenessService {
       
       await db.transaction(async (tx) => {
         // Update run with final score
+        const updateData = {
+          overallScore: results.overallScore.toString(),
+          // status: 'completed',  // REMOVE THIS LINE - let progress tracker handle status
+          screenshotUrl: dataResult.screenshotUrl,
+          fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
+        };
+        
+        logger.info('Saving client screenshots to DB', {
+          runId,
+          screenshotUrl: updateData.screenshotUrl,
+          fullPageScreenshotUrl: updateData.fullPageScreenshotUrl
+        });
+        
         await tx.update(effectivenessRuns)
-          .set({
-            overallScore: results.overallScore.toString(),
-            // status: 'completed',  // REMOVE THIS LINE - let progress tracker handle status
-            screenshotUrl: dataResult.screenshotUrl,
-            fullPageScreenshotUrl: dataResult.fullPageScreenshotUrl
-          })
+          .set(updateData)
           .where(eq(effectivenessRuns.id, runId));
 
         logger.info('Updated effectiveness run with final results', { runId });
