@@ -272,6 +272,107 @@ class EffectivenessApiService {
   }
 
   /**
+   * GET /api/admin/effectiveness-prompt-templates
+   * 
+   * Fetch all effectiveness prompt templates (admin only)
+   */
+  async getPromptTemplates(): Promise<any[]> {
+    try {
+      const response = await fetch('/api/admin/effectiveness-prompt-templates', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new AuthError('Admin authentication required');
+        }
+        if (response.status === 403) {
+          throw new AuthError('Admin access denied');
+        }
+        throw new AppError(`Failed to fetch prompt templates: ${response.status}`, 'API_ERROR');
+      }
+
+      return await response.json();
+    } catch (error) {
+      errorHandler.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * PUT /api/admin/effectiveness-prompt-template/:criterion
+   * 
+   * Update an effectiveness prompt template (admin only)
+   */
+  async updatePromptTemplate(criterion: string, data: any): Promise<any> {
+    try {
+      const response = await fetch(`/api/admin/effectiveness-prompt-template/${criterion}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new AuthError('Admin authentication required');
+        }
+        if (response.status === 403) {
+          throw new AuthError('Admin access denied');
+        }
+        if (response.status === 404) {
+          throw new AppError('Template not found', 'NOT_FOUND');
+        }
+        throw new AppError(`Failed to update prompt template: ${response.status}`, 'API_ERROR');
+      }
+
+      return await response.json();
+    } catch (error) {
+      errorHandler.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/admin/effectiveness-prompt-template/preview
+   * 
+   * Preview an effectiveness prompt template (admin only)
+   */
+  async previewPromptTemplate(data: any): Promise<any> {
+    try {
+      const response = await fetch('/api/admin/effectiveness-prompt-template/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new AuthError('Admin authentication required');
+        }
+        if (response.status === 403) {
+          throw new AuthError('Admin access denied');
+        }
+        throw new AppError(`Failed to preview prompt template: ${response.status}`, 'API_ERROR');
+      }
+
+      return await response.json();
+    } catch (error) {
+      errorHandler.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
    * Transform competitor data to match UI requirements
    * 
    * Ensures consistent format for radar chart and evidence drawer
