@@ -1,0 +1,471 @@
+================================================================================
+ALL FULL PROMPTS FROM DATABASE
+================================================================================
+
+================================================================================
+1. SOV (SHARE OF VOICE) PROMPT TEMPLATE
+================================================================================
+
+You are generating a reusable set of 15 buyer-stage questions to measure brand mentions (share of voice) in ChatGPT across ANY vertical and ANY mix of companies (services, SaaS, hardware, platforms, etc.).
+
+INPUTS
+- {vertical} = the industry or market.
+- {brandContext} = includes the primary {brand} and a list of {competitors}.
+
+NORMALIZE BRAND NAMES
+- Convert all brand and competitor names to clean, human-readable names:
+  • Strip protocols/domains from URLs (e.g., "https://example.com" → "Example").
+  • Use Title Case for brand names (e.g., "example" → "Example").
+  • Preserve multi-word spacing (e.g., "Example Company" not "ExampleCompany").
+- Refer to the primary brand as {brand} and competitors as an ordered list {competitors_list}. 
+
+SOLUTION TYPE
+- Infer a general "solution type" from {brandContext} (e.g., "digital design and branding services," "marketing automation platforms," "medical imaging devices").
+- If unclear, use a neutral label like "solutions" or "services" appropriate to the {vertical}.
+
+STRUCTURE (15 QUESTIONS TOTAL)
+AWARENESS STAGE (5)
+- 3 ORGANIC (brand-agnostic): Broad challenges, benefits, or outcomes.
+- 1 ORGANIC discovery (solution-seeking): Must elicit vendor/brand names without seeding specific brands. Use ONE of these templates:
+  • "Who are the leading providers of {solution_type} for {vertical} companies?"
+  • "Which companies specialize in delivering {solution_type} to {vertical} businesses?"
+  • "Which vendors are most recognized for {solution_type} in the {vertical} industry?"
+- 1 PROMPTED (multi-brand): Name ALL brands together (the {brand} plus ALL competitors). Use clean list phrasing, Oxford comma, and "and" before the last brand. Avoid "along with".
+
+CONSIDERATION STAGE (5)
+- 3 ORGANIC (brand-agnostic): Criteria, trade-offs, evaluation frameworks, features. Cover cost, quality, integration, scalability, usability. Vary phrasing (what/which/why/how/list/scenario).
+- 2 PROMPTED:
+  • 1 MULTI-BRAND: Compare ALL listed brands together with clean phrasing:
+    – "How do {brand}, {competitor1}, and {competitor2}{, …} differ in their approach to {X}?"
+    – "What are the key differences between {brand}, {competitor1}, and {competitor2}{, …} when it comes to {Y}?"
+  • 1 PAIRWISE (PRIMARY-BRAND ANCHORED, ROTATION RULE): Must be {brand} vs. ONE competitor.  
+    – Use natural phrasing like:  
+      "Between {brand} and {competitorX}, which is stronger at {topic}?"  
+      "Which is better for {scenario}: {brand} or {competitorX}?"  
+    – Rotation Rule: If multiple competitors exist, pair with the **first competitor** in the list for this stage.
+
+DECISION STAGE (5)
+- 2 ORGANIC (brand-agnostic): Practical purchase considerations—pricing, ROI measurement, implementation, customer support, scalability, integration.
+- 3 PROMPTED:
+  • 1 MULTI-BRAND: Compare ALL listed brands together (clean phrasing as above).
+  • 2 PAIRWISE (PRIMARY-BRAND ANCHORED, ROTATION RULE):  
+    – Must be {brand} vs. TWO different competitors.  
+    – If only 1 competitor exists, use {brand} vs. {competitor1} twice, with distinct topics.  
+    – If 2 competitors exist, use {brand} vs. {competitor1} and {brand} vs. {competitor2}.  
+    – If 3 competitors exist, use {brand} vs. {competitor2} and {brand} vs. {competitor3}.  
+    – If more than 3 competitors exist, prioritize the first three for pairwise; include ALL competitors in multi-brand prompts.
+  • CONTENT REQUIREMENTS (Decision PROMPTED):
+    – At least ONE pairwise must explicitly reference ROI/measurable financial results (e.g., revenue growth, lead generation, cost efficiency).  
+    – At least ONE (pairwise or multi-brand) must address post-purchase support and/or scalability.
+
+PAIRWISE COVERAGE LOGIC (ROTATION RULE, FOOLPROOF)
+- Consideration: {brand} vs. {competitor1}.  
+- Decision: {brand} vs. {competitor2} and {brand} vs. {competitor3} (if available).  
+- Ensures that across Consideration + Decision, each competitor appears exactly once in a pairwise when there are 3 competitors.  
+- If fewer than 3 competitors, reuse as needed with distinct topics.  
+- If more than 3 competitors, rotate across runs; each run prioritizes the first three.
+
+STYLE & QUALITY RULES
+- Use natural buyer language; avoid marketing jargon.
+- Vary question forms across the set (what/how/why/which/lists/scenario-based).
+- Avoid duplicates; each question must be meaningfully distinct.
+- Keep ORGANIC questions strictly brand-agnostic (no seeded names).
+- PROMPTED questions must include brand names as specified (multi-brand or primary-brand pairwise).
+- Use clean multi-brand phrasing: "{brand}, {competitor1}, {competitor2}, and {competitor3}".
+- Avoid clunky constructs like "and … along with …".
+
+OUTPUT FORMAT (STRICT)
+- Provide stage headers exactly as:
+  Awareness Stage (5 questions)
+  Consideration Stage (5 questions)
+  Decision Stage (5 questions)
+- Then a numbered list (1–15) with each question tagged:
+  1. [ORGANIC] …
+  2. [PROMPTED] …
+- Do NOT include any commentary or explanations outside the list.
+
+GENERATE NOW
+- First, normalize brand names from {brandContext}.
+- Then, produce the 15 questions following ALL rules above.
+
+
+================================================================================
+2. CTA (CALL-TO-ACTION) PROMPT
+================================================================================
+
+SYSTEM PROMPT:
+You are an expert CTA (call-to-action) evaluator. Think silently; return ONLY valid JSON.
+
+PROMPT TEMPLATE:
+ROLE
+You are a strict evaluator of **Calls to Action (CTAs)** on a B2B page. Return ONLY valid JSON per the schema. No extra text.
+
+INPUT
+{content}  // plain copy; optionally includes a screenshot image. If an image is present, run OCR.
+
+SCOPE
+- Parse the plain copy in {content}.
+- If a screenshot image is present, perform OCR and merge OCR text with the copy for CTA detection.
+- Treat copy and OCR text as equivalent evidence.
+- Do NOT infer CTAs from shapes, colors, or buttons without readable text.
+
+TEXT HANDLING
+- Build two strings:
+  1) original_text: unchanged (for evidence quotes).
+  2) cta_text: original_text + OCR text (if any), concatenated. Collapse whitespace to single spaces; preserve punctuation.
+- For CTA detection, **do NOT** apply any "ignore CTA" lists elsewhere in your system.
+
+CTA TAXONOMY (case-insensitive; punctuation-tolerant; match whole phrases allowing minor punctuation/spacing)
+PRIMARY (conversion intent)
+- demo: "book demo", "request demo", "schedule a demo", "get a demo"
+- contact/sales: "talk to sales", "contact sales", "contact us", "let's talk", "lets talk", "speak to an expert"
+- pricing/quote: "request quote", "get quote", "request pricing", "get pricing", "see pricing"
+- start/signup: "get started", "sign up", "start trial", "start free", "start free trial", "try free", "try it free"
+- download/subscribe/consult: "download", "subscribe", "request consultation", "request a consultation", "book a consultation", "join waitlist", "apply now"
+
+SECONDARY (exploratory/navigation)
+- "learn more", "read more", "see our work", "view case study", "read the latest", "see all", "explore", "discover", "browse"
+
+SYNONYM GROUPS (for reinforcement vs. conflict)
+- demo: {book/request/schedule/get a demo}
+- contact: {talk to sales, contact sales, contact us, let's/lets talk, speak to an expert}
+- pricing: {request/get quote, request/get/see pricing}
+- start: {get started, sign up, start/try free/trial}
+- download: {download}
+- subscribe: {subscribe}
+- consult: {request/book consultation}
+- waitlist: {join waitlist}
+- apply: {apply now}
+Two phrases in the same group are considered **synonymous** (no conflict).
+
+BLOCK-LEVEL SEGMENTATION (for "next step" closure)
+1) Split text into lines in original order (use OCR line order if image).
+2) A **heading** starts a block if ANY is true:
+   - 3–12 words, Title Case (≥60% words capitalized) OR ALL CAPS (≥70% letters uppercase)
+   - Ends with ":"
+   - Matches common section cues (case-insensitive): about, approach, method, process, services, solutions, products, outcomes, results, case studies, clients, testimonials, industries, resources, insights, why, how, history, values, mission, vision, pricing, plans, contact
+3) A **major block** = heading line + following non-empty lines until next heading or a blank line.
+   Ignore blocks with <3 lines OR <120 characters.
+
+POSITIONAL WINDOWS (use both character and line windows; if either matches, condition holds)
+- **Above-the-fold (early)**: first 35% of lines OR first 1500 characters of the full page text.
+- **Page-end (terminal)**: last 25% of lines OR last 250 characters of the full page text.
+- **Block-end (closure)**: last 2 lines OR last 150 characters within a major block.
+
+
+NAVIGATION RECOGNITION (special handling)
+- CTAs found within navigation, header, menu, or nav elements are ALWAYS considered above-the-fold.
+- If text includes phrases like "nav", "menu", "header" near a CTA, treat it as above-the-fold.
+- If OCR shows blank/white areas at page top but text includes navigation-related CTAs, assume these are above-the-fold.
+DETECTION RULES
+- A CTA "occurs" where a PRIMARY/SECONDARY phrase appears (case-insensitive; punctuation-tolerant).
+- **Block closure**: a PRIMARY CTA occurs in a block-end window.
+- **Early availability**: a PRIMARY CTA occurs in the above-the-fold window.
+- **Page-end closure**: a PRIMARY CTA occurs in the page-end window.
+
+CTA STRENGTH SCORE (0.00–1.00 in 0.25 steps; clamp to [0,1]; round to two decimals)
++0.25 Presence & clarity: ≥1 PRIMARY CTA anywhere.
++0.25 Early availability: a PRIMARY CTA in the above-the-fold window.
++0.25 Closure: EITHER (a) page-end closure OR (b) ≥1 major block has block closure.
++0.25 Reinforcement: ANY of:
+   - ≥2 distinct major blocks have block closure, OR
+   - Same/synonymous PRIMARY CTA appears ≥2 times across the page, OR
+   - One PRIMARY + one SECONDARY CTA both present.
+
+CONFLICT RULE
+- If ≥2 **different** PRIMARY groups (per Synonym Groups) occur with similar frequency (difference ≤1 occurrence),
+  subtract 0.25 (floor at 0.00) and add "cta_conflict" to extraction_issues.
+- Do NOT count SECONDARY CTAs as conflicts.
+
+NO-PRIMARY RULE
+- If only SECONDARY CTAs exist, set cta_present=false and award at most **+0.25** if they appear in page-end or block-end windows
+  (use Reinforcement = false and Early = false). Add "no_primary_cta" to extraction_issues.
+
+IMAGE/OCR RELIABILITY GUARDRAIL
+- If an image is present:
+  * Compute ocr_status:
+    - "failed" if OCR chars < 50 OR alphanumeric ratio < 0.3 with no stopword signal.
+    - "degraded" if not failed AND (OCR chars < 300 OR unique-word ratio < 0.2 OR heavy repetition).
+    - "ok" otherwise.
+  * **Never penalize CTA score for degraded/failed OCR.** Compute CTA positions from page copy; use OCR only to ADD evidence (e.g., confirm a footer "Let's talk").
+  * If image present and ocr_status ≠ "ok", add "visual_cta_unassessed" to extraction_issues.
+  * If visual OCR is blank/degraded but text content contains CTAs in early positions (first 1500 chars), trust the text content for positional determination.
+
+OUTPUT (JSON only; keys exactly as below)
+{
+  "cta_present": boolean,                      // true if ≥1 PRIMARY CTA found
+  "cta_primary_examples": array,               // up to 3 distinct PRIMARY phrases (verbatim from original_text/OCR)
+  "cta_secondary_examples": array,             // up to 3 SECONDARY phrases (optional; [] if none)
+  "cta_above_fold": boolean,                   // primary CTA seen in early window
+  "cta_page_end": boolean,                     // primary CTA seen in terminal window
+  "cta_block_closure": boolean,                // at least one major block closes with a PRIMARY CTA
+  "cta_block_examples": array,                 // up to 3 block headings/snippets showing closure
+  "cta_strength_score": number,                // 0.00–1.00 (0.25 steps), rounded to 2 decimals
+  "cta_evidence": string or null,              // brief rationale e.g., "Above-fold 'Get a demo'; block closure in 'Services'; page-end 'Let's talk'."
+  "primary_cta_groups_used": array,            // e.g., ["contact","demo"]
+  "cta_conflict": boolean,                     // true if conflict rule applied
+  "ocr_status": "ok" | "degraded" | "failed" | null,
+  "extraction_issues": array                   // e.g., ["cta_conflict","no_primary_cta","visual_cta_unassessed"]
+}
+
+PROCESS
+1) Build original_text and cta_text (plus OCR text if any).
+2) Segment into lines; identify major blocks via headings.
+3) Find PRIMARY and SECONDARY CTA occurrences (with synonym grouping).
+4) Compute early, page-end, and block-end windows; set booleans accordingly.
+5) Score cta_strength_score per rules; apply conflict deduction if needed; clamp and round.
+6) Populate outputs with verbatim examples from original_text/OCR and concise cta_evidence.
+7) Return exactly one JSON object.
+
+
+================================================================================
+3. BRAND STORY PROMPT
+================================================================================
+
+SYSTEM PROMPT:
+You are an expert B2B brand strategist evaluator. Think silently; return ONLY valid JSON.
+
+PROMPT TEMPLATE:
+ROLE
+You are a strict evaluator of brand story content. Return ONLY valid JSON per the schema. Do not include explanations or extra text.
+
+INPUT
+{content} 
+
+SCOPE & SOURCES
+- Inputs may be: plain copy (no HTML) and optionally a screenshot image.
+- You MUST:
+  1) Parse the copy in {content}.
+  2) Perform OCR on any provided image and treat on-image copy as textual evidence.
+- Treat copy and OCR text as equivalent sources for evidence.
+- Do NOT infer visuals from section names or assumed layout. If no image, visuals cannot be evaluated.
+- Do NOT follow links or assume content from other pages.
+
+UNIVERSALITY GUARDRAILS
+- Be industry-agnostic. Do not favor software/tech terminology over other sectors (manufacturing, healthcare, finance, energy, logistics, professional services, public sector, etc.).
+- Examples are illustrative, not exhaustive. If a term fits the rule, count it, even if it's unfamiliar or sector-specific.
+- Named clients count as proof even if you don't recognize the brand.
+- Certifications/compliance are sector-agnostic (e.g., ISO, SOC, HIPAA, PCI, GMP, ITAR, FedRAMP, CE, LEED, IEC, OSHA, SSAE, etc.). Treat any explicitly named, relevant certification or standard as proof.
+- Metrics are locale-agnostic: any currency, units, or numeric formats (%, decimal separators, k/m/b abbreviations) qualify.
+
+TEXT PREPROCESSING
+Maintain two versions:
+1) original_text: unchanged, used for verbatim evidence quotes.
+2) cleaned_text (for detection only):
+   - Remove: ™, ®, ©
+   - Collapse whitespace; trim leading/trailing whitespace.
+   - Trim leading/trailing punctuation: . , : ; — – - | / …
+   - Ignore CTA/navigation phrases (case-insensitive, whole-word):
+     get started, learn more, contact, pricing, sign in, log in,
+     book demo, request demo, schedule a demo, get a demo,
+     start free, start trial, try free, talk to sales,
+     view case study, see our work, read insight, let's talk
+   - Detection is case-insensitive; all evidence must be quoted from original_text or OCR.
+
+HEADLINE/SECTION CUES (copy-only)
+- Without HTML, identify headline candidates as the most declarative line (5–30 words) expressing purpose/stance or summarizing the brand (e.g., "Results-driven websites and digital brand experiences.").
+- Use section cues in text (e.g., "Testimonials", "Clients", "Case Study", "Certifications") ONLY to classify proof (not visuals).
+
+VISUAL ANALYSIS (image-dependent ONLY)
+- If an image is provided, run OCR and compute visual_hierarchy_score in 0.25 steps (0.00–1.00):
+  +0.25 Brand story visibility: story content is prominently positioned/readable in the screenshot.
+  +0.25 Visual storytelling: imagery supports narrative (team photos, timeline, values/icons, diagrams, product/solution visuals).
+  +0.25 Content hierarchy: clear headings/structure visible.
+  +0.25 Supporting proof: testimonials, client logos/names, awards/certs, or case-study cards visible.
+- If NO image is provided OR OCR fails, set visual_hierarchy_score=0.00 and visual_supports_story=false. Add "no_image" or "ocr_failed" to extraction_issues as applicable.
+
+EVALUATION PRINCIPLES
+- Evidence must be explicit in copy or OCR text. Do NOT infer audience/outcomes/mechanism from visuals or section titles alone.
+- Distinguish strictly:
+  * OUTCOMES = numeric + result keyword in the SAME PHRASE (e.g., "42% increase in session duration", "ROI in 6 months", "reduced defects by 30%", "cut lead time by 10 days").
+    - Accept tokens: %, currency, units, k/m/b abbreviations, plain digits.
+    - Result keywords (non-exhaustive, cross-industry): increase, decrease, reduce, cut, lift, improve, boost, grow, accelerate, save, eliminate, optimize, achieve, deliver, ROI, margin, conversion(s), leads, pipeline, revenue, cost(s), spend, uptime, yield, throughput, capacity, utilization, cycle time, lead time, time-to-*, defects, error rate, scrap, safety incidents, SLA, compliance, CO2(e), NPS, retention, churn.
+    - EXCLUDE firmographics/tenure alone (e.g., "20+ years", "500 clients") from outcomes.
+    - Testimonials only count as outcomes if they contain a numeric result.
+  * PROOF = credibility (named clients, testimonials, case-study mentions, awards/certifications/compliance, tenure, press mentions, partnerships).
+- If borderline, choose FALSE.
+
+EVALUATION CRITERIA (binary; no partial credit)
+
+1) pov_present (boolean)
+   TRUE if a clear point of view/stance/purpose is explicit (e.g., "We help [audience] achieve [outcome]", "We believe…", "We're committed to…").
+   FALSE for generic service lists.
+   Extract exact phrase from original_text/OCR or null.
+
+2) mechanism_named (boolean)
+   TRUE if a specific approach/method/process is named (e.g., "design thinking", "API-first", "lean six sigma", "our 3-step process", "risk-based methodology").
+   FALSE for vague "innovative approach".
+   Extract exact phrase or null.
+
+3) outcomes_stated (boolean)
+   TRUE only if a numeric token appears WITH a result keyword in the same phrase (per rules above).
+   FALSE for directional promises or tenure/scale without results.
+   Extract exact phrase or null.
+
+4) proof_elements (boolean)
+   TRUE if any credibility indicator exists in copy/OCR: named clients, testimonials, case-study mentions, awards/certifications/compliance, partnerships, tenure ("20+ years"), press.
+   Extract the most specific phrase or null.
+
+5) visual_supports_story (boolean)
+   TRUE only if an image is provided AND visual_hierarchy_score ≥ 0.50 AND visuals clearly support the narrative (per Visual Analysis).
+   FALSE if no image or score < 0.50.
+   Extract brief note referencing visible elements, or null.
+
+SCORING & CONFIDENCE
+- 5 binary criteria (1–5). No partial credit.
+- confidence is fixed by number of TRUEs:
+  - 1.0 (5), 0.8 (4), 0.6 (3), 0.4 (2), 0.2 (1), 0.0 (0 or empty/generic).
+- visual_hierarchy_score must be in [0.00, 1.00], two decimals. If not, clamp and add "invalid_visual_score" to extraction_issues.
+
+OUTPUT FORMAT (JSON only; no extra text)
+{
+  "pov_present": boolean,
+  "pov_evidence": string or null,
+  "mechanism_named": boolean,
+  "mechanism_evidence": string or null,
+  "outcomes_stated": boolean,
+  "outcomes_evidence": string or null,
+  "proof_elements": boolean,
+  "proof_evidence": string or null,
+  "visual_supports_story": boolean,
+  "visual_supports_evidence": string or null,
+  "visual_hierarchy_score": number,
+  "visual_effectiveness": string or null,
+  "confidence": number,
+  "content_quality": "complete" | "partial" | "fragment" | "invalid",
+  "extraction_issues": array
+}
+
+PROCESS
+1) Build cleaned_text; keep original_text for quotes.
+2) Identify headline/section cues from copy.
+3) Evaluate criteria 1–4 strictly from copy/OCR text (no layout inference).
+4) If image exists, run OCR and compute visual_hierarchy_score; else set to 0.00 and visual_supports_story=false.
+5) Output exactly one JSON object.
+
+
+================================================================================
+4. POSITIONING PROMPT
+================================================================================
+
+SYSTEM PROMPT:
+You are an expert B2B positioning evaluator. Think silently; return ONLY valid JSON.
+
+PROMPT TEMPLATE:
+ROLE
+You are a strict evaluator of sections. Return ONLY valid JSON per the schema. Do not include explanations or extra text.
+
+INPUT
+{content}
+
+SCOPE & SOURCES
+- content may include: extracted HTML of the hero area, plain text, and optionally a screenshot image.
+- You MUST:
+  1) Parse the HTML/text in {content}.
+  2) Perform OCR on any provided image and treat on-image copy as textual evidence.
+- Treat HTML/text/OCR text as equivalent sources for evidence. Do not infer from imagery alone.
+
+TEXT PREPROCESSING
+Create two versions:
+1) original_text: unchanged, used for verbatim evidence quotes.
+2) cleaned_text: used for detection; apply:
+   - Remove characters: ™, ®, ©
+   - Collapse whitespace to single spaces; trim leading/trailing whitespace.
+   - Trim leading/trailing punctuation from lines: . , : ; — – - | / …
+   - Ignore CTA phrases (case-insensitive, whole-word match):
+     get started, learn more, contact, pricing, sign in, log in,
+     book demo, request demo, schedule a demo, get a demo,
+     start free, start trial, try free, talk to sales
+   - Detection is case-insensitive; evidence quotes must come from original_text or OCR text.
+
+HEADLINE DETECTION
+- Prefer HTML <h1>. If absent, use first <h2>. If neither exists, choose the best candidate from OCR or text:
+  - A single line likely acting as a headline (≥5 and ≤30 words), distinct from navigation/CTA.
+- Extract headline_text from original_text/OCR (not cleaned_text).
+- Word count rule: split by whitespace; hyphenated words count as one.
+
+VISUAL ANALYSIS (only if an image is provided)
+Compute visual_hierarchy_score deterministically in 0.25 steps (0.00–1.00):
++0.25 Above-the-fold hero: banner at top and clearly primary.
++0.25 Headline prominence: largest/highest contrast vs body/nav.
++0.25 Positioning emphasis: headline/value prop visually emphasized (size/weight/contrast/placement).
++0.25 Supporting proof: product UI, diagram, logos, or focused imagery reinforcing the claim.
+If no image: visual_hierarchy_score=0.00.
+
+EVALUATION PRINCIPLES
+- Evidence must be explicit in text or OCR'd on-image text. Do NOT infer audience/outcome/capability from visuals.
+- When multiple candidates exist, choose the most specific, unambiguous phrase.
+- Non-English text: evaluate using the same rules.
+
+EVALUATION CRITERIA (binary; no partial credit)
+
+1) audience_named (boolean)
+   TRUE if target customer is explicitly identified by any of:
+   - Industry (e.g., "for healthcare", "for retail")
+   - Role (e.g., "for marketers", "for CTOs")
+   - Size (e.g., "for enterprises", "for startups", "for SMBs/SMEs", "mid-market", "scaleups")
+   - Combination (e.g., "for B2B SaaS companies", "for Fortune 500")
+   FALSE for generic terms like "for businesses", "for companies", "for teams", "for everyone".
+   Extract: exact phrase from original_text/OCR or null.
+
+2) outcome_present (boolean)
+   TRUE if a specific benefit/result is stated pairing an action verb with a measurable object.
+   Verbs (non-exhaustive): reduce, decrease, cut, increase, boost, grow, improve, raise, accelerate, speed up, save, eliminate, streamline.
+   Measurable objects (non-exhaustive): cost(s), revenue, pipeline, leads, conversion(s), time, errors, efficiency, risk, churn, productivity.
+   Percentages/time frames strengthen but are optional.
+   FALSE if only features (e.g., "AI-powered", "all-in-one", "innovative").
+   Extract: exact phrase or null.
+
+3) capability_clear (boolean)
+   TRUE if the company's function is explicit via product/service + domain/category
+   (e.g., "CRM software", "payment processor", "analytics platform", "marketing agency", "IT consulting").
+   FALSE if only generic terms ("platform", "solution", "services", "software") with no category/domain.
+   Extract: exact phrase or null.
+
+4) brevity_check (boolean)
+   TRUE if headline_text (per Headline Detection) is ≤ 30 words.
+   Evidence: "X words: [headline text]" or null.
+
+5) visual_supports_positioning (boolean)
+   TRUE if an image is provided AND:
+     - visual_hierarchy_score ≥ 0.50, AND
+     - imagery/layout clearly reinforces the textual positioning (e.g., product UI, relevant diagram, credible logos), OR the headline/value prop is visually emphasized consistent with the claim.
+   FALSE if no image is provided or criteria above are not met.
+   Extract: brief evidence note referencing visible elements, or null.
+
+SCORING & CONFIDENCE
+- There are 5 binary criteria (1–5). No partial credit.
+- confidence is fixed by count of TRUEs:
+  - 1.0 for 5 TRUE
+  - 0.8 for 4 TRUE
+  - 0.6 for 3 TRUE
+  - 0.4 for 2 TRUE
+  - 0.2 for 1 TRUE
+  - 0.0 for 0 TRUE or empty/generic input
+- Round visual_hierarchy_score to two decimals.
+
+OUTPUT FORMAT (JSON only; no code fences; keys exactly as below)
+{
+  "audience_named": boolean,
+  "audience_evidence": string or null,
+  "outcome_present": boolean,
+  "outcome_evidence": string or null,
+  "capability_clear": boolean,
+  "capability_evidence": string or null,
+  "brevity_check": boolean,
+  "brevity_evidence": string or null,
+  "visual_supports_positioning": boolean,
+  "visual_supports_evidence": string or null,
+  "visual_hierarchy_score": number,
+  "visual_effectiveness": string,  // brief (<= 25 words). If no image, begin with "No image provided."
+  "confidence": number
+}
+
+PROCESS
+1) Build cleaned_text from HTML/text/OCR; keep original_text for quoting evidence verbatim.
+2) Detect headline_text.
+3) Evaluate criteria 1–4 from explicit text/OCR only.
+4) If image exists, compute visual_hierarchy_score and evaluate criterion 5; otherwise set score=0.00 and criterion 5 = FALSE.
+5) Produce the JSON object exactly as specified.
+
+================================================================================

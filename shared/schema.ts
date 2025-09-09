@@ -400,6 +400,36 @@ export const effectivenessConfig = pgTable("effectiveness_config", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// SOV Analysis Storage
+export const sovAnalyses = pgTable("sov_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  brandName: text("brand_name").notNull(),
+  brandUrl: text("brand_url").notNull(),
+  competitors: jsonb("competitors").notNull(), // Array of {name, url}
+  vertical: text("vertical").notNull(),
+  analysisType: varchar("analysis_type", { length: 10 }).default("main").notNull(), // 'main' or 'test'
+  
+  // Results storage
+  summary: jsonb("summary"), // Includes timestamp, totalQuestions, strategicInsights
+  metrics: jsonb("metrics"), // overallSoV, totalMentions, questionCoverage
+  questionResults: jsonb("question_results"), // Array of question/stage/sov data
+  
+  // Metadata
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, processing, completed, failed
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  
+  // User tracking
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => ({
+  // Index for fast lookups
+  clientCreatedIdx: index("idx_sov_analyses_client_created").on(table.clientId, table.createdAt),
+  statusIdx: index("idx_sov_analyses_status").on(table.status),
+  analysisTypeIdx: index("idx_sov_analyses_type").on(table.analysisType),
+}));
+
 // Relations
 export const clientsRelations = relations(clients, ({ many }) => ({
   users: many(users),
@@ -410,6 +440,7 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   ga4PropertyAccess: many(ga4PropertyAccess),
   metricVersions: many(metricVersions),
   effectivenessRuns: many(effectivenessRuns),
+  sovAnalyses: many(sovAnalyses),
 }));
 
 export const metricVersionsRelations = relations(metricVersions, ({ one }) => ({
@@ -499,6 +530,17 @@ export const criterionScoresRelations = relations(criterionScores, ({ one }) => 
   run: one(effectivenessRuns, {
     fields: [criterionScores.runId],
     references: [effectivenessRuns.id],
+  }),
+}));
+
+export const sovAnalysesRelations = relations(sovAnalyses, ({ one }) => ({
+  client: one(clients, {
+    fields: [sovAnalyses.clientId],
+    references: [clients.id],
+  }),
+  createdByUser: one(users, {
+    fields: [sovAnalyses.createdBy],
+    references: [users.id],
   }),
 }));
 
@@ -690,6 +732,17 @@ export const updateEffectivenessConfigSchema = createInsertSchema(effectivenessC
   updatedAt: true,
 }).partial();
 
+export const insertSOVAnalysisSchema = createInsertSchema(sovAnalyses).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const updateSOVAnalysisSchema = createInsertSchema(sovAnalyses).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
 // Types
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -760,3 +813,7 @@ export type UpdateCriterionScore = z.infer<typeof updateCriterionScoreSchema>;
 export type EffectivenessConfig = typeof effectivenessConfig.$inferSelect;
 export type InsertEffectivenessConfig = z.infer<typeof insertEffectivenessConfigSchema>;
 export type UpdateEffectivenessConfig = z.infer<typeof updateEffectivenessConfigSchema>;
+
+export type SOVAnalysis = typeof sovAnalyses.$inferSelect;
+export type InsertSOVAnalysis = z.infer<typeof insertSOVAnalysisSchema>;
+export type UpdateSOVAnalysis = z.infer<typeof updateSOVAnalysisSchema>;

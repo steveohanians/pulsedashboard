@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -54,6 +54,40 @@ export default function BrandSignals() {
     industryVertical: "All",
   });
 
+  // Load saved analysis on mount
+  useEffect(() => {
+    // Only load if we have a client and we're not currently analyzing
+    if (client?.id && !isAnalyzing) {
+      console.log('Attempting to load saved SOV analysis for client:', client.id);
+      
+      // Load the most recent main analysis (real client data takes priority)
+      fetch(`/api/sov/latest/${client.id}?type=main`, {
+        credentials: 'include',  // Include cookies for session auth
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log('SOV fetch response:', data);
+          
+          if (data.success && data.summary) {
+            setAnalysisResults(data);
+            setIsTestAnalysis(false);
+            console.log('Successfully loaded saved SOV analysis', { 
+              analysisId: data.analysisId,
+              timestamp: data.summary?.timestamp 
+            });
+          } else {
+            console.log('No saved SOV analysis found for client');
+          }
+        })
+        .catch(error => {
+          console.error('Failed to load saved SOV analysis:', error);
+        });
+    }
+  }, [client?.id]); // Only depend on client.id to avoid re-fetching
+
   // Add progress with simple string format
   const addProgress = (message: string) => {
     setProgressSteps((prev) => [...prev, message]);
@@ -88,6 +122,7 @@ export default function BrandSignals() {
           url: formatUrl(c.domain),
         })),
         vertical: client?.industryVertical || "General",
+        clientId: client?.id,  // Include clientId for database save
       };
 
       // Show progress messages one at a time with delays
@@ -176,6 +211,7 @@ export default function BrandSignals() {
           { name: "Mailchimp", url: "https://mailchimp.com" },
         ],
         vertical: "Marketing Software",
+        clientId: client?.id,  // Include clientId for database save
       };
 
       // Show progress messages
@@ -557,6 +593,13 @@ export default function BrandSignals() {
                 {/* Analysis Results - Inside Pulse AI Analysis Box */}
                 {analysisResults && (
                   <div className="mt-6">
+                    {/* Last Fetched Timestamp */}
+                    {analysisResults.summary?.timestamp && (
+                      <div className="text-sm text-slate-500 mb-4">
+                        Last fetched: {new Date(analysisResults.summary.timestamp).toLocaleString()}
+                      </div>
+                    )}
+                    
                     {/* Summary Cards Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                       <Card className="bg-slate-50">
@@ -959,7 +1002,8 @@ export default function BrandSignals() {
   );
   
   // LoadKit integration - use if enabled, fallback to existing
-  if (useLoadKitBrandSignals) {
+  // TEMPORARILY DISABLED: LoadKit breaks results display - using original implementation
+  if (false && useLoadKitBrandSignals) {
     return (
       <LoadKit.BrandSignals state={brandSignalsLoadingState}>
         {mainContent}

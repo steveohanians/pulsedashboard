@@ -247,6 +247,9 @@ export class ProgressTracker {
   }
 
   startInsights(): void {
+    this.state.currentPhase = 'insights';
+    this.state.currentOperation = 'Generating AI insights and recommendations';
+    this.state.message = 'Analyzing patterns and generating insights...';
     // Use step-based tracking
     this.markStepComplete('insights_generation');
   }

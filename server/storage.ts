@@ -1,5 +1,5 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, effectivenessPromptTemplates, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, effectivenessPromptTemplates, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores, sovAnalyses,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
@@ -17,6 +17,7 @@ import {
   type FilterOption, type InsertFilterOption, type UpdateFilterOption,
   type GA4PropertyAccess, type InsertGA4PropertyAccess,
   type MetricVersion, type InsertMetricVersion, type UpdateMetricVersion,
+  type SOVAnalysis, type InsertSOVAnalysis, type UpdateSOVAnalysis,
   validateCanonicalMetricEnvelope,
   type CanonicalMetricEnvelope
 } from "@shared/schema";
@@ -133,6 +134,13 @@ export interface IStorage {
   getSOVPromptTemplate(): Promise<SOVPromptTemplate | undefined>;
   createSOVPromptTemplate(template: InsertSOVPromptTemplate): Promise<SOVPromptTemplate>;
   updateSOVPromptTemplate(template: UpdateSOVPromptTemplate): Promise<SOVPromptTemplate | undefined>;
+  
+  // SOV Analyses
+  saveSOVAnalysis(analysis: InsertSOVAnalysis): Promise<SOVAnalysis>;
+  getLatestSOVAnalysis(clientId: string, analysisType?: 'main' | 'test'): Promise<SOVAnalysis | undefined>;
+  updateSOVAnalysisStatus(id: string, update: UpdateSOVAnalysis): Promise<SOVAnalysis | undefined>;
+  getSOVAnalysisById(id: string): Promise<SOVAnalysis | undefined>;
+  getSOVAnalysesByClient(clientId: string): Promise<SOVAnalysis[]>;
   
   // Effectiveness Prompt Templates
   getEffectivenessPromptTemplates(): Promise<EffectivenessPromptTemplate[]>;
@@ -1863,6 +1871,58 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sovPromptTemplate.isActive, true))
       .returning();
     return updatedTemplate || undefined;
+  }
+
+  // SOV Analyses
+  async saveSOVAnalysis(analysis: InsertSOVAnalysis): Promise<SOVAnalysis> {
+    const [newAnalysis] = await db
+      .insert(sovAnalyses)
+      .values(analysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getLatestSOVAnalysis(clientId: string, analysisType: 'main' | 'test' = 'main'): Promise<SOVAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(sovAnalyses)
+      .where(and(
+        eq(sovAnalyses.clientId, clientId),
+        eq(sovAnalyses.analysisType, analysisType),
+        eq(sovAnalyses.status, 'completed')
+      ))
+      .orderBy(desc(sovAnalyses.createdAt))
+      .limit(1);
+    return analysis || undefined;
+  }
+
+  async updateSOVAnalysisStatus(id: string, update: UpdateSOVAnalysis): Promise<SOVAnalysis | undefined> {
+    const [updatedAnalysis] = await db
+      .update(sovAnalyses)
+      .set({
+        ...update,
+        completedAt: update.status === 'completed' ? new Date() : undefined
+      })
+      .where(eq(sovAnalyses.id, id))
+      .returning();
+    return updatedAnalysis || undefined;
+  }
+
+  async getSOVAnalysisById(id: string): Promise<SOVAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(sovAnalyses)
+      .where(eq(sovAnalyses.id, id))
+      .limit(1);
+    return analysis || undefined;
+  }
+
+  async getSOVAnalysesByClient(clientId: string): Promise<SOVAnalysis[]> {
+    return await db
+      .select()
+      .from(sovAnalyses)
+      .where(eq(sovAnalyses.clientId, clientId))
+      .orderBy(desc(sovAnalyses.createdAt));
   }
 
   // Effectiveness Prompt Templates

@@ -17,7 +17,7 @@ const SovAnalysisSchema = z.object({
   brand: BrandSchema,
   competitors: z.array(BrandSchema).min(1, 'At least one competitor is required'),
   vertical: z.string().min(1, 'Vertical is required'),
-  clientId: z.number().optional(),
+  clientId: z.string().optional(),  // Changed to string to match database schema
   userId: z.number().optional()
 });
 
@@ -70,9 +70,52 @@ router.post('/analyze', requireAuth, async (req, res) => {
       overallSoV: result.metrics?.overallSoV
     });
 
-    // Return the actual results
+    // Save analysis to database
+    let analysisId: string | undefined;
+    try {
+      const { storage } = await import('../storage');
+      // Determine analysis type based on the brand name (HubSpot is our test brand)
+      const isTestAnalysis = validatedInput.brand.name === 'HubSpot' && 
+                            validatedInput.competitors.some(c => c.name === 'Salesforce');
+      
+      const clientIdToUse = validatedInput.clientId || req.user?.clientId || '';
+      logger.info('Attempting to save SOV analysis', { 
+        clientId: clientIdToUse,
+        brandName: validatedInput.brand.name,
+        analysisType: isTestAnalysis ? 'test' : 'main'
+      });
+      
+      const savedAnalysis = await storage.saveSOVAnalysis({
+        clientId: clientIdToUse,  // Use provided clientId or fallback to user's
+        brandName: validatedInput.brand.name,
+        brandUrl: validatedInput.brand.url,
+        competitors: validatedInput.competitors,
+        vertical: validatedInput.vertical,
+        analysisType: isTestAnalysis ? 'test' : 'main',
+        summary: result.summary,
+        metrics: result.metrics,
+        questionResults: result.questionResults,
+        status: 'completed',
+        createdBy: req.user?.id
+      });
+      analysisId = savedAnalysis.id;
+      logger.info('SoV analysis saved successfully to database', { 
+        analysisId, 
+        clientId: clientIdToUse,
+        brandName: validatedInput.brand.name 
+      });
+    } catch (saveError) {
+      // Log but don't fail the request if save fails
+      logger.warn('Failed to save SoV analysis to database', { 
+        error: saveError instanceof Error ? saveError.message : String(saveError),
+        clientId: req.user?.clientId 
+      });
+    }
+
+    // Return the actual results with analysis ID
     res.status(200).json({
       success: true,
+      analysisId,
       ...result
     });
 
@@ -261,6 +304,58 @@ router.get('/progress/:analysisId', requireAuth, (req, res) => {
     sovService.removeListener('progress', progressHandler);
     res.end();
   }, 600000);
+});
+
+/**
+ * GET /api/sov/latest/:clientId
+ * Get the latest saved SOV analysis for a client
+ */
+router.get('/latest/:clientId', requireAuth, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { type = 'main' } = req.query as { type?: 'main' | 'test' };
+    
+    logger.info('Fetching latest SOV analysis', { clientId, type, userId: req.user?.id });
+    
+    const { storage } = await import('../storage');
+    const latestAnalysis = await storage.getLatestSOVAnalysis(clientId, type);
+    
+    if (!latestAnalysis) {
+      logger.info('No saved SOV analysis found', { clientId, type });
+      return res.status(200).json({
+        success: false,
+        message: 'No analysis found'
+      });
+    }
+    
+    logger.info('Found saved SOV analysis', { 
+      clientId, 
+      analysisId: latestAnalysis.id,
+      createdAt: latestAnalysis.createdAt
+    });
+    
+    // Return the analysis in the same format as the analyze endpoint
+    res.status(200).json({
+      success: true,
+      analysisId: latestAnalysis.id,
+      summary: latestAnalysis.summary,
+      metrics: latestAnalysis.metrics,
+      questionResults: latestAnalysis.questionResults
+    });
+    
+  } catch (error) {
+    logger.error('Failed to fetch latest SOV analysis', {
+      error: (error as Error).message,
+      clientId: req.params.clientId,
+      userId: req.user?.id
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analysis',
+      message: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+    });
+  }
 });
 
 export default router;

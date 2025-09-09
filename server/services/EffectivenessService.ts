@@ -14,6 +14,8 @@ import { EffectivenessConfigManager } from './effectiveness/config.js';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { logger } from '../utils/logging/logger.js';
 import { createProgressTracker, getProgressTracker, clearProgressTracker } from './effectiveness/progressTracker.js';
+import { EffectivenessInsightsService } from './effectiveness/insightsService.js';
+import { OpenAI } from 'openai';
 
 interface AnalysisProgress {
   runId: string;
@@ -336,8 +338,29 @@ class EffectivenessService {
     tracker.startInsights();
     await this.syncProgressFromTracker(runId, tracker);
     
-    // Small delay to simulate insights generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Best effort insights generation - non-blocking
+    try {
+      // Get client ID from the run
+      const run = await storage.getEffectivenessRun(runId);
+      if (run?.clientId) {
+        logger.info('Attempting to generate insights', { runId, clientId: run.clientId });
+        
+        // Set a timeout for insights generation (30 seconds max)
+        const insightsPromise = this.generateInsights(run.clientId, runId);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Insights generation timeout')), 30000)
+        );
+        
+        await Promise.race([insightsPromise, timeoutPromise]);
+        logger.info('Insights generated successfully', { runId });
+      }
+    } catch (error) {
+      // Log but don't fail the analysis - insights are best effort
+      logger.warn('Insights generation failed (non-blocking)', {
+        runId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
     
     tracker.complete();
     await this.syncProgressFromTracker(runId, tracker);
@@ -570,6 +593,56 @@ class EffectivenessService {
     if (!progress) return 0;
     const match = progress.match(/(\d+)%/);
     return match ? parseInt(match[1]) : 0;
+  }
+
+  /**
+   * Generate AI insights for a completed effectiveness run
+   * This is called by the API route handler
+   */
+  async generateInsights(clientId: string, runId: string): Promise<any> {
+    try {
+      logger.info('Generating insights via API', { clientId, runId });
+      
+      // Initialize the insights service with OpenAI
+      const openaiClient = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+      
+      const insightsService = new EffectivenessInsightsService({
+        storage,
+        openaiClient
+      });
+      
+      // Generate insights (userId and userRole will be handled by the route)
+      const result = await insightsService.generateInsights(
+        clientId,
+        runId,
+        undefined, // userId will be passed from route context
+        'Admin' // Assume admin for internal service calls
+      );
+      
+      // Save insights to database if successful
+      if (result.success && result.insights) {
+        await db.update(effectivenessRuns)
+          .set({
+            aiInsights: result.insights,
+            insightsGeneratedAt: new Date()
+          })
+          .where(eq(effectivenessRuns.id, runId));
+        
+        logger.info('Insights saved to database', { runId });
+      }
+      
+      return result;
+      
+    } catch (error) {
+      logger.error('Failed to generate insights', {
+        clientId,
+        runId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 }
 
