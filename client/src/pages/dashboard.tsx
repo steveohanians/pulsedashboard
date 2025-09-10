@@ -44,7 +44,8 @@ import {
 } from "lucide-react";
 
 import { ViewAsSelector } from '@/components/admin/ViewAsSelector';
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useToast } from "@/hooks/use-toast";
 import { MetricsChart } from "@/components/charts/metrics-chart";
 import { TimeSeriesChart } from "@/components/charts/time-series-chart";
@@ -70,6 +71,7 @@ export default function Dashboard() {
   const dashboardRootRef = useRef<HTMLDivElement>(null);
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const [currentPath] = useLocation();
 
   // State management
   const [timePeriod, setTimePeriod] = useState("Last Month");
@@ -454,152 +456,38 @@ export default function Dashboard() {
                 </Button>
               </div>
               
-              <nav>
-                <div className="mb-4">
-                  <h3 className="text-sm font-bold text-slate-800 mb-2">Vitals</h3>
-                  <ul className="space-y-1">
-                    {metricNames.map((metricName) => (
-                      <li key={metricName}>
-                        <button
-                          onClick={() => {
-                            handleNavigationClick(metricName);
-                            setMobileMenuOpen(false);
-                          }}
-                          className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
-                            activeSection === metricName
-                              ? "bg-slate-100 text-primary"
-                              : "text-slate-700 hover:bg-slate-100 hover:text-primary"
-                          }`}
-                        >
-                          {metricName}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <hr className="border-slate-200 my-4" />
-                
-                <ul className="space-y-2">
-                  <li>
-                    <Link href="/brand-signals">
-                      <button 
-                        className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Brand Signals
-                      </button>
-                    </Link>
-                  </li>
-                  
-                  {(viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && (
-                    <>
-                      <li className="my-4">
-                        <hr className="border-slate-200" />
-                      </li>
-                      <li>
-                        <Link href="/admin">
-                          <button 
-                            className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <Settings className="h-3 w-3 inline mr-2" />
-                            Admin Panel
-                          </button>
-                        </Link>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => {
-                            handleRefreshData();
-                            setMobileMenuOpen(false);
-                          }}
-                          className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
-                        >
-                          <RefreshCw className="h-3 w-3 inline mr-2" />
-                          Refresh Data
-                        </button>
-                      </li>
-                    </>
-                  )}
-                  
-                  <li className="my-4">
-                    <hr className="border-slate-200" />
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        logoutMutation.mutate();
-                      }}
-                      className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
-                    >
-                      <LogOut className="h-3 w-3 inline mr-2" />
-                      Logout
-                    </button>
-                  </li>
-                </ul>
-              </nav>
+              <NavigationSidebar
+                variant="mobile"
+                currentPath={currentPath}
+                metricNames={metricNames as string[]}
+                activeSection={activeSection}
+                onSectionClick={handleNavigationClick}
+                userRole={user?.role}
+                viewAsUserRole={viewAsUser?.role}
+                onRefreshData={handleRefreshData}
+                onCloseMobile={() => setMobileMenuOpen(false)}
+                onLogout={() => logoutMutation.mutate()}
+              />
             </div>
           </div>
         </div>
       )}
 
       <div className="flex">
-        {/* Desktop Navigation - Keep existing */}
+        {/* Desktop Navigation */}
         <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
           <div className="p-4">
-            <h2 className="text-base font-bold text-slate-800 mb-4">Vitals</h2>
-            <ul className="space-y-2">
-              {metricNames.map((metricName) => (
-                <li key={metricName}>
-                  <button
-                    onClick={() => handleNavigationClick(metricName)}
-                    className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
-                      activeSection === metricName
-                        ? "bg-slate-100 text-primary"
-                        : "text-slate-700 hover:bg-slate-100 hover:text-primary"
-                    }`}
-                  >
-                    {metricName}
-                  </button>
-                </li>
-              ))}
-              <li className="my-4">
-                <hr className="border-slate-200" />
-              </li>
-              <li>
-                <Link href="/brand-signals">
-                  <button className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary">
-                    Brand Signals
-                  </button>
-                </Link>
-              </li>
-              {(viewAsUser?.role === "Admin" || (!viewAsUser && user?.role === "Admin")) && (
-                <>
-                  <li className="my-4">
-                    <hr className="border-slate-200" />
-                  </li>
-                  <li>
-                    <Link href="/admin">
-                      <button className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary">
-                        <Settings className="h-3 w-3 inline mr-2" />
-                        Admin Panel
-                      </button>
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      onClick={handleRefreshData}
-                      className="w-full text-left p-2 rounded-lg transition-colors text-xs text-slate-700 hover:bg-slate-100 hover:text-primary"
-                    >
-                      <RefreshCw className="h-3 w-3 inline mr-2" />
-                      Refresh Data
-                    </button>
-                  </li>
-                </>
-              )}
-            </ul>
+            <NavigationSidebar
+              variant="desktop"
+              currentPath={currentPath}
+              metricNames={metricNames as string[]}
+              activeSection={activeSection}
+              onSectionClick={handleNavigationClick}
+              userRole={user?.role}
+              viewAsUserRole={viewAsUser?.role}
+              onRefreshData={handleRefreshData}
+              onLogout={() => logoutMutation.mutate()}
+            />
           </div>
         </nav>
 
