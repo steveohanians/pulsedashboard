@@ -771,7 +771,7 @@ export default function Dashboard() {
                         className="flex items-center justify-between h-10 px-3 rounded-lg border bg-slate-50 border-slate-200"
                       >
                         <span className="text-sm truncate flex-1 mr-2">
-                          {competitor.domain.replace(/^https?:\/\//, "")}
+                          {competitor.label}
                         </span>
                         <Button
                           variant="ghost"

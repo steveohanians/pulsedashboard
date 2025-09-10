@@ -206,6 +206,15 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
       return;
     }
 
+    if (!domain.startsWith('https://')) {
+      toast({
+        title: "Invalid domain",
+        description: "Domain must start with https://",
+        variant: "destructive",
+      });
+      return;
+    }
+
     addCompetitorMutation.mutate({
       domain: domain.trim(), // Send raw domain, backend will normalize
       label: label.trim(),
@@ -243,7 +252,7 @@ export function CompetitorModal({ isOpen, onClose, competitors, clientId }: Comp
               <div className="flex gap-4">
                 <div className="space-y-2 flex-1">
                   <Input
-                    placeholder="Enter competitor domain (e.g., competitor.com)"
+                    placeholder="Enter competitor domain (e.g., https://competitor.com)"
                     value={domain}
                     onChange={(e) => setDomain(e.target.value)}
                     className="flex-1"

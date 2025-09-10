@@ -287,7 +287,15 @@ export default function PdfExportButton({
       return [];
     }
 
-    return cards;
+    // Filter out nested cards to avoid duplicates (e.g., cards inside EffectivenessCard)
+    const filteredCards = cards.filter(card => {
+      // Check if this card is inside another captured card
+      return !cards.some(otherCard => 
+        otherCard !== card && otherCard.contains(card)
+      );
+    });
+
+    return filteredCards;
   };
 
   // Capture individual cards
