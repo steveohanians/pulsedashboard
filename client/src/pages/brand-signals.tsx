@@ -397,7 +397,8 @@ export default function BrandSignals() {
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden"
+              className="lg:hidden mr-2"
+              data-testid="button-mobile-menu"
             >
               <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -406,6 +407,7 @@ export default function BrandSignals() {
               size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
+              data-testid="button-logout"
             >
               <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>

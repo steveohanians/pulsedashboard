@@ -46,7 +46,7 @@ export function NavigationSidebar({
   const handleVitalsNavigation = () => {
     if (currentSection !== 'vitals') {
       // Navigate to dashboard if we're not already there
-      window.location.href = '/dashboard';
+      window.location.href = '/';
     }
   };
   
