@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useAuth } from "@/hooks/use-auth";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useLoadKit } from "@/components/loading";
@@ -20,6 +21,7 @@ import {
   RefreshCw,
   ArrowLeft,
   ExternalLink,
+  Menu,
   CheckCircle,
   Circle,
   XCircle,
@@ -36,6 +38,32 @@ export default function BrandSignals() {
   const brandSignalsRef = useRef<HTMLDivElement>(null);
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const [currentPath] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Brand Signals subsection scroll function
+  const scrollToSection = (sectionName: string) => {
+    let elementId = '';
+    if (sectionName === 'AI Share of Voice') {
+      elementId = 'ai-share-of-voice';
+    } else if (sectionName === 'AI Brand Perception') {
+      elementId = 'ai-brand-perception';
+    }
+    
+    if (elementId) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        const yOffset = -100; // Account for fixed header
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Handle subsection navigation
+  const handleSectionClick = (sectionName: string) => {
+    scrollToSection(sectionName);
+  };
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [progressSteps, setProgressSteps] = useState<string[]>([]);
@@ -368,6 +396,14 @@ export default function BrandSignals() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden"
+            >
+              <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
             >
@@ -377,21 +413,68 @@ export default function BrandSignals() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div
-        ref={brandSignalsRef}
-        className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
-      >
-        {/* Back to Dashboard Link - IN BODY NOW */}
-        <div className="mb-4">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-slate-600 hover:text-primary transition-colors"
+      {/* Mobile Navigation */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/50"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ×
+                </Button>
+              </div>
+              
+              <NavigationSidebar
+                variant="mobile"
+                currentPath={currentPath}
+                metricNames={[]}
+                activeSection=""
+                onSectionClick={handleSectionClick}
+                userRole={user?.role}
+                viewAsUserRole={undefined}
+                onRefreshData={() => {}}
+                onCloseMobile={() => setMobileMenuOpen(false)}
+                onLogout={() => logoutMutation.mutate()}
+              />
+            </div>
+          </div>
         </div>
+      )}
+
+      <div className="flex">
+        {/* Desktop Navigation */}
+        <nav className="w-64 bg-white border-r border-slate-200 fixed top-24 left-0 bottom-0 z-10 overflow-y-auto hidden lg:block">
+          <div className="p-4">
+            <NavigationSidebar
+              variant="desktop"
+              currentPath={currentPath}
+              metricNames={[]}
+              activeSection=""
+              onSectionClick={handleSectionClick}
+              userRole={user?.role}
+              viewAsUserRole={undefined}
+              onRefreshData={() => {}}
+              onLogout={() => logoutMutation.mutate()}
+            />
+          </div>
+        </nav>
+
+        {/* Main Content */}
+        <div
+          ref={brandSignalsRef}
+          className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
+        >
 
         {/* Main Container Card - Similar to Dashboard's Bounce Rate */}
         <Card id="ai-share-of-voice" className="mb-6">
@@ -983,8 +1066,8 @@ export default function BrandSignals() {
           </DialogContent>
         </Dialog>
 
-        {/* Placeholder for future sections */}
-        <Card className="mt-6">
+        {/* Brand Perception Section */}
+        <Card id="ai-brand-perception" className="mt-6">
           <CardHeader>
             <CardTitle className="text-slate-400">
               Brand Perception - Coming Soon
@@ -997,6 +1080,7 @@ export default function BrandSignals() {
             </p>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
