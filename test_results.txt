@@ -1,1 +1,0 @@
-bash: NODE_ENV=development: command not found
