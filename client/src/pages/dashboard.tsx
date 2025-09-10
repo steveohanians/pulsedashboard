@@ -721,22 +721,19 @@ export default function Dashboard() {
                   } else if (timePeriod === "Last Quarter") {
                     // Show the last 3 months based on display period
                     if (periods) {
-                      // Parse "July 2025" format properly
+                      // Parse "August 2025" format properly
                       const [monthName, year] = periods.displayPeriod.split(' ');
                       const monthIndex = new Date(`${monthName} 1, 2000`).getMonth();
-                      const endDate = new Date(parseInt(year), monthIndex + 1, 0); // Last day of the month
-                      const startDate = new Date(endDate);
-                      startDate.setMonth(startDate.getMonth() - 2);
+                      const endDate = new Date(parseInt(year), monthIndex, 31); // Last day of the month
+                      const startDate = new Date(parseInt(year), monthIndex - 2, 1); // Create June 1st directly
                       displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
                     }
                   } else if (timePeriod === "Last Year" && periods) {
-                    // Parse "July 2025" format properly for 12-month range
+                    // Parse "August 2025" format properly for 12-month range
                     const [monthName, year] = periods.displayPeriod.split(' ');
                     const monthIndex = new Date(`${monthName} 1, 2000`).getMonth();
-                    const endDate = new Date(parseInt(year), monthIndex + 1, 0); // Last day of the month
-                    const startDate = new Date(endDate);
-                    startDate.setFullYear(startDate.getFullYear() - 1);
-                    startDate.setMonth(startDate.getMonth() + 1); // Start from next month of previous year
+                    const endDate = new Date(parseInt(year), monthIndex, 31); // Last day of the month
+                    const startDate = new Date(parseInt(year) - 1, monthIndex + 1, 1); // Create September 1st of previous year directly
                     displayText = `${startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
                   }
 
