@@ -43,12 +43,12 @@ export class ProgressTracker {
   
   // Historical timing data for time estimates
   private historicalAverages = {
-    screenshot: 8000,       // 8s for screenshots
-    tier1Total: 800,        // 0.8s per Tier 1 criterion (HTML analysis)
-    tier2Total: 1500,       // 1.5s per Tier 2 criterion (AI analysis)
-    pageSpeed: 35000,       // 35s for PageSpeed API
-    insights: 4000,         // 4s for insights generation
-    competitorTotal: 45000  // 45s per competitor (full analysis)
+    screenshot: 16000,      // 16s for screenshots
+    tier1Total: 1600,       // 1.6s per Tier 1 criterion (HTML analysis)
+    tier2Total: 3000,       // 3s per Tier 2 criterion (AI analysis)
+    pageSpeed: 70000,       // 70s for PageSpeed API
+    insights: 8000,         // 8s for insights generation
+    competitorTotal: 90000  // 90s per competitor (full analysis)
   };
   
   // Step types for clearer tracking

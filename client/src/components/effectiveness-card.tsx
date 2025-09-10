@@ -139,6 +139,18 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
     });
   }, []);
 
+  const formatTimeRemaining = React.useCallback((milliseconds: number): string => {
+    const totalSeconds = Math.ceil(milliseconds / 1000);
+    if (totalSeconds >= 60) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return seconds > 0 
+        ? `${minutes}m ${seconds}s remaining`
+        : `${minutes}m remaining`;
+    }
+    return `${totalSeconds}s remaining`;
+  }, []);
+
   const getEffectivenessStatus = React.useCallback((score: number) => {
     if (score > 7.99) {
       return { text: "Very Effective", color: "text-green-600" };
@@ -406,7 +418,7 @@ export function EffectivenessCard({ clientId, className }: EffectivenessCardProp
                       role="status"
                       aria-live="polite"
                     >
-                      {Math.ceil(currentProgressState.timeRemaining / 1000)} seconds remaining
+                      {formatTimeRemaining(currentProgressState.timeRemaining)}
                     </div>
                   )}
                 </div>
