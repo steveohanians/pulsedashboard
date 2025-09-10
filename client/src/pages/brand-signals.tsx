@@ -40,6 +40,8 @@ export default function BrandSignals() {
   const { toast } = useToast();
   const [currentPath] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("AI Share of Voice");
+  const [manualClick, setManualClick] = useState<boolean>(false);
 
   // Brand Signals subsection scroll function
   const scrollToSection = (sectionName: string) => {
@@ -60,10 +62,77 @@ export default function BrandSignals() {
     }
   };
 
-  // Handle subsection navigation
+  // Handle subsection navigation  
   const handleSectionClick = (sectionName: string) => {
+    setManualClick(true);
+    setActiveSection(sectionName);
     scrollToSection(sectionName);
+    
+    // Reset manual click flag after scroll completes
+    setTimeout(() => {
+      setManualClick(false);
+    }, 1000);
   };
+  
+  // Brand Signals subsections for scroll tracking
+  const brandSignalsSubsections = ["AI Share of Voice", "AI Brand Perception"];
+  
+  // Add scroll tracking to automatically update active section
+  useEffect(() => {
+    if (!brandSignalsSubsections.length) return;
+
+    let isThrottled = false;
+    let lastActiveSection = activeSection;
+
+    const handleScroll = () => {
+      if (isThrottled || manualClick) return;
+
+      isThrottled = true;
+      setTimeout(() => {
+        isThrottled = false;
+      }, 100);
+
+      // Find the section that is most visible
+      let mostVisibleSection = brandSignalsSubsections[0];
+      let maxVisibleHeight = 0;
+
+      brandSignalsSubsections.forEach((sectionName) => {
+        let elementId = '';
+        if (sectionName === 'AI Share of Voice') {
+          elementId = 'ai-share-of-voice';
+        } else if (sectionName === 'AI Brand Perception') {
+          elementId = 'ai-brand-perception';
+        }
+        
+        if (elementId) {
+          const element = document.getElementById(elementId);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const visibleTop = Math.max(0, rect.top);
+            const visibleBottom = Math.min(viewportHeight, rect.bottom);
+            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+            if (visibleHeight > maxVisibleHeight) {
+              maxVisibleHeight = visibleHeight;
+              mostVisibleSection = sectionName;
+            }
+          }
+        }
+      });
+
+      if (mostVisibleSection !== lastActiveSection) {
+        setActiveSection(mostVisibleSection);
+        lastActiveSection = mostVisibleSection;
+      }
+    };
+
+    // Initial call to set correct section on page load
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [brandSignalsSubsections.length, activeSection, manualClick]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [progressSteps, setProgressSteps] = useState<string[]>([]);
@@ -426,12 +495,12 @@ export default function BrandSignals() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
+              <div className="flex justify-end mb-4">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setMobileMenuOpen(false)}
+                  data-testid="button-close-mobile"
                 >
                   ×
                 </Button>
@@ -440,8 +509,8 @@ export default function BrandSignals() {
               <NavigationSidebar
                 variant="mobile"
                 currentPath={currentPath}
-                metricNames={[]}
-                activeSection=""
+                metricNames={brandSignalsSubsections}
+                activeSection={activeSection}
                 onSectionClick={handleSectionClick}
                 userRole={user?.role}
                 viewAsUserRole={undefined}
@@ -461,8 +530,8 @@ export default function BrandSignals() {
             <NavigationSidebar
               variant="desktop"
               currentPath={currentPath}
-              metricNames={[]}
-              activeSection=""
+              metricNames={brandSignalsSubsections}
+              activeSection={activeSection}
               onSectionClick={handleSectionClick}
               userRole={user?.role}
               viewAsUserRole={undefined}

@@ -3,8 +3,8 @@ import {
   Settings,
   RefreshCw,
   LogOut,
-  ChevronDown,
-  ChevronRight,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -80,19 +80,7 @@ export function NavigationSidebar({
 
   if (variant === 'mobile') {
     return (
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onCloseMobile}
-          >
-            ×
-          </Button>
-        </div>
-        
-        <nav>
+      <nav>
           {/* Vitals Section */}
           <div className="mb-4">
             <button
@@ -105,9 +93,9 @@ export function NavigationSidebar({
             >
               <span>Vitals</span>
               {currentSection === 'vitals' ? (
-                <ChevronDown className="h-4 w-4" />
+                <Minus className="h-4 w-4" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               )}
             </button>
             
@@ -145,9 +133,9 @@ export function NavigationSidebar({
             >
               <span>Brand Signals</span>
               {currentSection === 'brand-signals' ? (
-                <ChevronDown className="h-4 w-4" />
+                <Minus className="h-4 w-4" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               )}
             </button>
             
@@ -213,7 +201,6 @@ export function NavigationSidebar({
             </li>
           </ul>
         </nav>
-      </div>
     );
   }
 
@@ -232,9 +219,9 @@ export function NavigationSidebar({
         >
           <span>Vitals</span>
           {currentSection === 'vitals' ? (
-            <ChevronDown className="h-4 w-4" />
+            <Minus className="h-4 w-4" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           )}
         </button>
         
@@ -272,9 +259,9 @@ export function NavigationSidebar({
         >
           <span>Brand Signals</span>
           {currentSection === 'brand-signals' ? (
-            <ChevronDown className="h-4 w-4" />
+            <Minus className="h-4 w-4" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           )}
         </button>
         

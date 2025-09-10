@@ -445,12 +445,12 @@ export default function Dashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-slate-800">Navigation</h2>
+              <div className="flex justify-end mb-4">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setMobileMenuOpen(false)}
+                  data-testid="button-close-mobile"
                 >
                   ×
                 </Button>
