@@ -80,7 +80,7 @@ export default function Dashboard() {
   const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
   const [viewAsUser, setViewAsUser] = useState<any>(null);
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("Bounce Rate");
+  const [activeSection, setActiveSection] = useState<string>("Website Effectiveness");
   const [manualClick, setManualClick] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [metricStatuses, setMetricStatuses] = useState<
