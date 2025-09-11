@@ -180,7 +180,7 @@ export class ScreenshotService {
   private async checkBrowserHealth(): Promise<boolean> {
     if (!this.browser) return false;
     try {
-      const pages = await this.browser.pages();
+      const pages = this.browser.contexts().flatMap(c => c.pages());
       const memUsage = process.memoryUsage();
       
       // Log health status
@@ -212,7 +212,7 @@ export class ScreenshotService {
 
     // Use lock to prevent concurrent browser operations
     return new Promise((resolve) => {
-      this.browserLock = this.browserLock.then(async () => {
+      this.browserLock = this.browserLock.then(async (): Promise<void> => {
         // Check if browser needs recycling due to health or usage
         if (this.browser) {
           const shouldRecycle = 
@@ -280,7 +280,6 @@ export class ScreenshotService {
               error: error instanceof Error ? error.message : String(error)
             });
             this.browserAvailable = false;
-            return null;
           }
         }
         resolve(this.browser);
@@ -1116,6 +1115,12 @@ export class ScreenshotService {
 
     try {
       const browser = await this.ensureBrowser();
+      if (!browser) {
+        return {
+          screenshot: this.generatePlaceholderScreenshot().screenshotUrl,
+          annotations: []
+        };
+      }
       page = await browser.newPage();
 
       await page.setViewportSize({ width: 1440, height: 900 });
