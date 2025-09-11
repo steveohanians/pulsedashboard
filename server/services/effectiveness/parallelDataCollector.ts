@@ -60,27 +60,14 @@ export class ParallelDataCollector {
     websiteUrl: string,
     config: any
   ): Promise<ParallelDataResult> {
-    const startTime = Date.now();
-    const timing = {
-      total: 0,
-      initialHtml: 0,
-      renderedHtml: 0,
-      screenshot: 0,
-      fullPageScreenshot: 0
-    };
-    
     logger.info('Starting parallel data collection', { 
       websiteUrl,
       targetDuration: '45s max'
     });
 
-    const totalTimeout = 60000; // 60s for entire collection
-    return Promise.race([
-      this.performCollection(websiteUrl, config),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Data collection timeout after 60s')), totalTimeout)
-      )
-    ]);
+    // Return performCollection directly - it already has graceful error handling
+    // via Promise.allSettled and intelligent fallbacks
+    return this.performCollection(websiteUrl, config);
   }
 
   /**
