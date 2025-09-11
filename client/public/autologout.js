@@ -86,7 +86,7 @@
         }, this.timeoutMs);
       },
 
-      // LOGOUT FUNCTIONALITY: Clear storage and redirect
+      // LOGOUT FUNCTIONALITY: Clear storage and trigger SPA logout
       logout: function() {
         try {
           // Clear storage if available
@@ -106,50 +106,61 @@
             }
           }
 
-          // Cleanup before redirect
+          // Cleanup before logout
           this.cleanup();
           
-          // PREVENT EDGE CASES: Handle redirect carefully
-          this.redirectToLogin();
+          // SPA-COMPATIBLE: Dispatch custom event to trigger React app logout
+          this.triggerSPALogout();
           
         } catch (e) {
-          // Fallback: reload page if redirect fails
+          // Fallback: use traditional navigation if SPA communication fails
           this.fallbackReload();
         }
       },
 
-      // PREVENT EDGE CASES: Smart redirect with fallbacks
-      redirectToLogin: function() {
-        var loginPaths = ['/auth', '/login'];
-        var currentPath = window.location.pathname;
-        
-        // Don't redirect if already on login page
-        if (isLoginPage()) {
-          return;
-        }
-
-        // Try each login path
-        for (var i = 0; i < loginPaths.length; i++) {
-          try {
-            window.location.href = loginPaths[i];
+      // SPA-COMPATIBLE: Trigger logout through React app event system
+      triggerSPALogout: function() {
+        try {
+          // Don't trigger if already on login page
+          if (isLoginPage()) {
             return;
-          } catch (e) {
-            continue;
           }
+
+          // Dispatch custom event for React app to handle
+          var event = new CustomEvent('autologout:trigger', {
+            detail: {
+              reason: 'timeout',
+              timestamp: Date.now(),
+              source: 'AutoLogoutSystem'
+            }
+          });
+          
+          window.dispatchEvent(event);
+          
+          // Also broadcast to other tabs
+          this.broadcastLogout();
+          
+        } catch (e) {
+          // Fallback to traditional navigation if custom events aren't supported
+          this.fallbackReload();
         }
-        
-        // Fallback: reload current page
-        this.fallbackReload();
       },
 
-      // PREVENT EDGE CASES: Fallback to reload if redirect fails
+      // FALLBACK: Traditional navigation only if SPA communication fails
       fallbackReload: function() {
         try {
-          window.location.reload();
+          // Try SPA navigation first via hash change (less disruptive)
+          if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', '/auth');
+            window.location.reload();
+          } else {
+            // Legacy fallback
+            window.location.href = '/auth';
+          }
         } catch (e) {
-          // Last resort: try to redirect to root
+          // Last resort: reload current page
           try {
-            window.location.href = '/';
+            window.location.reload();
           } catch (e2) {
             // Silent fail - browser will handle it
           }
@@ -273,6 +284,11 @@
       logout: function() {
         AutoLogoutSystem.broadcastLogout();
         AutoLogoutSystem.logout();
+      },
+      
+      // Public API to trigger SPA-compatible logout
+      triggerSPALogout: function() {
+        AutoLogoutSystem.triggerSPALogout();
       },
       
       // Public API to reset/extend the timer

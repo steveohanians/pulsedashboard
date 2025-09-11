@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -8,6 +8,7 @@ import { User as SelectUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -26,6 +27,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const {
     data: user,
     error,
@@ -72,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
+      // Navigate to auth page using SPA routing
+      setLocation("/auth");
     },
     onError: (error: Error) => {
       toast({
@@ -81,6 +85,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
+  // Listen for autologout events from the autologout script
+  useEffect(() => {
+    const handleAutoLogout = (event: CustomEvent) => {
+      logger.info('Auto-logout triggered by script', event.detail);
+      // Use the existing logout mutation which handles everything properly
+      logoutMutation.mutate();
+    };
+
+    // Listen for the custom autologout event
+    window.addEventListener('autologout:trigger', handleAutoLogout as EventListener);
+
+    // Cleanup event listener on unmount
+    return () => {
+      window.removeEventListener('autologout:trigger', handleAutoLogout as EventListener);
+    };
+  }, [logoutMutation]);
 
   return (
     <AuthContext.Provider
