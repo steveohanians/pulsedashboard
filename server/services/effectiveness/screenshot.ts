@@ -536,7 +536,6 @@ export class ScreenshotService {
       apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
       apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
       apiUrl.searchParams.append('storage_path', `screenshots/${screenshotFilename}`); // Full S3 object key
-      apiUrl.searchParams.append('storage_public', 'true'); // Make S3 object publicly accessible
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
       // Fetch screenshot from API (expecting JSON response with S3 URL)
@@ -559,6 +558,8 @@ export class ScreenshotService {
       // Check multiple possible field names for the S3 URL (expanded list)
       const s3Url = jsonResponse.location || 
                     jsonResponse.url || 
+                    jsonResponse.cache_url ||        // Screenshotone cache URL
+                    jsonResponse.screenshot_url ||   // Screenshotone screenshot URL
                     jsonResponse.image_url ||
                     jsonResponse.image?.url ||
                     jsonResponse.screenshot?.url ||
@@ -722,7 +723,6 @@ export class ScreenshotService {
       apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
       apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
       apiUrl.searchParams.append('storage_path', `fullpage/${fullPageFilename}`); // Full S3 object key
-      apiUrl.searchParams.append('storage_public', 'true'); // Make S3 object publicly accessible
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
       // Fetch full-page screenshot (may take 20-30 seconds)
@@ -743,6 +743,8 @@ export class ScreenshotService {
       // Check multiple possible field names for the S3 URL (expanded list)
       const s3Url = jsonResponse.location || 
                     jsonResponse.url || 
+                    jsonResponse.cache_url ||        // Screenshotone cache URL
+                    jsonResponse.screenshot_url ||   // Screenshotone screenshot URL
                     jsonResponse.image_url ||
                     jsonResponse.image?.url ||
                     jsonResponse.screenshot?.url ||
