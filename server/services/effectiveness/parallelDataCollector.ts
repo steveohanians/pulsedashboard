@@ -388,7 +388,7 @@ export class ParallelDataCollector {
       const result = await Promise.race([
         screenshotPromise,
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Screenshot operation timeout after 55s')), 55000)
+          setTimeout(() => reject(new Error('Screenshot operation timeout after 95s')), 95000)
         )
       ]) as ScreenshotResult;
 
