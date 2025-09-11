@@ -448,6 +448,13 @@ export class ScreenshotService {
   }
 
   /**
+   * Ensure filename has .png extension for S3 compatibility
+   */
+  private ensurePngExtension(filename: string): string {
+    return filename.endsWith('.png') ? filename : filename + '.png';
+  }
+
+  /**
    * Generate a placeholder screenshot when all methods fail
    */
   private generatePlaceholderScreenshot(): { 
@@ -470,6 +477,7 @@ export class ScreenshotService {
   private async captureWithAPI(url: string, outputDir: string, filename?: string, retryCount: boolean = false): Promise<ScreenshotResult> {
     try {
       const apiKey = process.env.SCREENSHOTONE_API_KEY;
+      const s3Bucket = process.env.AWS_S3_BUCKET;
       
       if (!apiKey) {
         logger.warn('SCREENSHOTONE_API_KEY not configured, screenshots will not be captured');
@@ -482,7 +490,29 @@ export class ScreenshotService {
         };
       }
 
-      logger.info('Using Screenshotone.com API for screenshot', { url });
+      if (!s3Bucket) {
+        logger.warn('AWS_S3_BUCKET not configured, cannot use S3 storage');
+        return {
+          screenshotPath: '',
+          screenshotUrl: '',
+          error: 'S3 storage not configured - set AWS_S3_BUCKET environment variable',
+          fallbackUsed: true,
+          screenshotMethod: 'none'
+        };
+      }
+
+      // Generate filename for S3 storage with proper .png extension
+      const timestamp = new Date().getTime();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const screenshotFilename = filename 
+        ? this.ensurePngExtension(filename) 
+        : `screenshot_${timestamp}_${randomId}.png`;
+
+      logger.info('Using Screenshotone.com API for screenshot with S3 storage', { 
+        url, 
+        s3Bucket, 
+        screenshotFilename 
+      });
       
       // Screenshotone.com API endpoint with optimized parameters for complex sites
       const apiUrl = new URL('https://api.screenshotone.com/take');
@@ -502,11 +532,17 @@ export class ScreenshotService {
       apiUrl.searchParams.append('timeout', '90'); // 90 second timeout (max allowed)
       apiUrl.searchParams.append('navigation_timeout', '30'); // 30 second navigation timeout (max allowed)
       
-      // Fetch screenshot from API
+      // S3 storage configuration with full object key
+      apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
+      apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
+      apiUrl.searchParams.append('storage_path', `screenshots/${screenshotFilename}`); // Full S3 object key
+      apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
+      
+      // Fetch screenshot from API (expecting JSON response with S3 URL)
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
         headers: {
-          'Accept': 'image/png'
+          'Accept': 'application/json'
         },
         signal: AbortSignal.timeout(120000) // 120 seconds for API call (includes processing time)
       });
@@ -516,37 +552,36 @@ export class ScreenshotService {
         throw new Error(`API returned ${response.status}: ${errorText}`);
       }
 
-      // Save screenshot to disk
-      const screenshotFilename = filename || 
-        `screenshot_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}.png`;
+      // Parse JSON response to get S3 URL with robust field checking
+      const jsonResponse = await response.json();
       
-      const screenshotPath = path.join(outputDir, screenshotFilename);
-      const screenshotUrl = `/screenshots/${screenshotFilename}`;
-
-      // Ensure output directory exists
-      await fs.mkdir(outputDir, { recursive: true });
+      // Check multiple possible field names for the S3 URL
+      const s3Url = jsonResponse.location || jsonResponse.url || jsonResponse.data?.location || jsonResponse.data?.url;
       
-      // Get image buffer and save
-      const buffer = Buffer.from(await response.arrayBuffer());
-      await fs.writeFile(screenshotPath, buffer);
-      
-      // Verify file was created
-      const fileStats = await fs.stat(screenshotPath).catch(() => null);
-      
-      if (!fileStats) {
-        throw new Error('Screenshot file was not created');
+      if (!s3Url) {
+        logger.error('S3 URL not found in API response', { 
+          response: jsonResponse,
+          availableFields: Object.keys(jsonResponse)
+        });
+        throw new Error('S3 URL not found in API response - check response format');
       }
 
-      logger.info('Screenshot captured successfully via API', {
+      // Validate URL format
+      if (typeof s3Url !== 'string' || !s3Url.startsWith('http')) {
+        logger.error('Invalid S3 URL format', { s3Url, type: typeof s3Url });
+        throw new Error('Invalid S3 URL format received from API');
+      }
+
+      logger.info('Screenshot captured successfully via API and stored in S3', {
         url,
-        screenshotPath,
-        fileSize: fileStats.size,
-        method: 'screenshotone'
+        s3Url,
+        screenshotFilename,
+        method: 'screenshotone-s3'
       });
 
       return {
-        screenshotPath,
-        screenshotUrl,
+        screenshotPath: '', // No local path for S3 storage
+        screenshotUrl: s3Url, // Direct S3 URL
         fallbackUsed: false,
         screenshotMethod: 'api',
         screenshotQuality: 'full'
@@ -598,6 +633,7 @@ export class ScreenshotService {
   }> {
     try {
       const apiKey = process.env.SCREENSHOTONE_API_KEY;
+      const s3Bucket = process.env.AWS_S3_BUCKET;
       
       if (!apiKey) {
         return {
@@ -607,7 +643,26 @@ export class ScreenshotService {
         };
       }
 
-      logger.info('Capturing full-page screenshot with Screenshotone API', { url });
+      if (!s3Bucket) {
+        return {
+          fullPageScreenshotPath: '',
+          fullPageScreenshotUrl: '',
+          fullPageError: 'S3 storage not configured - set AWS_S3_BUCKET environment variable'
+        };
+      }
+
+      // Generate filename for full-page S3 storage with proper .png extension
+      const timestamp = new Date().getTime();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const fullPageFilename = baseFilename 
+        ? this.ensurePngExtension(`fullpage_${baseFilename}`) 
+        : `fullpage_${timestamp}_${randomId}.png`;
+
+      logger.info('Capturing full-page screenshot with Screenshotone API and S3 storage', { 
+        url, 
+        s3Bucket, 
+        fullPageFilename 
+      });
       
       // Optimized full-page parameters based on Screenshotone best practices
       const apiUrl = new URL('https://api.screenshotone.com/take');
@@ -637,10 +692,16 @@ export class ScreenshotService {
       apiUrl.searchParams.append('block_trackers', 'true'); // Additional blocking
       // Note: fail_if_request_failed parameter removed - was causing API validation error
       
+      // S3 storage configuration for full-page screenshots with full object key
+      apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
+      apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
+      apiUrl.searchParams.append('storage_path', `fullpage/${fullPageFilename}`); // Full S3 object key
+      apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
+      
       // Fetch full-page screenshot (may take 20-30 seconds)
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
-        headers: { 'Accept': 'image/png' },
+        headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(120000) // 120 second timeout for full-page (matches above-fold)
       });
 
@@ -649,39 +710,36 @@ export class ScreenshotService {
         throw new Error(`Full-page API returned ${response.status}: ${errorText}`);
       }
 
-      // Generate filename for full-page screenshot
-      const timestamp = new Date().getTime();
-      const randomId = Math.random().toString(36).substr(2, 9);
-      const fullPageFilename = baseFilename 
-        ? `fullpage_${baseFilename}` 
-        : `fullpage_${timestamp}_${randomId}.png`;
+      // Parse JSON response to get S3 URL with robust field checking
+      const jsonResponse = await response.json();
       
-      const fullPageScreenshotPath = path.join(outputDir, fullPageFilename);
-      const fullPageScreenshotUrl = `/screenshots/${fullPageFilename}`;
-
-      // Ensure output directory exists
-      await fs.mkdir(outputDir, { recursive: true });
+      // Check multiple possible field names for the S3 URL
+      const s3Url = jsonResponse.location || jsonResponse.url || jsonResponse.data?.location || jsonResponse.data?.url;
       
-      // Get image buffer and save
-      const buffer = Buffer.from(await response.arrayBuffer());
-      await fs.writeFile(fullPageScreenshotPath, buffer);
-      
-      // Verify file was created
-      const fileStats = await fs.stat(fullPageScreenshotPath).catch(() => null);
-      
-      if (!fileStats) {
-        throw new Error('Full-page screenshot file was not created');
+      if (!s3Url) {
+        logger.error('S3 URL not found in full-page API response', { 
+          response: jsonResponse,
+          availableFields: Object.keys(jsonResponse)
+        });
+        throw new Error('S3 URL not found in full-page API response - check response format');
       }
 
-      logger.info('Full-page screenshot captured successfully', {
+      // Validate URL format
+      if (typeof s3Url !== 'string' || !s3Url.startsWith('http')) {
+        logger.error('Invalid S3 URL format in full-page response', { s3Url, type: typeof s3Url });
+        throw new Error('Invalid S3 URL format received from full-page API');
+      }
+
+      logger.info('Full-page screenshot captured successfully and stored in S3', {
         url,
-        fullPageScreenshotPath,
-        fileSize: Math.round(fileStats.size / 1024 / 1024 * 100) / 100 + ' MB'
+        s3Url,
+        fullPageFilename,
+        method: 'screenshotone-s3-fullpage'
       });
 
       return {
-        fullPageScreenshotPath,
-        fullPageScreenshotUrl
+        fullPageScreenshotPath: '', // No local path for S3 storage
+        fullPageScreenshotUrl: s3Url // Direct S3 URL
       };
 
     } catch (error) {
