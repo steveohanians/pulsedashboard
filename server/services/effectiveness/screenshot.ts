@@ -536,6 +536,7 @@ export class ScreenshotService {
       apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
       apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
       apiUrl.searchParams.append('storage_path', `screenshots/${screenshotFilename}`); // Full S3 object key
+      apiUrl.searchParams.append('storage_public', 'true'); // Make S3 object publicly accessible
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
       // Fetch screenshot from API (expecting JSON response with S3 URL)
@@ -555,13 +556,38 @@ export class ScreenshotService {
       // Parse JSON response to get S3 URL with robust field checking
       const jsonResponse = await response.json();
       
-      // Check multiple possible field names for the S3 URL
-      const s3Url = jsonResponse.location || jsonResponse.url || jsonResponse.data?.location || jsonResponse.data?.url;
+      // Check multiple possible field names for the S3 URL (expanded list)
+      const s3Url = jsonResponse.location || 
+                    jsonResponse.url || 
+                    jsonResponse.image_url ||
+                    jsonResponse.image?.url ||
+                    jsonResponse.screenshot?.url ||
+                    jsonResponse.result?.url ||
+                    jsonResponse.storage?.url ||
+                    jsonResponse.s3?.url ||
+                    jsonResponse.data?.location ||
+                    jsonResponse.data?.url ||
+                    jsonResponse.data?.image_url ||
+                    // Construct URL from bucket + path if available
+                    (jsonResponse.storage_bucket && jsonResponse.storage_path ? 
+                      `https://${jsonResponse.storage_bucket}.s3.amazonaws.com/${jsonResponse.storage_path}` : 
+                      (s3Bucket && screenshotFilename ? 
+                        `https://${s3Bucket}.s3.amazonaws.com/screenshots/${screenshotFilename}` : 
+                        undefined));
       
       if (!s3Url) {
-        logger.error('S3 URL not found in API response', { 
-          response: jsonResponse,
-          availableFields: Object.keys(jsonResponse)
+        // Log raw response for debugging (redact sensitive fields)
+        const debugResponse = { ...jsonResponse };
+        if (debugResponse.access_key) delete debugResponse.access_key;
+        if (debugResponse.secret) delete debugResponse.secret;
+        
+        logger.error('S3 URL not found in API response after checking all fields', { 
+          availableFields: Object.keys(jsonResponse),
+          responseShape: debugResponse,
+          bucketFromResponse: jsonResponse.storage_bucket,
+          pathFromResponse: jsonResponse.storage_path,
+          expectedBucket: s3Bucket,
+          expectedPath: `screenshots/${screenshotFilename}`
         });
         throw new Error('S3 URL not found in API response - check response format');
       }
@@ -696,6 +722,7 @@ export class ScreenshotService {
       apiUrl.searchParams.append('store', 'true'); // Enable S3 storage
       apiUrl.searchParams.append('storage_bucket', s3Bucket); // S3 bucket name
       apiUrl.searchParams.append('storage_path', `fullpage/${fullPageFilename}`); // Full S3 object key
+      apiUrl.searchParams.append('storage_public', 'true'); // Make S3 object publicly accessible
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
       // Fetch full-page screenshot (may take 20-30 seconds)
@@ -713,13 +740,38 @@ export class ScreenshotService {
       // Parse JSON response to get S3 URL with robust field checking
       const jsonResponse = await response.json();
       
-      // Check multiple possible field names for the S3 URL
-      const s3Url = jsonResponse.location || jsonResponse.url || jsonResponse.data?.location || jsonResponse.data?.url;
+      // Check multiple possible field names for the S3 URL (expanded list)
+      const s3Url = jsonResponse.location || 
+                    jsonResponse.url || 
+                    jsonResponse.image_url ||
+                    jsonResponse.image?.url ||
+                    jsonResponse.screenshot?.url ||
+                    jsonResponse.result?.url ||
+                    jsonResponse.storage?.url ||
+                    jsonResponse.s3?.url ||
+                    jsonResponse.data?.location ||
+                    jsonResponse.data?.url ||
+                    jsonResponse.data?.image_url ||
+                    // Construct URL from bucket + path if available
+                    (jsonResponse.storage_bucket && jsonResponse.storage_path ? 
+                      `https://${jsonResponse.storage_bucket}.s3.amazonaws.com/${jsonResponse.storage_path}` : 
+                      (s3Bucket && fullPageFilename ? 
+                        `https://${s3Bucket}.s3.amazonaws.com/fullpage/${fullPageFilename}` : 
+                        undefined));
       
       if (!s3Url) {
-        logger.error('S3 URL not found in full-page API response', { 
-          response: jsonResponse,
-          availableFields: Object.keys(jsonResponse)
+        // Log raw response for debugging (redact sensitive fields)
+        const debugResponse = { ...jsonResponse };
+        if (debugResponse.access_key) delete debugResponse.access_key;
+        if (debugResponse.secret) delete debugResponse.secret;
+        
+        logger.error('S3 URL not found in full-page API response after checking all fields', { 
+          availableFields: Object.keys(jsonResponse),
+          responseShape: debugResponse,
+          bucketFromResponse: jsonResponse.storage_bucket,
+          pathFromResponse: jsonResponse.storage_path,
+          expectedBucket: s3Bucket,
+          expectedPath: `fullpage/${fullPageFilename}`
         });
         throw new Error('S3 URL not found in full-page API response - check response format');
       }
