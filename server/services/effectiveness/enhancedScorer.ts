@@ -105,7 +105,7 @@ export class EnhancedWebsiteEffectivenessScorer {
           const dataResult = runId ? 
             await smartTimeoutManager.createTimeoutPromise(
               parallelDataCollector.collectAllData(websiteUrl, config),
-              60000, // 60s timeout
+              120000, // 120s timeout (increased for S3 screenshot processing)
               'data_collection'
             ) :
             await parallelDataCollector.collectAllData(websiteUrl, config);
