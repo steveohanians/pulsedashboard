@@ -12,7 +12,7 @@ import logger from "../../utils/logging/logger";
 import { storage } from "../../storage";
 
 export interface TimeoutConfig {
-  dataCollection: number;      // 60s max for parallel data collection
+  dataCollection: number;      // 120s max for parallel data collection (increased for S3 screenshots)
   tierOneAnalysis: number;     // 30s max for UX/Trust/Accessibility/SEO
   tierTwoAIAnalysis: number;   // 90s max for positioning/brand story/CTAs
   tierThreeExternalAPI: number; // 120s max for PageSpeed API
@@ -47,7 +47,7 @@ class SmartTimeoutManager {
   private constructor() {
     // ✅ UPDATED: Based on actual performance data from comprehensive testing
     this.defaultConfig = {
-      dataCollection: 15000,      // 15s (actual: 8-11s, buffer for slow sites)
+      dataCollection: 120000,     // 120s (increased for S3 screenshot processing: 95s screenshot + buffer)
       tierOneAnalysis: 5000,      // 5s (actual: 1-2s, very fast)
       tierTwoAIAnalysis: 40000,   // 40s (actual: 22-26s, OpenAI vision analysis)
       tierThreeExternalAPI: 45000, // 45s (actual: 29-33s, PageSpeed API)
