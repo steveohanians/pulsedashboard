@@ -70,11 +70,36 @@ class EffectivenessService {
         .limit(1);
 
       if (existingPending.length > 0) {
-        logger.info('Returning existing pending run', { 
-          clientId, 
-          runId: existingPending[0].id 
-        });
-        return { runId: existingPending[0].id };
+        const runId = existingPending[0].id;
+        
+        // ✅ CRITICAL: Only reuse pending run if it has an active job (not stale)
+        if (this.runningJobs.has(runId)) {
+          logger.info('Returning active pending run', { 
+            clientId, 
+            runId 
+          });
+          return { runId };
+        } else {
+          // Stale pending run - restart processing instead of creating new run
+          logger.info('Found stale pending run, restarting processing', { 
+            clientId, 
+            runId 
+          });
+          
+          // Initialize progress tracking for restarted run
+          this.runningJobs.set(runId, {
+            runId,
+            status: 'pending',
+            progress: 0,
+            progressDetail: 'Analysis restarted',
+            currentStep: 'Initializing'
+          });
+
+          // Restart async processing
+          setImmediate(() => this.processAnalysisAsync(runId, client));
+          
+          return { runId };
+        }
       }
     }
 
