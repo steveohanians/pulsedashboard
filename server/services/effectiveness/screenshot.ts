@@ -539,6 +539,9 @@ export class ScreenshotService {
       apiUrl.searchParams.append('storage_return_location', 'true'); // CRITICAL: Return S3 URL in response
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
+      // Debug: Log the exact API URL being sent
+      console.log('[SCREENSHOT DEBUG] Final API URL:', apiUrl.toString());
+      
       // Fetch screenshot from API (expecting JSON response with S3 URL)
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
@@ -556,8 +559,12 @@ export class ScreenshotService {
       // Parse JSON response to get S3 URL with robust field checking
       const jsonResponse = await response.json();
       
-      // Check multiple possible field names for the S3 URL (expanded list)
-      const s3Url = jsonResponse.location || 
+      // Debug: Log the exact JSON response structure
+      console.log('[SCREENSHOT DEBUG] ScreenshotOne JSON Response:', JSON.stringify(jsonResponse, null, 2));
+      
+      // Check multiple possible field names for the S3 URL (prioritize S3 fields first)
+      const s3Url = jsonResponse.store?.location ||   // OFFICIAL: S3 location from ScreenshotOne docs
+                    jsonResponse.location || 
                     jsonResponse.storage_location || // Alternative S3 location field
                     jsonResponse.url || 
                     jsonResponse.cache_url ||        // Screenshotone cache URL
@@ -728,6 +735,9 @@ export class ScreenshotService {
       apiUrl.searchParams.append('storage_return_location', 'true'); // CRITICAL: Return S3 URL in response
       apiUrl.searchParams.append('response_type', 'json'); // Return JSON with S3 URL
       
+      // Debug: Log the exact full-page API URL being sent
+      console.log('[FULL-PAGE DEBUG] Final API URL:', apiUrl.toString());
+      
       // Fetch full-page screenshot (may take 20-30 seconds)
       const response = await fetch(apiUrl.toString(), {
         method: 'GET',
@@ -743,8 +753,12 @@ export class ScreenshotService {
       // Parse JSON response to get S3 URL with robust field checking
       const jsonResponse = await response.json();
       
-      // Check multiple possible field names for the S3 URL (expanded list)
-      const s3Url = jsonResponse.location || 
+      // Debug: Log the exact JSON response structure
+      console.log('[SCREENSHOT DEBUG] ScreenshotOne JSON Response:', JSON.stringify(jsonResponse, null, 2));
+      
+      // Check multiple possible field names for the S3 URL (prioritize S3 fields first)
+      const s3Url = jsonResponse.store?.location ||   // OFFICIAL: S3 location from ScreenshotOne docs
+                    jsonResponse.location || 
                     jsonResponse.storage_location || // Alternative S3 location field
                     jsonResponse.url || 
                     jsonResponse.cache_url ||        // Screenshotone cache URL
