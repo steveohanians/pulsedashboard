@@ -5,7 +5,7 @@
  * instead of sequentially, reducing total time from 90s+ to 45s maximum
  */
 
-import { screenshotService } from './screenshot';
+import { screenshotService, ScreenshotResult } from './screenshot';
 import logger from '../../utils/logging/logger';
 import { circuitBreaker } from './circuitBreaker';
 import { requestThrottler } from '../../utils/requestThrottler';
@@ -335,10 +335,10 @@ export class ParallelDataCollector {
       
       const html = await Promise.race([
         htmlPromise,
-        new Promise((_, reject) => 
+        new Promise<undefined>((_, reject) => 
           setTimeout(() => reject(new Error('HTML operation timeout after 30s')), 30000)
         )
-      ]);
+      ]) as string | undefined;
       
       if (!html || html.length < 100) {
         throw new Error(`Invalid rendered HTML (length: ${html?.length || 0})`);
@@ -387,10 +387,10 @@ export class ParallelDataCollector {
       
       const result = await Promise.race([
         screenshotPromise,
-        new Promise((_, reject) => 
+        new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Screenshot operation timeout after 55s')), 55000)
         )
-      ]);
+      ]) as ScreenshotResult;
 
       const duration = Date.now() - startTime;
       
@@ -458,10 +458,14 @@ export class ParallelDataCollector {
       
       const result = await Promise.race([
         fullPagePromise,
-        new Promise((_, reject) => 
+        new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Full-page screenshot timeout after 150s')), 150000)
         )
-      ]);
+      ]) as {
+        fullPageScreenshotPath: string;
+        fullPageScreenshotUrl: string;
+        fullPageError?: string;
+      };
 
       const duration = Date.now() - startTime;
       

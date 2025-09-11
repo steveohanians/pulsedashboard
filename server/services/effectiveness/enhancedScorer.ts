@@ -14,6 +14,12 @@ import { storage } from "../../storage";
 import logger from "../../utils/logging/logger";
 import { smartTimeoutManager } from "./smartTimeoutManager";
 
+// Enhanced checkpoint recovery interface that includes context
+interface CheckpointRecoveryResult extends Partial<EffectivenessResult> {
+  context?: ScoringContext;
+  dataResult?: any;
+}
+
 
 export class EnhancedWebsiteEffectivenessScorer {
   private openai: OpenAI;
@@ -50,7 +56,7 @@ export class EnhancedWebsiteEffectivenessScorer {
 
       // ✅ CHECKPOINT RECOVERY: Check if we can continue from a previous checkpoint
       let skipToPhase: string | null = null;
-      let existingResults: Partial<EffectivenessResult> = {};
+      let existingResults: CheckpointRecoveryResult = {};
       let progressiveResults: ProgressiveResults;
       
       if (runId) {
