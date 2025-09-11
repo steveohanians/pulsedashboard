@@ -148,9 +148,23 @@ class EffectivenessService {
     try {
       logger.info('Starting async analysis processing', { runId, clientId: client.id });
 
+      // ✅ CRITICAL: Mark run as 'processing' to prevent stale-pending reuse on reruns
+      await storage.updateEffectivenessRun(runId, {
+        status: 'processing',
+        progress: '0%',
+        progressDetail: 'Analysis started - initializing...'
+      });
+
+      // Update in-memory tracking to reflect processing state
+      const job = this.runningJobs.get(runId);
+      if (job) {
+        job.status = 'processing';
+        job.progressDetail = 'Analysis started - initializing...';
+      }
+
       // Get competitors and initialize tracker
       const competitors = await storage.getCompetitorsByClient(client.id);
-      tracker.setCompetitorCount(competitors.length);
+      tracker.setTotalSteps(1, competitors.length); // Fix: use setTotalSteps instead of setCompetitorCount
       
       // Update initial progress
       await this.syncProgressFromTracker(runId, tracker);
