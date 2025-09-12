@@ -312,20 +312,158 @@ export class SemrushService implements ISemrushValidator {
 
 
   /**
-   * Fetch comprehensive 15-month historical data for a domain
+   * Fetch comprehensive 15-month historical data for a domain (legacy version)
    */
   public async fetchHistoricalData(domain: string): Promise<Map<string, SemrushMetricData>> {
-    logger.info('Starting SEMrush historical data fetch with authentic monthly data', { domain });
+    return this.fetchHistoricalDataOptimized(domain, false);
+  }
+
+  /**
+   * Fetch historical data with optional incremental sync and parallel processing
+   */
+  public async fetchHistoricalDataOptimized(
+    domain: string, 
+    incrementalSync: boolean = false,
+    companyId?: string
+  ): Promise<Map<string, SemrushMetricData>> {
+    logger.info('Starting SEMrush historical data fetch with optimizations', { 
+      domain, 
+      incrementalSync, 
+      companyId: companyId || 'unknown' 
+    });
     
     const periods = this.generateHistoricalPeriods();
+    let periodsToFetch = periods;
+
+    // Check existing metrics for incremental sync
+    if (incrementalSync && companyId) {
+      periodsToFetch = await this.getMissingPeriods(companyId, periods);
+      logger.info('Incremental sync analysis', { 
+        domain,
+        totalPeriods: periods.length,
+        missingPeriods: periodsToFetch.length,
+        skipCount: periods.length - periodsToFetch.length
+      });
+    }
+
+    if (periodsToFetch.length === 0) {
+      logger.info('No missing data found, skipping SEMrush fetch', { domain, companyId });
+      return new Map<string, SemrushMetricData>();
+    }
+
+    logger.info('Fetching SEMrush data for periods', { 
+      domain, 
+      periods: periodsToFetch, 
+      count: periodsToFetch.length 
+    });
+
+    // Use parallel processing with rate limiting (10 req/sec = 100ms between requests)
+    const results = await this.fetchPeriodsInParallel(domain, periodsToFetch);
+
+    logger.info('Completed SEMrush historical data fetch', { 
+      domain, 
+      totalPeriods: results.size,
+      successfulPeriods: Array.from(results.values()).filter(data => data.bounceRate > 0).length
+    });
+
+    return results;
+  }
+
+  /**
+   * Check database for missing periods that need to be fetched
+   */
+  private async getMissingPeriods(companyId: string, allPeriods: string[]): Promise<string[]> {
+    try {
+      const { storage } = await import('../../storage');
+      const existingMetrics = await storage.getMetricsByCompanyId(companyId);
+      
+      // Get periods that already have main metrics (bounce rate, session duration, etc.)
+      const existingPeriods = new Set<string>();
+      existingMetrics.forEach(metric => {
+        if (metric.timePeriod && ['Bounce Rate', 'Session Duration', 'Pages per Session'].includes(metric.metricName)) {
+          existingPeriods.add(metric.timePeriod);
+        }
+      });
+
+      // Find missing periods
+      const missingPeriods = allPeriods.filter(period => !existingPeriods.has(period));
+      
+      logger.debug('Missing periods analysis', {
+        companyId,
+        totalPeriods: allPeriods.length,
+        existingPeriods: existingPeriods.size,
+        missingPeriods: missingPeriods.length,
+        missing: missingPeriods
+      });
+
+      return missingPeriods;
+    } catch (error) {
+      logger.warn('Failed to check existing metrics, falling back to full sync', {
+        companyId,
+        error: (error as Error).message
+      });
+      return allPeriods; // Fallback to fetching all periods
+    }
+  }
+
+  /**
+   * Fetch periods in parallel with rate limiting and retry logic
+   */
+  private async fetchPeriodsInParallel(domain: string, periods: string[]): Promise<Map<string, SemrushMetricData>> {
     const results = new Map<string, SemrushMetricData>();
+    const MAX_CONCURRENT = 3; // Conservative limit to respect API constraints
+    const BATCH_DELAY = 300; // 300ms between batches to stay under 10 req/sec
 
-    logger.info('Generated historical periods', { domain, periods, count: periods.length });
+    // Process periods in batches to control concurrency
+    for (let i = 0; i < periods.length; i += MAX_CONCURRENT) {
+      const batch = periods.slice(i, i + MAX_CONCURRENT);
+      
+      logger.debug('Processing batch', { domain, batch, batchIndex: Math.floor(i / MAX_CONCURRENT) + 1 });
 
-    // Fetch data for each period using correct SEMrush historical date format
-    for (const period of periods) {
+      // Process batch in parallel with retry logic
+      const batchPromises = batch.map(period => this.fetchPeriodWithRetry(domain, period));
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      // Process batch results
+      batchResults.forEach((result, index) => {
+        const period = batch[index];
+        if (result.status === 'fulfilled' && result.value) {
+          results.set(period, result.value);
+          logger.debug('Successfully fetched period data', { domain, period });
+        } else {
+          const error = result.status === 'rejected' ? result.reason : 'Unknown error';
+          logger.warn('Failed to fetch period data', { domain, period, error: error?.message || error });
+          
+          // Add empty data for failed periods
+          results.set(period, {
+            bounceRate: 0,
+            sessionDuration: 0,
+            pagesPerSession: 0,
+            sessionsPerUser: 0,
+            trafficChannels: [],
+            deviceDistribution: []
+          });
+        }
+      });
+
+      // Add delay between batches to respect rate limits
+      if (i + MAX_CONCURRENT < periods.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Fetch single period with retry logic
+   */
+  private async fetchPeriodWithRetry(domain: string, period: string, maxRetries: number = 3): Promise<SemrushMetricData | null> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        logger.info('Fetching SEMrush data for period', { domain, period });
+        logger.debug('Fetching SEMrush data for period', { domain, period, attempt });
 
         // Fetch all metrics in parallel for this period
         const [mainMetrics, deviceDistribution] = await Promise.all([
@@ -338,12 +476,10 @@ export class SemrushService implements ISemrushValidator {
           sessionDuration: mainMetrics.sessionDuration || 0,
           pagesPerSession: mainMetrics.pagesPerSession || 0,
           sessionsPerUser: mainMetrics.sessionsPerUser || 0,
-          trafficChannels: mainMetrics.trafficChannels || [], // Now from Summary endpoint
+          trafficChannels: mainMetrics.trafficChannels || [],
           deviceDistribution: deviceDistribution || []
         };
 
-        results.set(period, periodData);
-        
         logger.info('Successfully fetched SEMrush data for period', { 
           domain, 
           period,
@@ -353,35 +489,32 @@ export class SemrushService implements ISemrushValidator {
           devicesCount: periodData.deviceDistribution.length
         });
 
-        // Add delay between requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        return periodData;
+
       } catch (error) {
-        logger.error('Failed to fetch SEMrush data for period', {
+        lastError = error as Error;
+        logger.warn(`Failed to fetch SEMrush data for period (attempt ${attempt}/${maxRetries})`, {
           domain,
           period,
-          error: (error as Error).message
+          error: lastError.message
         });
-        
-        // Continue with empty data for this period
-        results.set(period, {
-          bounceRate: 0,
-          sessionDuration: 0,
-          pagesPerSession: 0,
-          sessionsPerUser: 0,
-          trafficChannels: [],
-          deviceDistribution: []
-        });
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5s delay
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
     }
 
-    logger.info('Completed SEMrush historical data fetch', { 
-      domain, 
-      totalPeriods: results.size,
-      successfulPeriods: Array.from(results.values()).filter(data => data.bounceRate > 0).length
+    // All retries failed
+    logger.error('Failed to fetch SEMrush data for period after all retries', {
+      domain,
+      period,
+      error: lastError?.message
     });
 
-    return results;
+    return null;
   }
 
   /**

@@ -10,7 +10,15 @@ import { requireAuth } from '../auth';
 import { storage } from '../storage';
 import logger from '../utils/logging/logger';
 import { getProgressTracker } from '../services/effectiveness/progressTracker';
-import { sseEventEmitter, type SSEProgressData, type SSECompletionData, type SSEErrorData } from '../services/sse/sseEventEmitter';
+import { 
+  sseEventEmitter, 
+  type SSEProgressData, 
+  type SSECompletionData, 
+  type SSEErrorData,
+  type BenchmarkSyncProgressData,
+  type BenchmarkSyncCompletionData,
+  type BenchmarkSyncErrorData
+} from '../services/sse/sseEventEmitter';
 
 const router = Router();
 
@@ -327,6 +335,123 @@ router.get('/health', (req, res) => {
     },
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * SSE endpoint for benchmark sync progress monitoring
+ * GET /benchmark-sync
+ * Only accessible by Admin users
+ */
+router.get('/benchmark-sync', requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Only allow Admin users to monitor benchmark sync
+    if (req.user?.role !== 'Admin') {
+      return res.status(403).json({ error: 'Access denied. Admin role required.' });
+    }
+
+    logger.info('Benchmark sync SSE connection established', { 
+      userId: req.user.id,
+      userAgent: req.get('User-Agent')
+    });
+
+    // Check connection limits
+    const totalConnections = getActiveConnectionCount();
+    
+    if (totalConnections >= CONNECTION_LIMITS.maxTotalConnections) {
+      logger.warn('Total connection limit exceeded for benchmark sync', { 
+        totalConnections,
+        limit: CONNECTION_LIMITS.maxTotalConnections 
+      });
+      return res.status(429).json({ 
+        error: 'Too many concurrent connections. Please try again later.',
+        details: { totalConnections, limit: CONNECTION_LIMITS.maxTotalConnections }
+      });
+    }
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+
+    // Add connection to tracking (using special key for benchmark sync)
+    const benchmarkConnectionKey = 'benchmark-sync';
+    if (!activeConnections.has(benchmarkConnectionKey)) {
+      activeConnections.set(benchmarkConnectionKey, new Set());
+    }
+    activeConnections.get(benchmarkConnectionKey)!.add(res);
+
+    // Connection timeout handler
+    const connectionTimeout = setTimeout(() => {
+      logger.debug('Benchmark sync SSE connection timeout');
+      sendSSEEvent(res, 'timeout', { 
+        message: 'Connection timeout after 10 minutes',
+        timestamp: new Date().toISOString() 
+      });
+      cleanupConnection(res, benchmarkConnectionKey);
+    }, CONNECTION_LIMITS.connectionTimeoutMs);
+
+    // Send initial connected event
+    sendSSEEvent(res, 'connected', {
+      message: 'Benchmark sync progress stream connected',
+      timestamp: new Date().toISOString()
+    });
+
+    // Set up benchmark sync event listeners
+    const handleBenchmarkProgress = (progressData: BenchmarkSyncProgressData) => {
+      sendSSEEvent(res, 'progress', progressData);
+    };
+
+    const handleBenchmarkCompletion = (completionData: BenchmarkSyncCompletionData) => {
+      sendSSEEvent(res, 'completed', completionData);
+    };
+
+    const handleBenchmarkError = (errorData: BenchmarkSyncErrorData) => {
+      sendSSEEvent(res, 'error', errorData);
+    };
+
+    // Register event listeners
+    sseEventEmitter.on('benchmark-progress', handleBenchmarkProgress);
+    sseEventEmitter.on('benchmark-completed', handleBenchmarkCompletion);
+    sseEventEmitter.on('benchmark-error', handleBenchmarkError);
+
+    // Heartbeat to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      sendSSEEvent(res, 'heartbeat', {
+        timestamp: new Date().toISOString()
+      });
+    }, HEARTBEAT_INTERVAL);
+
+    // Connection cleanup
+    const cleanup = () => {
+      clearTimeout(connectionTimeout);
+      clearInterval(heartbeatInterval);
+      
+      sseEventEmitter.removeListener('benchmark-progress', handleBenchmarkProgress);
+      sseEventEmitter.removeListener('benchmark-completed', handleBenchmarkCompletion);
+      sseEventEmitter.removeListener('benchmark-error', handleBenchmarkError);
+      
+      cleanupConnection(res, benchmarkConnectionKey);
+    };
+
+    // Handle client disconnect
+    req.on('close', cleanup);
+    req.on('error', (error) => {
+      logger.warn('Benchmark sync SSE connection error', { 
+        error: error.message,
+        userId: req.user?.id 
+      });
+      cleanup();
+    });
+
+  } catch (error) {
+    logger.error('Failed to establish benchmark sync SSE connection', {
+      error: (error as Error).message,
+      userId: req.user?.id
+    });
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;

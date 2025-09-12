@@ -1,9 +1,9 @@
 import { 
-  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, effectivenessPromptTemplates, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores, sovAnalyses,
+  clients, users, competitors, benchmarkCompanies, cdPortfolioCompanies, metrics, benchmarks, aiInsights, passwordResetTokens, globalPromptTemplate, metricPrompts, sovPromptTemplate, effectivenessPromptTemplates, insightContexts, filterOptions, ga4PropertyAccess, ga4ServiceAccounts, metricVersions, effectivenessRuns, criterionScores, sovAnalyses, benchmarkSyncJobs,
   type Client, type InsertClient,
   type User, type InsertUser,
   type Competitor, type InsertCompetitor,
-  type BenchmarkCompany, type InsertBenchmarkCompany,
+  type BenchmarkCompany, type InsertBenchmarkCompany, type UpdateBenchmarkCompany,
   type CdPortfolioCompany, type InsertCdPortfolioCompany,
   type Metric, type InsertMetric,
   type Benchmark, type InsertBenchmark,
@@ -18,6 +18,7 @@ import {
   type GA4PropertyAccess, type InsertGA4PropertyAccess,
   type MetricVersion, type InsertMetricVersion, type UpdateMetricVersion,
   type SOVAnalysis, type InsertSOVAnalysis, type UpdateSOVAnalysis,
+  type BenchmarkSyncJob, type InsertBenchmarkSyncJob, type UpdateBenchmarkSyncJob,
   validateCanonicalMetricEnvelope,
   type CanonicalMetricEnvelope
 } from "@shared/schema";
@@ -59,11 +60,25 @@ export interface IStorage {
   deleteCompetitor(id: string): Promise<void>;
   
   // Benchmark Companies
-  getBenchmarkCompanies(): Promise<BenchmarkCompany[]>;
+  getBenchmarkCompanies(filters?: { syncStatus?: string }): Promise<BenchmarkCompany[]>;
   getBenchmarkCompaniesWithMetrics(): Promise<BenchmarkCompany[]>;
+  getBenchmarkCompaniesByIds(ids: string[]): Promise<BenchmarkCompany[]>;
   createBenchmarkCompany(company: InsertBenchmarkCompany): Promise<BenchmarkCompany>;
   updateBenchmarkCompany(id: string, company: Partial<InsertBenchmarkCompany>): Promise<BenchmarkCompany | undefined>;
+  updateBenchmarkCompanies(ids: string[], updates: UpdateBenchmarkCompany): Promise<void>;
   deleteBenchmarkCompany(id: string): Promise<void>;
+
+  // Benchmark Sync Jobs
+  getBenchmarkSyncJobs(filters?: { 
+    status?: string | string[];
+    jobType?: string;
+    limit?: number;
+    orderBy?: 'createdAt' | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+  }): Promise<BenchmarkSyncJob[]>;
+  getBenchmarkSyncJobById(id: string): Promise<BenchmarkSyncJob | undefined>;
+  createBenchmarkSyncJob(job: InsertBenchmarkSyncJob): Promise<string>;
+  updateBenchmarkSyncJob(id: string, updates: UpdateBenchmarkSyncJob): Promise<BenchmarkSyncJob | undefined>;
   
   // CD Portfolio Companies
   getCdPortfolioCompanies(): Promise<CdPortfolioCompany[]>;
@@ -345,8 +360,17 @@ export class DatabaseStorage implements IStorage {
 
 
   // Benchmark Companies
-  async getBenchmarkCompanies(): Promise<BenchmarkCompany[]> {
-    return await db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
+  async getBenchmarkCompanies(filters?: { syncStatus?: string }): Promise<BenchmarkCompany[]> {
+    let query = db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
+    
+    if (filters?.syncStatus) {
+      query = query.where(and(
+        eq(benchmarkCompanies.active, true),
+        eq(benchmarkCompanies.syncStatus, filters.syncStatus)
+      ));
+    }
+    
+    return await query;
   }
 
   async getBenchmarkCompaniesWithMetrics(): Promise<BenchmarkCompany[]> {
@@ -391,6 +415,108 @@ export class DatabaseStorage implements IStorage {
     // Use enhanced global deletion utility for comprehensive cleanup
     const { deleteBenchmarkCompanyEnhanced } = await import('./utils/company/deletion');
     await deleteBenchmarkCompanyEnhanced(id, this);
+  }
+
+  // Additional Benchmark Company Methods for Sync Operations
+  async getBenchmarkCompaniesByIds(ids: string[]): Promise<BenchmarkCompany[]> {
+    if (ids.length === 0) return [];
+    return await db.select().from(benchmarkCompanies).where(inArray(benchmarkCompanies.id, ids));
+  }
+
+  async updateBenchmarkCompanies(ids: string[], updates: UpdateBenchmarkCompany): Promise<void> {
+    if (ids.length === 0) return;
+    
+    await db.update(benchmarkCompanies)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(inArray(benchmarkCompanies.id, ids));
+  }
+
+  // Benchmark Sync Jobs
+  async getBenchmarkSyncJobs(filters?: { 
+    status?: string | string[];
+    jobType?: string;
+    limit?: number;
+    orderBy?: 'createdAt' | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+  }): Promise<BenchmarkSyncJob[]> {
+    let query = db.select().from(benchmarkSyncJobs);
+
+    // Build WHERE conditions
+    const conditions = [];
+    
+    if (filters?.status) {
+      if (Array.isArray(filters.status)) {
+        conditions.push(inArray(benchmarkSyncJobs.status, filters.status));
+      } else {
+        conditions.push(eq(benchmarkSyncJobs.status, filters.status));
+      }
+    }
+    
+    if (filters?.jobType) {
+      conditions.push(eq(benchmarkSyncJobs.jobType, filters.jobType));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    // Add ordering
+    const orderBy = filters?.orderBy || 'createdAt';
+    const orderDirection = filters?.orderDirection || 'desc';
+    const orderColumn = orderBy === 'createdAt' ? benchmarkSyncJobs.createdAt : benchmarkSyncJobs.updatedAt;
+    
+    query = orderDirection === 'asc' ? query.orderBy(orderColumn) : query.orderBy(desc(orderColumn));
+
+    // Add limit
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    return await query;
+  }
+
+  async getBenchmarkSyncJobById(id: string): Promise<BenchmarkSyncJob | undefined> {
+    const [job] = await db.select().from(benchmarkSyncJobs).where(eq(benchmarkSyncJobs.id, id));
+    return job || undefined;
+  }
+
+  async createBenchmarkSyncJob(job: InsertBenchmarkSyncJob): Promise<string> {
+    const [inserted] = await db.insert(benchmarkSyncJobs).values({
+      ...job,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning({ id: benchmarkSyncJobs.id });
+    
+    logger.info('Created benchmark sync job', { 
+      jobId: inserted.id, 
+      jobType: job.jobType,
+      totalCompanies: job.totalCompanies
+    });
+    
+    return inserted.id;
+  }
+
+  async updateBenchmarkSyncJob(id: string, updates: UpdateBenchmarkSyncJob): Promise<BenchmarkSyncJob | undefined> {
+    const [updated] = await db.update(benchmarkSyncJobs)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(benchmarkSyncJobs.id, id))
+      .returning();
+
+    if (updated) {
+      logger.debug('Updated benchmark sync job', { 
+        jobId: id,
+        status: updated.status,
+        processedCompanies: updated.processedCompanies 
+      });
+    }
+
+    return updated || undefined;
   }
 
   // CD Portfolio Companies

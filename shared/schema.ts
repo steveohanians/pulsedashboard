@@ -64,6 +64,8 @@ export function validateCanonicalMetricEnvelope(data: unknown): CanonicalMetricE
 export const roleEnum = pgEnum("role", ["Admin", "User"]);
 export const statusEnum = pgEnum("status", ["Active", "Inactive", "Invited"]);
 export const sourceTypeEnum = pgEnum("source_type", ["Client", "CD_Portfolio", "CD_Avg", "Industry", "Competitor", "Industry_Avg", "Competitor_Avg", "Benchmark"]);
+export const benchmarkSyncStatusEnum = pgEnum("benchmark_sync_status", ["pending", "queued", "processing", "completed", "failed", "cancelled"]);
+export const benchmarkSyncTypeEnum = pgEnum("benchmark_sync_type", ["individual", "bulk", "incremental"]);
 
 // Tables
 export const clients = pgTable("clients", {
@@ -128,10 +130,54 @@ export const benchmarkCompanies = pgTable("benchmark_companies", {
   businessSize: text("business_size").notNull(),
   sourceVerified: boolean("source_verified").default(false).notNull(),
   active: boolean("active").default(true).notNull(),
-  syncStatus: text("sync_status").default("verified").notNull(), // "pending", "processing", "verified"
+  syncStatus: benchmarkSyncStatusEnum("sync_status").default("pending").notNull(),
   lastSyncAttempt: timestamp("last_sync_attempt"), // Track when sync was last attempted
+  lastSyncCompleted: timestamp("last_sync_completed"), // Track when sync was last completed successfully
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for sync status filtering
+  syncStatusIdx: index("idx_benchmark_companies_sync_status").on(table.syncStatus),
+  activeIdx: index("idx_benchmark_companies_active").on(table.active),
+}));
+
+// Benchmark Sync Jobs - Persistent state tracking for sync operations
+export const benchmarkSyncJobs = pgTable("benchmark_sync_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobType: benchmarkSyncTypeEnum("job_type").notNull(),
+  status: benchmarkSyncStatusEnum("status").default("pending").notNull(),
+  
+  // Progress tracking
+  totalCompanies: integer("total_companies").default(0).notNull(),
+  processedCompanies: integer("processed_companies").default(0).notNull(),
+  failedCompanies: integer("failed_companies").default(0).notNull(),
+  currentCompanyId: varchar("current_company_id").references(() => benchmarkCompanies.id),
+  currentCompanyName: text("current_company_name"),
+  
+  // Timing information
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  estimatedCompletionAt: timestamp("estimated_completion_at"),
+  
+  // Results and errors
+  successfulResults: jsonb("successful_results"), // Store successful sync results
+  errorMessages: jsonb("error_messages"), // Store error details
+  progressLog: jsonb("progress_log"), // Detailed progress information
+  
+  // Job parameters
+  companyIds: text("company_ids").array(), // For individual/bulk syncs - specific company IDs to process
+  incrementalSync: boolean("incremental_sync").default(false).notNull(), // Whether to only sync missing months
+  
+  // Metadata
+  initiatedByUserId: varchar("initiated_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Performance indexes
+  statusIdx: index("idx_benchmark_sync_jobs_status").on(table.status),
+  jobTypeIdx: index("idx_benchmark_sync_jobs_type").on(table.jobType),
+  startedAtIdx: index("idx_benchmark_sync_jobs_started_at").on(table.startedAt),
+  currentCompanyIdx: index("idx_benchmark_sync_jobs_current_company").on(table.currentCompanyId),
+}));
 
 // Google Service Account Management for GA4 API access
 export const ga4ServiceAccounts = pgTable("ga4_service_accounts", {
@@ -572,6 +618,23 @@ export const insertBenchmarkCompanySchema = createInsertSchema(benchmarkCompanie
   createdAt: true,
 });
 
+export const updateBenchmarkCompanySchema = createInsertSchema(benchmarkCompanies).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export const insertBenchmarkSyncJobSchema = createInsertSchema(benchmarkSyncJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBenchmarkSyncJobSchema = createInsertSchema(benchmarkSyncJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertCdPortfolioCompanySchema = createInsertSchema(cdPortfolioCompanies).omit({
   id: true,
   createdAt: true,
@@ -754,6 +817,10 @@ export type Competitor = typeof competitors.$inferSelect;
 export type InsertCompetitor = z.infer<typeof insertCompetitorSchema>;
 export type BenchmarkCompany = typeof benchmarkCompanies.$inferSelect;
 export type InsertBenchmarkCompany = z.infer<typeof insertBenchmarkCompanySchema>;
+export type UpdateBenchmarkCompany = z.infer<typeof updateBenchmarkCompanySchema>;
+export type BenchmarkSyncJob = typeof benchmarkSyncJobs.$inferSelect;
+export type InsertBenchmarkSyncJob = z.infer<typeof insertBenchmarkSyncJobSchema>;
+export type UpdateBenchmarkSyncJob = z.infer<typeof updateBenchmarkSyncJobSchema>;
 export type CdPortfolioCompany = typeof cdPortfolioCompanies.$inferSelect;
 export type InsertCdPortfolioCompany = z.infer<typeof insertCdPortfolioCompanySchema>;
 export type Metric = typeof metrics.$inferSelect;

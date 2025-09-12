@@ -42,6 +42,40 @@ export interface SSEErrorData {
   timestamp: string;
 }
 
+// Benchmark Sync SSE Event Types
+export interface BenchmarkSyncProgressData {
+  jobId: string;
+  jobType: 'individual' | 'bulk' | 'incremental';
+  overallPercent: number;
+  totalCompanies: number;
+  processedCompanies: number;
+  failedCompanies: number;
+  currentCompanyId?: string;
+  currentCompanyName?: string;
+  timeElapsed: number;
+  estimatedTimeRemaining?: number;
+  currentPhase: 'initializing' | 'syncing' | 'completing' | 'completed';
+  message: string;
+  timestamp: string;
+}
+
+export interface BenchmarkSyncCompletionData {
+  jobId: string;
+  jobType: 'individual' | 'bulk' | 'incremental';
+  totalCompanies: number;
+  processedCompanies: number;
+  failedCompanies: number;
+  totalTime: number;
+  message: string;
+  timestamp: string;
+}
+
+export interface BenchmarkSyncErrorData {
+  jobId: string;
+  error: string;
+  timestamp: string;
+}
+
 /**
  * Global SSE event emitter for cross-service communication
  */
@@ -95,6 +129,44 @@ class SSEEventEmitter extends EventEmitter {
 
     logger.warn('Broadcasting error', { clientId, error });
     this.emit('error', eventData);
+  }
+
+  /**
+   * Broadcast benchmark sync progress update
+   */
+  broadcastBenchmarkProgress(progressData: BenchmarkSyncProgressData): void {
+    logger.debug('Broadcasting benchmark sync progress', { 
+      jobId: progressData.jobId, 
+      progress: progressData.overallPercent,
+      currentPhase: progressData.currentPhase
+    });
+
+    this.emit('benchmark-progress', progressData);
+  }
+
+  /**
+   * Broadcast benchmark sync completion
+   */
+  broadcastBenchmarkCompletion(completionData: BenchmarkSyncCompletionData): void {
+    logger.info('Broadcasting benchmark sync completion', { 
+      jobId: completionData.jobId,
+      totalCompanies: completionData.totalCompanies,
+      processedCompanies: completionData.processedCompanies
+    });
+
+    this.emit('benchmark-completed', completionData);
+  }
+
+  /**
+   * Broadcast benchmark sync error
+   */
+  broadcastBenchmarkError(errorData: BenchmarkSyncErrorData): void {
+    logger.warn('Broadcasting benchmark sync error', { 
+      jobId: errorData.jobId, 
+      error: errorData.error 
+    });
+
+    this.emit('benchmark-error', errorData);
   }
 
   /**

@@ -1,8 +1,10 @@
 import logger from '../../utils/logging/logger';
 import { semrushService } from './semrushService';
 import { semrushDataProcessor } from './dataProcessor';
+import { BenchmarkSyncManager } from '../BenchmarkSyncManager';
+import { sseEventEmitter } from '../sse/sseEventEmitter';
 import type { IStorage } from '../../storage';
-import type { BenchmarkCompany } from '@shared/schema';
+import type { BenchmarkCompany, UpdateBenchmarkCompany } from '@shared/schema';
 
 export interface BenchmarkIntegrationResult {
   success: boolean;
@@ -13,19 +15,37 @@ export interface BenchmarkIntegrationResult {
   deviceDistributionStored: number;
   averagesUpdated: boolean;
   error?: string;
+  syncJobId?: string;
+}
+
+export interface BenchmarkSyncOptions {
+  incrementalSync?: boolean;
+  syncJobId?: string;
+  emitProgressEvents?: boolean;
 }
 
 export class BenchmarkIntegration {
-  constructor(private storage: IStorage) {}
+  private syncManager: BenchmarkSyncManager;
+
+  constructor(private storage: IStorage) {
+    this.syncManager = new BenchmarkSyncManager(storage);
+  }
 
   /**
-   * Complete integration process for a new Benchmark company
+   * Complete integration process for a new Benchmark company with state tracking
    */
-  public async processNewBenchmarkCompany(company: BenchmarkCompany): Promise<BenchmarkIntegrationResult> {
-    logger.info('Starting SEMrush integration for new benchmark company', { 
+  public async processNewBenchmarkCompany(
+    company: BenchmarkCompany, 
+    options: BenchmarkSyncOptions = {}
+  ): Promise<BenchmarkIntegrationResult> {
+    const { incrementalSync = false, syncJobId, emitProgressEvents = true } = options;
+
+    logger.info('Starting SEMrush integration for benchmark company', { 
       companyId: company.id,
       companyName: company.name,
-      websiteUrl: company.websiteUrl
+      websiteUrl: company.websiteUrl,
+      incrementalSync,
+      syncJobId: syncJobId || 'standalone'
     });
 
     const result: BenchmarkIntegrationResult = {
@@ -35,24 +55,88 @@ export class BenchmarkIntegration {
       metricsStored: 0,
       trafficChannelsStored: 0,
       deviceDistributionStored: 0,
-      averagesUpdated: false
+      averagesUpdated: false,
+      syncJobId
     };
 
     try {
+      // Step 0: Update company sync status to processing
+      await this.updateCompanySyncStatus(company.id, 'processing', emitProgressEvents);
+
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncProgress({
+          companyId: company.id,
+          companyName: company.name,
+          stage: 'extracting_domain',
+          message: `Extracting domain from ${company.websiteUrl}`,
+          progress: 10
+        });
+      }
+
       // Step 1: Extract domain from website URL
       const domain = this.extractDomain(company.websiteUrl);
       logger.info('Extracted domain from URL', { companyId: company.id, domain, originalUrl: company.websiteUrl });
 
-      // Step 2: Fetch 15 months of historical data from SEMrush
-      const historicalData = await semrushService.fetchHistoricalData(domain);
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncProgress({
+          companyId: company.id,
+          companyName: company.name,
+          stage: 'fetching_data',
+          message: `Fetching SEMrush data for ${domain}${incrementalSync ? ' (incremental)' : ''}`,
+          progress: 20
+        });
+      }
+
+      // Step 2: Fetch historical data from SEMrush (with optimizations)
+      const historicalData = incrementalSync 
+        ? await semrushService.fetchHistoricalDataOptimized(domain, true, company.id)
+        : await semrushService.fetchHistoricalDataOptimized(domain, false);
+      
       result.periodsProcessed = historicalData.size;
 
       if (historicalData.size === 0) {
-        throw new Error('No historical data retrieved from SEMrush');
+        if (incrementalSync) {
+          logger.info('No missing data found for company, sync completed', { companyId: company.id });
+          result.success = true;
+          await this.updateCompanySyncStatus(company.id, 'verified', emitProgressEvents);
+          
+          if (emitProgressEvents) {
+            sseEventEmitter.emitBenchmarkSyncCompleted({
+              companyId: company.id,
+              companyName: company.name,
+              success: true,
+              message: 'No missing data - already up to date'
+            });
+          }
+          
+          return result;
+        } else {
+          throw new Error('No historical data retrieved from SEMrush');
+        }
       }
 
-      // Step 3: Process and convert SEMrush data to our schema (using Benchmark instead of CD_Portfolio)
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncProgress({
+          companyId: company.id,
+          companyName: company.name,
+          stage: 'processing_data',
+          message: `Processing ${historicalData.size} periods of SEMrush data`,
+          progress: 50
+        });
+      }
+
+      // Step 3: Process and convert SEMrush data to our schema
       const processedData = semrushDataProcessor.processBenchmarkCompanyData(company.id, historicalData);
+
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncProgress({
+          companyId: company.id,
+          companyName: company.name,
+          stage: 'storing_metrics',
+          message: `Storing ${processedData.metrics.length} metrics in database`,
+          progress: 70
+        });
+      }
 
       // Step 4: Store the company's metrics in database
       await this.storeCompanyMetrics(company.id, processedData);
@@ -60,9 +144,22 @@ export class BenchmarkIntegration {
       result.trafficChannelsStored = processedData.trafficChannelMetrics.length;
       result.deviceDistributionStored = processedData.deviceDistributionMetrics.length;
 
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncProgress({
+          companyId: company.id,
+          companyName: company.name,
+          stage: 'updating_averages',
+          message: 'Updating industry averages',
+          progress: 90
+        });
+      }
+
       // Step 5: Recalculate and update Industry averages
       await this.updateIndustryAverages();
       result.averagesUpdated = true;
+
+      // Step 6: Update company sync status to verified
+      await this.updateCompanySyncStatus(company.id, 'verified', emitProgressEvents);
 
       result.success = true;
       
@@ -72,8 +169,20 @@ export class BenchmarkIntegration {
         periodsProcessed: result.periodsProcessed,
         metricsStored: result.metricsStored,
         trafficChannelsStored: result.trafficChannelsStored,
-        deviceDistributionStored: result.deviceDistributionStored
+        deviceDistributionStored: result.deviceDistributionStored,
+        incrementalSync
       });
+
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncCompleted({
+          companyId: company.id,
+          companyName: company.name,
+          success: true,
+          message: `Successfully synced ${result.periodsProcessed} periods with ${result.metricsStored} metrics`,
+          periodsProcessed: result.periodsProcessed,
+          metricsStored: result.metricsStored
+        });
+      }
 
     } catch (error) {
       result.error = (error as Error).message;
@@ -81,11 +190,134 @@ export class BenchmarkIntegration {
         companyId: company.id,
         companyName: company.name,
         error: result.error,
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
+        incrementalSync
       });
+
+      // Update company sync status to error
+      await this.updateCompanySyncStatus(company.id, 'error', emitProgressEvents);
+
+      if (emitProgressEvents) {
+        sseEventEmitter.emitBenchmarkSyncError({
+          companyId: company.id,
+          companyName: company.name,
+          error: result.error || 'Unknown error occurred during sync'
+        });
+      }
     }
 
     return result;
+  }
+
+  /**
+   * Process multiple benchmark companies with state tracking
+   */
+  public async processBenchmarkCompanies(
+    companies: BenchmarkCompany[],
+    options: { incrementalSync?: boolean; jobType?: string } = {}
+  ): Promise<{ jobId: string; results: BenchmarkIntegrationResult[] }> {
+    const { incrementalSync = false, jobType = 'bulk_sync' } = options;
+
+    // Create sync job
+    const jobId = await this.syncManager.createSyncJob({
+      jobType,
+      totalCompanies: companies.length,
+      companyIds: companies.map(c => c.id),
+      incrementalSync
+    });
+
+    logger.info('Started bulk benchmark sync job', { 
+      jobId, 
+      companies: companies.length, 
+      incrementalSync,
+      jobType 
+    });
+
+    const results: BenchmarkIntegrationResult[] = [];
+
+    try {
+      await this.syncManager.updateJob(jobId, { status: 'processing' });
+
+      // Process companies sequentially to respect rate limits
+      for (let i = 0; i < companies.length; i++) {
+        const company = companies[i];
+        
+        // Update job progress
+        await this.syncManager.updateJob(jobId, {
+          processedCompanies: i,
+          currentCompanyId: company.id
+        });
+
+        // Process individual company
+        const companyResult = await this.processNewBenchmarkCompany(company, {
+          incrementalSync,
+          syncJobId: jobId,
+          emitProgressEvents: true
+        });
+
+        results.push(companyResult);
+
+        // Update job with company completion
+        await this.syncManager.updateJob(jobId, {
+          processedCompanies: i + 1,
+          currentCompanyId: null
+        });
+
+        logger.info('Completed company in bulk job', { 
+          jobId, 
+          companyId: company.id,
+          success: companyResult.success,
+          progress: `${i + 1}/${companies.length}`
+        });
+      }
+
+      // Complete the job
+      await this.syncManager.completeJob(jobId);
+
+      logger.info('Completed bulk benchmark sync job', { 
+        jobId, 
+        totalCompanies: companies.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+
+    } catch (error) {
+      await this.syncManager.failJob(jobId, (error as Error).message);
+      logger.error('Bulk benchmark sync job failed', { jobId, error: (error as Error).message });
+      throw error;
+    }
+
+    return { jobId, results };
+  }
+
+  /**
+   * Update benchmark company sync status
+   */
+  private async updateCompanySyncStatus(
+    companyId: string, 
+    status: string, 
+    emitEvents: boolean = true
+  ): Promise<void> {
+    try {
+      const updates: UpdateBenchmarkCompany = {
+        syncStatus: status,
+        lastSyncAttempt: new Date()
+      };
+
+      if (status === 'verified') {
+        updates.lastSuccessfulSync = new Date();
+      }
+
+      await this.storage.updateBenchmarkCompany(companyId, updates);
+      
+      logger.debug('Updated benchmark company sync status', { companyId, status });
+    } catch (error) {
+      logger.error('Failed to update benchmark company sync status', {
+        companyId,
+        status,
+        error: (error as Error).message
+      });
+    }
   }
 
   /**

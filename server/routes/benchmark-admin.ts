@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import { storage } from '../storage';
 import { BenchmarkIntegration } from '../services/semrush/benchmarkIntegration';
+import { BenchmarkSyncManager } from '../services/BenchmarkSyncManager';
 import logger from '../utils/logging/logger';
 
 const router = Router();
