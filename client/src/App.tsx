@@ -26,7 +26,7 @@ function AdminRedirect() {
     navigate('/admin-panel', { replace: true });
   }, [navigate]);
   
-  return null;
+  return <div>Redirecting...</div>;
 }
 
 function Router() {
