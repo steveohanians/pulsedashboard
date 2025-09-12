@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileText, Check, X, AlertCircle, Search, ShieldCheck } from "lucide-react";
+import { Upload, FileText, Check, X, AlertCircle, Search, ShieldCheck, TrendingUp, SkipForward, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CSVImportModalProps {
@@ -42,12 +42,18 @@ interface PreviewData {
   availableFields: string[];
 }
 
-/** Import operation results with success/failure metrics */
+/** Import operation results with comprehensive metrics */
 interface ImportResults {
   /** Number of successfully imported records */
-  successful: number;
+  imported: number;
+  /** Number of duplicate rows that were skipped */
+  skippedDuplicates: number;
+  /** Number of invalid rows that were skipped */
+  skippedInvalid: number;
   /** Number of failed import attempts */
   failed: number;
+  /** Total number of rows processed */
+  total: number;
   /** Detailed error messages for failed imports */
   errors: string[];
 }
@@ -289,15 +295,24 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
       }
 
       const data = await response.json();
+      const results = data.data || data.results || {};
+      const imported = results.imported || 0;
+      const skippedDuplicates = results.skippedDuplicates || 0;
+      const skippedInvalid = results.skippedInvalid || 0;
+      const failed = results.failed || 0;
+      
       setImportResults({
-        successful: data.results?.successful || 0,
-        failed: data.results?.failed || 0,
-        errors: data.results?.errors || []
+        imported,
+        skippedDuplicates,
+        skippedInvalid,
+        failed,
+        total: results.total || (imported + skippedDuplicates + skippedInvalid + failed),
+        errors: results.errors || []
       });
       setStep('results');
       
       // Trigger completion callback for successful imports
-      if (data.results && data.results.successful > 0) {
+      if (results.imported > 0) {
         onImportComplete();
       }
     } catch (error) {
@@ -593,46 +608,229 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
         )}
 
         {step === 'results' && importResults && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Results Header */}
             <div className="text-center">
               <div className="flex items-center justify-center space-x-2 mb-4">
-                {importResults.failed === 0 ? (
+                {importResults.imported === importResults.total && importResults.failed === 0 ? (
                   <Check className="h-8 w-8 text-green-500" />
+                ) : importResults.imported > 0 ? (
+                  <TrendingUp className="h-8 w-8 text-orange-500" />
                 ) : (
-                  <AlertCircle className="h-8 w-8 text-orange-500" />
+                  <X className="h-8 w-8 text-red-500" />
                 )}
                 <h3 className="text-lg font-medium">Import Complete</h3>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="text-2xl font-bold text-green-600">{importResults.successful}</div>
-                    <div className="text-sm text-gray-500">Successful</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="text-2xl font-bold text-red-600">{importResults.failed}</div>
-                    <div className="text-sm text-gray-500">Failed</div>
-                  </CardContent>
-                </Card>
+              {/* Status Message */}
+              <div className={`p-4 rounded-lg mb-6 ${
+                importResults.imported === importResults.total && importResults.failed === 0
+                  ? 'bg-green-50 border border-green-200'
+                  : importResults.imported > 0
+                  ? 'bg-orange-50 border border-orange-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className={`font-medium ${
+                  importResults.imported === importResults.total && importResults.failed === 0
+                    ? 'text-green-800'
+                    : importResults.imported > 0
+                    ? 'text-orange-800'
+                    : 'text-red-800'
+                }`}>
+                  {importResults.imported === importResults.total && importResults.failed === 0 ? (
+                    `All ${importResults.imported} companies imported successfully!`
+                  ) : importResults.imported > 0 ? (
+                    `${importResults.imported} of ${importResults.total} companies imported successfully. ${importResults.skippedDuplicates + importResults.skippedInvalid + importResults.failed} rows had issues.`
+                  ) : (
+                    'No companies were imported. Please fix errors and try again.'
+                  )}
+                </div>
+                
+                {importResults.skippedDuplicates > 0 && (
+                  <p className="text-sm text-orange-700 mt-2">
+                    {importResults.skippedDuplicates} duplicate companies were skipped.
+                  </p>
+                )}
+                
+                {importResults.skippedInvalid > 0 && (
+                  <p className="text-sm text-red-700 mt-2">
+                    {importResults.skippedInvalid} rows had validation errors and were skipped.
+                  </p>
+                )}
               </div>
             </div>
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card data-testid="card-imported">
+                <CardContent className="pt-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-xs font-medium text-green-600 uppercase tracking-wide">Imported</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">{importResults.imported}</div>
+                  <div className="text-sm text-gray-500">Companies added</div>
+                </CardContent>
+              </Card>
+              
+              {importResults.skippedDuplicates > 0 && (
+                <Card data-testid="card-duplicates">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <SkipForward className="h-4 w-4 text-orange-600" />
+                      <span className="text-xs font-medium text-orange-600 uppercase tracking-wide">Duplicates</span>
+                    </div>
+                    <div className="text-2xl font-bold text-orange-600">{importResults.skippedDuplicates}</div>
+                    <div className="text-sm text-gray-500">Already exist</div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {importResults.skippedInvalid > 0 && (
+                <Card data-testid="card-invalid">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-xs font-medium text-red-600 uppercase tracking-wide">Invalid</span>
+                    </div>
+                    <div className="text-2xl font-bold text-red-600">{importResults.skippedInvalid}</div>
+                    <div className="text-sm text-gray-500">Validation errors</div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {importResults.failed > 0 && (
+                <Card data-testid="card-failed">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <X className="h-4 w-4 text-red-600" />
+                      <span className="text-xs font-medium text-red-600 uppercase tracking-wide">Failed</span>
+                    </div>
+                    <div className="text-2xl font-bold text-red-600">{importResults.failed}</div>
+                    <div className="text-sm text-gray-500">Import errors</div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Card data-testid="card-total">
+                <CardContent className="pt-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">{importResults.total}</div>
+                  <div className="text-sm text-gray-500">Rows processed</div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Progress Visualization */}
+            {importResults.total > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Import Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Success Rate Bar */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Success Rate</span>
+                        <span>{Math.round((importResults.imported / importResults.total) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full"
+                          style={{ width: `${(importResults.imported / importResults.total) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {/* Breakdown */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-green-600">✓ Imported:</span>
+                        <span className="font-medium">{importResults.imported}</span>
+                      </div>
+                      {importResults.skippedDuplicates > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-orange-600">⚠ Duplicates:</span>
+                          <span className="font-medium">{importResults.skippedDuplicates}</span>
+                        </div>
+                      )}
+                      {importResults.skippedInvalid > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-red-600">✗ Invalid:</span>
+                          <span className="font-medium">{importResults.skippedInvalid}</span>
+                        </div>
+                      )}
+                      {importResults.failed > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-red-600">🚫 Failed:</span>
+                          <span className="font-medium">{importResults.failed}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Error Details */}
             {importResults.errors.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base text-red-600">Import Errors</CardTitle>
+                  <CardTitle className="text-base text-red-600 flex items-center space-x-2">
+                    <X className="h-4 w-4" />
+                    <span>Import Errors ({importResults.errors.length})</span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
+                  <div className="max-h-32 overflow-y-auto space-y-2">
                     {importResults.errors.map((error, index) => (
-                      <div key={index} className="text-sm text-red-600 flex items-start space-x-2">
+                      <div key={index} className="text-sm text-red-600 flex items-start space-x-2 bg-red-50 p-2 rounded">
                         <X className="h-3 w-3 mt-0.5 flex-shrink-0" />
                         <span>{error}</span>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Next Steps */}
+            {importResults.imported > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base text-green-600">Next Steps</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setStep('upload');
+                        setSelectedFile(null);
+                        setPreviewData(null);
+                        setColumnMapping({});
+                        setImportResults(null);
+                        setValidationResults(null);
+                      }}
+                      data-testid="button-import-more"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import More Companies
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.location.href = '/admin-panel'}
+                      data-testid="button-view-companies"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View All Companies
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
