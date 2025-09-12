@@ -2774,7 +2774,7 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 lg:hidden">
                                   <Badge 
                                     variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                    className={`text-xs flex items-center ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : ""}`}
+                                    className={`px-1.5 py-0.5 text-xs inline-flex items-center whitespace-nowrap ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : "gap-0"}`}
                                     data-testid={`sync-status-badge-mobile-${company.id}`}
                                   >
                                     {getCompanySyncStatus(company.id, company) === "processing" && (
@@ -2791,7 +2791,7 @@ export default function AdminPanel() {
                             <TableCell className="hidden lg:table-cell">
                               <Badge 
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                className={`text-xs flex items-center ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : ""}`}
+                                className={`px-1.5 py-0.5 text-xs inline-flex items-center whitespace-nowrap ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : "gap-0"}`}
                                 data-testid={`sync-status-badge-desktop-${company.id}`}
                               >
                                 {getCompanySyncStatus(company.id, company) === "processing" && (
