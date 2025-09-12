@@ -240,7 +240,7 @@ export default function AdminPanel() {
   const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
   
   // Helper function to get real-time sync status for a company
-  const getCompanySyncStatus = (companyId: string, company: BenchmarkCompany) => {
+  const getCompanySyncStatus = (companyId: string, company: BenchmarkCompany): "pending" | "processing" | "verified" | "completed" | "error" | "failed" => {
     // First check real-time status from SSE
     const realtimeStatus = benchmarkSyncStream.getCompanyStatus(companyId);
     if (realtimeStatus) {
@@ -302,27 +302,24 @@ export default function AdminPanel() {
   useEffect(() => {
     if (activeTab !== "benchmark" || user?.role !== "Admin") return;
     
-    // Check for active sync jobs when SSE connection is established
-    if (benchmarkSyncStream.connectionStatus === "connected") {
-      // Check if there's ongoing bulk sync activity
-      const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
-      if (hasActiveSyncs && !isBulkSyncInProgress) {
-        setIsBulkSyncInProgress(true);
-      } else if (!hasActiveSyncs && isBulkSyncInProgress) {
-        // Bulk sync completed while we were away
-        setIsBulkSyncInProgress(false);
-        
-        // Show completion notification if we missed it
-        if (benchmarkSyncStream.totalProgress.completed > 0) {
-          toast({
-            title: "Sync Process Restored",
-            description: `Found ongoing sync progress: ${benchmarkSyncStream.totalProgress.completed}/${benchmarkSyncStream.totalProgress.total} completed`,
-            duration: 5000,
-          });
-        }
+    // Check if there's ongoing bulk sync activity
+    const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
+    if (hasActiveSyncs && !isBulkSyncInProgress) {
+      setIsBulkSyncInProgress(true);
+    } else if (!hasActiveSyncs && isBulkSyncInProgress) {
+      // Bulk sync completed while we were away
+      setIsBulkSyncInProgress(false);
+      
+      // Show completion notification if we missed it
+      if (benchmarkSyncStream.totalProgress.completed > 0) {
+        toast({
+          title: "Sync Process Restored",
+          description: `Found ongoing sync progress: ${benchmarkSyncStream.totalProgress.completed}/${benchmarkSyncStream.totalProgress.total} completed`,
+          duration: 5000,
+        });
       }
     }
-  }, [benchmarkSyncStream.connectionStatus, benchmarkSyncStream.totalProgress, activeTab, user?.role, isBulkSyncInProgress]);
+  }, [benchmarkSyncStream.totalProgress, activeTab, user?.role, isBulkSyncInProgress]);
 
   // Auto-refresh companies when sync completes
   useEffect(() => {
