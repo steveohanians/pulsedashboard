@@ -33,6 +33,9 @@ export interface BenchmarkCompany {
   sourceVerified: boolean;
   active: boolean;
   createdAt: Date;
+  syncStatus?: "pending" | "processing" | "verified" | "error";
+  lastSyncAttempt?: Date;
+  lastSyncCompleted?: Date;
 }
 
 export interface CDPortfolioCompany {

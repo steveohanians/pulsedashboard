@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useBenchmarkSyncStream } from "@/hooks/useBenchmarkSyncStream";
 
 import { CSVImportModal } from "@/components/csv-import-modal";
 import { GlobalPromptTemplateForm } from "@/components/global-prompt-template-form";
@@ -227,6 +228,51 @@ export default function AdminPanel() {
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
 
+  // Real-time benchmark sync status tracking
+  const benchmarkSyncStream = useBenchmarkSyncStream({
+    enabled: user?.role === "Admin" && activeTab === "benchmark",
+    autoReconnect: true,
+    maxReconnectAttempts: 5,
+    reconnectDelay: 2000
+  });
+
+  // Track bulk sync state
+  const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
+  
+  // Helper function to get real-time sync status for a company
+  const getCompanySyncStatus = (companyId: string, company: BenchmarkCompany) => {
+    // First check real-time status from SSE
+    const realtimeStatus = benchmarkSyncStream.getCompanyStatus(companyId);
+    if (realtimeStatus) {
+      return realtimeStatus;
+    }
+    
+    // Fall back to company.syncStatus or default to pending
+    return company.syncStatus || "pending";
+  };
+  
+  // Get sync status badge variant
+  const getSyncStatusVariant = (status: "pending" | "processing" | "verified" | "error") => {
+    switch (status) {
+      case "processing": return "default";
+      case "verified": return "secondary";
+      case "error": return "destructive";
+      case "pending":
+      default: return "outline";
+    }
+  };
+  
+  // Get sync status display text
+  const getSyncStatusText = (status: "pending" | "processing" | "verified" | "error") => {
+    switch (status) {
+      case "processing": return "Processing";
+      case "verified": return "Verified";
+      case "error": return "Error";
+      case "pending":
+      default: return "Pending";
+    }
+  };
+
   // Query for fetching portfolio company data
   const companyDataQuery = useQuery({
     queryKey: AdminQueryKeys.cdPortfolioData(viewingCompanyData?.id || ''),
@@ -247,6 +293,50 @@ export default function AdminPanel() {
       setActiveTab(mappedTab);
     }
   }, [location]);
+
+  // Handle persistent sync state and SSE connection status
+  useEffect(() => {
+    if (activeTab !== "benchmark" || user?.role !== "Admin") return;
+    
+    // Check for active sync jobs when SSE connection is established
+    if (benchmarkSyncStream.connectionStatus === "connected") {
+      // Check if there's ongoing bulk sync activity
+      const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
+      if (hasActiveSyncs && !isBulkSyncInProgress) {
+        setIsBulkSyncInProgress(true);
+      } else if (!hasActiveSyncs && isBulkSyncInProgress) {
+        // Bulk sync completed while we were away
+        setIsBulkSyncInProgress(false);
+        
+        // Show completion notification if we missed it
+        if (benchmarkSyncStream.totalProgress.completed > 0) {
+          toast({
+            title: "Sync Process Restored",
+            description: `Found ongoing sync progress: ${benchmarkSyncStream.totalProgress.completed}/${benchmarkSyncStream.totalProgress.total} completed`,
+            duration: 5000,
+          });
+        }
+      }
+    }
+  }, [benchmarkSyncStream.connectionStatus, benchmarkSyncStream.totalProgress, activeTab, user?.role, isBulkSyncInProgress]);
+
+  // Auto-refresh companies when sync completes
+  useEffect(() => {
+    if (benchmarkSyncStream.totalProgress.total > 0 && 
+        benchmarkSyncStream.totalProgress.completed === benchmarkSyncStream.totalProgress.total) {
+      // All syncs completed, refresh the data
+      queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+      
+      if (isBulkSyncInProgress) {
+        setIsBulkSyncInProgress(false);
+        toast({
+          title: "Bulk Sync Complete",
+          description: `Successfully synced ${benchmarkSyncStream.totalProgress.completed} companies`,
+          duration: 5000,
+        });
+      }
+    }
+  }, [benchmarkSyncStream.totalProgress, queryClient, isBulkSyncInProgress]);
 
   // Always-loaded queries for dropdowns and cross-tab functionality
   const { data: clients, isLoading: clientsLoading, isError: clientsError, refetch: refetchClients } = useQuery<Client[]>({
@@ -2317,7 +2407,7 @@ export default function AdminPanel() {
                         variant="default"
                         onClick={async () => {
                           try {
-                            setIsLoading(true);
+                            setIsBulkSyncInProgress(true);
                             toast({
                               title: "Starting bulk sync...",
                               description: "Syncing all benchmark companies from SEMrush",
@@ -2350,15 +2440,19 @@ export default function AdminPanel() {
                               variant: "destructive",
                             });
                           } finally {
-                            setIsLoading(false);
+                            setIsBulkSyncInProgress(false);
                           }
                         }}
-                        disabled={isLoading || benchmarkCompanies?.length === 0}
+                        disabled={isBulkSyncInProgress || benchmarkCompanies?.length === 0}
+                        data-testid="sync-all-button"
                       >
-                        {isLoading ? (
+                        {isBulkSyncInProgress || benchmarkSyncStream.totalProgress.total > 0 ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Syncing...
+                            {benchmarkSyncStream.totalProgress.total > 0 
+                              ? `Syncing... (${benchmarkSyncStream.totalProgress.completed}/${benchmarkSyncStream.totalProgress.total})`
+                              : "Syncing..."
+                            }
                           </>
                         ) : (
                           <>
@@ -2449,8 +2543,15 @@ export default function AdminPanel() {
                             <div className="text-xs text-gray-500">Industry: {company.industryVertical}</div>
                             <div className="text-xs text-gray-500">Size: {company.businessSize}</div>
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
-                                {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
+                              <Badge 
+                                variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
+                                className="text-xs flex items-center gap-1"
+                                data-testid={`sync-status-badge-${company.id}`}
+                              >
+                                {getCompanySyncStatus(company.id, company) === "processing" && (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                )}
+                                {getSyncStatusText(getCompanySyncStatus(company.id, company))}
                               </Badge>
                               <Badge variant={company.active ? "secondary" : "destructive"} className="text-xs">
                                 {company.active ? "Active" : "Inactive"}
@@ -2463,6 +2564,9 @@ export default function AdminPanel() {
                               size="sm"
                               variant="ghost"
                               onClick={async () => {
+                                const currentStatus = getCompanySyncStatus(company.id, company);
+                                if (currentStatus === "processing") return;
+                                
                                 try {
                                   toast({
                                     title: "Syncing company...",
@@ -2499,8 +2603,14 @@ export default function AdminPanel() {
                               }}
                               title="Sync from SEMrush"
                               className="h-8 w-8 p-0"
+                              disabled={getCompanySyncStatus(company.id, company) === "processing" || isBulkSyncInProgress}
+                              data-testid={`sync-button-${company.id}`}
                             >
-                              <RefreshCw className="h-4 w-4" />
+                              {getCompanySyncStatus(company.id, company) === "processing" ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
                             </Button>
                             
                             <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
@@ -2658,8 +2768,15 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 lg:hidden">{company.websiteUrl}</div>
                                 <div className="text-xs text-gray-500 md:hidden">{company.businessSize}</div>
                                 <div className="text-xs text-gray-500 lg:hidden">
-                                  <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
-                                    {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
+                                  <Badge 
+                                    variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
+                                    className="text-xs flex items-center gap-1"
+                                    data-testid={`sync-status-badge-mobile-${company.id}`}
+                                  >
+                                    {getCompanySyncStatus(company.id, company) === "processing" && (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    )}
+                                    {getSyncStatusText(getCompanySyncStatus(company.id, company))}
                                   </Badge>
                                 </div>
                               </div>
@@ -2668,8 +2785,15 @@ export default function AdminPanel() {
                             <TableCell className="text-xs">{company.industryVertical}</TableCell>
                             <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <Badge variant={benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "secondary" : "outline"} className="text-xs">
-                                {benchmarkStats?.companiesWithMetricsIds?.includes(company.id) ? "Verified" : "Pending"}
+                              <Badge 
+                                variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
+                                className="text-xs flex items-center gap-1"
+                                data-testid={`sync-status-badge-desktop-${company.id}`}
+                              >
+                                {getCompanySyncStatus(company.id, company) === "processing" && (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                )}
+                                {getSyncStatusText(getCompanySyncStatus(company.id, company))}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -2693,6 +2817,9 @@ export default function AdminPanel() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={async () => {
+                                  const currentStatus = getCompanySyncStatus(company.id, company);
+                                  if (currentStatus === "processing") return;
+                                  
                                   try {
                                     toast({
                                       title: "Syncing company...",
@@ -2729,8 +2856,14 @@ export default function AdminPanel() {
                                 }}
                                 title="Sync from SEMrush"
                                 className="h-8 w-8 p-0"
+                                disabled={getCompanySyncStatus(company.id, company) === "processing" || isBulkSyncInProgress}
+                                data-testid={`sync-button-desktop-${company.id}`}
                               >
-                                <RefreshCw className="h-4 w-4" />
+                                {getCompanySyncStatus(company.id, company) === "processing" ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4" />
+                                )}
                               </Button>
                               
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
