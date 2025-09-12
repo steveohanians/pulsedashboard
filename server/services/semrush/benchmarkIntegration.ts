@@ -158,10 +158,13 @@ export class BenchmarkIntegration {
       await this.updateIndustryAverages();
       result.averagesUpdated = true;
 
-      // Step 6: Update company sync status to verified
-      await this.updateCompanySyncStatus(company.id, 'verified', emitProgressEvents);
+      // Step 6: Update company sync status based on whether we stored any data
+      const hasValidData = result.metricsStored > 0 || result.trafficChannelsStored > 0 || result.deviceDistributionStored > 0;
+      const finalStatus = hasValidData ? 'verified' : 'failed';
+      
+      await this.updateCompanySyncStatus(company.id, finalStatus, emitProgressEvents);
 
-      result.success = true;
+      result.success = hasValidData;
       
       logger.info('Successfully completed SEMrush integration', {
         companyId: company.id,
@@ -177,8 +180,10 @@ export class BenchmarkIntegration {
         sseEventEmitter.emitBenchmarkSyncCompleted({
           companyId: company.id,
           companyName: company.name,
-          success: true,
-          message: `Successfully synced ${result.periodsProcessed} periods with ${result.metricsStored} metrics`,
+          success: result.success,
+          message: result.success 
+            ? `Successfully synced ${result.periodsProcessed} periods with ${result.metricsStored} metrics`
+            : `No valid data found after processing ${result.periodsProcessed} periods`,
           periodsProcessed: result.periodsProcessed,
           metricsStored: result.metricsStored
         });
