@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileText, Check, X, AlertCircle } from "lucide-react";
+import { Upload, FileText, Check, X, AlertCircle, Search, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CSVImportModalProps {
@@ -50,6 +50,30 @@ interface ImportResults {
   failed: number;
   /** Detailed error messages for failed imports */
   errors: string[];
+}
+
+/** Validation results from the backend validation endpoint */
+interface ValidationResults {
+  /** Total number of rows analyzed */
+  totalRows: number;
+  /** Number of valid rows ready for import */
+  validRows: number;
+  /** Number of duplicate rows detected */
+  duplicateRows: number;
+  /** Number of invalid rows with errors */
+  invalidRows: number;
+  /** Whether import operation can proceed */
+  canImport: boolean;
+  /** Detailed validation data for each row */
+  validation: {
+    results: Array<{
+      status: 'valid' | 'duplicate' | 'invalid';
+      row: Record<string, string>;
+      cleanedData?: Record<string, any>;
+      duplicateMatch?: Record<string, any>;
+      errors?: string[];
+    }>;
+  };
 }
 
 /** Field mapping configuration with user-friendly labels */
@@ -88,7 +112,7 @@ const fieldLabels: Record<string, string> = {
  */
 export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImportModalProps) {
   /** Current step in the import workflow process */
-  const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'results'>('upload');
+  const [step, setStep] = useState<'upload' | 'mapping' | 'validation' | 'importing' | 'results'>('upload');
   /** Currently selected CSV file for processing */
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   /** Parsed CSV data with headers and preview rows */
@@ -97,6 +121,8 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   /** Final import operation results and metrics */
   const [importResults, setImportResults] = useState<ImportResults | null>(null);
+  /** Validation results from pre-import validation check */
+  const [validationResults, setValidationResults] = useState<ValidationResults | null>(null);
   /** Loading state for async operations (file processing, import) */
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -172,14 +198,14 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
   };
 
   /**
-   * Executes CSV data import with comprehensive validation and error handling.
-   * Validates required field mappings, processes data through backend pipeline,
-   * and provides detailed success/failure reporting with metrics.
+   * Validates CSV data before import with comprehensive duplicate detection.
+   * Calls the backend validation endpoint to analyze data quality, detect duplicates,
+   * and provide detailed feedback on import readiness.
    */
-  const handleImport = async () => {
+  const handleValidation = async () => {
     if (!selectedFile || !previewData) return;
 
-    // Comprehensive validation of required field mappings
+    // Validate required field mappings before sending to backend
     const requiredFields = ['name', 'websiteUrl', 'industryVertical', 'businessSize'];
     const missingMappings = requiredFields.filter(field => !columnMapping[field]);
     
@@ -187,6 +213,58 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
       toast({
         title: "Missing required mappings",
         description: `Please map the following required fields: ${missingMappings.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('csvFile', selectedFile);
+      formData.append('columnMapping', JSON.stringify(columnMapping));
+
+      const response = await fetch('/api/admin/benchmark-companies/csv-validate', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to validate CSV');
+      }
+
+      const data = await response.json();
+      setValidationResults(data.data);
+      setStep('validation');
+      
+      toast({
+        title: "Validation Complete",
+        description: data.message,
+        variant: data.data.canImport ? "default" : "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Validation failed",
+        description: "Failed to validate CSV data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Executes CSV data import with comprehensive validation and error handling.
+   * Uses the validated data and processes through backend pipeline.
+   */
+  const handleImport = async () => {
+    if (!selectedFile || !validationResults) return;
+
+    if (!validationResults.canImport) {
+      toast({
+        title: "Cannot import",
+        description: "Please resolve validation issues before importing.",
         variant: "destructive",
       });
       return;
@@ -211,11 +289,15 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
       }
 
       const data = await response.json();
-      setImportResults(data.results);
+      setImportResults({
+        successful: data.results?.successful || 0,
+        failed: data.results?.failed || 0,
+        errors: data.results?.errors || []
+      });
       setStep('results');
       
       // Trigger completion callback for successful imports
-      if (data.results.successful > 0) {
+      if (data.results && data.results.successful > 0) {
         onImportComplete();
       }
     } catch (error) {
@@ -224,7 +306,7 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
         description: "Failed to import CSV data. Please try again.",
         variant: "destructive",
       });
-      setStep('mapping');
+      setStep('validation');
     } finally {
       setIsLoading(false);
     }
@@ -240,6 +322,7 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
     setPreviewData(null);
     setColumnMapping({});
     setImportResults(null);
+    setValidationResults(null);
     onOpenChange(false);
   };
 
@@ -357,6 +440,150 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
           </div>
         )}
 
+        {step === 'validation' && validationResults && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4 flex items-center space-x-2">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+                <span>Validation Results</span>
+              </h3>
+              
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-green-600">{validationResults.validRows}</div>
+                    <div className="text-sm text-gray-500">Valid Rows</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-orange-600">{validationResults.duplicateRows}</div>
+                    <div className="text-sm text-gray-500">Duplicates</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-red-600">{validationResults.invalidRows}</div>
+                    <div className="text-sm text-gray-500">Invalid</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-blue-600">{validationResults.totalRows}</div>
+                    <div className="text-sm text-gray-500">Total Rows</div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Import Readiness Status */}
+              <div className={`p-4 rounded-lg mb-6 ${
+                validationResults.canImport 
+                  ? 'bg-green-50 border border-green-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  {validationResults.canImport ? (
+                    <Check className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <X className="h-5 w-5 text-red-600" />
+                  )}
+                  <span className={`font-medium ${
+                    validationResults.canImport ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    {validationResults.canImport 
+                      ? `Ready to import ${validationResults.validRows} valid rows` 
+                      : 'Cannot import - please resolve validation issues'
+                    }
+                  </span>
+                </div>
+                
+                {!validationResults.canImport && validationResults.validRows === 0 && (
+                  <p className="text-sm text-red-700 mt-2">
+                    No valid rows found. Please check your data and column mappings.
+                  </p>
+                )}
+                
+                {validationResults.duplicateRows > 0 && (
+                  <p className="text-sm text-orange-700 mt-2">
+                    {validationResults.duplicateRows} duplicate rows will be skipped during import.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Detailed Results Table */}
+            {validationResults.validation && validationResults.validation.results && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Row-by-Row Validation Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-96 overflow-y-auto">
+                    <div className="space-y-2">
+                      {validationResults.validation.results.map((result, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-3 rounded-lg border ${
+                            result.status === 'valid' 
+                              ? 'border-green-200 bg-green-50' 
+                              : result.status === 'duplicate'
+                              ? 'border-orange-200 bg-orange-50'
+                              : 'border-red-200 bg-red-50'
+                          }`}
+                          data-testid={`validation-row-${index}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-2">
+                              {result.status === 'valid' && <Check className="h-4 w-4 text-green-600" />}
+                              {result.status === 'duplicate' && <AlertCircle className="h-4 w-4 text-orange-600" />}
+                              {result.status === 'invalid' && <X className="h-4 w-4 text-red-600" />}
+                              <span className={`text-sm font-medium capitalize ${
+                                result.status === 'valid' ? 'text-green-800'
+                                : result.status === 'duplicate' ? 'text-orange-800'
+                                : 'text-red-800'
+                              }`}>
+                                {result.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">Row {index + 1}</span>
+                          </div>
+                          
+                          <div className="mt-2 text-sm text-gray-700">
+                            <strong>Company:</strong> {result.row[columnMapping.name] || 'N/A'} 
+                            {result.row[columnMapping.websiteUrl] && (
+                              <> | <strong>URL:</strong> {result.row[columnMapping.websiteUrl]}</>
+                            )}
+                          </div>
+                          
+                          {result.status === 'duplicate' && result.duplicateMatch && (
+                            <div className="mt-2 p-2 bg-orange-100 rounded text-sm">
+                              <strong>Matches existing:</strong> {result.duplicateMatch.name}
+                              {result.duplicateMatch.websiteUrl && (
+                                <> ({result.duplicateMatch.websiteUrl})</>
+                              )}
+                            </div>
+                          )}
+                          
+                          {result.status === 'invalid' && result.errors && result.errors.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {result.errors.map((error, errorIndex) => (
+                                <div key={errorIndex} className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded">
+                                  {error}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
         {step === 'importing' && (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -427,11 +654,26 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
           
           {step === 'mapping' && (
             <>
-              <Button variant="outline" onClick={() => setStep('upload')}>
+              <Button variant="outline" onClick={() => setStep('upload')} data-testid="button-back-upload">
                 Back
               </Button>
-              <Button onClick={handleImport}>
-                Import Data
+              <Button onClick={handleValidation} disabled={isLoading} data-testid="button-validate">
+                {isLoading ? "Validating..." : "Validate Data"}
+              </Button>
+            </>
+          )}
+          
+          {step === 'validation' && (
+            <>
+              <Button variant="outline" onClick={() => setStep('mapping')} data-testid="button-back-mapping">
+                Back to Mapping
+              </Button>
+              <Button 
+                onClick={handleImport} 
+                disabled={!validationResults?.canImport || isLoading}
+                data-testid="button-import-validated"
+              >
+                {isLoading ? "Importing..." : `Import ${validationResults?.validRows || 0} Valid Rows`}
               </Button>
             </>
           )}

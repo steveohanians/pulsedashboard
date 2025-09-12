@@ -62,9 +62,31 @@ export class BenchmarkService extends BaseService {
   }
 
   /**
+   * Validate CSV data before import
+   */
+  async csvValidate(file: File, columnMapping: Record<string, string>): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      totalRows: number;
+      validRows: number;
+      duplicateRows: number;
+      invalidRows: number;
+      canImport: boolean;
+      validation: any;
+    };
+  }> {
+    const formData = new FormData();
+    formData.append('csvFile', file);
+    formData.append('columnMapping', JSON.stringify(columnMapping));
+    
+    return this.request('POST', '/csv-validate', formData);
+  }
+
+  /**
    * Import CSV data
    */
-  async csvImport(file: File): Promise<{
+  async csvImport(file: File, columnMapping: Record<string, string>): Promise<{
     imported: number;
     skipped: number;
     errors: string[];
@@ -72,6 +94,7 @@ export class BenchmarkService extends BaseService {
   }> {
     const formData = new FormData();
     formData.append('csvFile', file);
+    formData.append('columnMapping', JSON.stringify(columnMapping));
     
     const result = await this.request('POST', '/csv-import', formData) as {
       imported: number;
