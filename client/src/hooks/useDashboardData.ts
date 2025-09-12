@@ -108,11 +108,11 @@ export function useDashboardData({
       }
     },
     enabled: !!user?.clientId,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes - historical data doesn't change frequently
     refetchOnMount: 'always',
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnReconnect: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disable to prevent unnecessary tab switching refetches
   });
 
   // Process dashboard data using UnifiedDataService

@@ -22,9 +22,9 @@ export function useAIInsights(clientId: string | undefined, period: string | und
     queryKey: ["/api/ai-insights", clientId, canonicalPeriod],
     enabled,
     retry: 0,
-    staleTime: 0,
-    refetchOnMount: "always",
-    gcTime: 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes - users can regenerate insights
+    refetchOnMount: true,
+    gcTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       const url = `/api/ai-insights/${encodeURIComponent(clientId!)}` +
                   `?period=${encodeURIComponent(canonicalPeriod!)}`;
