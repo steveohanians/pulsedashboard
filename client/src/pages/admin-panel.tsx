@@ -2556,7 +2556,7 @@ export default function AdminPanel() {
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
                                 className={`text-xs ${
                                   getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
-                                    ? "bg-primary/10 text-primary border-primary/20" 
+                                    ? "text-primary border-primary" 
                                     : ""
                                 }`}
                                 data-testid={`sync-status-badge-${company.id}`}
@@ -2798,7 +2798,7 @@ export default function AdminPanel() {
                                     variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
                                     className={`text-xs ${
                                       getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
-                                        ? "bg-primary/10 text-primary border-primary/20" 
+                                        ? "text-primary border-primary" 
                                         : ""
                                     }`}
                                     data-testid={`sync-status-badge-mobile-${company.id}`}
@@ -2819,7 +2819,7 @@ export default function AdminPanel() {
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
                                 className={`text-xs ${
                                   getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
-                                    ? "bg-primary/10 text-primary border-primary/20" 
+                                    ? "text-primary border-primary" 
                                     : ""
                                 }`}
                                 data-testid={`sync-status-badge-desktop-${company.id}`}
