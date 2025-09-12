@@ -25,7 +25,7 @@ function Router() {
     <ErrorBoundary>
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
-        <ProtectedRoute path="/admin" component={AdminPanel} />
+        <ProtectedRoute path="/admin-panel" component={AdminPanel} />
         <ProtectedRoute path="/brand-signals" component={BrandSignals} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />

@@ -25,11 +25,41 @@ router.post('/sync/:companyId', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
+    // Update company status to processing and broadcast via SSE
+    await storage.updateBenchmarkCompany(companyId, { syncStatus: 'processing' });
+    logger.debug('Updated benchmark company sync status', { companyId, status: 'processing' });
+    
+    // Initialize sync manager to get SSE broadcasting capabilities
+    const syncManager = new BenchmarkSyncManager(storage);
+    
+    // Create an individual sync job for proper SSE broadcasting
+    const jobId = 'individual';
+    await syncManager.updateSyncProgress(jobId, {
+      processedCompanies: 0,
+      currentCompanyName: company.name,
+      message: `Processing ${company.name}`,
+      phase: 'initializing'
+    });
+    
     // Initialize integration service
     const benchmarkIntegration = new BenchmarkIntegration(storage);
     
-    // Process the company through SEMrush
-    const result = await benchmarkIntegration.processNewBenchmarkCompany(company);
+    // Process the company through SEMrush (use incremental sync for individual updates)
+    const result = await benchmarkIntegration.processNewBenchmarkCompany(company, { 
+      incrementalSync: true,
+      emitProgressEvents: true 
+    });
+    
+    // Complete the sync job
+    await syncManager.updateSyncProgress(jobId, {
+      processedCompanies: 1,
+      currentCompanyName: company.name,
+      message: `Completed ${company.name}`,
+      phase: 'completed'
+    });
+    
+    // Broadcast completion
+    logger.info('Broadcasting benchmark sync completion', { jobId: 'individual', totalCompanies: 1, processedCompanies: 1 });
     
     if (result.success) {
       logger.info(`[Benchmark Admin] Successfully synced ${company.name}`, result);
@@ -39,11 +69,21 @@ router.post('/sync/:companyId', requireAuth, requireAdmin, async (req, res) => {
         data: result
       });
     } else {
+      // Update status to failed on error
+      await storage.updateBenchmarkCompany(companyId, { syncStatus: 'failed' });
       throw new Error(result.error || 'Sync failed');
     }
     
   } catch (error) {
     logger.error('[Benchmark Admin] Sync failed:', error);
+    
+    // Update status to failed on error
+    try {
+      await storage.updateBenchmarkCompany(req.params.companyId, { syncStatus: 'failed' });
+    } catch (updateError) {
+      logger.error('Failed to update company status to failed:', updateError);
+    }
+    
     res.status(500).json({
       success: false,
       error: (error as Error).message || 'Failed to sync benchmark company'
@@ -110,7 +150,7 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
             await syncManager.updateSyncProgress(jobId, {
               currentCompanyId: company.id,
               currentCompanyName: company.name,
-              currentPhase: 'syncing',
+              phase: 'syncing',
               message: `Syncing ${company.name} (${i + 1}/${activeCompanies.length})`
             });
             
@@ -135,9 +175,7 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
         }
         
         // Complete the sync job
-        await syncManager.completeSyncJob(jobId, {
-          finalMessage: `Completed bulk sync: ${successCount} successful, ${failCount} failed`
-        });
+        await syncManager.completeSyncJob(jobId);
         
         logger.info('[Benchmark Admin] Bulk sync job completed', {
           jobId,

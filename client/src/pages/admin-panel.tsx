@@ -239,9 +239,17 @@ export default function AdminPanel() {
   // Track bulk sync state
   const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
   
+  // Track individual company sync state (to show Processing status longer)
+  const [syncingCompanyIds, setSyncingCompanyIds] = useState<Set<string>>(new Set());
+  
   // Helper function to get real-time sync status for a company
   const getCompanySyncStatus = (companyId: string, company: BenchmarkCompany): "pending" | "processing" | "verified" | "completed" | "error" | "failed" => {
-    // First check real-time status from SSE
+    // Check if company is currently being synced (local state)
+    if (syncingCompanyIds.has(companyId)) {
+      return "processing";
+    }
+    
+    // Check real-time status from SSE
     const realtimeStatus = benchmarkSyncStream.getCompanyStatus(companyId);
     if (realtimeStatus) {
       return realtimeStatus;
@@ -2568,6 +2576,9 @@ export default function AdminPanel() {
                                 const currentStatus = getCompanySyncStatus(company.id, company);
                                 if (currentStatus === "processing") return;
                                 
+                                // Set company as processing immediately for UI feedback
+                                setSyncingCompanyIds(prev => new Set([...prev, company.id]));
+                                
                                 try {
                                   toast({
                                     title: "Syncing company...",
@@ -2581,6 +2592,9 @@ export default function AdminPanel() {
                                   });
                                   
                                   const result = await response.json();
+                                  
+                                  // Keep processing status visible for at least 3 seconds
+                                  await new Promise(resolve => setTimeout(resolve, 3000));
                                   
                                   if (result.success) {
                                     toast({
@@ -2599,6 +2613,13 @@ export default function AdminPanel() {
                                     title: "Sync Failed",
                                     description: `Failed to sync ${company.name}: ${(error as Error).message}`,
                                     variant: "destructive",
+                                  });
+                                } finally {
+                                  // Remove company from processing state
+                                  setSyncingCompanyIds(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.delete(company.id);
+                                    return newSet;
                                   });
                                 }
                               }}
@@ -2821,6 +2842,9 @@ export default function AdminPanel() {
                                   const currentStatus = getCompanySyncStatus(company.id, company);
                                   if (currentStatus === "processing") return;
                                   
+                                  // Set company as processing immediately for UI feedback
+                                  setSyncingCompanyIds(prev => new Set([...prev, company.id]));
+                                  
                                   try {
                                     toast({
                                       title: "Syncing company...",
@@ -2834,6 +2858,9 @@ export default function AdminPanel() {
                                     });
                                     
                                     const result = await response.json();
+                                    
+                                    // Keep processing status visible for at least 3 seconds
+                                    await new Promise(resolve => setTimeout(resolve, 3000));
                                     
                                     if (result.success) {
                                       toast({
@@ -2852,6 +2879,13 @@ export default function AdminPanel() {
                                       title: "Sync Failed",
                                       description: `Failed to sync ${company.name}: ${(error as Error).message}`,
                                       variant: "destructive",
+                                    });
+                                  } finally {
+                                    // Remove company from processing state
+                                    setSyncingCompanyIds(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(company.id);
+                                      return newSet;
                                     });
                                   }
                                 }}
