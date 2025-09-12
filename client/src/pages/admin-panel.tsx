@@ -2774,7 +2774,7 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 lg:hidden">
                                   <Badge 
                                     variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                    className="text-xs flex items-center gap-1"
+                                    className={`text-xs flex items-center ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : ""}`}
                                     data-testid={`sync-status-badge-mobile-${company.id}`}
                                   >
                                     {getCompanySyncStatus(company.id, company) === "processing" && (
@@ -2791,7 +2791,7 @@ export default function AdminPanel() {
                             <TableCell className="hidden lg:table-cell">
                               <Badge 
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                className="text-xs flex items-center gap-1"
+                                className={`text-xs flex items-center ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : ""}`}
                                 data-testid={`sync-status-badge-desktop-${company.id}`}
                               >
                                 {getCompanySyncStatus(company.id, company) === "processing" && (
