@@ -3982,7 +3982,62 @@ Output: Numbered list with tags.
     }
   });
 
-  // CSV Import endpoint - import data with column mapping
+  // CSV Validation endpoint - validate data and detect duplicates before import
+  app.post("/api/admin/benchmark-companies/csv-validate", requireAdmin, uploadLimiter, upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file || !req.body.columnMapping) {
+        return res.status(400).json({ message: "CSV file and column mapping required" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const columnMapping = JSON.parse(req.body.columnMapping);
+      
+      const records = parse(csvData, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      }) as Record<string, any>[];
+
+      if (records.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
+      }
+
+      // Get existing benchmark companies for duplicate detection
+      const existingCompanies = await storage.getBenchmarkCompanies();
+      
+      // Import duplicate detection function
+      const { detectDuplicates } = await import('./utils/duplicateDetection');
+      
+      // Run duplicate detection
+      const validationResults = detectDuplicates(records, columnMapping, existingCompanies);
+      
+      logger.info("CSV validation completed", {
+        totalRows: validationResults.totalRows,
+        validRows: validationResults.validRows,
+        duplicateRows: validationResults.duplicateRows,
+        invalidRows: validationResults.invalidRows
+      });
+
+      res.json({
+        success: true,
+        message: `Validation completed. ${validationResults.validRows} valid, ${validationResults.duplicateRows} duplicates, ${validationResults.invalidRows} invalid.`,
+        data: {
+          totalRows: validationResults.totalRows,
+          validRows: validationResults.validRows,
+          duplicateRows: validationResults.duplicateRows,
+          invalidRows: validationResults.invalidRows,
+          canImport: validationResults.validRows > 0,
+          validation: validationResults
+        }
+      });
+      
+    } catch (error) {
+      logger.error("Error validating CSV", { error: (error as Error).message, stack: (error as Error).stack });
+      res.status(500).json({ message: "Failed to validate CSV data" });
+    }
+  });
+
+  // CSV Import endpoint - import data with column mapping and duplicate detection
   app.post("/api/admin/benchmark-companies/csv-import", requireAdmin, uploadLimiter, upload.single('csvFile'), async (req, res) => {
     try {
       if (!req.file || !req.body.columnMapping) {
@@ -3996,59 +4051,90 @@ Output: Numbered list with tags.
         columns: true,
         skip_empty_lines: true,
         trim: true
+      }) as Record<string, any>[];
+
+      if (records.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
+      }
+
+      // CRITICAL: Get existing companies and run duplicate detection BEFORE any database inserts
+      const existingCompanies = await storage.getBenchmarkCompanies();
+      
+      // Import duplicate detection function
+      const { detectDuplicates } = await import('./utils/duplicateDetection');
+      
+      // Run duplicate detection to filter out duplicates and invalid rows
+      const validationResults = detectDuplicates(records, columnMapping, existingCompanies);
+      
+      logger.info("CSV import validation completed", {
+        totalRows: validationResults.totalRows,
+        validRows: validationResults.validRows,
+        duplicateRows: validationResults.duplicateRows,
+        invalidRows: validationResults.invalidRows
       });
 
       const importResults = {
-        successful: 0,
+        imported: 0,
+        skippedDuplicates: validationResults.duplicateRows,
+        skippedInvalid: validationResults.invalidRows,
         failed: 0,
         errors: [] as string[]
       };
 
-      for (let i = 0; i < records.length; i++) {
+      // Only process rows marked as 'valid' - skip duplicates and invalid rows for data safety
+      const validRows = validationResults.results.filter(result => result.status === 'valid');
+      
+      for (const result of validRows) {
         try {
-          const record = records[i];
+          // Use the cleaned data from validation which ensures consistency
+          const cleanedData = result.cleanedData;
           
-          // Map CSV columns to database fields
-          const mappedData: any = {};
-          
-          Object.entries(columnMapping).forEach(([dbField, csvColumn]) => {
-            if (csvColumn && (record as any)[csvColumn as string] !== undefined) {
-              let value = (record as any)[csvColumn as string];
-              
-              // Handle boolean fields
-              if (dbField === 'sourceVerified' || dbField === 'active') {
-                value = ['true', '1', 'yes', 'y'].includes(value.toLowerCase());
-              }
-              
-              mappedData[dbField] = value;
-            }
-          });
-
-          // Set defaults for required fields if not mapped
-          if (!mappedData.sourceVerified) mappedData.sourceVerified = false;
-          if (!mappedData.active) mappedData.active = true;
-          
-          // Validate required fields
-          if (!mappedData.name || !mappedData.websiteUrl || !mappedData.industryVertical || !mappedData.businessSize) {
-            throw new Error(`Row ${i + 1}: Missing required fields (name, websiteUrl, industryVertical, businessSize)`);
-          }
+          // Convert string booleans to actual booleans
+          const mappedData = {
+            name: cleanedData.name,
+            websiteUrl: cleanedData.websiteUrl,
+            industryVertical: cleanedData.industryVertical,
+            businessSize: cleanedData.businessSize,
+            sourceVerified: cleanedData.sourceVerified === 'true',
+            active: cleanedData.active === 'true'
+          };
 
           // Validate the data against schema
           const validatedData = insertBenchmarkCompanySchema.parse(mappedData);
           
           // Create the benchmark company
           await storage.createBenchmarkCompany(validatedData);
-          importResults.successful++;
+          importResults.imported++;
           
         } catch (error) {
           importResults.failed++;
-          importResults.errors.push(`Row ${i + 1}: ${(error as Error).message}`);
+          importResults.errors.push(`Row ${result.row}: ${(error as Error).message}`);
         }
       }
 
+      // Log duplicate details for audit purposes
+      const duplicateRows = validationResults.results.filter(r => r.status === 'duplicate');
+      if (duplicateRows.length > 0) {
+        logger.info("CSV import skipped duplicates", {
+          count: duplicateRows.length,
+          examples: duplicateRows.slice(0, 3).map(r => ({
+            row: r.row,
+            name: r.cleanedData.name,
+            reason: r.duplicateInfo?.matchReason,
+            error: r.errors[0]
+          }))
+        });
+      }
+
       res.json({
-        message: `Import completed. ${importResults.successful} successful, ${importResults.failed} failed.`,
-        results: importResults
+        message: `Import completed. ${importResults.imported} imported, ${importResults.skippedDuplicates} duplicates skipped, ${importResults.skippedInvalid} invalid skipped, ${importResults.failed} failed.`,
+        results: importResults,
+        validation: {
+          totalRows: validationResults.totalRows,
+          validRows: validationResults.validRows,
+          duplicateRows: validationResults.duplicateRows,
+          invalidRows: validationResults.invalidRows
+        }
       });
       
     } catch (error) {
