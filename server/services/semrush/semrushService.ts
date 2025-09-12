@@ -103,6 +103,8 @@ export class SemrushService implements ISemrushValidator {
       }
 
       const text = await response.text();
+      // Force logging of API response to investigate Claroty issue
+      logger.info('SEMrush API Response', { domain, period, responseText: text.substring(0, 500) });
       logger.debug('SEMrush main metrics response', { domain, period, response: text });
 
       if (text.includes('ERROR')) {
