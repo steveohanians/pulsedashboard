@@ -74,6 +74,13 @@ interface UseBenchmarkSyncStreamReturn {
   // Current sync progress data
   syncProgress: BenchmarkSyncProgressData | null;
   
+  // Total progress computed from sync progress
+  totalProgress: {
+    total: number;
+    completed: number;
+    failed: number;
+  };
+  
   // Company status updates
   companySyncStatuses: Map<string, CompanySyncStatus>;
   
@@ -153,6 +160,13 @@ export function useBenchmarkSyncStream(
   }, [getCompanyStatus]);
 
   const isSyncInProgress = Boolean(activeSyncJob && syncProgress && syncProgress.currentPhase !== 'completed');
+
+  // Compute total progress from sync progress data
+  const totalProgress = {
+    total: syncProgress?.totalCompanies || 0,
+    completed: syncProgress?.processedCompanies || 0,
+    failed: syncProgress?.failedCompanies || 0,
+  };
 
   // Connect to SSE stream
   const connect = useCallback(() => {
@@ -380,6 +394,7 @@ export function useBenchmarkSyncStream(
 
   return {
     syncProgress,
+    totalProgress,
     companySyncStatuses,
     activeSyncJob,
     isConnected,
