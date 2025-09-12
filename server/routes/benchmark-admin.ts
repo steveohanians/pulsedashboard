@@ -70,64 +70,96 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
-    // Initialize integration service
+    // Initialize sync manager and integration service
+    const syncManager = new BenchmarkSyncManager(storage);
     const benchmarkIntegration = new BenchmarkIntegration(storage);
     
-    // Track results
-    const results = {
-      total: activeCompanies.length,
-      successful: 0,
-      failed: 0,
-      details: [] as any[]
-    };
+    // Create a bulk sync job
+    const jobId = await syncManager.createSyncJob({
+      jobType: 'bulk',
+      companyIds: activeCompanies.map(c => c.id),
+      incrementalSync: false,
+      initiatedByUserId: (req.user as any)?.id
+    });
     
-    // Process each company
-    for (const company of activeCompanies) {
-      try {
-        const result = await benchmarkIntegration.processNewBenchmarkCompany(company);
-        
-        if (result.success) {
-          results.successful++;
-          results.details.push({
-            companyId: company.id,
-            companyName: company.name,
-            success: true,
-            metricsStored: result.metricsStored
-          });
-        } else {
-          results.failed++;
-          results.details.push({
-            companyId: company.id,
-            companyName: company.name,
-            success: false,
-            error: result.error
-          });
-        }
-      } catch (error) {
-        results.failed++;
-        results.details.push({
-          companyId: company.id,
-          companyName: company.name,
-          success: false,
-          error: (error as Error).message
-        });
-        logger.error(`[Benchmark Admin] Failed to sync ${company.name}:`, error);
-      }
-    }
+    // Start the sync job (this sends initial SSE events)
+    await syncManager.startSyncJob(jobId);
     
-    logger.info('[Benchmark Admin] Bulk sync completed', results);
-    
+    // Return immediately - the sync will continue in the background with SSE updates
     res.json({
-      success: results.failed === 0,
-      message: `Synced ${results.successful} of ${results.total} companies`,
-      data: results
+      success: true,
+      message: `Started bulk sync for ${activeCompanies.length} companies`,
+      data: { 
+        jobId,
+        companiesQueued: activeCompanies.length,
+        status: 'started'
+      }
+    });
+    
+    // Process companies asynchronously with proper SSE events
+    (async () => {
+      try {
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (let i = 0; i < activeCompanies.length; i++) {
+          const company = activeCompanies[i];
+          
+          try {
+            // Update progress before processing each company
+            await syncManager.updateSyncProgress(jobId, {
+              currentCompanyId: company.id,
+              currentCompanyName: company.name,
+              currentPhase: 'syncing',
+              message: `Syncing ${company.name} (${i + 1}/${activeCompanies.length})`
+            });
+            
+            // Process the company
+            const result = await benchmarkIntegration.processNewBenchmarkCompany(company, {
+              syncJobId: jobId,
+              emitProgressEvents: true
+            });
+            
+            if (result.success) {
+              successCount++;
+              await syncManager.recordCompanySuccess(jobId, company.id, result);
+            } else {
+              failCount++;
+              await syncManager.recordCompanyFailure(jobId, company.id, result.error || 'Unknown error');
+            }
+          } catch (error) {
+            failCount++;
+            await syncManager.recordCompanyFailure(jobId, company.id, (error as Error).message);
+            logger.error(`[Benchmark Admin] Failed to sync ${company.name}:`, error);
+          }
+        }
+        
+        // Complete the sync job
+        await syncManager.completeSyncJob(jobId, {
+          finalMessage: `Completed bulk sync: ${successCount} successful, ${failCount} failed`
+        });
+        
+        logger.info('[Benchmark Admin] Bulk sync job completed', {
+          jobId,
+          successCount,
+          failCount,
+          total: activeCompanies.length
+        });
+        
+      } catch (error) {
+        // Fail the sync job on any critical error
+        await syncManager.failSyncJob(jobId, (error as Error).message);
+        logger.error('[Benchmark Admin] Bulk sync job failed:', error);
+      }
+    })().catch((error) => {
+      logger.error('[Benchmark Admin] Async bulk sync handler failed:', error);
     });
     
   } catch (error) {
-    logger.error('[Benchmark Admin] Bulk sync failed:', error);
+    logger.error('[Benchmark Admin] Failed to start bulk sync:', error);
     res.status(500).json({
       success: false,
-      error: (error as Error).message || 'Failed to sync benchmark companies'
+      error: (error as Error).message || 'Failed to start bulk sync'
     });
   }
 });
