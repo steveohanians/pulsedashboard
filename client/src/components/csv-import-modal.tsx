@@ -74,7 +74,8 @@ interface ValidationResults {
   validation: {
     results: Array<{
       status: 'valid' | 'duplicate' | 'invalid';
-      row: Record<string, string>;
+      row: number;
+      originalData: Record<string, string>;
       cleanedData?: Record<string, any>;
       duplicateMatch?: Record<string, any>;
       errors?: string[];
@@ -568,17 +569,13 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
                             <strong>Company:</strong> {(() => {
                               // Find the CSV header that maps to the 'name' field
                               const nameHeader = Object.entries(columnMapping).find(([field, header]) => field === 'name')?.[1];
-                              console.log('Debug - columnMapping:', columnMapping);
-                              console.log('Debug - nameHeader:', nameHeader);
-                              console.log('Debug - result.row:', result.row);
-                              console.log('Debug - result.row[nameHeader]:', nameHeader ? result.row?.[nameHeader] : 'No nameHeader');
-                              return nameHeader ? result.row?.[nameHeader] || 'N/A' : 'N/A';
+                              return nameHeader ? result.originalData?.[nameHeader] || 'N/A' : 'N/A';
                             })()} 
                             {(() => {
                               // Find the CSV header that maps to the 'websiteUrl' field
                               const urlHeader = Object.entries(columnMapping).find(([field, header]) => field === 'websiteUrl')?.[1];
-                              return urlHeader && result.row?.[urlHeader] ? (
-                                <> | <strong>URL:</strong> {result.row[urlHeader]}</>
+                              return urlHeader && result.originalData?.[urlHeader] ? (
+                                <> | <strong>URL:</strong> {result.originalData[urlHeader]}</>
                               ) : null;
                             })()}
                           </div>

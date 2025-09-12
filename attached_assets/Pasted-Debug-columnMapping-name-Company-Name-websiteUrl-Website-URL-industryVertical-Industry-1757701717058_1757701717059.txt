@@ -1,0 +1,28 @@
+Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 44
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 45
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 46
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 47
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 48
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 49
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
+index-C-HPzdYP.js:487 Debug - columnMapping: {name: 'Company Name', websiteUrl: 'Website URL', industryVertical: 'Industry Vertical', businessSize: 'Business Size'}
+index-C-HPzdYP.js:487 Debug - nameHeader: Company Name
+index-C-HPzdYP.js:487 Debug - result.row: 50
+index-C-HPzdYP.js:487 Debug - result.row[nameHeader]: undefined
