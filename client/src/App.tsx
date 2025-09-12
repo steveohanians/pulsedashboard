@@ -16,6 +16,18 @@ import { useEffect } from "react";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useLocation } from "wouter";
+
+// Redirect component for /admin -> /admin-panel
+function AdminRedirect() {
+  const [, navigate] = useLocation();
+  
+  useEffect(() => {
+    navigate('/admin-panel', { replace: true });
+  }, [navigate]);
+  
+  return null;
+}
 
 function Router() {
   // Track page views when routes change
@@ -26,6 +38,7 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/admin-panel" component={AdminPanel} />
+        <ProtectedRoute path="/admin" component={AdminRedirect} />
         <ProtectedRoute path="/brand-signals" component={BrandSignals} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
