@@ -252,22 +252,26 @@ export default function AdminPanel() {
   };
   
   // Get sync status badge variant
-  const getSyncStatusVariant = (status: "pending" | "processing" | "verified" | "error") => {
+  const getSyncStatusVariant = (status: "pending" | "processing" | "verified" | "completed" | "error" | "failed") => {
     switch (status) {
       case "processing": return "default";
-      case "verified": return "secondary";
-      case "error": return "destructive";
+      case "verified":
+      case "completed": return "secondary";
+      case "error":
+      case "failed": return "destructive";
       case "pending":
       default: return "outline";
     }
   };
   
   // Get sync status display text
-  const getSyncStatusText = (status: "pending" | "processing" | "verified" | "error") => {
+  const getSyncStatusText = (status: "pending" | "processing" | "verified" | "completed" | "error" | "failed") => {
     switch (status) {
       case "processing": return "Processing";
-      case "verified": return "Verified";
-      case "error": return "Error";
+      case "verified":
+      case "completed": return "Verified";
+      case "error":
+      case "failed": return "Error";
       case "pending":
       default: return "Pending";
     }
