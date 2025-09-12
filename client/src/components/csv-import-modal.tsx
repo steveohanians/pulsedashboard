@@ -568,6 +568,10 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
                             <strong>Company:</strong> {(() => {
                               // Find the CSV header that maps to the 'name' field
                               const nameHeader = Object.entries(columnMapping).find(([field, header]) => field === 'name')?.[1];
+                              console.log('Debug - columnMapping:', columnMapping);
+                              console.log('Debug - nameHeader:', nameHeader);
+                              console.log('Debug - result.row:', result.row);
+                              console.log('Debug - result.row[nameHeader]:', nameHeader ? result.row?.[nameHeader] : 'No nameHeader');
                               return nameHeader ? result.row?.[nameHeader] || 'N/A' : 'N/A';
                             })()} 
                             {(() => {
