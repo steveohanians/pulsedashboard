@@ -70,10 +70,10 @@ function BusinessSizeEditDialog({ option }: { option: { id: string; value: strin
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     const formData = new FormData(e.target as HTMLFormElement);
     const value = formData.get('value') as string;
-    
+
     try {
       await filterService.update(option.id, { value });
       toast({
@@ -135,10 +135,10 @@ function IndustryVerticalEditDialog({ option }: { option: { id: string; value: s
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     const formData = new FormData(e.target as HTMLFormElement);
     const value = formData.get('value') as string;
-    
+
     try {
       await filterService.update(option.id, { value });
       toast({
@@ -204,11 +204,11 @@ export default function AdminPanel() {
 
   // Event listeners for real-time updates (temporarily disabled for debugging)
   // Note: Will re-enable after confirming admin panel loads successfully
-  
+
   // Form refs for controlled form handling
   const clientFormRef = useRef<HTMLFormElement>(null);
   const companyFormRef = useRef<HTMLFormElement>(null);
-  
+
   // State for controlled form fields
   const [editingBusinessSize, setEditingBusinessSize] = useState<string>("");
   const [editingIndustryVertical, setEditingIndustryVertical] = useState<string>("");
@@ -223,7 +223,7 @@ export default function AdminPanel() {
   const [showDataCheckDialog, setShowDataCheckDialog] = useState(false);
   const [dataCheckResults, setDataCheckResults] = useState<any>(null);
   const [isCheckingData, setIsCheckingData] = useState(false);
-  
+
   // Activity tracking states
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
@@ -238,27 +238,27 @@ export default function AdminPanel() {
 
   // Track bulk sync state
   const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
-  
+
   // Track individual company sync state (to show Processing status longer)
   const [syncingCompanyIds, setSyncingCompanyIds] = useState<Set<string>>(new Set());
-  
+
   // Helper function to get real-time sync status for a company
   const getCompanySyncStatus = (companyId: string, company: BenchmarkCompany): "pending" | "processing" | "verified" | "completed" | "error" | "failed" => {
     // Check if company is currently being synced (local state)
     if (syncingCompanyIds.has(companyId)) {
       return "processing";
     }
-    
+
     // Check real-time status from SSE
     const realtimeStatus = benchmarkSyncStream.getCompanyStatus(companyId);
     if (realtimeStatus) {
       return realtimeStatus;
     }
-    
+
     // Fall back to company.syncStatus or default to pending
     return company.syncStatus || "pending";
   };
-  
+
   // Get sync status badge variant
   const getSyncStatusVariant = (status: "pending" | "processing" | "verified" | "completed" | "error" | "failed") => {
     switch (status) {
@@ -271,7 +271,7 @@ export default function AdminPanel() {
       default: return "outline";
     }
   };
-  
+
   // Get sync status display text
   const getSyncStatusText = (status: "pending" | "processing" | "verified" | "completed" | "error" | "failed") => {
     switch (status) {
@@ -309,7 +309,7 @@ export default function AdminPanel() {
   // Handle persistent sync state and SSE connection status
   useEffect(() => {
     if (activeTab !== "benchmark" || user?.role !== "Admin") return;
-    
+
     // Check if there's ongoing bulk sync activity
     const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
     if (hasActiveSyncs && !isBulkSyncInProgress) {
@@ -317,7 +317,7 @@ export default function AdminPanel() {
     } else if (!hasActiveSyncs && isBulkSyncInProgress) {
       // Bulk sync completed while we were away
       setIsBulkSyncInProgress(false);
-      
+
       // Show completion notification if we missed it
       if (benchmarkSyncStream.totalProgress.completed > 0) {
         toast({
@@ -335,7 +335,7 @@ export default function AdminPanel() {
         benchmarkSyncStream.totalProgress.completed === benchmarkSyncStream.totalProgress.total) {
       // All syncs completed, refresh the data
       queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
-      
+
       if (isBulkSyncInProgress) {
         setIsBulkSyncInProgress(false);
         toast({
@@ -635,14 +635,14 @@ export default function AdminPanel() {
     onSuccess: (response) => {
       setIsDialogOpen(false);
       setEditingItem(null);
-      
+
       // Show immediate success message
       toast({
         title: "Company added - data syncing",
         description: "SEMrush integration started. Charts will update automatically when data is ready (30-60 seconds).",
         duration: APP_CONFIG.toast.success,
       });
-      
+
       // Show detailed integration status after a brief delay
       setTimeout(() => {
         toast({
@@ -651,7 +651,7 @@ export default function AdminPanel() {
           duration: APP_CONFIG.polling.semrushIntegration,
         });
       }, 2000);
-      
+
       // Event system will handle completion notifications automatically
     },
     onError: (error: Error) => {
@@ -764,9 +764,9 @@ export default function AdminPanel() {
       industryVertical: formData.get("industry") as string,
       businessSize: formData.get("businessSize") as string,
     };
-    
 
-    
+
+
     if (!data.name || !data.websiteUrl) {
       toast({
         title: "Validation error",
@@ -775,7 +775,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     updateClientMutation.mutate({ id: editingItem.id, data });
   };
 
@@ -788,7 +788,7 @@ export default function AdminPanel() {
       industryVertical: editingIndustryVertical || formData.get("industry") as string,
       businessSize: editingBusinessSize || editingItem?.businessSize, // Use state value instead of FormData
     };
-    
+
     if (!data.name || !data.websiteUrl) {
       toast({
         title: "Validation error",
@@ -797,7 +797,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     updateCompanyMutation.mutate({ id: editingItem.id, data });
   };
 
@@ -814,11 +814,11 @@ export default function AdminPanel() {
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
     const statusSwitch = form.querySelector('input[name="status"]') as HTMLInputElement;
-    
+
     // Get status value - Switch component provides checked state
     const isActive = statusSwitch?.checked;
     const status = isActive ? "Active" : "Inactive";
-    
+
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -826,9 +826,9 @@ export default function AdminPanel() {
       clientId: (formData.get("clientId") as string) === "none" ? undefined : formData.get("clientId") as string,
       status: status as "Active" | "Inactive",
     };
-    
 
-    
+
+
     if (!data.name || !data.email) {
       toast({
         title: "Validation error",
@@ -837,7 +837,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     updateUserMutation.mutate({ id: editingItem.id, data });
   };
 
@@ -852,7 +852,7 @@ export default function AdminPanel() {
       ga4PropertyId: formData.get("gaPropertyId") as string || null,
       serviceAccountId: formData.get("serviceAccountId") as string || null,
     };
-    
+
     if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
       toast({
         title: "Validation error",
@@ -861,7 +861,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     createClientMutation.mutate(data);
   }
 
@@ -876,10 +876,10 @@ export default function AdminPanel() {
       promptTemplate: formData.get("promptTemplate") as string,
       isActive: formData.has("isActive"),
     };
-    
+
     // Debug logging
     logger.debug("Form data:", { metricName, data });
-    
+
     if (!data.promptTemplate || !metricName) {
       toast({
         title: "Validation error",
@@ -888,7 +888,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     updateMetricPromptMutation.mutate({ metricName, data });
   };
 
@@ -903,7 +903,7 @@ export default function AdminPanel() {
       industryVertical: formData.get("industryVertical") as string,
       businessSize: formData.get("businessSize") as string,
     };
-    
+
     if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
       toast({
         title: "Validation error",
@@ -912,7 +912,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     createBenchmarkCompanyMutation.mutate(data);
   };
 
@@ -927,7 +927,7 @@ export default function AdminPanel() {
       businessSize: formData.get("businessSize") as string,
       description: formData.get("description") as string || undefined,
     };
-    
+
     if (!data.name || !data.websiteUrl || !data.industryVertical || !data.businessSize) {
       toast({
         title: "Validation error",
@@ -936,7 +936,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     createCdPortfolioCompanyMutation.mutate(data);
   };
 
@@ -950,7 +950,7 @@ export default function AdminPanel() {
       businessSize: formData.get("businessSize") as string,
       description: formData.get("description") as string || undefined,
     };
-    
+
     if (!data.name || !data.websiteUrl) {
       toast({
         title: "Validation error",
@@ -959,7 +959,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     updateCdPortfolioCompanyMutation.mutate({ id: editingItem.id, data });
   };
 
@@ -972,7 +972,7 @@ export default function AdminPanel() {
       role: formData.get("role") as "Admin" | "User",
       clientId: (formData.get("clientId") as string) === "none" ? undefined : formData.get("clientId") as string,
     };
-    
+
     if (!data.name || !data.email) {
       toast({
         title: "Validation error",
@@ -981,7 +981,7 @@ export default function AdminPanel() {
       });
       return;
     }
-    
+
     inviteUserMutation.mutate(data);
   };
 
@@ -1002,20 +1002,20 @@ export default function AdminPanel() {
     if (!data || !Array.isArray(data)) {
       return [];
     }
-    
+
     if (!sortConfig) {
       return data;
     }
-    
+
     return [...data].sort((a, b) => {
       let aValue = (a as any)[sortConfig.key];
       let bValue = (b as any)[sortConfig.key];
-      
+
       // Handle null/undefined values - put them at the end
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return 1;
       if (bValue == null) return -1;
-      
+
       // Handle dates/timestamps
       if (aValue instanceof Date || bValue instanceof Date || 
           (typeof aValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(aValue))) {
@@ -1024,7 +1024,7 @@ export default function AdminPanel() {
         const timeDiff = aDate.getTime() - bDate.getTime();
         return sortConfig.direction === 'asc' ? timeDiff : -timeDiff;
       }
-      
+
       // Handle booleans
       if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
         if (aValue === bValue) return 0;
@@ -1032,19 +1032,19 @@ export default function AdminPanel() {
           ? (aValue ? 1 : -1)
           : (aValue ? -1 : 1);
       }
-      
+
       // Handle strings
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortConfig.direction === 'asc' 
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-      
+
       // Handle numbers
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
-      
+
       // Default comparison - convert to strings
       const aStr = String(aValue);
       const bStr = String(bValue);
@@ -1464,7 +1464,7 @@ export default function AdminPanel() {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                            
+
                             {/* Activity Tracking Button - Mobile */}
                             <Button 
                               variant="ghost" 
@@ -1674,7 +1674,7 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                              
+
                               {/* Activity Tracking Button */}
                               <Button 
                                 variant="ghost" 
@@ -1712,16 +1712,16 @@ export default function AdminPanel() {
                         try {
                           setIsCheckingData(true);
                           setShowDataCheckDialog(true);
-                          
+
                           const response = await fetch('/api/debug/verify-client-isolation', {
                             credentials: 'include'
                           });
                           const data = await response.json();
-                          
+
                           // Store results for dialog display
                           setDataCheckResults(data);
-                          
-                          
+
+
                         } catch (error) {
                           toast({
                             title: "Check Failed",
@@ -1737,7 +1737,7 @@ export default function AdminPanel() {
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Check Client Data
                     </Button>
-                    
+
                     {/* Original Add Client Button */}
                     <Button onClick={() => {
                       setEditingItem({ type: 'client' });
@@ -1748,7 +1748,7 @@ export default function AdminPanel() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Loading State */}
                 {clientsLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -1816,7 +1816,7 @@ export default function AdminPanel() {
                                     onClick={() => deleteClientMutation.mutate(client.id)}
                                     disabled={deleteClientMutation.isPending}
                                   >
-                                    {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
+                                    {deleteUserMutation.isPending ? "Deleting..." : "Delete Client"}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -1985,7 +1985,7 @@ export default function AdminPanel() {
                           }
                         }}
                       />
-                      
+
                       {/* GA4 Data Sync Button - Only show if client has GA4 property configured */}
                       {editingItem?.id && editingItem?.ga4PropertyId && /^\d+$/.test(editingItem.ga4PropertyId) && (
                         <div className="space-y-3 border-t pt-4">
@@ -2009,36 +2009,36 @@ export default function AdminPanel() {
                                     description: "This may take 30-60 seconds",
                                     duration: 5000,
                                   });
-                                  
+
                                   const endpoint = `/api/ga4-sync/${editingItem.id}`;
                                   const response = await fetch(endpoint, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     credentials: 'include',
                                   });
-                                  
+
                                   const result = await response.json();
-                                  
+
                                   if (!response.ok || !result.success) {
                                     throw new Error(result.error || 'GA4 sync failed');
                                   }
-                                  
+
                                   // Simply update the lastGA4Sync field with current time
                                   const syncTime = new Date().toISOString();
                                   setEditingItem((prev: any) => ({
                                     ...prev,
                                     lastGA4Sync: syncTime
                                   }));
-                                  
+
                                   toast({
                                     title: "GA4 Sync Complete",
                                     description: `Successfully synced GA4 data. ${result.metricsStored || 0} metrics stored.`,
                                     duration: 5000,
                                   });
-                                  
+
                                   // Refresh the clients list in the background
                                   queryClient.invalidateQueries({ queryKey: AdminQueryKeys.clients() });
-                                  
+
                                 } catch (error) {
                                   toast({
                                     title: "GA4 Sync Failed",
@@ -2066,7 +2066,7 @@ export default function AdminPanel() {
                               )}
                             </Button>
                           </div>
-                          
+
                           {/* Last Sync Status */}
                           {editingItem?.id && editingItem?.ga4PropertyId && (
                             <div className="mt-3 pt-3 border-t border-blue-200 text-xs text-blue-700">
@@ -2079,7 +2079,7 @@ export default function AdminPanel() {
                           )}
                         </div>
                       )}
-                      
+
                       {/* Hidden inputs for form submission */}
                       <input 
                         type="hidden" 
@@ -2093,7 +2093,7 @@ export default function AdminPanel() {
                         name="serviceAccountId" 
                         defaultValue="" 
                       />
-                      
+
                       {/* Icon Section */}
                       <div className="space-y-3">
                         <Label>Client Icon</Label>
@@ -2130,11 +2130,11 @@ export default function AdminPanel() {
                                   });
                                   return;
                                 }
-                                
+
                                 try {
                                   setIsLoading(true);
                                   await clientService.clearIcon(editingItem.id);
-                                  
+
                                   // Update the editingItem to remove the icon immediately
                                   setEditingItem((prev: Client | null) => prev ? { ...prev, iconUrl: null } : prev);
                                   toast({
@@ -2170,17 +2170,17 @@ export default function AdminPanel() {
                                   });
                                   return;
                                 }
-                                
+
                                 try {
                                   setIsLoading(true);
                                   const websiteUrl = (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || editingItem.websiteUrl;
                                   if (!websiteUrl) {
                                     throw new Error("Website URL is required");
                                   }
-                                  
+
                                   const domain = new URL(websiteUrl).hostname.replace('www.', '');
                                   const response = await clientService.fetchIcon(editingItem.id, domain);
-                                  
+
                                   if (response.iconUrl) {
                                     setEditingItem((prev: Client | null) => prev ? { ...prev, iconUrl: response.iconUrl } : prev);
                                     toast({
@@ -2213,7 +2213,7 @@ export default function AdminPanel() {
                           value={editingItem?.iconUrl || ""} 
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="industry">Industry Vertical *</Label>
                         <NativeSelect 
@@ -2422,21 +2422,21 @@ export default function AdminPanel() {
                               description: "Syncing all benchmark companies from SEMrush",
                               duration: 10000,
                             });
-                            
+
                             const response = await fetch('/api/admin/benchmark/sync-all', {
                               method: 'POST',
                               credentials: 'include',
                             });
-                            
+
                             const result = await response.json();
-                            
+
                             if (result.success) {
                               toast({
                                 title: "Sync Complete",
                                 description: result.message,
                                 duration: 5000,
                               });
-                              
+
                               // Refresh the companies list
                               queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
                             } else {
@@ -2470,7 +2470,7 @@ export default function AdminPanel() {
                           </>
                         )}
                       </Button>
-                      
+
                       {/* Recalculate Averages Button */}
                       <Button
                         variant="outline"
@@ -2482,14 +2482,14 @@ export default function AdminPanel() {
                               description: "Updating Industry averages from benchmark data",
                               duration: 5000,
                             });
-                            
+
                             const response = await fetch('/api/admin/benchmark/recalculate-averages', {
                               method: 'POST',
                               credentials: 'include',
                             });
-                            
+
                             const result = await response.json();
-                            
+
                             if (result.success) {
                               toast({
                                 title: "Recalculation Complete",
@@ -2516,7 +2516,7 @@ export default function AdminPanel() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   {/* Sync Status */}
                   {benchmarkCompanies && benchmarkCompanies.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-blue-200">
@@ -2554,7 +2554,11 @@ export default function AdminPanel() {
                             <div className="flex items-center gap-2 mt-2">
                               <Badge 
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                className="text-xs flex items-center gap-1"
+                                className={`text-xs ${
+                                  getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
+                                    ? "bg-primary/10 text-primary border-primary/20" 
+                                    : ""
+                                }`}
                                 data-testid={`sync-status-badge-${company.id}`}
                               >
                                 {getCompanySyncStatus(company.id, company) === "processing" && (
@@ -2575,34 +2579,34 @@ export default function AdminPanel() {
                               onClick={async () => {
                                 const currentStatus = getCompanySyncStatus(company.id, company);
                                 if (currentStatus === "processing") return;
-                                
+
                                 // Set company as processing immediately for UI feedback
                                 setSyncingCompanyIds(prev => new Set([...prev, company.id]));
-                                
+
                                 try {
                                   toast({
                                     title: "Syncing company...",
                                     description: `Fetching SEMrush data for ${company.name}`,
                                     duration: 5000,
                                   });
-                                  
+
                                   const response = await fetch(`/api/admin/benchmark/sync/${company.id}`, {
                                     method: 'POST',
                                     credentials: 'include',
                                   });
-                                  
+
                                   const result = await response.json();
-                                  
+
                                   // Keep processing status visible for at least 3 seconds
                                   await new Promise(resolve => setTimeout(resolve, 3000));
-                                  
+
                                   if (result.success) {
                                     toast({
                                       title: "Sync Complete",
                                       description: `${company.name}: ${result.data.metricsStored} metrics stored`,
                                       duration: 5000,
                                     });
-                                    
+
                                     // Refresh the companies list
                                     queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
                                   } else {
@@ -2634,7 +2638,7 @@ export default function AdminPanel() {
                                 <RefreshCw className="h-4 w-4" />
                               )}
                             </Button>
-                            
+
                             <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                               setIsDialogOpen(open);
                               if (!open) {
@@ -2744,7 +2748,7 @@ export default function AdminPanel() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Benchmark Company</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete "{company.name}"? This will remove the company from benchmark calculations.
+                                    Are you sure you want to delete "{company.name}"? This action cannot be undone and will remove the company from benchmark calculations.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -2792,7 +2796,11 @@ export default function AdminPanel() {
                                 <div className="text-xs text-gray-500 lg:hidden">
                                   <Badge 
                                     variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                    className={`px-1.5 py-0.5 text-xs inline-flex items-center whitespace-nowrap ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : "gap-0"} ${(getCompanySyncStatus(company.id, company) === "completed" || getCompanySyncStatus(company.id, company) === "verified") ? "bg-white text-pink-600 border-pink-600" : ""}`}
+                                    className={`text-xs ${
+                                      getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
+                                        ? "bg-primary/10 text-primary border-primary/20" 
+                                        : ""
+                                    }`}
                                     data-testid={`sync-status-badge-mobile-${company.id}`}
                                   >
                                     {getCompanySyncStatus(company.id, company) === "processing" && (
@@ -2809,7 +2817,11 @@ export default function AdminPanel() {
                             <TableCell className="hidden lg:table-cell">
                               <Badge 
                                 variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
-                                className={`px-1.5 py-0.5 text-xs inline-flex items-center whitespace-nowrap ${getCompanySyncStatus(company.id, company) === "processing" ? "gap-1" : "gap-0"} ${(getCompanySyncStatus(company.id, company) === "completed" || getCompanySyncStatus(company.id, company) === "verified") ? "bg-white text-pink-600 border-pink-600" : ""}`}
+                                className={`text-xs ${
+                                  getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
+                                    ? "bg-primary/10 text-primary border-primary/20" 
+                                    : ""
+                                }`}
                                 data-testid={`sync-status-badge-desktop-${company.id}`}
                               >
                                 {getCompanySyncStatus(company.id, company) === "processing" && (
@@ -2822,7 +2834,7 @@ export default function AdminPanel() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className={`h-6 px-2 text-xs cursor-default ${
+                                className={`h-6 px-2 text-xs ${
                                   company.active 
                                     ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
                                     : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
@@ -2841,34 +2853,34 @@ export default function AdminPanel() {
                                 onClick={async () => {
                                   const currentStatus = getCompanySyncStatus(company.id, company);
                                   if (currentStatus === "processing") return;
-                                  
+
                                   // Set company as processing immediately for UI feedback
                                   setSyncingCompanyIds(prev => new Set([...prev, company.id]));
-                                  
+
                                   try {
                                     toast({
                                       title: "Syncing company...",
                                       description: `Fetching SEMrush data for ${company.name}`,
                                       duration: 5000,
                                     });
-                                    
+
                                     const response = await fetch(`/api/admin/benchmark/sync/${company.id}`, {
                                       method: 'POST',
                                       credentials: 'include',
                                     });
-                                    
+
                                     const result = await response.json();
-                                    
+
                                     // Keep processing status visible for at least 3 seconds
                                     await new Promise(resolve => setTimeout(resolve, 3000));
-                                    
+
                                     if (result.success) {
                                       toast({
                                         title: "Sync Complete",
                                         description: `${company.name}: ${result.data.metricsStored} metrics stored`,
                                         duration: 5000,
                                       });
-                                      
+
                                       // Refresh the companies list
                                       queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
                                     } else {
@@ -2900,7 +2912,7 @@ export default function AdminPanel() {
                                   <RefreshCw className="h-4 w-4" />
                                 )}
                               </Button>
-                              
+
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
@@ -3006,7 +3018,7 @@ export default function AdminPanel() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Benchmark Company</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{company.name}"? This action cannot be undone and will remove all associated benchmark data.
+                                      Are you sure you want to delete "{company.name}"? This action cannot be undone and will remove the company from benchmark calculations.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -3356,8 +3368,7 @@ export default function AdminPanel() {
                                     disabled={deleteCdPortfolioCompanyMutation.isPending}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    {deleteCdPortfolioCompanyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                    {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Delete Company"}
+                                    {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Remove from Portfolio"}
                                   </Button>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -3559,8 +3570,7 @@ export default function AdminPanel() {
                                         disabled={deleteCdPortfolioCompanyMutation.isPending}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >
-                                        {deleteCdPortfolioCompanyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                        {deleteCdPortfolioCompanyMutation.isPending ? "Removing..." : "Remove from Portfolio"}
+                                        {deleteCdPortfolioCompanyMutation.isPending ? "Deleting..." : "Remove from Portfolio"}
                                       </Button>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
@@ -3573,7 +3583,7 @@ export default function AdminPanel() {
                     </Table>
                   </div>
                   {(!cdPortfolioCompanies || cdPortfolioCompanies.length === 0) && (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-12 text-slate-500">
                       <Building className="h-12 w-12 mx-auto mb-3 text-slate-300" />
                       <h3 className="text-lg font-medium mb-2">No Portfolio Companies</h3>
                       <p className="text-sm mb-4">Add companies to start building your portfolio benchmark.</p>
@@ -3620,7 +3630,7 @@ export default function AdminPanel() {
                         const formData = new FormData(e.currentTarget as HTMLFormElement);
                         const category = formData.get("category") as string;
                         const value = formData.get("value") as string;
-                        
+
                         if (!category || !value) {
                           toast({
                             title: "Validation error",
@@ -3629,7 +3639,7 @@ export default function AdminPanel() {
                           });
                           return;
                         }
-                        
+
                         try {
                           await filterService.create({ 
                             type: category === 'businessSizes' ? 'business_size' : 'industry_vertical',
@@ -3939,7 +3949,7 @@ export default function AdminPanel() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className={`h-6 px-2 text-xs cursor-default ${
+                                className={`h-6 px-2 text-xs ${
                                   prompt.isActive 
                                     ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200' 
                                     : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
@@ -4078,7 +4088,7 @@ export default function AdminPanel() {
               View all fetched metrics and data for this portfolio company
             </DialogDescription>
           </DialogHeader>
-          
+
           {companyDataQuery.isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -4138,19 +4148,19 @@ export default function AdminPanel() {
                                     const value = typeof metric.value === 'object' && metric.value !== null 
                                       ? (metric.value.value ?? metric.value.source ?? JSON.stringify(metric.value))
                                       : metric.value;
-                                    
+
                                     // Create a descriptive label for this metric
                                     const labels = [];
                                     if (metric.channel) labels.push(`${metric.channel}`);
                                     if (metric.deviceType) labels.push(`${metric.deviceType}`);
                                     if (metric.sourceType) labels.push(`${metric.sourceType}`);
-                                    
+
                                     const description = labels.length > 0 ? labels.join(' • ') : 'General';
-                                    
+
                                     // Format creation date for debugging duplicates
                                     const createdDate = metric.createdAt ? new Date(metric.createdAt).toLocaleDateString() : 'Unknown';
                                     const createdTime = metric.createdAt ? new Date(metric.createdAt).toLocaleTimeString() : 'Unknown';
-                                    
+
                                     return (
                                       <div key={index} className="bg-white rounded p-2 border">
                                         <div className="font-medium text-blue-600 mb-1">{description}</div>
@@ -4191,7 +4201,7 @@ export default function AdminPanel() {
               Data isolation and metrics summary for all clients
             </DialogDescription>
           </DialogHeader>
-          
+
           {dataCheckResults && !isCheckingData && (
             <div className="space-y-6">
               {/* Summary Status */}
@@ -4214,7 +4224,7 @@ export default function AdminPanel() {
                   Checked {dataCheckResults.clientCount} clients • Period: {dataCheckResults.period}
                 </p>
               </div>
-              
+
               {/* Client Data Table */}
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full">
@@ -4300,7 +4310,7 @@ export default function AdminPanel() {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Footer Information */}
               <div className="text-sm text-gray-600 space-y-1 border-t pt-4">
                 <p>• Client-specific metrics are isolated by clientId</p>
@@ -4309,7 +4319,7 @@ export default function AdminPanel() {
               </div>
             </div>
           )}
-          
+
           {isCheckingData && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -4318,7 +4328,7 @@ export default function AdminPanel() {
           )}
         </DialogContent>
       </Dialog>
-      
+
       {/* User Activity Modal */}
       <UserActivityModal 
         user={selectedUserForActivity}
