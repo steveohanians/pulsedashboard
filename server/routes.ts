@@ -313,15 +313,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(metrics.timePeriod));
       
       // Get unique periods
-      const uniquePeriods = Array.from(new Set(industryAvgMetrics.map(m => m.timePeriod))).sort();
+      const uniquePeriods = Array.from(new Set(industryAvgMetrics.map((m: { timePeriod: string }) => m.timePeriod))).sort();
       
       // Core metrics we expect
       const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
       
       // Build analysis by period
       const periodAnalysis = uniquePeriods.map(period => {
-        const periodMetrics = industryAvgMetrics.filter(m => m.timePeriod === period);
-        const metricsInPeriod = Array.from(new Set(periodMetrics.map(m => m.metricName)));
+        const periodMetrics = industryAvgMetrics.filter((m: { timePeriod: string }) => m.timePeriod === period);
+        const metricsInPeriod = Array.from(new Set(periodMetrics.map((m: { metricName: string }) => m.metricName)));
         
         return {
           period,
@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasAllCoreMetrics: coreMetrics.every(cm => metricsInPeriod.includes(cm)),
           missingCoreMetrics: coreMetrics.filter(cm => !metricsInPeriod.includes(cm)),
           presentMetrics: metricsInPeriod,
-          samples: periodMetrics.slice(0, 2).map(m => ({
+          samples: periodMetrics.slice(0, 2).map((m: { metricName: string; value: any; channel: string | null }) => ({
             metric: m.metricName,
             value: m.value,
             channel: m.channel
@@ -418,22 +418,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
       
       const analysis = coreMetrics.map(metricName => {
-        const industryData = industryAvgData.filter(m => m.metricName === metricName);
-        const cdData = cdAvgData.filter(m => m.metricName === metricName);
+        const industryData = industryAvgData.filter((m: { metricName: string }) => m.metricName === metricName);
+        const cdData = cdAvgData.filter((m: { metricName: string }) => m.metricName === metricName);
         
         return {
           metric: metricName,
           industry_avg: {
-            has_july_2025: industryData.some(d => d.timePeriod === '2025-07'),
-            has_june_2025: industryData.some(d => d.timePeriod === '2025-06'),
-            periods_available: industryData.map(d => d.timePeriod),
-            should_fallback: !industryData.some(d => d.timePeriod === '2025-07') && industryData.some(d => d.timePeriod === '2025-06')
+            has_july_2025: industryData.some((d: { timePeriod: string }) => d.timePeriod === '2025-07'),
+            has_june_2025: industryData.some((d: { timePeriod: string }) => d.timePeriod === '2025-06'),
+            periods_available: industryData.map((d: { timePeriod: string }) => d.timePeriod),
+            should_fallback: !industryData.some((d: { timePeriod: string }) => d.timePeriod === '2025-07') && industryData.some((d: { timePeriod: string }) => d.timePeriod === '2025-06')
           },
           cd_avg: {
-            has_july_2025: cdData.some(d => d.timePeriod === '2025-07'),
-            has_june_2025: cdData.some(d => d.timePeriod === '2025-06'),
-            periods_available: cdData.map(d => d.timePeriod),
-            fallback_working: !cdData.some(d => d.timePeriod === '2025-07') && cdData.some(d => d.timePeriod === '2025-06')
+            has_july_2025: cdData.some((d: { timePeriod: string }) => d.timePeriod === '2025-07'),
+            has_june_2025: cdData.some((d: { timePeriod: string }) => d.timePeriod === '2025-06'),
+            periods_available: cdData.map((d: { timePeriod: string }) => d.timePeriod),
+            fallback_working: !cdData.some((d: { timePeriod: string }) => d.timePeriod === '2025-07') && cdData.some((d: { timePeriod: string }) => d.timePeriod === '2025-06')
           }
         };
       });
@@ -468,12 +468,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         traffic_channels: {
           data_found: trafficChannels.length,
-          by_source_and_period: trafficChannels.reduce((acc, tc) => {
+          by_source_and_period: trafficChannels.reduce((acc: Record<string, Array<{ channel: string | null; value: any }>>, tc: { sourceType: string; timePeriod: string; channel: string | null; value: any }) => {
             const key = `${tc.sourceType}_${tc.timePeriod}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push({ channel: tc.channel, value: tc.value });
             return acc;
-          }, {} as any)
+          }, {})
         },
         recommendation: analysis.some(a => a.industry_avg.has_june_2025 && !a.industry_avg.has_july_2025) ?
           'Industry_Avg has June data but not July. Fallback mechanism may be broken. Need to copy June data to July period.' :
@@ -2262,12 +2262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.info("DEBUG: Actual competitors in database", { 
         clientId, 
         count: competitors.length,
-        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, name: c.name }))
+        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, label: c.label }))
       });
       res.json({
         clientId,
         count: competitors.length,
-        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, name: c.name }))
+        competitors: competitors.map(c => ({ id: c.id, domain: c.domain, label: c.label }))
       });
     } catch (error) {
       logger.error("DEBUG: Error fetching competitors", { error: (error as Error).message });
@@ -4464,7 +4464,7 @@ Output: Numbered list with tags.
         ));
       
       const periodCounts = await Promise.all(
-        allMetrics.map(async ({ timePeriod }) => {
+        allMetrics.map(async ({ timePeriod }: { timePeriod: string }) => {
           const count = await db
             .select({ count: sql<number>`count(*)` })
             .from(metrics)
