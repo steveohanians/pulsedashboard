@@ -128,6 +128,8 @@ export const benchmarkCompanies = pgTable("benchmark_companies", {
   businessSize: text("business_size").notNull(),
   sourceVerified: boolean("source_verified").default(false).notNull(),
   active: boolean("active").default(true).notNull(),
+  syncStatus: text("sync_status").default("verified").notNull(), // "pending", "processing", "verified"
+  lastSyncAttempt: timestamp("last_sync_attempt"), // Track when sync was last attempted
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
