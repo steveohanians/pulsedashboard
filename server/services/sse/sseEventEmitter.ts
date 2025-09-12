@@ -183,6 +183,76 @@ class SSEEventEmitter extends EventEmitter {
     const events = this.eventNames();
     return events.reduce((total, event) => total + this.listenerCount(event), 0);
   }
+
+  /**
+   * Emit benchmark sync progress - convenience method for individual company progress
+   */
+  emitBenchmarkSyncProgress(data: {
+    companyId: string;
+    companyName: string;
+    stage: string;
+    message: string;
+    progress: number;
+    jobId?: string;
+  }): void {
+    const progressData: BenchmarkSyncProgressData = {
+      jobId: data.jobId || 'individual',
+      jobType: 'individual',
+      overallPercent: data.progress,
+      totalCompanies: 1,
+      processedCompanies: Math.floor(data.progress / 100),
+      failedCompanies: 0,
+      currentCompanyId: data.companyId,
+      currentCompanyName: data.companyName,
+      timeElapsed: 0,
+      currentPhase: data.stage === 'completed' ? 'completed' : 'syncing',
+      message: data.message,
+      timestamp: new Date().toISOString()
+    };
+
+    this.broadcastBenchmarkProgress(progressData);
+  }
+
+  /**
+   * Emit benchmark sync completion - convenience method for individual company completion
+   */
+  emitBenchmarkSyncCompleted(data: {
+    companyId: string;
+    companyName: string;
+    message: string;
+    jobId?: string;
+  }): void {
+    const completionData: BenchmarkSyncCompletionData = {
+      jobId: data.jobId || 'individual',
+      jobType: 'individual',
+      totalCompanies: 1,
+      processedCompanies: 1,
+      failedCompanies: 0,
+      totalTime: 0,
+      message: data.message,
+      timestamp: new Date().toISOString()
+    };
+
+    this.broadcastBenchmarkCompletion(completionData);
+  }
+
+  /**
+   * Emit benchmark sync error - convenience method for individual company errors
+   */
+  emitBenchmarkSyncError(data: {
+    companyId: string;
+    companyName: string;
+    error: string;
+    jobId?: string;
+  }): void {
+    const errorData: BenchmarkSyncErrorData = {
+      jobId: data.jobId || 'individual',
+      error: `${data.companyName} (${data.companyId}): ${data.error}`,
+      timestamp: new Date().toISOString()
+    };
+
+    this.broadcastBenchmarkError(errorData);
+  }
 }
 
 // Export singleton instance
