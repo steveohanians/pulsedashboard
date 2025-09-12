@@ -44,9 +44,9 @@ router.post('/sync/:companyId', requireAuth, requireAdmin, async (req, res) => {
     // Initialize integration service
     const benchmarkIntegration = new BenchmarkIntegration(storage);
     
-    // Process the company through SEMrush (use incremental sync for individual updates)
+    // Process the company through SEMrush (force fetch recent data for individual syncs)
     const result = await benchmarkIntegration.processNewBenchmarkCompany(company, { 
-      incrementalSync: true,
+      incrementalSync: false, // Force full refresh to ensure we get data
       emitProgressEvents: true 
     });
     
