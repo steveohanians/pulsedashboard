@@ -568,12 +568,12 @@ export function CSVImportModal({ open, onOpenChange, onImportComplete }: CSVImpo
                             <strong>Company:</strong> {(() => {
                               // Find the CSV header that maps to the 'name' field
                               const nameHeader = Object.entries(columnMapping).find(([field, header]) => field === 'name')?.[1];
-                              return nameHeader ? result.row[nameHeader] || 'N/A' : 'N/A';
+                              return nameHeader ? result.row?.[nameHeader] || 'N/A' : 'N/A';
                             })()} 
                             {(() => {
                               // Find the CSV header that maps to the 'websiteUrl' field
                               const urlHeader = Object.entries(columnMapping).find(([field, header]) => field === 'websiteUrl')?.[1];
-                              return urlHeader && result.row[urlHeader] ? (
+                              return urlHeader && result.row?.[urlHeader] ? (
                                 <> | <strong>URL:</strong> {result.row[urlHeader]}</>
                               ) : null;
                             })()}
