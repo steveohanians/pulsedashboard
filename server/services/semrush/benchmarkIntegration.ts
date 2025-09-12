@@ -1,8 +1,8 @@
 import logger from '../../utils/logging/logger';
-import { semrushService } from './semrushService.js';
-import { semrushDataProcessor } from './dataProcessor.js';
-import type { IStorage } from '../../storage.js';
-import type { BenchmarkCompany } from '@shared/schema.js';
+import { semrushService } from './semrushService';
+import { semrushDataProcessor } from './dataProcessor';
+import type { IStorage } from '../../storage';
+import type { BenchmarkCompany } from '@shared/schema';
 
 export interface BenchmarkIntegrationResult {
   success: boolean;
