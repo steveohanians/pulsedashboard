@@ -30,7 +30,7 @@ import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
-import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, getCategoryEmoji, getCategoryDisplayNameWithPeriod, formatPeriodForDisplay, getCategoryPeriodInfo, type BusinessInsights } from '@/utils/portfolioDataTransformer';
+import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, getCategoryEmoji, getCategoryDisplayNameWithPeriod, formatPeriodForDisplay, getCategoryPeriodInfo, getCategoryDisplayNameSimple, getCategoryPeriodsSimple, type BusinessInsights } from '@/utils/portfolioDataTransformer';
 import {
   clientService,
   userService,
@@ -4182,14 +4182,18 @@ export default function AdminPanel() {
                     <CardContent>
                       <div className="space-y-3">
                         {Object.entries(businessInsights.categories).map(([key, category]) => (
-                          <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <span className="text-lg">{category.displayName.split(' ')[0]}</span>
+                          <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
                               <span className="font-medium">{category.displayName}</span>
+                              <div className="text-sm text-gray-600">
+                                {category.metrics.length} metrics
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600">
-                              {category.metrics.length} metrics
-                            </div>
+                            {category.periods && category.periods.length > 0 && (
+                              <div className="text-sm text-gray-600">
+                                {getCategoryPeriodsSimple(category.periods)}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -4216,6 +4220,9 @@ export default function AdminPanel() {
                             <CardTitle className="text-lg">
                               {businessInsights.categories.websitePerformance.displayName}
                             </CardTitle>
+                            {businessInsights.categories.websitePerformance.periods && businessInsights.categories.websitePerformance.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.websitePerformance.periods)}</p>
+                            )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('websitePerformance')}</p>
                           </CardHeader>
                           <CardContent>
@@ -4241,6 +4248,9 @@ export default function AdminPanel() {
                             <CardTitle className="text-lg">
                               {businessInsights.categories.trafficSources.displayName}
                             </CardTitle>
+                            {businessInsights.categories.trafficSources.periods && businessInsights.categories.trafficSources.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.trafficSources.periods)}</p>
+                            )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
                           </CardHeader>
                           <CardContent>
@@ -4266,6 +4276,9 @@ export default function AdminPanel() {
                             <CardTitle className="text-lg">
                               {businessInsights.categories.userBehavior.displayName}
                             </CardTitle>
+                            {businessInsights.categories.userBehavior.periods && businessInsights.categories.userBehavior.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.userBehavior.periods)}</p>
+                            )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
                           </CardHeader>
                           <CardContent>
@@ -4291,6 +4304,9 @@ export default function AdminPanel() {
                             <CardTitle className="text-lg">
                               {businessInsights.categories.engagement.displayName}
                             </CardTitle>
+                            {businessInsights.categories.engagement.periods && businessInsights.categories.engagement.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagement.periods)}</p>
+                            )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('engagement')}</p>
                           </CardHeader>
                           <CardContent>
@@ -4316,6 +4332,9 @@ export default function AdminPanel() {
                             <CardTitle className="text-lg">
                               {businessInsights.categories.technical.displayName}
                             </CardTitle>
+                            {businessInsights.categories.technical.periods && businessInsights.categories.technical.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.technical.periods)}</p>
+                            )}
                             <p className="text-sm text-gray-600">Additional technical metrics and data points</p>
                           </CardHeader>
                           <CardContent>

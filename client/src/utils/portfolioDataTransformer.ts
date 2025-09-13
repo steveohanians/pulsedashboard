@@ -60,6 +60,7 @@ export interface CategoryWithPeriod {
   name: string;
   displayName: string;
   period: string;
+  periods: string[]; // List of all available periods for this category
   icon: string;
   metrics: BusinessMetric[];
 }
@@ -677,36 +678,41 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     categories: {
       websitePerformance: {
         name: 'websitePerformance',
-        displayName: getCategoryDisplayNameWithPeriod('websitePerformance', 'No Data'),
+        displayName: getCategoryDisplayNameSimple('websitePerformance'),
         period: 'No Data',
+        periods: [],
         icon: getCategoryIcon('websitePerformance'),
         metrics: []
       },
       trafficSources: {
         name: 'trafficSources',
-        displayName: getCategoryDisplayNameWithPeriod('trafficSources', 'No Data'),
+        displayName: getCategoryDisplayNameSimple('trafficSources'),
         period: 'No Data',
+        periods: [],
         icon: getCategoryIcon('trafficSources'),
         metrics: []
       },
       userBehavior: {
         name: 'userBehavior',
-        displayName: getCategoryDisplayNameWithPeriod('userBehavior', 'No Data'),
+        displayName: getCategoryDisplayNameSimple('userBehavior'),
         period: 'No Data',
+        periods: [],
         icon: getCategoryIcon('userBehavior'),
         metrics: []
       },
       engagement: {
         name: 'engagement',
-        displayName: getCategoryDisplayNameWithPeriod('engagement', 'No Data'),
+        displayName: getCategoryDisplayNameSimple('engagement'),
         period: 'No Data',
+        periods: [],
         icon: getCategoryIcon('engagement'),
         metrics: []
       },
       technical: {
         name: 'technical',
-        displayName: getCategoryDisplayNameWithPeriod('technical', 'No Data'),
+        displayName: getCategoryDisplayNameSimple('technical'),
         period: 'No Data',
+        periods: [],
         icon: getCategoryIcon('technical'),
         metrics: []
       }
@@ -751,11 +757,15 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     technical: getCategoryOptimalPeriod(rawData, 'technical')
   };
   
-  // Update category information with period tags
+  // Get all available periods for each category and update category information
   Object.entries(categoryOptimalPeriods).forEach(([category, period]) => {
     const categoryKey = category as keyof typeof insights.categories;
+    const allPeriodsForCategory = getCategoryAllPeriods(rawData, category);
+    
     insights.categories[categoryKey].period = period;
-    insights.categories[categoryKey].displayName = getCategoryDisplayNameWithPeriod(category, period);
+    insights.categories[categoryKey].periods = allPeriodsForCategory;
+    // Keep the simple display name without periods embedded
+    insights.categories[categoryKey].displayName = getCategoryDisplayNameSimple(category);
   });
   
   // Process each metric using category-specific optimal periods
@@ -969,6 +979,19 @@ export function getCategoryDisplayNameWithAllPeriods(category: string, periods: 
 }
 
 /**
+ * Creates a simplified category display with periods (no emojis or brackets)
+ */
+export function getCategoryDisplayNameWithAllPeriodsSimple(category: string, periods: string[]): { name: string; periods: string } {
+  const displayName = getCategoryDisplayName(category as any);
+  const periodsString = getCategoryPeriodsSimple(periods);
+  
+  return {
+    name: displayName,
+    periods: periodsString
+  };
+}
+
+/**
  * Creates a category display name with period tag (for backward compatibility)
  */
 export function getCategoryDisplayNameWithPeriod(category: string, period: string): string {
@@ -981,6 +1004,29 @@ export function getCategoryDisplayNameWithPeriod(category: string, period: strin
   }
   
   return `${emoji} ${displayName} [${formattedPeriod}]`;
+}
+
+/**
+ * Creates a simplified category display name (no emojis or brackets)
+ */
+export function getCategoryDisplayNameSimple(category: string): string {
+  return getCategoryDisplayName(category as any);
+}
+
+/**
+ * Gets periods formatted as a simple space-separated list
+ */
+export function getCategoryPeriodsSimple(periods: string[]): string {
+  if (periods.length === 0) {
+    return 'No Data';
+  }
+  
+  // Sort periods descending (most recent first) and format as YYYY-MM
+  const sortedPeriods = periods
+    .filter(period => period && period !== 'No Data')
+    .sort((a, b) => b.localeCompare(a));
+    
+  return sortedPeriods.join(' ');
 }
 
 /**
