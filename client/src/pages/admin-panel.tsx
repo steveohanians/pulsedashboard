@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity, Gauge, MousePointer, Target } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useBenchmarkSyncStream } from "@/hooks/useBenchmarkSyncStream";
@@ -30,6 +30,7 @@ import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
+import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, type BusinessInsights } from '@/utils/portfolioDataTransformer';
 import {
   clientService,
   userService,
@@ -4083,109 +4084,237 @@ export default function AdminPanel() {
       }}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Portfolio Company Data{viewingCompanyData?.name ? `: ${viewingCompanyData.name}` : ''}</DialogTitle>
+            <DialogTitle>Business Insights{viewingCompanyData?.name ? `: ${viewingCompanyData.name}` : ''}</DialogTitle>
             <DialogDescription>
-              View all fetched metrics and data for this portfolio company
+              Performance metrics and business insights organized by category
             </DialogDescription>
           </DialogHeader>
 
           {companyDataQuery.isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              Loading company data...
+              Loading company insights...
             </div>
           ) : companyDataQuery.error ? (
             <div className="text-center py-8 text-red-600">
-              <p>Error loading company data</p>
+              <p>Error loading company insights</p>
               <p className="text-sm text-red-500 mt-1">{(companyDataQuery.error as Error).message}</p>
             </div>
           ) : companyDataQuery.data ? (
-            <div className="space-y-6">
-              {/* Company Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Company Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Name:</span> {companyDataQuery.data.company.name}
-                    </div>
-                    <div>
-                      <span className="font-medium">Website:</span> {companyDataQuery.data.company.websiteUrl}
-                    </div>
-                    <div>
-                      <span className="font-medium">Industry:</span> {companyDataQuery.data.company.industryVertical}
-                    </div>
-                    <div>
-                      <span className="font-medium">Business Size:</span> {companyDataQuery.data.company.businessSize}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            (() => {
+              const businessInsights = transformCompanyDataToBusinessInsights(companyDataQuery.data);
+              
+              const getCategoryIconComponent = (category: string) => {
+                switch (category) {
+                  case 'websitePerformance': return <Gauge className="h-5 w-5" />;
+                  case 'trafficSources': return <Users className="h-5 w-5" />;
+                  case 'userBehavior': return <MousePointer className="h-5 w-5" />;
+                  case 'engagement': return <Target className="h-5 w-5" />;
+                  default: return <BarChart3 className="h-5 w-5" />;
+                }
+              };
 
-              {/* Metrics Data */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Fetched Metrics ({companyDataQuery.data.totalMetrics} total)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {Object.keys(companyDataQuery.data.metrics).length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No metrics data found for this company.</p>
-                  ) : (
-                    <div className="space-y-6">
-                      {Object.entries(companyDataQuery.data.metrics).map(([metricName, timePeriods]: [string, any]) => (
-                        <div key={metricName} className="border rounded-lg p-4">
-                          <h4 className="font-medium text-base mb-3">{metricName}</h4>
-                          <div className="space-y-3">
-                            {Object.entries(timePeriods)
-                              .sort(([a], [b]) => b.localeCompare(a)) // Sort periods latest first
-                              .map(([timePeriod, metrics]: [string, any]) => (
-                              <div key={timePeriod} className="bg-gray-50 rounded p-3">
-                                <h5 className="font-medium text-sm mb-2">{timePeriod}</h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-                                  {(metrics as any[]).map((metric, index) => {
-                                    const value = typeof metric.value === 'object' && metric.value !== null 
-                                      ? (metric.value.value ?? metric.value.source ?? JSON.stringify(metric.value))
-                                      : metric.value;
-
-                                    // Create a descriptive label for this metric
-                                    const labels = [];
-                                    if (metric.channel) labels.push(`${metric.channel}`);
-                                    if (metric.deviceType) labels.push(`${metric.deviceType}`);
-                                    if (metric.sourceType) labels.push(`${metric.sourceType}`);
-
-                                    const description = labels.length > 0 ? labels.join(' • ') : 'General';
-
-                                    // Format creation date for debugging duplicates
-                                    const createdDate = metric.createdAt ? new Date(metric.createdAt).toLocaleDateString() : 'Unknown';
-                                    const createdTime = metric.createdAt ? new Date(metric.createdAt).toLocaleTimeString() : 'Unknown';
-
-                                    return (
-                                      <div key={index} className="bg-white rounded p-2 border">
-                                        <div className="font-medium text-blue-600 mb-1">{description}</div>
-                                        <div className="text-lg font-semibold">{value}</div>
-                                        <div className="text-xs text-gray-400 mt-1">
-                                          <div>Stored: {createdDate}</div>
-                                          <div>Time: {createdTime}</div>
-                                          {metric.id && <div>ID: {metric.id.slice(0, 8)}...</div>}
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            ))}
+              return (
+                <div className="space-y-6">
+                  {/* Company Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Company Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-gray-600">Company Name</span>
+                            <p className="font-medium">{companyDataQuery.data.company.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Website</span>
+                            <p className="font-medium text-blue-600">{companyDataQuery.data.company.websiteUrl}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-gray-600">Industry</span>
+                            <p className="font-medium">{companyDataQuery.data.company.industryVertical}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Business Size</span>
+                            <p className="font-medium">{companyDataQuery.data.company.businessSize}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Data Status */}
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm text-gray-600">Data Status</span>
+                            <p className="font-medium">{businessInsights.overview.dataAvailability}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Total Metrics</span>
+                            <p className="font-medium">{businessInsights.overview.totalMetrics}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Last Updated</span>
+                            <p className="font-medium">{businessInsights.overview.lastUpdated}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Business Insights */}
+                  {businessInsights.overview.totalMetrics === 0 ? (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <div className="text-gray-500">
+                          <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">No Performance Data Available</p>
+                          <p className="text-sm">This company hasn't been synced with SEMrush data yet.</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Website Performance */}
+                      {businessInsights.websitePerformance.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {getCategoryIconComponent('websitePerformance')}
+                              {getCategoryDisplayName('websitePerformance')}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">{getCategoryDescription('websitePerformance')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.websitePerformance.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-blue-700 mb-1">{metric.value}</div>
+                                  {metric.description && (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Traffic Sources */}
+                      {businessInsights.trafficSources.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {getCategoryIconComponent('trafficSources')}
+                              {getCategoryDisplayName('trafficSources')}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.trafficSources.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-green-700 mb-1">{metric.value}</div>
+                                  {metric.description && (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* User Behavior */}
+                      {businessInsights.userBehavior.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {getCategoryIconComponent('userBehavior')}
+                              {getCategoryDisplayName('userBehavior')}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.userBehavior.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-4 border border-purple-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-purple-700 mb-1">{metric.value}</div>
+                                  {metric.description && (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Engagement Metrics */}
+                      {businessInsights.engagement.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {getCategoryIconComponent('engagement')}
+                              {getCategoryDisplayName('engagement')}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">{getCategoryDescription('engagement')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.engagement.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-4 border border-orange-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-orange-700 mb-1">{metric.value}</div>
+                                  {metric.description && (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Technical Metrics (if any, shown in a collapsed state) */}
+                      {businessInsights.technical.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {getCategoryIconComponent('technical')}
+                              Additional Data Points
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">Additional technical metrics and data points</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                              {businessInsights.technical.map((metric, index) => (
+                                <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-lg font-semibold text-gray-700">{metric.value}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="text-center py-8 text-gray-500">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No data available</p>
             </div>
           )}
