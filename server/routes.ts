@@ -17,6 +17,7 @@ import sovRoutes from "./routes/sovRoutes";
 import effectivenessRoutes from "./routes/effectivenessRoutes";
 import sseRoutes from "./routes/sseRoutes";
 import { debugRoutes } from "./routes/debugRoutes";
+import rateLimitTestRoute from "./routes/rateLimitTestRoute";
 import { z } from "zod";
 import { insertCompetitorSchema, insertMetricSchema, insertBenchmarkSchema, insertClientSchema, insertUserSchema, insertAIInsightSchema, insertBenchmarkCompanySchema, insertCdPortfolioCompanySchema, insertGlobalPromptTemplateSchema, updateGlobalPromptTemplateSchema, insertMetricPromptSchema, updateMetricPromptSchema, insertSOVPromptTemplateSchema, updateSOVPromptTemplateSchema, insertInsightContextSchema, updateInsightContextSchema, updateEffectivenessPromptTemplateSchema } from "@shared/schema";
 import { 
@@ -4643,6 +4644,9 @@ Output: Numbered list with tags.
 
   // Debug routes (temporary - enabled for all environments)
   app.use("/api/debug", debugRoutes);
+
+  // Rate limiting test routes (for development and monitoring)
+  app.use("/api/debug", rateLimitTestRoute);
 
   // Export routes - must come before generic cleanup route
   app.use("/api/export", exportPdfRouter);

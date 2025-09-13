@@ -1,4 +1,5 @@
 import logger from '../../utils/logging/logger';
+import { createSemrushRateLimiter, type ApiRateLimiter } from '../../utils/apiRateLimiter';
 
 export interface SemrushMetricData {
   bounceRate: number;
@@ -63,9 +64,16 @@ export class SemrushService implements ISemrushValidator {
   private lastBalanceCheck: Date | null = null;
   private cachedBalance: SemrushBalanceStatus | null = null;
   private balanceCacheTimeout = 5 * 60 * 1000; // Cache balance for 5 minutes
+  private rateLimiter: ApiRateLimiter;
 
   constructor() {
     this.apiKey = requireSemrushApiKey();
+    this.rateLimiter = createSemrushRateLimiter();
+    
+    logger.info('SemrushService initialized with rate limiting', {
+      maxRequestsPerSecond: 8,
+      burstCapacity: 10
+    });
   }
 
   /**
@@ -121,6 +129,8 @@ export class SemrushService implements ISemrushValidator {
 
       logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
 
+      // Apply rate limiting before making the API call
+      await this.rateLimiter.waitForToken();
       const response = await fetch(`${url}?${params}`);
       
       if (!response.ok) {
@@ -268,6 +278,8 @@ export class SemrushService implements ISemrushValidator {
             device_type: deviceType
           });
 
+          // Apply rate limiting before making the API call
+          await this.rateLimiter.waitForToken();
           const response = await fetch(`${url}?${params}`);
           
           if (!response.ok) {
@@ -526,28 +538,20 @@ export class SemrushService implements ISemrushValidator {
    */
   private async fetchPeriodsInParallel(domain: string, periods: string[]): Promise<Map<string, SemrushMetricData>> {
     const results = new Map<string, SemrushMetricData>();
-    const MAX_CONCURRENT = 3; // Conservative limit to respect API constraints
-    const BATCH_DELAY = 300; // 300ms between batches to stay under 10 req/sec
 
-    // Process periods in batches to control concurrency
-    for (let i = 0; i < periods.length; i += MAX_CONCURRENT) {
-      const batch = periods.slice(i, i + MAX_CONCURRENT);
-      
-      logger.debug('Processing batch', { domain, batch, batchIndex: Math.floor(i / MAX_CONCURRENT) + 1 });
+    // Process periods sequentially to ensure proper rate limiting
+    // The rate limiter will handle the timing automatically
+    for (const period of periods) {
+      logger.debug('Processing period', { domain, period });
 
-      // Process batch in parallel with retry logic
-      const batchPromises = batch.map(period => this.fetchPeriodWithRetry(domain, period));
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      // Process batch results
-      batchResults.forEach((result, index) => {
-        const period = batch[index];
-        if (result.status === 'fulfilled' && result.value) {
-          results.set(period, result.value);
+      try {
+        const periodData = await this.fetchPeriodWithRetry(domain, period);
+        
+        if (periodData) {
+          results.set(period, periodData);
           logger.debug('Successfully fetched period data', { domain, period });
         } else {
-          const error = result.status === 'rejected' ? result.reason : 'Unknown error';
-          logger.warn('Failed to fetch period data', { domain, period, error: error?.message || error });
+          logger.warn('Failed to fetch period data', { domain, period });
           
           // Add empty data for failed periods
           results.set(period, {
@@ -559,11 +563,22 @@ export class SemrushService implements ISemrushValidator {
             deviceDistribution: []
           });
         }
-      });
-
-      // Add delay between batches to respect rate limits
-      if (i + MAX_CONCURRENT < periods.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      } catch (error) {
+        logger.warn('Error fetching period data', { 
+          domain, 
+          period, 
+          error: (error as Error).message 
+        });
+        
+        // Add empty data for failed periods
+        results.set(period, {
+          bounceRate: 0,
+          sessionDuration: 0,
+          pagesPerSession: 0,
+          sessionsPerUser: 0,
+          trafficChannels: [],
+          deviceDistribution: []
+        });
       }
     }
 
@@ -656,6 +671,8 @@ export class SemrushService implements ISemrushValidator {
         key: this.apiKey
       });
 
+      // Apply rate limiting before making the API call
+      await this.rateLimiter.waitForToken();
       const response = await fetch(`${this.balanceUrl}?${params}`);
       
       if (!response.ok) {
@@ -823,6 +840,8 @@ export class SemrushService implements ISemrushValidator {
         display_date: '2024-01-01'
       });
 
+      // Apply rate limiting before making the API call
+      await this.rateLimiter.waitForToken();
       const response = await fetch(`${url}?${params}`);
       return response.status !== 401 && response.status !== 403;
     } catch (error) {
@@ -836,6 +855,56 @@ export class SemrushService implements ISemrushValidator {
    */
   public async getBalanceStatus(): Promise<SemrushBalanceStatus> {
     return this.checkBalance();
+  }
+
+  /**
+   * Get rate limiter status for monitoring
+   */
+  public getRateLimiterStatus() {
+    return this.rateLimiter.getStatus();
+  }
+
+  /**
+   * Test rate limiting with multiple requests
+   */
+  public async testRateLimiting(requestCount: number = 10): Promise<{
+    requestTimes: number[];
+    averageRate: number;
+    rateLimiterStatus: ReturnType<typeof this.rateLimiter.getStatus>;
+  }> {
+    const requestTimes: number[] = [];
+    const startTime = Date.now();
+    
+    logger.info('Starting rate limiting test', { requestCount });
+    
+    for (let i = 0; i < requestCount; i++) {
+      await this.rateLimiter.waitForToken();
+      requestTimes.push(Date.now() - startTime);
+      logger.debug('Rate limiting test request completed', { 
+        requestNumber: i + 1,
+        timeElapsed: Date.now() - startTime,
+        rateLimiterStatus: this.rateLimiter.getStatus()
+      });
+    }
+    
+    const totalTime = requestTimes[requestTimes.length - 1];
+    const averageRate = (requestCount / totalTime) * 1000; // requests per second
+    
+    const result = {
+      requestTimes,
+      averageRate,
+      rateLimiterStatus: this.rateLimiter.getStatus()
+    };
+    
+    logger.info('Rate limiting test completed', {
+      requestCount,
+      totalTimeMs: totalTime,
+      averageRate: averageRate.toFixed(2),
+      targetRate: 8,
+      withinLimit: averageRate <= 8.5
+    });
+    
+    return result;
   }
 }
 
