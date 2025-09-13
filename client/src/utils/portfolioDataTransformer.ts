@@ -147,29 +147,23 @@ function formatMetricValue(value: any, metricName: string): string {
 function categorizeMetric(metricName: string): string {
   const name = metricName.toLowerCase();
   
-  // Engagement performance metrics (bounce rate, speed, load times)
-  if (name.includes('bounce') || name.includes('load') || name.includes('speed') || name.includes('performance')) {
-    return 'engagementMetrics';
-  }
-  
-  // Traffic source metrics
-  if (name.includes('source') || name.includes('channel') || name.includes('organic') || 
-      name.includes('direct') || name.includes('referral') || name.includes('social')) {
-    return 'trafficSources';
-  }
-  
-  // User behavior metrics (session patterns, pages, device usage)
+  // Business requirement: engagementMetrics = Pages per Session, Session Duration, Sessions per User, Bounce Rate
   if (name.includes('pagespersession') || name.includes('pages per session') ||
       name.includes('sessionduration') || name.includes('session duration') ||
       name.includes('sessionsperuser') || name.includes('sessions per user') ||
-      name.includes('device') || name.includes('visit')) {
+      name.includes('bounce')) {
+    return 'engagementMetrics';
+  }
+  
+  // Business requirement: userBehavior = ONLY Device Distribution  
+  if (name.includes('device')) {
     return 'userBehavior';
   }
   
-  // General session/page/user metrics that don't fit above categories
-  if (name.includes('session') || name.includes('page') || name.includes('user') || 
-      name.includes('duration')) {
-    return 'userBehavior';
+  // Business requirement: trafficSources = Traffic Channels (unchanged)
+  if (name.includes('source') || name.includes('channel') || name.includes('organic') || 
+      name.includes('direct') || name.includes('referral') || name.includes('social')) {
+    return 'trafficSources';
   }
   
   // Conversion and engagement action metrics
@@ -178,6 +172,7 @@ function categorizeMetric(metricName: string): string {
     return 'engagement';
   }
   
+  // Everything else goes to technical
   return 'technical';
 }
 
@@ -735,6 +730,48 @@ function findLongestGap(expectedPeriods: string[], availablePeriods: string[]): 
 }
 
 /**
+ * Gets User Behavior periods based on Device Distribution data availability
+ * Returns periods where BOTH Desktop AND Mobile device data exists
+ */
+export function getUserBehaviorPeriods(rawData: any): string[] {
+  if (!rawData?.metrics?.['Device Distribution']) {
+    return [];
+  }
+  
+  const deviceData = rawData.metrics['Device Distribution'];
+  if (!deviceData || typeof deviceData !== 'object') {
+    return [];
+  }
+  
+  // Find periods where both Desktop and Mobile data exists
+  const validPeriods: string[] = [];
+  
+  Object.keys(deviceData).forEach(period => {
+    const periodData = deviceData[period];
+    if (!periodData || !Array.isArray(periodData)) {
+      return;
+    }
+    
+    // Check if both Desktop and Mobile data exists in this period
+    const hasDesktop = periodData.some(item => 
+      item?.channel?.toLowerCase().includes('desktop') ||
+      item?.channel?.toLowerCase().includes('computer')
+    );
+    const hasMobile = periodData.some(item => 
+      item?.channel?.toLowerCase().includes('mobile') ||
+      item?.channel?.toLowerCase().includes('phone')
+    );
+    
+    if (hasDesktop && hasMobile) {
+      validPeriods.push(period);
+    }
+  });
+  
+  // Return sorted periods (most recent first)
+  return validPeriods.sort((a, b) => b.localeCompare(a));
+}
+
+/**
  * Main transformation function that converts raw company data to business insights
  */
 export function transformCompanyDataToBusinessInsights(rawData: any): BusinessInsights {
@@ -821,11 +858,15 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     insights.overview.lastUpdated = mostRecentDate;
   }
   
+  // Get User Behavior periods first (special case)
+  const userBehaviorPeriods = getUserBehaviorPeriods(rawData);
+  const userBehaviorOptimalPeriod = userBehaviorPeriods.length > 0 ? userBehaviorPeriods[0] : 'No Data';
+  
   // Get optimal periods for each category using simplified approach
   const categoryOptimalPeriods = {
     engagementMetrics: getCategoryOptimalPeriod(rawData, 'engagementMetrics'),
     trafficSources: getCategoryOptimalPeriod(rawData, 'trafficSources'),
-    userBehavior: getCategoryOptimalPeriod(rawData, 'userBehavior'),
+    userBehavior: userBehaviorOptimalPeriod,
     engagement: getCategoryOptimalPeriod(rawData, 'engagement'),
     technical: getCategoryOptimalPeriod(rawData, 'technical')
   };
@@ -833,7 +874,14 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
   // Get all available periods for each category and update category information
   Object.entries(categoryOptimalPeriods).forEach(([category, period]) => {
     const categoryKey = category as keyof typeof insights.categories;
-    const allPeriodsForCategory = getCategoryAllPeriods(rawData, category);
+    
+    // Special handling for User Behavior: use device data periods specifically
+    let allPeriodsForCategory: string[];
+    if (category === 'userBehavior') {
+      allPeriodsForCategory = userBehaviorPeriods;
+    } else {
+      allPeriodsForCategory = getCategoryAllPeriods(rawData, category);
+    }
     
     insights.categories[categoryKey].period = period;
     insights.categories[categoryKey].periods = allPeriodsForCategory;
