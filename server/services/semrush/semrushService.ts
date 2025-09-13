@@ -35,12 +35,34 @@ export interface SemrushApiResponse {
   }>;
 }
 
+export interface SemrushBalanceResponse {
+  unitsLeft: number;
+  unitsLimit: number;
+  nextResetTime: number; // Unix timestamp
+  resetPeriod: string; // e.g., "monthly", "daily"
+}
+
+export interface SemrushBalanceStatus {
+  hasUnits: boolean;
+  unitsRemaining: number;
+  unitsLimit: number;
+  percentageUsed: number;
+  nextResetTime: Date;
+  resetPeriod: string;
+  lowBalanceWarning: boolean;
+  criticalBalanceWarning: boolean;
+}
+
 import { requireSemrushApiKey } from '../../config';
 import { ISemrushValidator } from '../../utils/company/validation';
 
 export class SemrushService implements ISemrushValidator {
   private apiKey: string;
   private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3'; // Analytics API v3 for traffic data
+  private balanceUrl = 'https://www.semrush.com/users/countapiunits.html';
+  private lastBalanceCheck: Date | null = null;
+  private cachedBalance: SemrushBalanceStatus | null = null;
+  private balanceCacheTimeout = 5 * 60 * 1000; // Cache balance for 5 minutes
 
   constructor() {
     this.apiKey = requireSemrushApiKey();
@@ -78,6 +100,12 @@ export class SemrushService implements ISemrushValidator {
    */
   private async fetchMainMetrics(domain: string, period: string): Promise<Partial<SemrushMetricData>> {
     try {
+      // Check API balance before making the request (estimate 5 units for this call)
+      const hasBalance = await this.checkSufficientBalance(5);
+      if (!hasBalance) {
+        throw new Error('Insufficient SEMrush API units available for main metrics request');
+      }
+
       const url = `${this.baseUrl}/summary`;
       
       // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
@@ -97,6 +125,20 @@ export class SemrushService implements ISemrushValidator {
       
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Check if this is a quota exceeded error (Error 131)
+        if (response.status === 403 || errorText.includes('LIMIT EXCEEDED') || errorText.includes('Error 131')) {
+          logger.error('SEMrush API quota exceeded (Error 131)', { 
+            domain, 
+            period, 
+            status: response.status, 
+            error: errorText 
+          });
+          // Force refresh balance cache after quota error
+          await this.checkBalance(true);
+          throw new Error('SEMrush API quota exceeded. Please check your balance and try again later.');
+        }
+        
         const errorMessage = `SEMrush API error: ${response.status} ${response.statusText} - ${errorText}`;
         logger.error('SEMrush API HTTP error', { domain, period, status: response.status, error: errorText });
         throw new Error(errorMessage);
@@ -108,6 +150,13 @@ export class SemrushService implements ISemrushValidator {
       logger.debug('SEMrush main metrics response', { domain, period, response: text });
 
       if (text.includes('ERROR')) {
+        // Check for quota exceeded errors in the response text
+        if (text.includes('LIMIT EXCEEDED') || text.includes('Error 131')) {
+          logger.error('SEMrush API quota exceeded in response', { domain, period, error: text });
+          await this.checkBalance(true); // Force refresh balance cache
+          throw new Error('SEMrush API quota exceeded. Please check your balance and try again later.');
+        }
+        
         const errorMessage = `SEMrush API returned error for ${domain}: ${text}`;
         logger.error('SEMrush API data error', { domain, period, error: text });
         throw new Error(errorMessage);
@@ -191,6 +240,12 @@ export class SemrushService implements ISemrushValidator {
    */
   private async fetchDeviceDistribution(domain: string, period: string): Promise<SemrushMetricData['deviceDistribution']> {
     try {
+      // Check API balance before making device distribution requests (estimate 6 units for 2 device calls)
+      const hasBalance = await this.checkSufficientBalance(6);
+      if (!hasBalance) {
+        throw new Error('Insufficient SEMrush API units available for device distribution request');
+      }
+
       const url = `${this.baseUrl}/summary`;
       
       // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
@@ -216,6 +271,21 @@ export class SemrushService implements ISemrushValidator {
           const response = await fetch(`${url}?${params}`);
           
           if (!response.ok) {
+            const errorText = await response.text();
+            
+            // Check if this is a quota exceeded error
+            if (response.status === 403 || errorText.includes('LIMIT EXCEEDED') || errorText.includes('Error 131')) {
+              logger.error(`SEMrush ${deviceType} API quota exceeded (Error 131)`, { 
+                domain, 
+                period, 
+                deviceType,
+                status: response.status, 
+                error: errorText 
+              });
+              await this.checkBalance(true); // Force refresh balance cache
+              throw new Error(`SEMrush API quota exceeded during ${deviceType} request. Please check your balance and try again later.`);
+            }
+            
             logger.warn(`SEMrush ${deviceType} API error: ${response.status}`, { domain, period });
             continue;
           }
@@ -224,6 +294,13 @@ export class SemrushService implements ISemrushValidator {
           logger.debug(`SEMrush ${deviceType} response`, { domain, period, response: text.substring(0, 200) });
 
           if (text.includes('ERROR')) {
+            // Check for quota exceeded errors in the response text
+            if (text.includes('LIMIT EXCEEDED') || text.includes('Error 131')) {
+              logger.error(`SEMrush ${deviceType} quota exceeded in response`, { domain, period, deviceType, error: text.trim() });
+              await this.checkBalance(true); // Force refresh balance cache
+              throw new Error(`SEMrush API quota exceeded during ${deviceType} request. Please check your balance and try again later.`);
+            }
+            
             logger.info(`SEMrush ${deviceType} not available`, { domain, period, error: text.trim() });
             continue;
           }
@@ -334,6 +411,17 @@ export class SemrushService implements ISemrushValidator {
       companyId: companyId || 'unknown' 
     });
     
+    // Check balance before starting the data fetch operation
+    const balance = await this.checkBalance();
+    if (!balance.hasUnits) {
+      logger.error('Cannot proceed with historical data fetch - no SEMrush API units available', {
+        domain,
+        unitsRemaining: balance.unitsRemaining,
+        nextResetTime: balance.nextResetTime
+      });
+      throw new Error(`SEMrush API has no remaining units. Next reset: ${balance.nextResetTime.toISOString()}`);
+    }
+    
     const periods = this.generateHistoricalPeriods();
     let periodsToFetch = periods;
 
@@ -353,10 +441,35 @@ export class SemrushService implements ISemrushValidator {
       return new Map<string, SemrushMetricData>();
     }
 
+    // Estimate total API units needed (approximately 11 units per period: 5 for main metrics + 6 for device distribution)
+    const estimatedUnitsNeeded = periodsToFetch.length * 11;
+    if (balance.unitsRemaining < estimatedUnitsNeeded) {
+      logger.warn('SEMrush API balance may not be sufficient for full historical fetch', {
+        domain,
+        periodsToFetch: periodsToFetch.length,
+        estimatedUnitsNeeded,
+        unitsRemaining: balance.unitsRemaining,
+        percentageUsed: balance.percentageUsed
+      });
+      
+      // If balance is critically low, limit the number of periods to fetch
+      if (balance.criticalBalanceWarning && periodsToFetch.length > 3) {
+        periodsToFetch = periodsToFetch.slice(-3); // Only fetch the last 3 periods
+        logger.warn('Limited periods to fetch due to critically low API balance', {
+          domain,
+          originalCount: periods.length,
+          limitedCount: periodsToFetch.length,
+          unitsRemaining: balance.unitsRemaining
+        });
+      }
+    }
+
     logger.info('Fetching SEMrush data for periods', { 
       domain, 
       periods: periodsToFetch, 
-      count: periodsToFetch.length 
+      count: periodsToFetch.length,
+      estimatedUnitsNeeded: periodsToFetch.length * 11,
+      unitsRemaining: balance.unitsRemaining
     });
 
     // Use parallel processing with rate limiting (10 req/sec = 100ms between requests)
@@ -520,10 +633,188 @@ export class SemrushService implements ISemrushValidator {
   }
 
   /**
+   * Check SEMrush API balance using the free balance endpoint
+   * This endpoint is FREE and doesn't consume API units
+   */
+  public async checkBalance(forceFresh: boolean = false): Promise<SemrushBalanceStatus> {
+    // Use cached balance if available and not expired (unless forceFresh is true)
+    if (!forceFresh && this.cachedBalance && this.lastBalanceCheck) {
+      const timeSinceLastCheck = Date.now() - this.lastBalanceCheck.getTime();
+      if (timeSinceLastCheck < this.balanceCacheTimeout) {
+        logger.debug('Using cached SEMrush balance', {
+          cachedBalance: this.cachedBalance,
+          cacheAgeMs: timeSinceLastCheck
+        });
+        return this.cachedBalance;
+      }
+    }
+
+    try {
+      logger.info('Checking SEMrush API balance (free endpoint)');
+      
+      const params = new URLSearchParams({
+        key: this.apiKey
+      });
+
+      const response = await fetch(`${this.balanceUrl}?${params}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('SEMrush balance check HTTP error', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`Balance check failed: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      logger.debug('SEMrush balance check response', { responseText: text.substring(0, 200) });
+
+      // Parse the response - SEMrush returns CSV-like format
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        throw new Error('Invalid balance response format');
+      }
+
+      // Expected format: units_left;units_limit;reset_time;reset_period
+      const data = lines[1].split(';');
+      if (data.length < 4) {
+        throw new Error('Incomplete balance data received');
+      }
+
+      const unitsLeft = parseInt(data[0]) || 0;
+      const unitsLimit = parseInt(data[1]) || 0;
+      const resetTime = parseInt(data[2]) || 0;
+      const resetPeriod = data[3] || 'unknown';
+
+      const percentageUsed = unitsLimit > 0 ? ((unitsLimit - unitsLeft) / unitsLimit) * 100 : 0;
+      const lowBalanceWarning = percentageUsed >= 80; // Warn at 80% usage
+      const criticalBalanceWarning = percentageUsed >= 95; // Critical at 95% usage
+
+      const balanceStatus: SemrushBalanceStatus = {
+        hasUnits: unitsLeft > 0,
+        unitsRemaining: unitsLeft,
+        unitsLimit: unitsLimit,
+        percentageUsed: Math.round(percentageUsed * 10) / 10, // Round to 1 decimal
+        nextResetTime: new Date(resetTime * 1000), // Convert Unix timestamp
+        resetPeriod: resetPeriod,
+        lowBalanceWarning: lowBalanceWarning,
+        criticalBalanceWarning: criticalBalanceWarning
+      };
+
+      // Cache the result
+      this.cachedBalance = balanceStatus;
+      this.lastBalanceCheck = new Date();
+
+      // Log balance status
+      if (criticalBalanceWarning) {
+        logger.error('SEMrush API balance critically low!', {
+          unitsRemaining: unitsLeft,
+          unitsLimit: unitsLimit,
+          percentageUsed: balanceStatus.percentageUsed,
+          nextResetTime: balanceStatus.nextResetTime,
+          resetPeriod: resetPeriod
+        });
+      } else if (lowBalanceWarning) {
+        logger.warn('SEMrush API balance running low', {
+          unitsRemaining: unitsLeft,
+          unitsLimit: unitsLimit,
+          percentageUsed: balanceStatus.percentageUsed,
+          nextResetTime: balanceStatus.nextResetTime,
+          resetPeriod: resetPeriod
+        });
+      } else {
+        logger.info('SEMrush API balance check completed', {
+          unitsRemaining: unitsLeft,
+          unitsLimit: unitsLimit,
+          percentageUsed: balanceStatus.percentageUsed,
+          hasUnits: balanceStatus.hasUnits
+        });
+      }
+
+      return balanceStatus;
+
+    } catch (error) {
+      logger.error('Failed to check SEMrush API balance', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      
+      // Return a default status indicating we couldn't check balance
+      // In production, you might want to fail more gracefully or retry
+      return {
+        hasUnits: false,
+        unitsRemaining: 0,
+        unitsLimit: 0,
+        percentageUsed: 100,
+        nextResetTime: new Date(),
+        resetPeriod: 'unknown',
+        lowBalanceWarning: true,
+        criticalBalanceWarning: true
+      };
+    }
+  }
+
+  /**
+   * Check if we have sufficient API units before making a request
+   * @param requiredUnits Estimated units needed for the operation (default: 10)
+   */
+  private async checkSufficientBalance(requiredUnits: number = 10): Promise<boolean> {
+    try {
+      const balance = await this.checkBalance();
+      
+      if (!balance.hasUnits) {
+        logger.error('SEMrush API has no remaining units', {
+          unitsRemaining: balance.unitsRemaining,
+          requiredUnits: requiredUnits,
+          nextResetTime: balance.nextResetTime
+        });
+        return false;
+      }
+
+      if (balance.unitsRemaining < requiredUnits) {
+        logger.error('Insufficient SEMrush API units for request', {
+          unitsRemaining: balance.unitsRemaining,
+          requiredUnits: requiredUnits,
+          nextResetTime: balance.nextResetTime
+        });
+        return false;
+      }
+
+      // Log warnings for low balance
+      if (balance.criticalBalanceWarning) {
+        logger.warn('Proceeding with critically low API balance', {
+          unitsRemaining: balance.unitsRemaining,
+          percentageUsed: balance.percentageUsed,
+          requiredUnits: requiredUnits
+        });
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to check API balance before request', {
+        error: (error as Error).message,
+        requiredUnits: requiredUnits
+      });
+      // In case of balance check failure, allow the request to proceed
+      // The actual API call will fail with proper error if there's no balance
+      return true;
+    }
+  }
+
+  /**
    * Test API connectivity
    */
   public async testConnection(): Promise<boolean> {
     try {
+      // First check balance to ensure we have units
+      const balance = await this.checkBalance();
+      if (!balance.hasUnits) {
+        logger.warn('SEMrush API has no remaining units for connection test');
+        return false;
+      }
+
       const url = `${this.baseUrl}/summary`;
       const params = new URLSearchParams({
         key: this.apiKey,
@@ -538,6 +829,13 @@ export class SemrushService implements ISemrushValidator {
       logger.error('SEMrush connection test failed', { error: (error as Error).message });
       return false;
     }
+  }
+
+  /**
+   * Get current balance status (public method for external use)
+   */
+  public async getBalanceStatus(): Promise<SemrushBalanceStatus> {
+    return this.checkBalance();
   }
 }
 

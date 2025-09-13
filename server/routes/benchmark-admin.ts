@@ -3,6 +3,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth';
 import { storage } from '../storage';
 import { BenchmarkIntegration } from '../services/semrush/benchmarkIntegration';
 import { BenchmarkSyncManager } from '../services/BenchmarkSyncManager';
+import { semrushService } from '../services/semrush/semrushService';
 import logger from '../utils/logging/logger';
 
 const router = Router();
@@ -269,6 +270,170 @@ router.get('/sync-status', requireAuth, requireAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: (error as Error).message || 'Failed to get sync status'
+    });
+  }
+});
+
+/**
+ * Check SEMrush API balance and quota status
+ */
+router.get('/semrush-balance', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    logger.info('[Benchmark Admin] Checking SEMrush API balance');
+    
+    // Check if we should force a fresh balance check
+    const forceFresh = req.query.refresh === 'true';
+    
+    const balance = await semrushService.checkBalance(forceFresh);
+    
+    logger.info('[Benchmark Admin] SEMrush balance check completed', {
+      unitsRemaining: balance.unitsRemaining,
+      unitsLimit: balance.unitsLimit,
+      percentageUsed: balance.percentageUsed,
+      hasUnits: balance.hasUnits,
+      lowBalanceWarning: balance.lowBalanceWarning,
+      criticalBalanceWarning: balance.criticalBalanceWarning
+    });
+    
+    // Add status message based on balance level
+    let statusMessage = 'API balance is healthy';
+    if (balance.criticalBalanceWarning) {
+      statusMessage = 'CRITICAL: API balance is very low!';
+    } else if (balance.lowBalanceWarning) {
+      statusMessage = 'WARNING: API balance is running low';
+    }
+    
+    res.json({
+      success: true,
+      message: statusMessage,
+      data: {
+        balance: {
+          unitsRemaining: balance.unitsRemaining,
+          unitsLimit: balance.unitsLimit,
+          percentageUsed: balance.percentageUsed,
+          unitsUsed: balance.unitsLimit - balance.unitsRemaining,
+          hasUnits: balance.hasUnits,
+          nextResetTime: balance.nextResetTime.toISOString(),
+          resetPeriod: balance.resetPeriod
+        },
+        warnings: {
+          lowBalance: balance.lowBalanceWarning,
+          criticalBalance: balance.criticalBalanceWarning
+        },
+        status: {
+          canMakeRequests: balance.hasUnits,
+          recommendedAction: balance.criticalBalanceWarning 
+            ? 'Stop API calls until reset' 
+            : balance.lowBalanceWarning 
+              ? 'Monitor usage carefully'
+              : 'Normal operations'
+        }
+      }
+    });
+    
+  } catch (error) {
+    logger.error('[Benchmark Admin] Failed to check SEMrush balance:', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message || 'Failed to check SEMrush API balance',
+      data: {
+        balance: null,
+        warnings: {
+          lowBalance: false,
+          criticalBalance: true // Assume critical if we can't check
+        },
+        status: {
+          canMakeRequests: false,
+          recommendedAction: 'Check API key and connection'
+        }
+      }
+    });
+  }
+});
+
+/**
+ * Test SEMrush API connectivity and balance
+ */
+router.get('/semrush-test', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    logger.info('[Benchmark Admin] Testing SEMrush API connectivity');
+    
+    // Test connectivity and balance simultaneously
+    const [balance, connectionTest] = await Promise.all([
+      semrushService.checkBalance(true), // Force fresh balance check for test
+      semrushService.testConnection()
+    ]);
+    
+    const testResults = {
+      connectivity: {
+        status: connectionTest ? 'connected' : 'failed',
+        canConnect: connectionTest,
+        message: connectionTest 
+          ? 'Successfully connected to SEMrush API'
+          : 'Failed to connect to SEMrush API'
+      },
+      balance: {
+        unitsRemaining: balance.unitsRemaining,
+        unitsLimit: balance.unitsLimit,
+        percentageUsed: balance.percentageUsed,
+        hasUnits: balance.hasUnits,
+        nextResetTime: balance.nextResetTime.toISOString(),
+        resetPeriod: balance.resetPeriod
+      },
+      recommendations: []
+    };
+    
+    // Add recommendations based on test results
+    if (!connectionTest) {
+      testResults.recommendations.push('Check API key configuration');
+      testResults.recommendations.push('Verify network connectivity to SEMrush');
+    }
+    
+    if (!balance.hasUnits) {
+      testResults.recommendations.push('API quota exhausted - wait for reset or upgrade plan');
+    } else if (balance.criticalBalanceWarning) {
+      testResults.recommendations.push('API balance critically low - consider limiting usage');
+    } else if (balance.lowBalanceWarning) {
+      testResults.recommendations.push('API balance running low - monitor usage');
+    }
+    
+    const overallStatus = connectionTest && balance.hasUnits ? 'healthy' : 'issues_detected';
+    
+    logger.info('[Benchmark Admin] SEMrush API test completed', {
+      overallStatus,
+      connectivity: connectionTest,
+      hasUnits: balance.hasUnits,
+      unitsRemaining: balance.unitsRemaining
+    });
+    
+    res.json({
+      success: true,
+      message: `SEMrush API test completed - status: ${overallStatus}`,
+      data: {
+        overallStatus,
+        testResults,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    logger.error('[Benchmark Admin] SEMrush API test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message || 'Failed to test SEMrush API',
+      data: {
+        overallStatus: 'test_failed',
+        testResults: {
+          connectivity: {
+            status: 'unknown',
+            canConnect: false,
+            message: 'Test failed to complete'
+          },
+          balance: null,
+          recommendations: ['Check API configuration and network connectivity']
+        },
+        timestamp: new Date().toISOString()
+      }
     });
   }
 });
