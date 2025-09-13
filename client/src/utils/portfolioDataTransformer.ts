@@ -10,6 +10,25 @@ export interface BusinessMetric {
   change?: string;
   description?: string;
   category: string;
+  period?: string;
+  isFromFallbackPeriod?: boolean;
+}
+
+export interface CategoryPeriodInfo {
+  period: string;
+  metricsCount: number;
+  totalPossibleMetrics: number;
+  completenessPercentage: number;
+  isOptimal: boolean;
+  fallbackReason?: string;
+}
+
+export interface CategoryCoverage {
+  websitePerformance: CategoryPeriodInfo;
+  trafficSources: CategoryPeriodInfo;
+  userBehavior: CategoryPeriodInfo;
+  engagement: CategoryPeriodInfo;
+  technical: CategoryPeriodInfo;
 }
 
 export interface DataCoverage {
@@ -29,6 +48,12 @@ export interface DataCoverage {
     longestGap: number; // in months
     recentDataAvailable: boolean;
   };
+  categoryAnalysis: CategoryCoverage;
+  mixedPeriodWarning: {
+    hasMixedPeriods: boolean;
+    affectedCategories: string[];
+    message?: string;
+  };
 }
 
 export interface BusinessInsights {
@@ -43,6 +68,11 @@ export interface BusinessInsights {
   userBehavior: BusinessMetric[];
   engagement: BusinessMetric[];
   technical: BusinessMetric[];
+  periodSummary: {
+    primaryPeriod: string;
+    hasMixedPeriods: boolean;
+    categoriesUsingOlderData: string[];
+  };
 }
 
 /**
@@ -151,20 +181,30 @@ function getFriendlyMetricName(metricName: string): string {
 }
 
 /**
- * Gets the most recent value from a metric's time periods
+ * Gets value from a specific period, or the most recent if no period specified
  */
-function getLatestMetricValue(timePeriods: Record<string, any[]>): { value: any; period: string } | null {
-  // Sort periods to get the most recent
+function getMetricValue(timePeriods: Record<string, any[]>, preferredPeriod?: string): { value: any; period: string; isFromFallback?: boolean } | null {
+  // If preferred period is specified and has data, use it
+  if (preferredPeriod && timePeriods[preferredPeriod] && timePeriods[preferredPeriod].length > 0) {
+    const metrics = timePeriods[preferredPeriod];
+    return {
+      value: metrics[metrics.length - 1].value,
+      period: preferredPeriod,
+      isFromFallback: false
+    };
+  }
+  
+  // Otherwise, fall back to the most recent available period
   const sortedPeriods = Object.keys(timePeriods).sort((a, b) => b.localeCompare(a));
   
   for (const period of sortedPeriods) {
     const metrics = timePeriods[period];
     if (metrics && metrics.length > 0) {
-      // Get the most recent metric (could be multiple for different channels/devices)
       const latestMetric = metrics[metrics.length - 1];
       return {
         value: latestMetric.value,
-        period
+        period,
+        isFromFallback: preferredPeriod !== undefined && period !== preferredPeriod
       };
     }
   }
@@ -173,27 +213,48 @@ function getLatestMetricValue(timePeriods: Record<string, any[]>): { value: any;
 }
 
 /**
+ * Legacy function maintained for backward compatibility
+ */
+function getLatestMetricValue(timePeriods: Record<string, any[]>): { value: any; period: string } | null {
+  const result = getMetricValue(timePeriods);
+  return result ? { value: result.value, period: result.period } : null;
+}
+
+/**
  * Aggregates channel-based metrics (traffic channels, device distribution) into human-readable summaries
  */
-function aggregateChannelMetrics(timePeriods: Record<string, any[]>, metricType: 'traffic' | 'device'): BusinessMetric[] {
+function aggregateChannelMetrics(timePeriods: Record<string, any[]>, metricType: 'traffic' | 'device', preferredPeriod?: string): BusinessMetric[] {
   const results: BusinessMetric[] = [];
   
-  // Get the most recent period with data
-  const sortedPeriods = Object.keys(timePeriods).sort((a, b) => b.localeCompare(a));
-  let latestPeriod = '';
+  let usedPeriod = '';
   let channelData: Array<{ channel: string; percentage: number; sessions: number }> = [];
+  let isFromFallback = false;
   
-  for (const period of sortedPeriods) {
-    const metrics = timePeriods[period];
-    if (metrics && metrics.length > 0) {
-      latestPeriod = period;
-      // Extract channel data from metrics
-      channelData = metrics.map(metric => ({
-        channel: metric.channel || 'Unknown',
-        percentage: typeof metric.value === 'object' ? (metric.value.percentage || 0) : 0,
-        sessions: typeof metric.value === 'object' ? (metric.value.sessions || 0) : 0
-      })).filter(item => item.percentage > 0);
-      break;
+  // Try preferred period first
+  if (preferredPeriod && timePeriods[preferredPeriod] && timePeriods[preferredPeriod].length > 0) {
+    usedPeriod = preferredPeriod;
+    const metrics = timePeriods[preferredPeriod];
+    channelData = metrics.map(metric => ({
+      channel: metric.channel || 'Unknown',
+      percentage: typeof metric.value === 'object' ? (metric.value.percentage || 0) : 0,
+      sessions: typeof metric.value === 'object' ? (metric.value.sessions || 0) : 0
+    })).filter(item => item.percentage > 0);
+  } else {
+    // Fall back to most recent period with data
+    const sortedPeriods = Object.keys(timePeriods).sort((a, b) => b.localeCompare(a));
+    isFromFallback = preferredPeriod !== undefined;
+    
+    for (const period of sortedPeriods) {
+      const metrics = timePeriods[period];
+      if (metrics && metrics.length > 0) {
+        usedPeriod = period;
+        channelData = metrics.map(metric => ({
+          channel: metric.channel || 'Unknown',
+          percentage: typeof metric.value === 'object' ? (metric.value.percentage || 0) : 0,
+          sessions: typeof metric.value === 'object' ? (metric.value.sessions || 0) : 0
+        })).filter(item => item.percentage > 0);
+        break;
+      }
     }
   }
   
@@ -217,7 +278,9 @@ function aggregateChannelMetrics(timePeriods: Record<string, any[]>, metricType:
       name: friendlyName,
       value: `${channel.percentage.toFixed(1)}%`,
       category,
-      description: `${formatNumber(channel.sessions)} sessions from ${latestPeriod}`
+      period: usedPeriod,
+      isFromFallbackPeriod: isFromFallback,
+      description: `${formatNumber(channel.sessions)} sessions from ${usedPeriod}`
     });
   });
   
@@ -229,7 +292,9 @@ function aggregateChannelMetrics(timePeriods: Record<string, any[]>, metricType:
         name: metricType === 'traffic' ? 'Other Traffic Sources' : 'Other Devices',
         value: `${totalOther.toFixed(1)}%`,
         category,
-        description: `${channelData.length - 3} additional sources from ${latestPeriod}`
+        period: usedPeriod,
+        isFromFallbackPeriod: isFromFallback,
+        description: `${channelData.length - 3} additional sources from ${usedPeriod}`
       });
     }
   }
@@ -250,9 +315,167 @@ function formatNumber(num: number): string {
 }
 
 /**
+ * Analyzes metric completeness per period to understand data quality
+ */
+function analyzeMetricCompletenessPerPeriod(rawData: any): Record<string, Record<string, string[]>> {
+  const periodAnalysis: Record<string, Record<string, string[]>> = {};
+  
+  if (!rawData?.metrics) {
+    return periodAnalysis;
+  }
+  
+  // Group metrics by period and category
+  Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
+    const category = categorizeMetric(metricName);
+    
+    if (timePeriods && typeof timePeriods === 'object') {
+      Object.keys(timePeriods).forEach(period => {
+        const periodData = timePeriods[period];
+        if (periodData && periodData.length > 0) {
+          if (!periodAnalysis[period]) {
+            periodAnalysis[period] = {
+              websitePerformance: [],
+              trafficSources: [],
+              userBehavior: [],
+              engagement: [],
+              technical: []
+            };
+          }
+          periodAnalysis[period][category].push(metricName);
+        }
+      });
+    }
+  });
+  
+  return periodAnalysis;
+}
+
+/**
+ * Selects optimal period for each category based on completeness and recency
+ */
+function selectOptimalPeriodPerCategory(periodAnalysis: Record<string, Record<string, string[]>>, rawData: any): CategoryCoverage {
+  const categories = ['websitePerformance', 'trafficSources', 'userBehavior', 'engagement', 'technical'] as const;
+  const result: CategoryCoverage = {} as CategoryCoverage;
+  
+  // Get sorted periods (most recent first)
+  const sortedPeriods = Object.keys(periodAnalysis).sort((a, b) => b.localeCompare(a));
+  
+  categories.forEach(category => {
+    let bestPeriod = '';
+    let bestScore = -1;
+    let bestMetricsCount = 0;
+    let totalPossibleMetrics = 0;
+    let fallbackReason: string | undefined;
+    
+    // Calculate total possible metrics for this category across all periods
+    const allMetricsInCategory = new Set<string>();
+    Object.values(periodAnalysis).forEach(periodData => {
+      periodData[category].forEach(metric => allMetricsInCategory.add(metric));
+    });
+    totalPossibleMetrics = allMetricsInCategory.size;
+    
+    if (totalPossibleMetrics === 0) {
+      // No metrics for this category at all
+      result[category] = {
+        period: 'No Data',
+        metricsCount: 0,
+        totalPossibleMetrics: 0,
+        completenessPercentage: 0,
+        isOptimal: false,
+        fallbackReason: 'No metrics available for this category'
+      };
+      return;
+    }
+    
+    // Score each period for this category
+    sortedPeriods.forEach((period, index) => {
+      const metricsInPeriod = periodAnalysis[period][category].length;
+      const completeness = (metricsInPeriod / totalPossibleMetrics) * 100;
+      
+      // Score calculation: completeness is primary factor, recency is secondary
+      // Recent periods get slight bonus, but completeness is more important
+      const recencyBonus = (sortedPeriods.length - index) / sortedPeriods.length * 10;
+      const score = completeness + recencyBonus;
+      
+      if (score > bestScore || (score === bestScore && index === 0)) {
+        bestPeriod = period;
+        bestScore = score;
+        bestMetricsCount = metricsInPeriod;
+        
+        // Determine if this is optimal or a fallback
+        const isOptimal = index === 0 && completeness >= 80;
+        fallbackReason = undefined;
+        
+        if (!isOptimal) {
+          if (completeness < 50) {
+            fallbackReason = `Low data completeness (${completeness.toFixed(0)}%)`;
+          } else if (index > 0) {
+            fallbackReason = `Using older period due to incomplete recent data`;
+          }
+        }
+      }
+    });
+    
+    result[category] = {
+      period: bestPeriod,
+      metricsCount: bestMetricsCount,
+      totalPossibleMetrics,
+      completenessPercentage: Math.round((bestMetricsCount / totalPossibleMetrics) * 100),
+      isOptimal: bestPeriod === sortedPeriods[0] && (bestMetricsCount / totalPossibleMetrics) >= 0.8,
+      fallbackReason
+    };
+  });
+  
+  return result;
+}
+
+/**
+ * Detects mixed-period warnings across categories
+ */
+function detectMixedPeriodWarnings(categoryAnalysis: CategoryCoverage): {
+  hasMixedPeriods: boolean;
+  affectedCategories: string[];
+  message?: string;
+} {
+  const periods = new Set<string>();
+  const categoriesWithData: string[] = [];
+  const categoriesUsingOlderData: string[] = [];
+  
+  Object.entries(categoryAnalysis).forEach(([category, info]) => {
+    if (info.metricsCount > 0 && info.period !== 'No Data') {
+      periods.add(info.period);
+      categoriesWithData.push(category);
+      
+      if (!info.isOptimal && info.fallbackReason?.includes('older')) {
+        categoriesUsingOlderData.push(category);
+      }
+    }
+  });
+  
+  const hasMixedPeriods = periods.size > 1;
+  let message: string | undefined;
+  
+  if (hasMixedPeriods) {
+    const periodList = Array.from(periods).sort((a, b) => b.localeCompare(a));
+    message = `Data spans multiple periods (${periodList.join(', ')}) due to incomplete recent data for some metrics.`;
+  }
+  
+  return {
+    hasMixedPeriods,
+    affectedCategories: categoriesUsingOlderData,
+    message
+  };
+}
+
+/**
  * Analyzes data coverage across all metrics to provide comprehensive coverage insights
  */
 function analyzeDataCoverage(rawData: any): DataCoverage {
+  // Analyze metric completeness per period first
+  const periodAnalysis = analyzeMetricCompletenessPerPeriod(rawData);
+  const categoryAnalysis = selectOptimalPeriodPerCategory(periodAnalysis, rawData);
+  const mixedPeriodWarning = detectMixedPeriodWarnings(categoryAnalysis);
+  
   // Default empty coverage
   const defaultCoverage: DataCoverage = {
     totalPeriods: 0,
@@ -270,7 +493,9 @@ function analyzeDataCoverage(rawData: any): DataCoverage {
       hasGaps: false,
       longestGap: 0,
       recentDataAvailable: false
-    }
+    },
+    categoryAnalysis,
+    mixedPeriodWarning
   };
 
   if (!rawData?.metrics) {
@@ -353,7 +578,9 @@ function analyzeDataCoverage(rawData: any): DataCoverage {
       hasGaps,
       longestGap,
       recentDataAvailable
-    }
+    },
+    categoryAnalysis,
+    mixedPeriodWarning
   };
 }
 
@@ -445,7 +672,12 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     trafficSources: [],
     userBehavior: [],
     engagement: [],
-    technical: []
+    technical: [],
+    periodSummary: {
+      primaryPeriod: '',
+      hasMixedPeriods: false,
+      categoriesUsingOlderData: []
+    }
   };
   
   if (!rawData || !rawData.metrics) {
@@ -471,11 +703,30 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     insights.overview.lastUpdated = mostRecentDate;
   }
   
-  // Process each metric
+  // Get optimal periods for each category from the data coverage analysis
+  const categoryOptimalPeriods = {
+    websitePerformance: dataCoverage.categoryAnalysis.websitePerformance.period,
+    trafficSources: dataCoverage.categoryAnalysis.trafficSources.period,
+    userBehavior: dataCoverage.categoryAnalysis.userBehavior.period,
+    engagement: dataCoverage.categoryAnalysis.engagement.period,
+    technical: dataCoverage.categoryAnalysis.technical.period
+  };
+  
+  // Update period summary
+  const categoryPeriods = Object.values(categoryOptimalPeriods).filter(p => p !== 'No Data');
+  const uniquePeriods = [...new Set(categoryPeriods)];
+  insights.periodSummary.primaryPeriod = uniquePeriods.sort((a, b) => b.localeCompare(a))[0] || '';
+  insights.periodSummary.hasMixedPeriods = dataCoverage.mixedPeriodWarning.hasMixedPeriods;
+  insights.periodSummary.categoriesUsingOlderData = dataCoverage.mixedPeriodWarning.affectedCategories;
+  
+  // Process each metric using category-specific optimal periods
   Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
+    const category = categorizeMetric(metricName);
+    const optimalPeriod = categoryOptimalPeriods[category as keyof typeof categoryOptimalPeriods];
+    
     // Handle Traffic Channels and Device Distribution specially as they need aggregation
     if (metricName === 'Traffic Channels') {
-      const trafficMetrics = aggregateChannelMetrics(timePeriods, 'traffic');
+      const trafficMetrics = aggregateChannelMetrics(timePeriods, 'traffic', optimalPeriod !== 'No Data' ? optimalPeriod : undefined);
       trafficMetrics.forEach(metric => {
         insights.trafficSources.push(metric);
       });
@@ -483,7 +734,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     }
     
     if (metricName === 'Device Distribution') {
-      const deviceMetrics = aggregateChannelMetrics(timePeriods, 'device');
+      const deviceMetrics = aggregateChannelMetrics(timePeriods, 'device', optimalPeriod !== 'No Data' ? optimalPeriod : undefined);
       deviceMetrics.forEach(metric => {
         insights.userBehavior.push(metric);
       });
@@ -491,19 +742,20 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     }
     
     // Handle regular individual metrics
-    const latestData = getLatestMetricValue(timePeriods);
+    const metricData = getMetricValue(timePeriods, optimalPeriod !== 'No Data' ? optimalPeriod : undefined);
     
-    if (!latestData) return;
+    if (!metricData) return;
     
-    const category = categorizeMetric(metricName);
     const friendlyName = getFriendlyMetricName(metricName);
-    const formattedValue = formatMetricValue(latestData.value, metricName);
+    const formattedValue = formatMetricValue(metricData.value, metricName);
     
     const businessMetric: BusinessMetric = {
       name: friendlyName,
       value: formattedValue,
       category,
-      description: `Data from ${latestData.period}`
+      period: metricData.period,
+      isFromFallbackPeriod: metricData.isFromFallback,
+      description: `Data from ${metricData.period}${metricData.isFromFallback ? ' (fallback)' : ''}`
     };
     
     // Add to appropriate category
@@ -530,9 +782,47 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
 }
 
 /**
+ * Helper function to get human-readable period information for a category
+ */
+export function getCategoryPeriodInfo(categoryAnalysis: CategoryPeriodInfo): string {
+  if (categoryAnalysis.period === 'No Data') {
+    return 'No data available';
+  }
+  
+  const periodDate = new Date(categoryAnalysis.period + '-01');
+  const formattedPeriod = periodDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  
+  let info = formattedPeriod;
+  
+  if (categoryAnalysis.fallbackReason) {
+    info += ` (${categoryAnalysis.fallbackReason.toLowerCase()})`;
+  } else if (categoryAnalysis.isOptimal) {
+    info += ' (current)';
+  }
+  
+  return info;
+}
+
+/**
+ * Helper function to format period for display
+ */
+export function formatPeriodForDisplay(period: string): string {
+  if (!period || period === 'No Data') {
+    return 'No Data';
+  }
+  
+  try {
+    const date = new Date(period + '-01');
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  } catch {
+    return period;
+  }
+}
+
+/**
  * Helper function to get category display name
  */
-export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
+export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
   const categoryNames = {
     websitePerformance: 'Website Performance',
     trafficSources: 'Traffic Sources',
@@ -547,7 +837,7 @@ export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category description
  */
-export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
+export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
   const descriptions = {
     websitePerformance: 'Key metrics affecting user experience and search rankings',
     trafficSources: 'How visitors discover and reach your website',
@@ -562,7 +852,7 @@ export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category icon (for UI)
  */
-export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
+export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
   const icons = {
     websitePerformance: 'gauge',
     trafficSources: 'users',

@@ -30,7 +30,7 @@ import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
-import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, type BusinessInsights } from '@/utils/portfolioDataTransformer';
+import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, formatPeriodForDisplay, getCategoryPeriodInfo, type BusinessInsights } from '@/utils/portfolioDataTransformer';
 import {
   clientService,
   userService,
@@ -4284,6 +4284,86 @@ export default function AdminPanel() {
                             )}
                           </div>
                         )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Period Summary Section */}
+                  {businessInsights.periodSummary.primaryPeriod && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Sparkles className="h-5 w-5" />
+                          Data Period Analysis
+                        </CardTitle>
+                        <p className="text-sm text-gray-600">
+                          Period coverage and freshness by metric category
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {/* Mixed Period Warning */}
+                        {businessInsights.periodSummary.hasMixedPeriods && businessInsights.dataCoverage.mixedPeriodWarning.message && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <X className="h-5 w-5 text-amber-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-amber-800 mb-1">Mixed Period Data Detected</h4>
+                                <p className="text-sm text-amber-700">
+                                  {businessInsights.dataCoverage.mixedPeriodWarning.message}
+                                </p>
+                                {businessInsights.periodSummary.categoriesUsingOlderData.length > 0 && (
+                                  <p className="text-xs text-amber-600 mt-2">
+                                    Categories using older data: {businessInsights.periodSummary.categoriesUsingOlderData.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Category Period Breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                          {Object.entries(businessInsights.dataCoverage.categoryAnalysis).map(([category, analysis]) => {
+                            const categoryName = getCategoryDisplayName(category as keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>);
+                            const IconComponent = getCategoryIconComponent(category);
+                            
+                            return (
+                              <div
+                                key={category}
+                                className={`rounded-lg p-4 border ${
+                                  analysis.period === 'No Data' ? 'bg-gray-50 border-gray-200' :
+                                  analysis.isOptimal ? 'bg-green-50 border-green-200' :
+                                  'bg-amber-50 border-amber-200'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  {IconComponent}
+                                  <div className="text-sm font-medium text-gray-900 truncate">{categoryName}</div>
+                                </div>
+                                <div className={`text-lg font-bold mb-1 ${
+                                  analysis.period === 'No Data' ? 'text-gray-500' :
+                                  analysis.isOptimal ? 'text-green-700' :
+                                  'text-amber-700'
+                                }`}>
+                                  {analysis.period === 'No Data' ? 'No Data' : formatPeriodForDisplay(analysis.period)}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {analysis.period !== 'No Data' && (
+                                    <>
+                                      {analysis.metricsCount} of {analysis.totalPossibleMetrics} metrics
+                                      {analysis.fallbackReason && (
+                                        <div className="text-amber-600 mt-1">{analysis.fallbackReason}</div>
+                                      )}
+                                    </>
+                                  )}
+                                  {analysis.period === 'No Data' && 'No metrics available'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </CardContent>
                     </Card>
                   )}
