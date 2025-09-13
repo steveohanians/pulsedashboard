@@ -147,27 +147,32 @@ function formatMetricValue(value: any, metricName: string): string {
 function categorizeMetric(metricName: string): string {
   const name = metricName.toLowerCase();
   
-  // Move specific user engagement metrics to Engagement Metrics
-  if (name.includes('pagespersession') || name.includes('pages per session') ||
-      name.includes('sessionduration') || name.includes('session duration') ||
-      name.includes('sessionsperuser') || name.includes('sessions per user')) {
-    return 'engagementMetrics';
-  }
-  
+  // Engagement performance metrics (bounce rate, speed, load times)
   if (name.includes('bounce') || name.includes('load') || name.includes('speed') || name.includes('performance')) {
     return 'engagementMetrics';
   }
   
+  // Traffic source metrics
   if (name.includes('source') || name.includes('channel') || name.includes('organic') || 
       name.includes('direct') || name.includes('referral') || name.includes('social')) {
     return 'trafficSources';
   }
   
-  if (name.includes('session') || name.includes('page') || name.includes('user') || 
-      name.includes('visit') || name.includes('duration')) {
+  // User behavior metrics (session patterns, pages, device usage)
+  if (name.includes('pagespersession') || name.includes('pages per session') ||
+      name.includes('sessionduration') || name.includes('session duration') ||
+      name.includes('sessionsperuser') || name.includes('sessions per user') ||
+      name.includes('device') || name.includes('visit')) {
     return 'userBehavior';
   }
   
+  // General session/page/user metrics that don't fit above categories
+  if (name.includes('session') || name.includes('page') || name.includes('user') || 
+      name.includes('duration')) {
+    return 'userBehavior';
+  }
+  
+  // Conversion and engagement action metrics
   if (name.includes('conversion') || name.includes('click') || name.includes('ctr') || 
       name.includes('engagement') || name.includes('goal')) {
     return 'engagement';
