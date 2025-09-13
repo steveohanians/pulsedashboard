@@ -801,11 +801,15 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
   let mostRecentDate = '';
   const allPeriods: string[] = [];
   
-  Object.values(rawData.metrics).forEach((timePeriods: any) => {
-    Object.keys(timePeriods).forEach(period => {
-      allPeriods.push(period);
+  if (rawData.metrics && typeof rawData.metrics === 'object') {
+    Object.values(rawData.metrics).forEach((timePeriods: any) => {
+      if (timePeriods && typeof timePeriods === 'object') {
+        Object.keys(timePeriods).forEach(period => {
+          allPeriods.push(period);
+        });
+      }
     });
-  });
+  }
   
   if (allPeriods.length > 0) {
     mostRecentDate = allPeriods.sort((a, b) => b.localeCompare(a))[0];
@@ -833,7 +837,8 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
   });
   
   // Process each metric using category-specific optimal periods
-  Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
+  if (rawData.metrics && typeof rawData.metrics === 'object') {
+    Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
     const category = categorizeMetric(metricName);
     const optimalPeriod = categoryOptimalPeriods[category as keyof typeof categoryOptimalPeriods];
     
@@ -897,7 +902,8 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
         insights.technical.push(businessMetric);
         break;
     }
-  });
+    });
+  }
   
   return insights;
 }
