@@ -4183,25 +4183,28 @@ export default function AdminPanel() {
                   ) : (
                     <>
                       {/* Website Performance */}
-                      {businessInsights.categories.websitePerformance.metrics.length > 0 && (
+                      {businessInsights.categories.engagementMetrics.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
                             <CardTitle className="text-lg">
-                              {businessInsights.categories.websitePerformance.displayName}
+                              {businessInsights.categories.engagementMetrics.displayName}
                             </CardTitle>
-                            {businessInsights.categories.websitePerformance.periods && businessInsights.categories.websitePerformance.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.websitePerformance.periods)}</p>
+                            {businessInsights.categories.engagementMetrics.periods && businessInsights.categories.engagementMetrics.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagementMetrics.periods)}</p>
                             )}
-                            <p className="text-sm text-gray-600">{getCategoryDescription('websitePerformance')}</p>
+                            <p className="text-sm text-gray-600">{getCategoryDescription('engagementMetrics')}</p>
                           </CardHeader>
                           <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {businessInsights.websitePerformance.map((metric, index) => (
+                              {businessInsights.engagementMetrics.map((metric, index) => (
                                 <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
                                   <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
                                   <div className="text-2xl font-bold text-blue-700 mb-1">{metric.value}</div>
                                   {metric.description && (
                                     <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
                                   )}
                                 </div>
                               ))}
@@ -4218,7 +4221,7 @@ export default function AdminPanel() {
                               {businessInsights.categories.trafficSources.displayName}
                             </CardTitle>
                             {businessInsights.categories.trafficSources.periods && businessInsights.categories.trafficSources.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.trafficSources.periods)}</p>
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.trafficSources.periods)}</p>
                             )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
                           </CardHeader>
@@ -4230,6 +4233,9 @@ export default function AdminPanel() {
                                   <div className="text-2xl font-bold text-green-700 mb-1">{metric.value}</div>
                                   {metric.description && (
                                     <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
                                   )}
                                 </div>
                               ))}
@@ -4246,7 +4252,7 @@ export default function AdminPanel() {
                               {businessInsights.categories.userBehavior.displayName}
                             </CardTitle>
                             {businessInsights.categories.userBehavior.periods && businessInsights.categories.userBehavior.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.userBehavior.periods)}</p>
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.userBehavior.periods)}</p>
                             )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
                           </CardHeader>
@@ -4258,6 +4264,9 @@ export default function AdminPanel() {
                                   <div className="text-2xl font-bold text-purple-700 mb-1">{metric.value}</div>
                                   {metric.description && (
                                     <div className="text-xs text-gray-500">{metric.description}</div>
+                                  )}
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
                                   )}
                                 </div>
                               ))}
@@ -4287,6 +4296,9 @@ export default function AdminPanel() {
                                   {metric.description && (
                                     <div className="text-xs text-gray-500">{metric.description}</div>
                                   )}
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -4312,6 +4324,9 @@ export default function AdminPanel() {
                                 <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                   <div className="text-xs text-gray-600 mb-1">{metric.name}</div>
                                   <div className="text-lg font-semibold text-gray-700">{metric.value}</div>
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
                                 </div>
                               ))}
                             </div>

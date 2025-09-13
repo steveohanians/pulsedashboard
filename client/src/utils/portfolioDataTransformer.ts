@@ -24,7 +24,7 @@ export interface CategoryPeriodInfo {
 }
 
 export interface CategoryCoverage {
-  websitePerformance: CategoryPeriodInfo;
+  engagementMetrics: CategoryPeriodInfo;
   trafficSources: CategoryPeriodInfo;
   userBehavior: CategoryPeriodInfo;
   engagement: CategoryPeriodInfo;
@@ -72,14 +72,14 @@ export interface BusinessInsights {
     totalMetrics: number;
   };
   categories: {
-    websitePerformance: CategoryWithPeriod;
+    engagementMetrics: CategoryWithPeriod;
     trafficSources: CategoryWithPeriod;
     userBehavior: CategoryWithPeriod;
     engagement: CategoryWithPeriod;
     technical: CategoryWithPeriod;
   };
   // Simplified legacy support - no complex analysis
-  websitePerformance: BusinessMetric[];
+  engagementMetrics: BusinessMetric[];
   trafficSources: BusinessMetric[];
   userBehavior: BusinessMetric[];
   engagement: BusinessMetric[];
@@ -147,15 +147,15 @@ function formatMetricValue(value: any, metricName: string): string {
 function categorizeMetric(metricName: string): string {
   const name = metricName.toLowerCase();
   
-  // Move specific user engagement metrics to Website Performance
+  // Move specific user engagement metrics to Engagement Metrics
   if (name.includes('pagespersession') || name.includes('pages per session') ||
       name.includes('sessionduration') || name.includes('session duration') ||
       name.includes('sessionsperuser') || name.includes('sessions per user')) {
-    return 'websitePerformance';
+    return 'engagementMetrics';
   }
   
   if (name.includes('bounce') || name.includes('load') || name.includes('speed') || name.includes('performance')) {
-    return 'websitePerformance';
+    return 'engagementMetrics';
   }
   
   if (name.includes('source') || name.includes('channel') || name.includes('organic') || 
@@ -352,7 +352,7 @@ function analyzeMetricCompletenessPerPeriod(rawData: any): Record<string, Record
         if (periodData && periodData.length > 0) {
           if (!periodAnalysis[period]) {
             periodAnalysis[period] = {
-              websitePerformance: [],
+              engagementMetrics: [],
               trafficSources: [],
               userBehavior: [],
               engagement: [],
@@ -372,7 +372,7 @@ function analyzeMetricCompletenessPerPeriod(rawData: any): Record<string, Record
  * Selects optimal period for each category based on completeness and recency
  */
 function selectOptimalPeriodPerCategory(periodAnalysis: Record<string, Record<string, string[]>>, rawData: any): CategoryCoverage {
-  const categories = ['websitePerformance', 'trafficSources', 'userBehavior', 'engagement', 'technical'] as const;
+  const categories = ['engagementMetrics', 'trafficSources', 'userBehavior', 'engagement', 'technical'] as const;
   const result: CategoryCoverage = {} as CategoryCoverage;
   
   // Get sorted periods (most recent first)
@@ -683,12 +683,12 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       totalMetrics: 0
     },
     categories: {
-      websitePerformance: {
-        name: 'websitePerformance',
-        displayName: getCategoryDisplayNameSimple('websitePerformance'),
+      engagementMetrics: {
+        name: 'engagementMetrics',
+        displayName: getCategoryDisplayNameSimple('engagementMetrics'),
         period: 'No Data',
         periods: [],
-        icon: getCategoryIcon('websitePerformance'),
+        icon: getCategoryIcon('engagementMetrics'),
         metrics: []
       },
       trafficSources: {
@@ -725,7 +725,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       }
     },
     // Legacy support for backward compatibility
-    websitePerformance: [],
+    engagementMetrics: [],
     trafficSources: [],
     userBehavior: [],
     engagement: [],
@@ -757,7 +757,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
   
   // Get optimal periods for each category using simplified approach
   const categoryOptimalPeriods = {
-    websitePerformance: getCategoryOptimalPeriod(rawData, 'websitePerformance'),
+    engagementMetrics: getCategoryOptimalPeriod(rawData, 'engagementMetrics'),
     trafficSources: getCategoryOptimalPeriod(rawData, 'trafficSources'),
     userBehavior: getCategoryOptimalPeriod(rawData, 'userBehavior'),
     engagement: getCategoryOptimalPeriod(rawData, 'engagement'),
@@ -821,8 +821,8 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     insights.categories[categoryKey].metrics.push(businessMetric);
     
     switch (category) {
-      case 'websitePerformance':
-        insights.websitePerformance.push(businessMetric);
+      case 'engagementMetrics':
+        insights.engagementMetrics.push(businessMetric);
         break;
       case 'trafficSources':
         insights.trafficSources.push(businessMetric);
@@ -885,7 +885,7 @@ export function formatPeriodForDisplay(period: string): string {
  */
 export function getCategoryDisplayName(category: keyof BusinessInsights['categories']): string {
   const categoryNames = {
-    websitePerformance: 'Website Performance',
+    engagementMetrics: 'Engagement Metrics',
     trafficSources: 'Traffic Sources',
     userBehavior: 'User Behavior',
     engagement: 'Engagement Metrics',
@@ -900,7 +900,7 @@ export function getCategoryDisplayName(category: keyof BusinessInsights['categor
  */
 export function getCategoryDescription(category: keyof BusinessInsights['categories']): string {
   const descriptions = {
-    websitePerformance: 'Key metrics affecting user experience and search rankings',
+    engagementMetrics: 'Key metrics affecting user experience and search rankings',
     trafficSources: 'How visitors discover and reach your website',
     userBehavior: 'How users interact and engage with your content',
     engagement: 'Actions users take that indicate interest and intent',
@@ -915,7 +915,7 @@ export function getCategoryDescription(category: keyof BusinessInsights['categor
  */
 export function getCategoryIcon(category: string): string {
   const icons = {
-    websitePerformance: 'gauge',
+    engagementMetrics: 'gauge',
     trafficSources: 'users',
     userBehavior: 'mouse-pointer',
     engagement: 'target',
@@ -930,7 +930,7 @@ export function getCategoryIcon(category: string): string {
  */
 export function getCategoryEmoji(category: string): string {
   const emojis = {
-    websitePerformance: '📈',
+    engagementMetrics: '📈',
     trafficSources: '🌐',
     userBehavior: '📱',
     engagement: '🎯',
