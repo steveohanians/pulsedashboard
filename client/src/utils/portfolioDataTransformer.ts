@@ -795,8 +795,8 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       value: formattedValue,
       category,
       period: metricData.period,
-      isFromFallbackPeriod: metricData.isFromFallback,
-      description: `Data from ${metricData.period}${metricData.isFromFallback ? ' (fallback)' : ''}`
+      isFromFallbackPeriod: metricData.isFromFallback
+      // Removed description with individual period labels as requested
     };
     
     // Add to both legacy and new category structures
@@ -924,7 +924,52 @@ export function getCategoryEmoji(category: string): string {
 }
 
 /**
- * Creates a category display name with period tag
+ * Creates a category display name with all available periods
+ */
+export function getCategoryDisplayNameWithAllPeriods(category: string, periods: string[]): string {
+  const displayName = getCategoryDisplayName(category as any);
+  const emoji = getCategoryEmoji(category);
+  
+  if (periods.length === 0) {
+    return `${emoji} ${displayName} [No Data]`;
+  }
+  
+  // Format periods for display
+  const formattedPeriods = periods.map(period => {
+    try {
+      const date = new Date(period + '-01');
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      return { month, year, period };
+    } catch {
+      return { month: period, year: '', period };
+    }
+  });
+  
+  // Group by year and format
+  const yearGroups: Record<string, string[]> = {};
+  formattedPeriods.forEach(({ month, year, period }) => {
+    const yearKey = year.toString();
+    if (!yearGroups[yearKey]) {
+      yearGroups[yearKey] = [];
+    }
+    yearGroups[yearKey].push(month);
+  });
+  
+  // Create display string
+  const yearDisplays = Object.entries(yearGroups).map(([year, months]) => {
+    if (months.length === 1) {
+      return `${months[0]} ${year}`;
+    }
+    return `${months.join(', ')} ${year}`;
+  });
+  
+  const periodDisplay = yearDisplays.join('; ');
+  return `${emoji} ${displayName} [${periodDisplay}]`;
+}
+
+/**
+ * Creates a category display name with period tag (for backward compatibility)
  */
 export function getCategoryDisplayNameWithPeriod(category: string, period: string): string {
   const displayName = getCategoryDisplayName(category as any);
@@ -939,11 +984,11 @@ export function getCategoryDisplayNameWithPeriod(category: string, period: strin
 }
 
 /**
- * Gets the optimal period for a specific category from raw data
+ * Gets ALL periods with data for a specific category from raw data
  */
-export function getCategoryOptimalPeriod(rawData: any, category: string): string {
+export function getCategoryAllPeriods(rawData: any, category: string): string[] {
   if (!rawData?.metrics) {
-    return 'No Data';
+    return [];
   }
   
   // Collect metrics for this category
@@ -956,10 +1001,10 @@ export function getCategoryOptimalPeriod(rawData: any, category: string): string
   });
   
   if (Object.keys(categoryMetrics).length === 0) {
-    return 'No Data';
+    return [];
   }
   
-  // Find the most recent period with data for this category
+  // Collect all periods with data for this category
   const allPeriods = new Set<string>();
   Object.values(categoryMetrics).forEach((timePeriods: any) => {
     if (timePeriods && typeof timePeriods === 'object') {
@@ -972,10 +1017,14 @@ export function getCategoryOptimalPeriod(rawData: any, category: string): string
     }
   });
   
-  if (allPeriods.size === 0) {
-    return 'No Data';
-  }
-  
-  // Return the most recent period
-  return Array.from(allPeriods).sort((a, b) => b.localeCompare(a))[0];
+  // Return sorted periods (most recent first)
+  return Array.from(allPeriods).sort((a, b) => b.localeCompare(a));
+}
+
+/**
+ * Gets the optimal period for a specific category from raw data (for backward compatibility)
+ */
+export function getCategoryOptimalPeriod(rawData: any, category: string): string {
+  const periods = getCategoryAllPeriods(rawData, category);
+  return periods.length > 0 ? periods[0] : 'No Data';
 }
