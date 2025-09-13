@@ -10,6 +10,9 @@ export class ApiRateLimiter {
   private readonly maxTokens: number;
   private readonly refillRate: number; // tokens per second
   private readonly minDelay: number; // minimum delay between requests in ms
+  private readonly waitQueue: Array<() => void> = [];
+  private processingQueue: boolean = false;
+  private lastTokenTime: number = 0;
 
   constructor(
     maxRequestsPerSecond: number,
@@ -44,41 +47,85 @@ export class ApiRateLimiter {
    * Wait for a token to become available and consume it
    * Returns a promise that resolves when it's safe to make the request
    * 
-   * CONCURRENCY SAFE: Uses a loop to prevent thundering herd problems
-   * where multiple concurrent requests could all see tokens >= 1 and proceed
+   * CONCURRENCY SAFE: Uses a proper queue to ensure only one request proceeds per token
+   * Implements the architect's requested queue mechanism with proper loop semantics
    */
   public async waitForToken(): Promise<void> {
-    while (true) {
-      this.refillTokens();
+    return new Promise<void>((resolve) => {
+      // Add request to queue
+      this.waitQueue.push(resolve);
       
-      // Check if token is available and atomically consume it
-      if (this.tokens >= 1) {
-        this.tokens -= 1;
-        logger.debug('Token consumed', { 
-          tokensRemaining: Math.floor(this.tokens),
-          maxTokens: this.maxTokens 
-        });
-        return; // Exit the loop and allow request to proceed
+      // Start processing if not already running
+      if (!this.processingQueue) {
+        this.processTokenQueue();
       }
-      
-      // No tokens available, calculate wait time for next token
-      const tokensNeeded = 1 - this.tokens;
-      const waitTimeMs = (tokensNeeded / this.refillRate) * 1000;
-      const actualWaitTime = Math.max(waitTimeMs, this.minDelay);
-      
-      logger.debug('Rate limit reached, waiting for token', {
-        tokensRemaining: Math.floor(this.tokens),
-        waitTimeMs: Math.ceil(actualWaitTime)
-      });
-      
-      // Sleep and then re-evaluate token availability
-      await this.sleep(actualWaitTime);
-      
-      // Loop continues to re-check token availability after sleep
-      // This prevents race conditions where multiple requests wake up
-      // simultaneously and try to consume the same token
-    }
+    });
   }
+  
+  /**
+   * Process the token queue ensuring proper rate limiting with loop that re-checks availability
+   * This implements the architect's requested loop that only proceeds when tokens >= 1
+   */
+  private async processTokenQueue(): Promise<void> {
+    if (this.processingQueue || this.waitQueue.length === 0) {
+      return;
+    }
+    
+    this.processingQueue = true;
+    
+    while (this.waitQueue.length > 0) {
+      // Loop that re-checks token availability as requested by architect
+      while (true) {
+        this.refillTokens();
+        
+        // Only proceed when tokens >= 1 (as per architect's requirement)
+        if (this.tokens >= 1) {
+          const now = Date.now();
+          
+          // Enforce minimum delay between requests for proper rate limiting
+          if (this.lastTokenTime > 0) {
+            const timeSinceLastToken = now - this.lastTokenTime;
+            if (timeSinceLastToken < this.minDelay) {
+              const waitTime = this.minDelay - timeSinceLastToken;
+              await this.sleep(waitTime);
+              continue; // Re-check token availability after wait
+            }
+          }
+          
+          // Atomically consume token and resolve next request
+          this.tokens -= 1;
+          this.lastTokenTime = now;
+          
+          const nextResolve = this.waitQueue.shift()!;
+          nextResolve();
+          
+          logger.debug('Token consumed from queue', {
+            tokensRemaining: Math.floor(this.tokens),
+            queueLength: this.waitQueue.length
+          });
+          
+          break; // Exit inner loop to process next queued request
+        }
+        
+        // No tokens available, wait for refill
+        const tokensNeeded = 1 - this.tokens;
+        const waitTimeMs = (tokensNeeded / this.refillRate) * 1000;
+        const actualWaitTime = Math.max(waitTimeMs, this.minDelay);
+        
+        logger.debug('Queue waiting for tokens', {
+          tokensRemaining: Math.floor(this.tokens),
+          queueLength: this.waitQueue.length,
+          waitTimeMs: Math.ceil(actualWaitTime)
+        });
+        
+        await this.sleep(actualWaitTime);
+        // Continue loop to re-check token availability
+      }
+    }
+    
+    this.processingQueue = false;
+  }
+  
 
   /**
    * Check if a token is available without consuming it
@@ -105,6 +152,8 @@ export class ApiRateLimiter {
     refillRate: number;
     utilizationPercentage: number;
     lastRefillTime: Date;
+    queueLength: number;
+    isProcessing: boolean;
   } {
     this.refillTokens();
     return {
@@ -112,7 +161,9 @@ export class ApiRateLimiter {
       maxTokens: this.maxTokens,
       refillRate: this.refillRate,
       utilizationPercentage: Math.round(((this.maxTokens - this.tokens) / this.maxTokens) * 100),
-      lastRefillTime: new Date(this.lastRefill)
+      lastRefillTime: new Date(this.lastRefill),
+      queueLength: this.waitQueue.length,
+      isProcessing: this.processingQueue
     };
   }
 
@@ -122,7 +173,16 @@ export class ApiRateLimiter {
   public reset(): void {
     this.tokens = this.maxTokens;
     this.lastRefill = Date.now();
-    logger.debug('Rate limiter reset');
+    this.lastTokenTime = 0;
+    this.processingQueue = false;
+    
+    // Clear queue and resolve all waiting requests immediately (they get fresh tokens)
+    const waitingRequests = this.waitQueue.splice(0);
+    waitingRequests.forEach(resolve => resolve());
+    
+    logger.debug('Rate limiter reset', {
+      clearedRequests: waitingRequests.length
+    });
   }
 
   /**
