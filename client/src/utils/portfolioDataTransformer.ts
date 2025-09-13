@@ -866,7 +866,7 @@ export function formatPeriodForDisplay(period: string): string {
 /**
  * Helper function to get category display name
  */
-export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
+export function getCategoryDisplayName(category: keyof BusinessInsights['categories']): string {
   const categoryNames = {
     websitePerformance: 'Website Performance',
     trafficSources: 'Traffic Sources',
@@ -881,7 +881,7 @@ export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category description
  */
-export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
+export function getCategoryDescription(category: keyof BusinessInsights['categories']): string {
   const descriptions = {
     websitePerformance: 'Key metrics affecting user experience and search rankings',
     trafficSources: 'How visitors discover and reach your website',
