@@ -1006,7 +1006,7 @@ export function getCategoryDisplayName(category: keyof BusinessInsights['categor
   const categoryNames = {
     engagementMetrics: 'Engagement Metrics',
     trafficSources: 'Traffic Sources',
-    userBehavior: 'User Behavior',
+    userBehavior: 'Device Distribution',
     engagement: 'Engagement Metrics',
     technical: 'Technical Metrics'
   };
