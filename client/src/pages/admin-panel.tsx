@@ -30,7 +30,7 @@ import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
-import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, formatPeriodForDisplay, getCategoryPeriodInfo, type BusinessInsights } from '@/utils/portfolioDataTransformer';
+import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, getCategoryEmoji, getCategoryDisplayNameWithPeriod, formatPeriodForDisplay, getCategoryPeriodInfo, type BusinessInsights } from '@/utils/portfolioDataTransformer';
 import {
   clientService,
   userService,
@@ -4168,205 +4168,33 @@ export default function AdminPanel() {
                     </CardContent>
                   </Card>
 
-                  {/* Data Coverage Section */}
-                  {businessInsights.dataCoverage.totalPeriods > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Activity className="h-5 w-5" />
-                          Data Coverage Analysis
-                        </CardTitle>
-                        <p className="text-sm text-gray-600">
-                          Detailed analysis of data availability across time periods
-                        </p>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                          {/* Coverage Percentage */}
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                            <div className="text-sm text-gray-600 mb-1">Coverage</div>
-                            <div className="text-2xl font-bold text-blue-700 mb-1">
-                              {businessInsights.dataCoverage.coveragePercentage}%
+                  {/* Simplified Data Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Activity className="h-5 w-5" />
+                        Data Categories
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">
+                        Data availability by category with period information
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {Object.entries(businessInsights.categories).map(([key, category]) => (
+                          <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{category.displayName.split(' ')[0]}</span>
+                              <span className="font-medium">{category.displayName}</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {businessInsights.dataCoverage.periodsWithData} of {businessInsights.dataCoverage.totalPeriods} periods
-                            </div>
-                          </div>
-
-                          {/* Time Range */}
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
-                            <div className="text-sm text-gray-600 mb-1">Time Range</div>
-                            <div className="text-2xl font-bold text-green-700 mb-1">
-                              {businessInsights.dataCoverage.timeRange.spanMonths} months
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {businessInsights.dataCoverage.timeRange.earliest} to {businessInsights.dataCoverage.timeRange.latest}
+                            <div className="text-sm text-gray-600">
+                              {category.metrics.length} metrics
                             </div>
                           </div>
-
-                          {/* Data Completeness */}
-                          <div className={`rounded-lg p-4 border ${
-                            businessInsights.dataCoverage.dataCompleteness === 'excellent' ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-100' :
-                            businessInsights.dataCoverage.dataCompleteness === 'good' ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100' :
-                            businessInsights.dataCoverage.dataCompleteness === 'fair' ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-100' :
-                            'bg-gradient-to-br from-red-50 to-rose-50 border-red-100'
-                          }`}>
-                            <div className="text-sm text-gray-600 mb-1">Quality</div>
-                            <div className={`text-2xl font-bold mb-1 capitalize ${
-                              businessInsights.dataCoverage.dataCompleteness === 'excellent' ? 'text-green-700' :
-                              businessInsights.dataCoverage.dataCompleteness === 'good' ? 'text-blue-700' :
-                              businessInsights.dataCoverage.dataCompleteness === 'fair' ? 'text-yellow-700' :
-                              'text-red-700'
-                            }`}>
-                              {businessInsights.dataCoverage.dataCompleteness}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {businessInsights.dataCoverage.gapAnalysis.recentDataAvailable ? 'Recent data available' : 'Data may be outdated'}
-                            </div>
-                          </div>
-
-                          {/* Gap Analysis */}
-                          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-4 border border-purple-100">
-                            <div className="text-sm text-gray-600 mb-1">Gaps</div>
-                            <div className="text-2xl font-bold text-purple-700 mb-1">
-                              {businessInsights.dataCoverage.gapAnalysis.hasGaps ? businessInsights.dataCoverage.gapAnalysis.longestGap : 0}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {businessInsights.dataCoverage.gapAnalysis.hasGaps ? 'months longest gap' : 'No gaps found'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Available Periods Timeline */}
-                        {businessInsights.dataCoverage.availablePeriods.length > 0 && (
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="font-medium text-gray-900 mb-3">Available Data Periods</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {businessInsights.dataCoverage.availablePeriods.slice(0, 12).map((period) => (
-                                  <span
-                                    key={period}
-                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                    data-testid={`period-available-${period}`}
-                                  >
-                                    {period}
-                                  </span>
-                                ))}
-                                {businessInsights.dataCoverage.availablePeriods.length > 12 && (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                    +{businessInsights.dataCoverage.availablePeriods.length - 12} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Missing Periods */}
-                            {businessInsights.dataCoverage.missingPeriods.length > 0 && (
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Missing Data Periods</h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {businessInsights.dataCoverage.missingPeriods.slice(0, 8).map((period) => (
-                                    <span
-                                      key={period}
-                                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                                      data-testid={`period-missing-${period}`}
-                                    >
-                                      {period}
-                                    </span>
-                                  ))}
-                                  {businessInsights.dataCoverage.missingPeriods.length > 8 && (
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                      +{businessInsights.dataCoverage.missingPeriods.length - 8} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Period Summary Section */}
-                  {businessInsights.periodSummary.primaryPeriod && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Sparkles className="h-5 w-5" />
-                          Data Period Analysis
-                        </CardTitle>
-                        <p className="text-sm text-gray-600">
-                          Period coverage and freshness by metric category
-                        </p>
-                      </CardHeader>
-                      <CardContent>
-                        {/* Mixed Period Warning */}
-                        {businessInsights.periodSummary.hasMixedPeriods && businessInsights.dataCoverage.mixedPeriodWarning.message && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                <X className="h-5 w-5 text-amber-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-amber-800 mb-1">Mixed Period Data Detected</h4>
-                                <p className="text-sm text-amber-700">
-                                  {businessInsights.dataCoverage.mixedPeriodWarning.message}
-                                </p>
-                                {businessInsights.periodSummary.categoriesUsingOlderData.length > 0 && (
-                                  <p className="text-xs text-amber-600 mt-2">
-                                    Categories using older data: {businessInsights.periodSummary.categoriesUsingOlderData.join(', ')}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Category Period Breakdown */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                          {Object.entries(businessInsights.dataCoverage.categoryAnalysis).map(([category, analysis]) => {
-                            const categoryName = getCategoryDisplayName(category as keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>);
-                            const IconComponent = getCategoryIconComponent(category);
-                            
-                            return (
-                              <div
-                                key={category}
-                                className={`rounded-lg p-4 border ${
-                                  analysis.period === 'No Data' ? 'bg-gray-50 border-gray-200' :
-                                  analysis.isOptimal ? 'bg-green-50 border-green-200' :
-                                  'bg-amber-50 border-amber-200'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 mb-2">
-                                  {IconComponent}
-                                  <div className="text-sm font-medium text-gray-900 truncate">{categoryName}</div>
-                                </div>
-                                <div className={`text-lg font-bold mb-1 ${
-                                  analysis.period === 'No Data' ? 'text-gray-500' :
-                                  analysis.isOptimal ? 'text-green-700' :
-                                  'text-amber-700'
-                                }`}>
-                                  {analysis.period === 'No Data' ? 'No Data' : formatPeriodForDisplay(analysis.period)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {analysis.period !== 'No Data' && (
-                                    <>
-                                      {analysis.metricsCount} of {analysis.totalPossibleMetrics} metrics
-                                      {analysis.fallbackReason && (
-                                        <div className="text-amber-600 mt-1">{analysis.fallbackReason}</div>
-                                      )}
-                                    </>
-                                  )}
-                                  {analysis.period === 'No Data' && 'No metrics available'}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Business Insights */}
                   {businessInsights.overview.totalMetrics === 0 ? (
@@ -4382,12 +4210,11 @@ export default function AdminPanel() {
                   ) : (
                     <>
                       {/* Website Performance */}
-                      {businessInsights.websitePerformance.length > 0 && (
+                      {businessInsights.categories.websitePerformance.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {getCategoryIconComponent('websitePerformance')}
-                              {getCategoryDisplayName('websitePerformance')}
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.websitePerformance.displayName}
                             </CardTitle>
                             <p className="text-sm text-gray-600">{getCategoryDescription('websitePerformance')}</p>
                           </CardHeader>
@@ -4408,12 +4235,11 @@ export default function AdminPanel() {
                       )}
 
                       {/* Traffic Sources */}
-                      {businessInsights.trafficSources.length > 0 && (
+                      {businessInsights.categories.trafficSources.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {getCategoryIconComponent('trafficSources')}
-                              {getCategoryDisplayName('trafficSources')}
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.trafficSources.displayName}
                             </CardTitle>
                             <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
                           </CardHeader>
@@ -4434,12 +4260,11 @@ export default function AdminPanel() {
                       )}
 
                       {/* User Behavior */}
-                      {businessInsights.userBehavior.length > 0 && (
+                      {businessInsights.categories.userBehavior.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {getCategoryIconComponent('userBehavior')}
-                              {getCategoryDisplayName('userBehavior')}
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.userBehavior.displayName}
                             </CardTitle>
                             <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
                           </CardHeader>
@@ -4460,12 +4285,11 @@ export default function AdminPanel() {
                       )}
 
                       {/* Engagement Metrics */}
-                      {businessInsights.engagement.length > 0 && (
+                      {businessInsights.categories.engagement.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {getCategoryIconComponent('engagement')}
-                              {getCategoryDisplayName('engagement')}
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.engagement.displayName}
                             </CardTitle>
                             <p className="text-sm text-gray-600">{getCategoryDescription('engagement')}</p>
                           </CardHeader>
@@ -4486,12 +4310,11 @@ export default function AdminPanel() {
                       )}
 
                       {/* Technical Metrics (if any, shown in a collapsed state) */}
-                      {businessInsights.technical.length > 0 && (
+                      {businessInsights.categories.technical.metrics.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {getCategoryIconComponent('technical')}
-                              Additional Data Points
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.technical.displayName}
                             </CardTitle>
                             <p className="text-sm text-gray-600">Additional technical metrics and data points</p>
                           </CardHeader>

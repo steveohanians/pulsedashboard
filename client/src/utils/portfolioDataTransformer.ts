@@ -56,23 +56,33 @@ export interface DataCoverage {
   };
 }
 
+export interface CategoryWithPeriod {
+  name: string;
+  displayName: string;
+  period: string;
+  icon: string;
+  metrics: BusinessMetric[];
+}
+
 export interface BusinessInsights {
   overview: {
     dataAvailability: string;
     lastUpdated: string;
     totalMetrics: number;
   };
-  dataCoverage: DataCoverage;
+  categories: {
+    websitePerformance: CategoryWithPeriod;
+    trafficSources: CategoryWithPeriod;
+    userBehavior: CategoryWithPeriod;
+    engagement: CategoryWithPeriod;
+    technical: CategoryWithPeriod;
+  };
+  // Simplified legacy support - no complex analysis
   websitePerformance: BusinessMetric[];
   trafficSources: BusinessMetric[];
   userBehavior: BusinessMetric[];
   engagement: BusinessMetric[];
   technical: BusinessMetric[];
-  periodSummary: {
-    primaryPeriod: string;
-    hasMixedPeriods: boolean;
-    categoriesUsingOlderData: string[];
-  };
 }
 
 /**
@@ -658,26 +668,55 @@ function findLongestGap(expectedPeriods: string[], availablePeriods: string[]): 
  * Main transformation function that converts raw company data to business insights
  */
 export function transformCompanyDataToBusinessInsights(rawData: any): BusinessInsights {
-  // Analyze data coverage first
-  const dataCoverage = analyzeDataCoverage(rawData);
-
   const insights: BusinessInsights = {
     overview: {
       dataAvailability: 'No data available',
       lastUpdated: 'Never',
       totalMetrics: 0
     },
-    dataCoverage,
+    categories: {
+      websitePerformance: {
+        name: 'websitePerformance',
+        displayName: getCategoryDisplayNameWithPeriod('websitePerformance', 'No Data'),
+        period: 'No Data',
+        icon: getCategoryIcon('websitePerformance'),
+        metrics: []
+      },
+      trafficSources: {
+        name: 'trafficSources',
+        displayName: getCategoryDisplayNameWithPeriod('trafficSources', 'No Data'),
+        period: 'No Data',
+        icon: getCategoryIcon('trafficSources'),
+        metrics: []
+      },
+      userBehavior: {
+        name: 'userBehavior',
+        displayName: getCategoryDisplayNameWithPeriod('userBehavior', 'No Data'),
+        period: 'No Data',
+        icon: getCategoryIcon('userBehavior'),
+        metrics: []
+      },
+      engagement: {
+        name: 'engagement',
+        displayName: getCategoryDisplayNameWithPeriod('engagement', 'No Data'),
+        period: 'No Data',
+        icon: getCategoryIcon('engagement'),
+        metrics: []
+      },
+      technical: {
+        name: 'technical',
+        displayName: getCategoryDisplayNameWithPeriod('technical', 'No Data'),
+        period: 'No Data',
+        icon: getCategoryIcon('technical'),
+        metrics: []
+      }
+    },
+    // Legacy support for backward compatibility
     websitePerformance: [],
     trafficSources: [],
     userBehavior: [],
     engagement: [],
-    technical: [],
-    periodSummary: {
-      primaryPeriod: '',
-      hasMixedPeriods: false,
-      categoriesUsingOlderData: []
-    }
+    technical: []
   };
   
   if (!rawData || !rawData.metrics) {
@@ -703,21 +742,21 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     insights.overview.lastUpdated = mostRecentDate;
   }
   
-  // Get optimal periods for each category from the data coverage analysis
+  // Get optimal periods for each category using simplified approach
   const categoryOptimalPeriods = {
-    websitePerformance: dataCoverage.categoryAnalysis.websitePerformance.period,
-    trafficSources: dataCoverage.categoryAnalysis.trafficSources.period,
-    userBehavior: dataCoverage.categoryAnalysis.userBehavior.period,
-    engagement: dataCoverage.categoryAnalysis.engagement.period,
-    technical: dataCoverage.categoryAnalysis.technical.period
+    websitePerformance: getCategoryOptimalPeriod(rawData, 'websitePerformance'),
+    trafficSources: getCategoryOptimalPeriod(rawData, 'trafficSources'),
+    userBehavior: getCategoryOptimalPeriod(rawData, 'userBehavior'),
+    engagement: getCategoryOptimalPeriod(rawData, 'engagement'),
+    technical: getCategoryOptimalPeriod(rawData, 'technical')
   };
   
-  // Update period summary
-  const categoryPeriods = Object.values(categoryOptimalPeriods).filter(p => p !== 'No Data');
-  const uniquePeriods = [...new Set(categoryPeriods)];
-  insights.periodSummary.primaryPeriod = uniquePeriods.sort((a, b) => b.localeCompare(a))[0] || '';
-  insights.periodSummary.hasMixedPeriods = dataCoverage.mixedPeriodWarning.hasMixedPeriods;
-  insights.periodSummary.categoriesUsingOlderData = dataCoverage.mixedPeriodWarning.affectedCategories;
+  // Update category information with period tags
+  Object.entries(categoryOptimalPeriods).forEach(([category, period]) => {
+    const categoryKey = category as keyof typeof insights.categories;
+    insights.categories[categoryKey].period = period;
+    insights.categories[categoryKey].displayName = getCategoryDisplayNameWithPeriod(category, period);
+  });
   
   // Process each metric using category-specific optimal periods
   Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
@@ -729,6 +768,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       const trafficMetrics = aggregateChannelMetrics(timePeriods, 'traffic', optimalPeriod !== 'No Data' ? optimalPeriod : undefined);
       trafficMetrics.forEach(metric => {
         insights.trafficSources.push(metric);
+        insights.categories.trafficSources.metrics.push(metric);
       });
       return;
     }
@@ -737,6 +777,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       const deviceMetrics = aggregateChannelMetrics(timePeriods, 'device', optimalPeriod !== 'No Data' ? optimalPeriod : undefined);
       deviceMetrics.forEach(metric => {
         insights.userBehavior.push(metric);
+        insights.categories.userBehavior.metrics.push(metric);
       });
       return;
     }
@@ -758,7 +799,10 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
       description: `Data from ${metricData.period}${metricData.isFromFallback ? ' (fallback)' : ''}`
     };
     
-    // Add to appropriate category
+    // Add to both legacy and new category structures
+    const categoryKey = category as keyof typeof insights.categories;
+    insights.categories[categoryKey].metrics.push(businessMetric);
+    
     switch (category) {
       case 'websitePerformance':
         insights.websitePerformance.push(businessMetric);
@@ -852,7 +896,7 @@ export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category icon (for UI)
  */
-export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage' | 'periodSummary'>): string {
+export function getCategoryIcon(category: string): string {
   const icons = {
     websitePerformance: 'gauge',
     trafficSources: 'users',
@@ -861,5 +905,77 @@ export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview
     technical: 'settings'
   };
   
-  return icons[category] || 'bar-chart';
+  return icons[category as keyof typeof icons] || 'bar-chart';
+}
+
+/**
+ * Helper function to get category emoji for period tags
+ */
+export function getCategoryEmoji(category: string): string {
+  const emojis = {
+    websitePerformance: '📈',
+    trafficSources: '🌐',
+    userBehavior: '📱',
+    engagement: '🎯',
+    technical: '⚙️'
+  };
+  
+  return emojis[category as keyof typeof emojis] || '📊';
+}
+
+/**
+ * Creates a category display name with period tag
+ */
+export function getCategoryDisplayNameWithPeriod(category: string, period: string): string {
+  const displayName = getCategoryDisplayName(category as any);
+  const emoji = getCategoryEmoji(category);
+  const formattedPeriod = formatPeriodForDisplay(period);
+  
+  if (period === 'No Data' || !period) {
+    return `${emoji} ${displayName} [No Data]`;
+  }
+  
+  return `${emoji} ${displayName} [${formattedPeriod}]`;
+}
+
+/**
+ * Gets the optimal period for a specific category from raw data
+ */
+export function getCategoryOptimalPeriod(rawData: any, category: string): string {
+  if (!rawData?.metrics) {
+    return 'No Data';
+  }
+  
+  // Collect metrics for this category
+  const categoryMetrics: Record<string, any> = {};
+  
+  Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
+    if (categorizeMetric(metricName) === category) {
+      categoryMetrics[metricName] = timePeriods;
+    }
+  });
+  
+  if (Object.keys(categoryMetrics).length === 0) {
+    return 'No Data';
+  }
+  
+  // Find the most recent period with data for this category
+  const allPeriods = new Set<string>();
+  Object.values(categoryMetrics).forEach((timePeriods: any) => {
+    if (timePeriods && typeof timePeriods === 'object') {
+      Object.keys(timePeriods).forEach(period => {
+        const periodData = timePeriods[period];
+        if (periodData && periodData.length > 0) {
+          allPeriods.add(period);
+        }
+      });
+    }
+  });
+  
+  if (allPeriods.size === 0) {
+    return 'No Data';
+  }
+  
+  // Return the most recent period
+  return Array.from(allPeriods).sort((a, b) => b.localeCompare(a))[0];
 }
