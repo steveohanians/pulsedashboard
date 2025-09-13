@@ -12,12 +12,32 @@ export interface BusinessMetric {
   category: string;
 }
 
+export interface DataCoverage {
+  totalPeriods: number;
+  periodsWithData: number;
+  coveragePercentage: number;
+  timeRange: {
+    earliest: string;
+    latest: string;
+    spanMonths: number;
+  };
+  missingPeriods: string[];
+  availablePeriods: string[];
+  dataCompleteness: 'excellent' | 'good' | 'fair' | 'poor' | 'none';
+  gapAnalysis: {
+    hasGaps: boolean;
+    longestGap: number; // in months
+    recentDataAvailable: boolean;
+  };
+}
+
 export interface BusinessInsights {
   overview: {
     dataAvailability: string;
     lastUpdated: string;
     totalMetrics: number;
   };
+  dataCoverage: DataCoverage;
   websitePerformance: BusinessMetric[];
   trafficSources: BusinessMetric[];
   userBehavior: BusinessMetric[];
@@ -230,15 +250,197 @@ function formatNumber(num: number): string {
 }
 
 /**
+ * Analyzes data coverage across all metrics to provide comprehensive coverage insights
+ */
+function analyzeDataCoverage(rawData: any): DataCoverage {
+  // Default empty coverage
+  const defaultCoverage: DataCoverage = {
+    totalPeriods: 0,
+    periodsWithData: 0,
+    coveragePercentage: 0,
+    timeRange: {
+      earliest: '',
+      latest: '',
+      spanMonths: 0
+    },
+    missingPeriods: [],
+    availablePeriods: [],
+    dataCompleteness: 'none',
+    gapAnalysis: {
+      hasGaps: false,
+      longestGap: 0,
+      recentDataAvailable: false
+    }
+  };
+
+  if (!rawData?.metrics) {
+    return defaultCoverage;
+  }
+
+  // Collect all unique periods across all metrics
+  const allPeriodsSet = new Set<string>();
+  const metricsWithData: Record<string, string[]> = {};
+
+  Object.entries(rawData.metrics).forEach(([metricName, timePeriods]: [string, any]) => {
+    if (timePeriods && typeof timePeriods === 'object') {
+      const periodsForMetric = Object.keys(timePeriods).filter(period => {
+        const periodData = timePeriods[period];
+        return periodData && periodData.length > 0;
+      });
+      
+      periodsForMetric.forEach(period => allPeriodsSet.add(period));
+      if (periodsForMetric.length > 0) {
+        metricsWithData[metricName] = periodsForMetric;
+      }
+    }
+  });
+
+  const allPeriods = Array.from(allPeriodsSet).sort();
+  
+  if (allPeriods.length === 0) {
+    return defaultCoverage;
+  }
+
+  // Count periods with at least one metric having data
+  const periodsWithData = allPeriods.filter(period => 
+    Object.values(metricsWithData).some(metricPeriods => metricPeriods.includes(period))
+  );
+
+  // Generate expected periods between earliest and latest
+  const earliestPeriod = allPeriods[0];
+  const latestPeriod = allPeriods[allPeriods.length - 1];
+  const expectedPeriods = generateExpectedPeriods(earliestPeriod, latestPeriod);
+  
+  // Find missing periods
+  const missingPeriods = expectedPeriods.filter(period => !allPeriods.includes(period));
+
+  // Calculate time span in months
+  const spanMonths = calculateMonthSpan(earliestPeriod, latestPeriod);
+
+  // Determine data completeness level
+  const coveragePercentage = (periodsWithData.length / expectedPeriods.length) * 100;
+  let dataCompleteness: DataCoverage['dataCompleteness'] = 'none';
+  if (coveragePercentage >= 90) dataCompleteness = 'excellent';
+  else if (coveragePercentage >= 75) dataCompleteness = 'good';
+  else if (coveragePercentage >= 50) dataCompleteness = 'fair';
+  else if (coveragePercentage > 0) dataCompleteness = 'poor';
+
+  // Analyze gaps
+  const longestGap = findLongestGap(expectedPeriods, allPeriods);
+  const hasGaps = missingPeriods.length > 0;
+  
+  // Check if recent data is available (within last 3 months)
+  const now = new Date();
+  const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  const recentDataAvailable = allPeriods.some(period => {
+    const periodDate = parsePeriodToDate(period);
+    return periodDate && periodDate >= threeMonthsAgo;
+  });
+
+  return {
+    totalPeriods: expectedPeriods.length,
+    periodsWithData: periodsWithData.length,
+    coveragePercentage: Math.round(coveragePercentage),
+    timeRange: {
+      earliest: earliestPeriod,
+      latest: latestPeriod,
+      spanMonths
+    },
+    missingPeriods,
+    availablePeriods: periodsWithData.sort(),
+    dataCompleteness,
+    gapAnalysis: {
+      hasGaps,
+      longestGap,
+      recentDataAvailable
+    }
+  };
+}
+
+/**
+ * Helper function to generate expected periods between two dates
+ */
+function generateExpectedPeriods(earliest: string, latest: string): string[] {
+  const periods: string[] = [];
+  const start = parsePeriodToDate(earliest);
+  const end = parsePeriodToDate(latest);
+  
+  if (!start || !end) return [earliest, latest];
+  
+  const current = new Date(start);
+  while (current <= end) {
+    periods.push(formatDateToPeriod(current));
+    current.setMonth(current.getMonth() + 1);
+  }
+  
+  return periods;
+}
+
+/**
+ * Helper function to parse period string (YYYY-MM) to Date
+ */
+function parsePeriodToDate(period: string): Date | null {
+  if (!period || !period.match(/^\d{4}-\d{2}$/)) return null;
+  const [year, month] = period.split('-').map(Number);
+  return new Date(year, month - 1, 1);
+}
+
+/**
+ * Helper function to format Date to period string (YYYY-MM)
+ */
+function formatDateToPeriod(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Helper function to calculate month span between two periods
+ */
+function calculateMonthSpan(earliest: string, latest: string): number {
+  const start = parsePeriodToDate(earliest);
+  const end = parsePeriodToDate(latest);
+  
+  if (!start || !end) return 0;
+  
+  const yearDiff = end.getFullYear() - start.getFullYear();
+  const monthDiff = end.getMonth() - start.getMonth();
+  return yearDiff * 12 + monthDiff + 1; // +1 to include both start and end months
+}
+
+/**
+ * Helper function to find the longest gap in data
+ */
+function findLongestGap(expectedPeriods: string[], availablePeriods: string[]): number {
+  let longestGap = 0;
+  let currentGap = 0;
+  
+  for (const period of expectedPeriods) {
+    if (!availablePeriods.includes(period)) {
+      currentGap++;
+    } else {
+      longestGap = Math.max(longestGap, currentGap);
+      currentGap = 0;
+    }
+  }
+  
+  return Math.max(longestGap, currentGap);
+}
+
+/**
  * Main transformation function that converts raw company data to business insights
  */
 export function transformCompanyDataToBusinessInsights(rawData: any): BusinessInsights {
+  // Analyze data coverage first
+  const dataCoverage = analyzeDataCoverage(rawData);
+
   const insights: BusinessInsights = {
     overview: {
       dataAvailability: 'No data available',
       lastUpdated: 'Never',
       totalMetrics: 0
     },
+    dataCoverage,
     websitePerformance: [],
     trafficSources: [],
     userBehavior: [],
@@ -330,7 +532,7 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
 /**
  * Helper function to get category display name
  */
-export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'overview'>): string {
+export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
   const categoryNames = {
     websitePerformance: 'Website Performance',
     trafficSources: 'Traffic Sources',
@@ -345,7 +547,7 @@ export function getCategoryDisplayName(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category description
  */
-export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'overview'>): string {
+export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
   const descriptions = {
     websitePerformance: 'Key metrics affecting user experience and search rankings',
     trafficSources: 'How visitors discover and reach your website',
@@ -360,7 +562,7 @@ export function getCategoryDescription(category: keyof Omit<BusinessInsights, 'o
 /**
  * Helper function to get category icon (for UI)
  */
-export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview'>): string {
+export function getCategoryIcon(category: keyof Omit<BusinessInsights, 'overview' | 'dataCoverage'>): string {
   const icons = {
     websitePerformance: 'gauge',
     trafficSources: 'users',
