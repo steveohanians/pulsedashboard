@@ -99,6 +99,9 @@ export interface IStorage {
   getMetricsByCompanyId(companyId: string): Promise<Metric[]>;
   deleteMetricsByCompany(companyId: string, sourceType: string): Promise<void>;
   
+  // Bulk operations for efficient processing
+  getMetricsCountByCompanyIds(companyIds: string[]): Promise<Map<string, number>>;
+  
   // Benchmarks
   getBenchmarks(metricName: string, industryVertical: string, businessSize: string, timePeriod: string): Promise<Benchmark[]>;
   createBenchmark(benchmark: InsertBenchmark): Promise<Benchmark>;
@@ -220,7 +223,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     try {
       this.sessionStore = new PostgresSessionStore({ 
-        pool, 
+        pool: pool || undefined, 
         createTableIfMissing: true,  // Allow creating table if missing
         tableName: 'sessions',  // Explicit table name
         // Add error handling for connection issues
@@ -285,7 +288,7 @@ export class DatabaseStorage implements IStorage {
     .where(eq(clients.active, true));
 
     // Map the results to update the ga4PropertyId with current data
-    return results.map(result => ({
+    return results.map((result: { client: Client; ga4PropertyAccess: any }) => ({
       ...result.client,
       // Use current property ID from property access table, fallback to client table if none
       ga4PropertyId: result.ga4PropertyAccess?.propertyId || result.client.ga4PropertyId
@@ -329,7 +332,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
     
     // Ensure competitor fields never return null - coalesce to empty strings or defaults
-    return results.map(competitor => ({
+    return results.map((competitor: Competitor) => ({
       ...competitor,
       domain: competitor.domain || '', // Ensure non-null domain
       label: competitor.label || competitor.domain || 'Unknown Competitor', // Fallback to domain or default
@@ -360,7 +363,7 @@ export class DatabaseStorage implements IStorage {
 
 
   // Benchmark Companies
-  async getBenchmarkCompanies(filters?: { syncStatus?: string }): Promise<BenchmarkCompany[]> {
+  async getBenchmarkCompanies(filters?: { syncStatus?: "pending" | "queued" | "processing" | "completed" | "failed" | "cancelled" }): Promise<BenchmarkCompany[]> {
     let query = db.select().from(benchmarkCompanies).where(eq(benchmarkCompanies.active, true));
     
     if (filters?.syncStatus) {
@@ -436,8 +439,8 @@ export class DatabaseStorage implements IStorage {
 
   // Benchmark Sync Jobs
   async getBenchmarkSyncJobs(filters?: { 
-    status?: string | string[];
-    jobType?: string;
+    status?: ("pending" | "queued" | "processing" | "completed" | "failed" | "cancelled") | ("pending" | "queued" | "processing" | "completed" | "failed" | "cancelled")[];
+    jobType?: "individual" | "bulk" | "incremental";
     limit?: number;
     orderBy?: 'createdAt' | 'updatedAt';
     orderDirection?: 'asc' | 'desc';
@@ -687,7 +690,7 @@ export class DatabaseStorage implements IStorage {
           ));
         
         // Adjust the timePeriod to match what dashboard expects
-        allIndustryMetrics = allIndustryMetrics.map(metric => ({
+        allIndustryMetrics = allIndustryMetrics.map((metric: Metric) => ({
           ...metric,
           timePeriod: period // Override to match requested period
         }));
@@ -733,7 +736,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     logger.info(`Applying filters: businessSize="${filters.businessSize}", industryVertical="${filters.industryVertical}"`);
-    logger.info(`Current allIndustryMetrics count: ${allIndustryMetrics.length}, sample: ${JSON.stringify(allIndustryMetrics.find(m => m.metricName === 'Bounce Rate'))}`);
+    logger.info(`Current allIndustryMetrics count: ${allIndustryMetrics.length}, sample: ${JSON.stringify(allIndustryMetrics.find((m: Metric) => m.metricName === 'Bounce Rate'))}`);
     
     // First, get companies that actually have metrics data for this period or recent fallback periods
     const periodsToCheck = [period, '2025-06', '2025-05', '2025-04', '2025-03'];
@@ -769,7 +772,7 @@ export class DatabaseStorage implements IStorage {
     
     // Filter companies with metrics by the criteria
     const matchingCompanies = companiesWithMetrics
-      .filter(({ company }) => {
+      .filter(({ company }: { company: BenchmarkCompany }) => {
         if (filters.businessSize && filters.businessSize !== "All" && company.businessSize !== filters.businessSize) {
           return false;
         }
@@ -778,17 +781,17 @@ export class DatabaseStorage implements IStorage {
         }
         return true;
       })
-      .map(({ company }) => company);
+      .map(({ company }: { company: BenchmarkCompany }) => company);
     
     if (matchingCompanies.length === 0) {
       logger.info(`No benchmark companies found matching filters - returning fallback to global averages`);
       return allIndustryMetrics;
     }
     
-    logger.info(`Found ${matchingCompanies.length} filtered companies with metrics: ${matchingCompanies.map(c => c.name).join(', ')}`);
+    logger.info(`Found ${matchingCompanies.length} filtered companies with metrics: ${matchingCompanies.map((c: BenchmarkCompany) => c.name).join(', ')}`);
     
     // Calculate filtered industry averages from actual benchmark company metrics
-    const matchingCompanyIds = matchingCompanies.map(c => c.id);
+    const matchingCompanyIds = matchingCompanies.map((c: BenchmarkCompany) => c.id);
     
     // Get actual metrics for filtered benchmark companies using fallback periods if needed
     let actualBenchmarkMetrics = await db
@@ -819,7 +822,7 @@ export class DatabaseStorage implements IStorage {
           );
         
         if (fallbackMetrics.length > 0) {
-          metricsToUse = fallbackMetrics.map(m => ({ ...m, timePeriod: period }));
+          metricsToUse = fallbackMetrics.map((m: Metric) => ({ ...m, timePeriod: period }));
           logger.info(`Using fallback period ${fallbackPeriod} with ${fallbackMetrics.length} metrics for ${matchingCompanies.length} filtered companies`);
           break;
         }
@@ -831,7 +834,7 @@ export class DatabaseStorage implements IStorage {
     // Group metrics by metric name and calculate averages
     const metricGroups: Record<string, number[]> = {};
     logger.info(`Processing ${metricsToUse.length} metrics for calculation`);
-    metricsToUse.forEach(metric => {
+    metricsToUse.forEach((metric: Metric) => {
       if (!metricGroups[metric.metricName]) {
         metricGroups[metric.metricName] = [];
       }
@@ -915,7 +918,7 @@ export class DatabaseStorage implements IStorage {
     
     // Only add Traffic Channels from database that don't already exist in calculated metrics
     const calculatedMetricNames = new Set(filteredMetrics.map(m => m.metricName));
-    const trafficChannelsFromDB = allIndustryMetrics.filter(m => 
+    const trafficChannelsFromDB = allIndustryMetrics.filter((m: Metric) => 
       m.metricName === 'Traffic Channels' && 
       m.timePeriod === period && 
       !calculatedMetricNames.has(m.metricName)
@@ -1014,7 +1017,7 @@ export class DatabaseStorage implements IStorage {
         if (recentPortfolioMetrics.length > 0) {
           // Group by time period and pick the most recent one
           const periodGroups: Record<string, Metric[]> = {};
-          recentPortfolioMetrics.forEach(metric => {
+          recentPortfolioMetrics.forEach((metric: Metric) => {
             if (!periodGroups[metric.timePeriod]) {
               periodGroups[metric.timePeriod] = [];
             }
@@ -1182,7 +1185,7 @@ export class DatabaseStorage implements IStorage {
     // Baseline check logging removed for cleaner console
     
     const coreMetrics = ['Bounce Rate', 'Session Duration', 'Pages per Session', 'Sessions per User'];
-    const existingMetricNames = allMetrics.map(m => m.metricName);
+    const existingMetricNames = allMetrics.map((m: Metric) => m.metricName);
     const missingCoreMetrics = coreMetrics.filter(metric => !existingMetricNames.includes(metric));
     
     for (const metricName of coreMetrics) {
@@ -1324,7 +1327,7 @@ export class DatabaseStorage implements IStorage {
         } : 'NONE'
       });
 
-      return rawResults.map(metric => {
+      return rawResults.map((metric: Metric) => {
         let processedValue = metric.value;
         
         // Extract percentage from JSON format
@@ -1445,7 +1448,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get competitors for this client
       const clientCompetitors = await db.select().from(competitors).where(eq(competitors.clientId, clientId));
-      const competitorIds = clientCompetitors.map(c => c.id);
+      const competitorIds = clientCompetitors.map((c: Competitor) => c.id);
       
       if (competitorIds.length === 0) {
         // No competitors found logging removed for cleaner console
@@ -1514,7 +1517,7 @@ export class DatabaseStorage implements IStorage {
       // Raw metrics count logging removed for cleaner console
       
       // Fix JSONB values: Drizzle returns null for JSONB, need to handle this
-      const processedMetrics = rawMetrics.map(metric => {
+      const processedMetrics = rawMetrics.map((metric: Metric) => {
         let processedValue = metric.value;
         
         // If Drizzle returned null but we know there's JSONB data, query directly
@@ -1531,7 +1534,7 @@ export class DatabaseStorage implements IStorage {
       // Metrics null value checking logs removed for cleaner console
       
       // For any null values, use direct SQL to get correct JSONB data
-      const nullValueMetrics = processedMetrics.filter(m => m.value === null);
+      const nullValueMetrics = processedMetrics.filter((m: Metric) => m.value === null);
       // Null value count logging removed for cleaner console
       
       if (nullValueMetrics.length > 0) {
@@ -1557,7 +1560,7 @@ export class DatabaseStorage implements IStorage {
         const sqlMap = new Map(sqlResult.rows.map((row: any) => [row.id, row.value]));
         
         // Update ALL metrics (not just null ones) with SQL values to ensure JSONB consistency
-        processedMetrics.forEach(metric => {
+        processedMetrics.forEach((metric: Metric) => {
           if (sqlMap.has(metric.id)) {
             const sqlValue = sqlMap.get(metric.id);
             if (sqlValue !== metric.value) {
@@ -1798,7 +1801,7 @@ export class DatabaseStorage implements IStorage {
 
   // SINGLE TRANSACTIONAL DELETE - as per specification requirement
   async deleteInsightAndContextTransactional(clientId: string, metricName: string, timePeriod: string): Promise<{ insights: number; contexts: number }> {
-    return await db.transaction(async (tx) => {
+    return await db.transaction(async (tx: any) => {
       // Delete from aiInsights table with proper WHERE including timePeriod
       const deletedInsights = await tx.delete(aiInsights).where(
         and(
@@ -2484,6 +2487,64 @@ export class DatabaseStorage implements IStorage {
       .orderBy(metrics.timePeriod, metrics.metricName);
   }
 
+  /**
+   * Bulk metrics count retrieval to avoid N+1 queries during audit operations
+   * @param companyIds Array of company IDs to count metrics for
+   * @returns Map of company ID to metric count
+   */
+  async getMetricsCountByCompanyIds(companyIds: string[]): Promise<Map<string, number>> {
+    if (companyIds.length === 0) {
+      return new Map();
+    }
+
+    logger.debug('Bulk counting metrics for companies', { 
+      companyCount: companyIds.length,
+      companyIds: companyIds.slice(0, 5).join(', ') + (companyIds.length > 5 ? '...' : '')
+    });
+
+    // Query both benchmark and portfolio metrics in a single operation
+    const metricsCount = await db
+      .select({
+        companyId: sql<string>`COALESCE(${metrics.benchmarkCompanyId}, ${metrics.cdPortfolioCompanyId})`,
+        count: sql<number>`COUNT(*)::integer`
+      })
+      .from(metrics)
+      .where(
+        or(
+          and(
+            eq(metrics.sourceType, 'Benchmark'),
+            inArray(metrics.benchmarkCompanyId, companyIds)
+          ),
+          and(
+            eq(metrics.sourceType, 'CD_Portfolio'), 
+            inArray(metrics.cdPortfolioCompanyId, companyIds)
+          )
+        )
+      )
+      .groupBy(sql`COALESCE(${metrics.benchmarkCompanyId}, ${metrics.cdPortfolioCompanyId})`);
+
+    // Convert to Map for efficient lookup
+    const countMap = new Map<string, number>();
+    
+    // Initialize all companies with 0 count
+    companyIds.forEach(id => countMap.set(id, 0));
+    
+    // Update with actual counts
+    metricsCount.forEach(({ companyId, count }: { companyId: string; count: number }) => {
+      if (companyId) {
+        countMap.set(companyId, count);
+      }
+    });
+
+    logger.debug('Bulk metrics count completed', {
+      totalCompanies: companyIds.length,
+      companiesWithMetrics: metricsCount.length,
+      companiesWithZeroMetrics: companyIds.length - metricsCount.length
+    });
+
+    return countMap;
+  }
+
   // Clear ONLY CLIENT metrics for a specific client and time period (preserve benchmarks)
   async clearClientMetricsByPeriod(clientId: string, timePeriod: string): Promise<void> {
     console.log(`[STORAGE] Clearing metrics for client ${clientId}, period ${timePeriod}`);
@@ -2753,7 +2814,7 @@ export class DatabaseStorage implements IStorage {
       clientId,
       competitorId,
       totalRuns: allRuns.length,
-      runs: allRuns.map(r => ({
+      runs: allRuns.map((r: any) => ({
         id: r.id,
         status: r.status,
         overallScore: r.overallScore,
@@ -2792,8 +2853,8 @@ export class DatabaseStorage implements IStorage {
         competitorDomain: competitor[0].domain,
         competitorLabel: competitor[0].label,
         totalRuns: allRuns.length,
-        pendingRuns: allRuns.filter(r => r.status === 'pending').length,
-        failedRuns: allRuns.filter(r => r.status === 'failed').length
+        pendingRuns: allRuns.filter((r: any) => r.status === 'pending').length,
+        failedRuns: allRuns.filter((r: any) => r.status === 'failed').length
       });
     }
     

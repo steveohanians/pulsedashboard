@@ -4,6 +4,8 @@ import { storage } from '../storage';
 import { BenchmarkIntegration } from '../services/semrush/benchmarkIntegration';
 import { BenchmarkSyncManager } from '../services/BenchmarkSyncManager';
 import { semrushService } from '../services/semrush/semrushService';
+import { verifiedAuditService, VerifiedAuditService, VerifiedAuditOptions } from '../services/verifiedAuditService';
+import { z } from 'zod';
 import logger from '../utils/logging/logger';
 
 const router = Router();
@@ -380,7 +382,7 @@ router.get('/semrush-test', requireAuth, requireAdmin, async (req, res) => {
         nextResetTime: balance.nextResetTime.toISOString(),
         resetPeriod: balance.resetPeriod
       },
-      recommendations: []
+      recommendations: [] as string[]
     };
     
     // Add recommendations based on test results
@@ -434,6 +436,144 @@ router.get('/semrush-test', requireAuth, requireAdmin, async (req, res) => {
         },
         timestamp: new Date().toISOString()
       }
+    });
+  }
+});
+
+/**
+ * Request body validation schema for verified companies audit
+ */
+const VerifiedAuditRequestSchema = z.object({
+  dryRun: z.boolean().optional().default(false),
+  targetSyncStatus: z.enum(['failed', 'pending', 'completed']).optional().default('failed')
+}).strict();
+
+/**
+ * Audit verified companies and update those with zero metrics
+ * 
+ * POST /api/admin/benchmarks/audit-verified
+ * 
+ * Comprehensive audit system that:
+ * - Identifies all companies with sourceVerified=true
+ * - Efficiently counts metrics using bulk operations
+ * - Updates companies with zero metrics to failed status
+ * - Supports dry-run mode for safe testing
+ * - Returns detailed summary and audit results
+ */
+router.post('/audit-verified', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    logger.info('[Benchmark Admin] Starting verified companies audit', {
+      userId: (req.user as any)?.id,
+      userEmail: (req.user as any)?.email,
+      requestBody: req.body,
+      timestamp: new Date().toISOString()
+    });
+
+    // Validate request body
+    const validation = VerifiedAuditRequestSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      logger.warn('[Benchmark Admin] Verified audit validation failed', {
+        errors: validation.error.errors,
+        requestBody: req.body
+      });
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request body',
+        details: validation.error.errors
+      });
+    }
+
+    const { dryRun, targetSyncStatus } = validation.data;
+
+    // Additional validation using the service's validation method
+    const optionsValidation = VerifiedAuditService.validateOptions(validation.data);
+    
+    if (!optionsValidation.valid) {
+      logger.warn('[Benchmark Admin] Verified audit options validation failed', {
+        errors: optionsValidation.errors,
+        options: validation.data
+      });
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid audit options',
+        details: optionsValidation.errors
+      });
+    }
+
+    // Execute the audit
+    const auditService = await verifiedAuditService;
+    const auditResult = await auditService.auditVerifiedCompanies({
+      dryRun,
+      targetSyncStatus
+    });
+
+    if (!auditResult.success) {
+      logger.error('[Benchmark Admin] Verified companies audit failed', {
+        error: auditResult.error,
+        dryRun,
+        targetSyncStatus,
+        executionTime: auditResult.executionTime
+      });
+      
+      return res.status(500).json({
+        success: false,
+        error: auditResult.error || 'Audit operation failed',
+        summary: auditResult.summary,
+        executionTime: auditResult.executionTime
+      });
+    }
+
+    // Success response with comprehensive results
+    logger.info('[Benchmark Admin] Verified companies audit completed successfully', {
+      dryRun: auditResult.dryRun,
+      summary: auditResult.summary,
+      executionTime: auditResult.executionTime
+    });
+
+    res.json({
+      success: true,
+      message: dryRun 
+        ? `Audit preview completed - ${auditResult.summary.companiesWithZeroMetrics} companies would be updated`
+        : `Audit completed successfully - ${auditResult.summary.companiesUpdated} companies updated`,
+      data: {
+        dryRun: auditResult.dryRun,
+        summary: auditResult.summary,
+        executionTime: auditResult.executionTime,
+        timestamp: new Date().toISOString(),
+        // Include detailed company information for transparency
+        verifiedCompaniesCount: auditResult.details.verifiedCompanies.length,
+        companiesNeedingUpdateCount: auditResult.details.companiesNeedingUpdate.length,
+        // Optionally include detailed company data (for debugging/transparency)
+        companiesWithZeroMetrics: auditResult.details.companiesNeedingUpdate.map((company: any) => ({
+          id: company.id,
+          name: company.name,
+          websiteUrl: company.websiteUrl,
+          industryVertical: company.industryVertical,
+          businessSize: company.businessSize,
+          metricsCount: company.metricsCount,
+          currentSyncStatus: company.syncStatus,
+          hasRequiredMetrics: company.hasRequiredMetrics,
+          missingMetrics: company.missingMetrics,
+          validatedTimePeriodsCount: company.validatedTimePeriods.length
+        }))
+      }
+    });
+
+  } catch (error) {
+    logger.error('[Benchmark Admin] Verified companies audit failed with exception', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+      userId: (req.user as any)?.id,
+      requestBody: req.body
+    });
+
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message || 'Failed to execute verified companies audit',
+      timestamp: new Date().toISOString()
     });
   }
 });
