@@ -239,6 +239,63 @@ function getLatestMetricValue(timePeriods: Record<string, any[]>): { value: any;
 }
 
 /**
+ * Generates contextual descriptions for individual metrics based on available data and metric type
+ */
+function generateMetricDescription(rawData: any, metricName: string, metricValue: any, period: string, category: string): string {
+  // For engagement metrics, try to add context based on sessions data
+  if (category === 'engagementMetrics') {
+    const sessionsData = rawData?.metrics?.['Sessions']?.[period];
+    if (sessionsData && sessionsData.length > 0) {
+      const sessions = sessionsData[sessionsData.length - 1].value;
+      const formattedSessions = formatNumber(typeof sessions === 'object' ? (sessions.value ?? sessions.source ?? 0) : Number(sessions));
+      
+      if (metricName.toLowerCase().includes('bounce')) {
+        return `Across ${formattedSessions} sessions from ${period}`;
+      } else if (metricName.toLowerCase().includes('duration')) {
+        return `Average across ${formattedSessions} sessions from ${period}`;
+      } else if (metricName.toLowerCase().includes('pages per session')) {
+        return `Navigation depth across ${formattedSessions} sessions from ${period}`;
+      } else if (metricName.toLowerCase().includes('sessions per user')) {
+        return `User engagement pattern from ${period}`;
+      }
+    }
+  }
+  
+  // For user behavior metrics, try to add context
+  if (category === 'userBehavior') {
+    const sessionsData = rawData?.metrics?.['Sessions']?.[period];
+    if (sessionsData && sessionsData.length > 0) {
+      const sessions = sessionsData[sessionsData.length - 1].value;
+      const formattedSessions = formatNumber(typeof sessions === 'object' ? (sessions.value ?? sessions.source ?? 0) : Number(sessions));
+      return `Based on ${formattedSessions} user sessions from ${period}`;
+    }
+  }
+  
+  // For engagement metrics (conversion-related), try to add context
+  if (category === 'engagement') {
+    const sessionsData = rawData?.metrics?.['Sessions']?.[period];
+    if (sessionsData && sessionsData.length > 0) {
+      const sessions = sessionsData[sessionsData.length - 1].value;
+      const formattedSessions = formatNumber(typeof sessions === 'object' ? (sessions.value ?? sessions.source ?? 0) : Number(sessions));
+      
+      if (metricName.toLowerCase().includes('conversion')) {
+        return `Conversion performance across ${formattedSessions} sessions from ${period}`;
+      } else if (metricName.toLowerCase().includes('click')) {
+        return `Click performance across ${formattedSessions} sessions from ${period}`;
+      }
+    }
+  }
+  
+  // For technical metrics, provide general context
+  if (category === 'technical') {
+    return `Technical performance metric from ${period}`;
+  }
+  
+  // Default fallback with just period info
+  return `from ${period}`;
+}
+
+/**
  * Aggregates channel-based metrics (traffic channels, device distribution) into human-readable summaries
  */
 function aggregateChannelMetrics(timePeriods: Record<string, any[]>, metricType: 'traffic' | 'device', preferredPeriod?: string): BusinessMetric[] {
@@ -807,13 +864,16 @@ export function transformCompanyDataToBusinessInsights(rawData: any): BusinessIn
     const friendlyName = getFriendlyMetricName(metricName);
     const formattedValue = formatMetricValue(metricData.value, metricName);
     
+    // Generate contextual description for this metric
+    const description = generateMetricDescription(rawData, friendlyName, metricData.value, metricData.period, category);
+    
     const businessMetric: BusinessMetric = {
       name: friendlyName,
       value: formattedValue,
       category,
       period: metricData.period,
-      isFromFallbackPeriod: metricData.isFromFallback
-      // Removed description with individual period labels as requested
+      isFromFallbackPeriod: metricData.isFromFallback,
+      description: description
     };
     
     // Add to both legacy and new category structures
