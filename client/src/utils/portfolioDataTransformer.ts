@@ -1026,7 +1026,7 @@ export function getCategoryPeriodsSimple(periods: string[]): string {
     .filter(period => period && period !== 'No Data')
     .sort((a, b) => b.localeCompare(a));
     
-  return sortedPeriods.join(' ');
+  return sortedPeriods.join(', ');
 }
 
 /**

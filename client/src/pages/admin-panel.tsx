@@ -4168,37 +4168,6 @@ export default function AdminPanel() {
                     </CardContent>
                   </Card>
 
-                  {/* Simplified Data Overview */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Activity className="h-5 w-5" />
-                        Data Categories
-                      </CardTitle>
-                      <p className="text-sm text-gray-600">
-                        Data availability by category with period information
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(businessInsights.categories).map(([key, category]) => (
-                          <div key={key} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium">{category.displayName}</span>
-                              <div className="text-sm text-gray-600">
-                                {category.metrics.length} metrics
-                              </div>
-                            </div>
-                            {category.periods && category.periods.length > 0 && (
-                              <div className="text-sm text-gray-600">
-                                {getCategoryPeriodsSimple(category.periods)}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
 
                   {/* Business Insights */}
                   {businessInsights.overview.totalMetrics === 0 ? (
