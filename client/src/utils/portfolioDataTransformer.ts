@@ -147,6 +147,13 @@ function formatMetricValue(value: any, metricName: string): string {
 function categorizeMetric(metricName: string): string {
   const name = metricName.toLowerCase();
   
+  // Move specific user engagement metrics to Website Performance
+  if (name.includes('pagespersession') || name.includes('pages per session') ||
+      name.includes('sessionduration') || name.includes('session duration') ||
+      name.includes('sessionsperuser') || name.includes('sessions per user')) {
+    return 'websitePerformance';
+  }
+  
   if (name.includes('bounce') || name.includes('load') || name.includes('speed') || name.includes('performance')) {
     return 'websitePerformance';
   }
@@ -1027,6 +1034,34 @@ export function getCategoryPeriodsSimple(periods: string[]): string {
     .sort((a, b) => b.localeCompare(a));
     
   return sortedPeriods.join(', ');
+}
+
+/**
+ * Gets periods formatted as "from [Month Year]" labels
+ */
+export function getCategoryPeriodsWithFromLabel(periods: string[]): string {
+  if (periods.length === 0) {
+    return 'No data available';
+  }
+  
+  // Sort periods descending (most recent first) and format as human-readable dates
+  const sortedPeriods = periods
+    .filter(period => period && period !== 'No Data')
+    .sort((a, b) => b.localeCompare(a));
+  
+  if (sortedPeriods.length === 0) {
+    return 'No data available';
+  }
+  
+  // Format the most recent period as "from [Month Year]"
+  const mostRecentPeriod = sortedPeriods[0];
+  const formattedPeriod = formatPeriodForDisplay(mostRecentPeriod);
+  
+  if (formattedPeriod === 'No Data') {
+    return 'No data available';
+  }
+  
+  return `from ${formattedPeriod}`;
 }
 
 /**

@@ -30,7 +30,7 @@ import { UserActivityModal } from "@/components/UserActivityModal";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
-import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, getCategoryEmoji, getCategoryDisplayNameWithPeriod, formatPeriodForDisplay, getCategoryPeriodInfo, getCategoryDisplayNameSimple, getCategoryPeriodsSimple, type BusinessInsights } from '@/utils/portfolioDataTransformer';
+import { transformCompanyDataToBusinessInsights, getCategoryDisplayName, getCategoryDescription, getCategoryIcon, getCategoryEmoji, getCategoryDisplayNameWithPeriod, formatPeriodForDisplay, getCategoryPeriodInfo, getCategoryDisplayNameSimple, getCategoryPeriodsSimple, getCategoryPeriodsWithFromLabel, type BusinessInsights } from '@/utils/portfolioDataTransformer';
 import {
   clientService,
   userService,
@@ -4190,7 +4190,7 @@ export default function AdminPanel() {
                               {businessInsights.categories.websitePerformance.displayName}
                             </CardTitle>
                             {businessInsights.categories.websitePerformance.periods && businessInsights.categories.websitePerformance.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.websitePerformance.periods)}</p>
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.websitePerformance.periods)}</p>
                             )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('websitePerformance')}</p>
                           </CardHeader>
@@ -4218,7 +4218,7 @@ export default function AdminPanel() {
                               {businessInsights.categories.trafficSources.displayName}
                             </CardTitle>
                             {businessInsights.categories.trafficSources.periods && businessInsights.categories.trafficSources.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.trafficSources.periods)}</p>
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.trafficSources.periods)}</p>
                             )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
                           </CardHeader>
@@ -4246,7 +4246,7 @@ export default function AdminPanel() {
                               {businessInsights.categories.userBehavior.displayName}
                             </CardTitle>
                             {businessInsights.categories.userBehavior.periods && businessInsights.categories.userBehavior.periods.length > 0 && (
-                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.userBehavior.periods)}</p>
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsWithFromLabel(businessInsights.categories.userBehavior.periods)}</p>
                             )}
                             <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
                           </CardHeader>
