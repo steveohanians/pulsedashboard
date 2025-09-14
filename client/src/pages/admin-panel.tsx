@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity, Gauge, MousePointer, Target } from "lucide-react";
+import { ArrowLeft, Settings, Plus, Edit, Trash2, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Building, BarChart3, Upload, Users, Building2, TrendingUp, Filter, Sparkles, X, ChevronRight, Menu, Briefcase, Key, Loader2, Image, RefreshCw, CheckCircle, XCircle, Calculator, Activity, Gauge, MousePointer, Target, RotateCcw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useBenchmarkSyncStream } from "@/hooks/useBenchmarkSyncStream";
@@ -2513,6 +2513,55 @@ export default function AdminPanel() {
                       >
                         <Calculator className="h-4 w-4 mr-2" />
                         Recalculate Industry Avg
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            toast({
+                              title: "Resetting stuck companies...",
+                              description: "Finding and resetting companies stuck in processing status",
+                              duration: 3000,
+                            });
+
+                            const response = await fetch('/api/admin/benchmark/reset-stuck-companies', {
+                              method: 'POST',
+                              credentials: 'include',
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                              toast({
+                                title: "Reset Complete",
+                                description: result.data.companiesReset === 0 
+                                  ? "No stuck companies found" 
+                                  : `Reset ${result.data.companiesReset} companies to pending status`,
+                                duration: 5000,
+                              });
+
+                              // Refresh the companies list to show updated statuses
+                              queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
+                            } else {
+                              throw new Error(result.error);
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Reset Failed",
+                              description: (error as Error).message,
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        data-testid="reset-stuck-companies-button"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset Stuck Companies
                       </Button>
                     </div>
                   </div>

@@ -253,6 +253,62 @@ router.post('/recalculate-averages', requireAuth, requireAdmin, async (req, res)
 });
 
 /**
+ * Reset companies stuck in processing status (after server restarts)
+ */
+router.post('/reset-stuck-companies', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    logger.info('[Benchmark Admin] Resetting companies stuck in processing status');
+    
+    // Get companies stuck in processing
+    const allCompanies = await storage.getBenchmarkCompanies();
+    const stuckCompanies = allCompanies.filter(company => 
+      company.syncStatus === 'processing'
+    );
+    
+    if (stuckCompanies.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No stuck companies found',
+        data: {
+          companiesReset: 0,
+          stuckCompanies: []
+        }
+      });
+    }
+    
+    // Reset each stuck company to pending
+    const resetPromises = stuckCompanies.map(company =>
+      storage.updateBenchmarkCompany(company.id, {
+        syncStatus: 'pending',
+        lastSyncAttempt: null
+      })
+    );
+    
+    await Promise.all(resetPromises);
+    
+    logger.info(`[Benchmark Admin] Reset ${stuckCompanies.length} stuck companies to pending`, {
+      stuckCompanies: stuckCompanies.map(c => ({ id: c.id, name: c.name }))
+    });
+    
+    res.json({
+      success: true,
+      message: `Successfully reset ${stuckCompanies.length} stuck companies`,
+      data: {
+        companiesReset: stuckCompanies.length,
+        stuckCompanies: stuckCompanies.map(c => ({ id: c.id, name: c.name }))
+      }
+    });
+    
+  } catch (error) {
+    logger.error('[Benchmark Admin] Failed to reset stuck companies:', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message || 'Failed to reset stuck companies'
+    });
+  }
+});
+
+/**
  * Get sync status for all benchmark companies
  */
 router.get('/sync-status', requireAuth, requireAdmin, async (req, res) => {
