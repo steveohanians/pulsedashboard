@@ -578,4 +578,79 @@ router.post('/audit-verified', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * Get benchmark company data for admin viewing
+ */
+router.get('/:id/data', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    logger.info(`[Benchmark Admin] Fetching benchmark company data`, { companyId: id, admin: (req.user as any)?.id });
+    
+    // Get company info
+    const company = await storage.getBenchmarkCompanyById(id);
+    
+    if (!company) {
+      return res.status(404).json({ error: 'Benchmark company not found' });
+    }
+
+    // Get all metrics for this company
+    const metrics = await storage.getMetricsByCompanyId(id);
+
+    // Group metrics by type and time period
+    const groupedData = metrics.reduce((acc: any, metric: any) => {
+      const metricKey = metric.metricName;
+      const timePeriod = metric.timePeriod;
+      
+      if (!acc[metricKey]) {
+        acc[metricKey] = {};
+      }
+      
+      if (!acc[metricKey][timePeriod]) {
+        acc[metricKey][timePeriod] = [];
+      }
+      
+      acc[metricKey][timePeriod].push({
+        id: metric.id,
+        value: metric.value,
+        sourceType: metric.sourceType,
+        createdAt: metric.createdAt,
+        updatedAt: metric.updatedAt
+      });
+      
+      return acc;
+    }, {});
+
+    logger.info(`[Benchmark Admin] Successfully fetched benchmark company data`, { 
+      companyId: id, 
+      companyName: company.name,
+      metricsCount: metrics.length 
+    });
+
+    res.json({
+      success: true,
+      data: {
+        company: {
+          id: company.id,
+          name: company.name,
+          websiteUrl: company.websiteUrl,
+          industryVertical: company.industryVertical,
+          businessSize: company.businessSize,
+          active: company.active,
+          syncStatus: company.syncStatus,
+          sourceVerified: company.sourceVerified
+        },
+        metrics: groupedData,
+        metricsCount: metrics.length
+      }
+    });
+    
+  } catch (error) {
+    logger.error('[Benchmark Admin] Failed to fetch benchmark company data:', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message || 'Failed to fetch benchmark company data'
+    });
+  }
+});
+
 export default router;
