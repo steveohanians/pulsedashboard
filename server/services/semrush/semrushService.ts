@@ -59,7 +59,7 @@ import { ISemrushValidator } from '../../utils/company/validation';
 
 export class SemrushService implements ISemrushValidator {
   private apiKey: string;
-  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3'; // Analytics API v3 for traffic data
+  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3/summary'; // Traffic Analytics Summary endpoint
   private balanceUrl = 'https://www.semrush.com/users/countapiunits.html';
   private lastBalanceCheck: Date | null = null;
   private cachedBalance: SemrushBalanceStatus | null = null;
@@ -393,19 +393,22 @@ export class SemrushService implements ISemrushValidator {
           
           const params = new URLSearchParams({
             key: this.apiKey,
-            domain: domain,
-            date: month,
-            format: 'json',
-            export_columns: 'Dn,Ad,At,Mp,Dt,Sh'
+            target: domain,
+            display_date: `${month}-01`, // Convert YYYY-MM to YYYY-MM-DD format
+            export_columns: 'target,visits,users,bounce_rate,time_on_site,pages_per_visit'
           });
           
           const response = await fetch(`${this.baseUrl}?${params}`);
           
           if (!response.ok) {
+            const errorText = await response.text();
             logger.warn('SEMrush API request failed for month', { 
               domain, 
               month, 
-              status: response.status 
+              status: response.status,
+              statusText: response.statusText,
+              errorResponse: errorText,
+              requestUrl: `${this.baseUrl}?${params}`
             });
             continue;
           }
