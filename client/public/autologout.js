@@ -252,6 +252,52 @@
           );
         }
 
+        // TAB VISIBILITY: Handle tab switching and browser throttling
+        if (document.addEventListener && typeof document.hidden !== 'undefined') {
+          this.addEventListener(document, 'visibilitychange', function() {
+            if (!document.hidden) {
+              // Tab became visible - check if we should have logged out while hidden
+              var now = Date.now();
+              var hiddenTime = self.hasSessionStorage() ? 
+                window.sessionStorage.getItem('__autologout_hidden_since__') : null;
+              if (hiddenTime) {
+                var timeHidden = now - parseInt(hiddenTime, 10);
+                if (timeHidden >= self.timeoutMs) {
+                  // Should have logged out while tab was hidden
+                  if (self.hasSessionStorage()) {
+                    try {
+                      window.sessionStorage.removeItem('__autologout_hidden_since__');
+                    } catch (e) {
+                      // Silent fail
+                    }
+                  }
+                  self.logout();
+                  return;
+                }
+                // Clear the hidden timestamp
+                if (self.hasSessionStorage()) {
+                  try {
+                    window.sessionStorage.removeItem('__autologout_hidden_since__');
+                  } catch (e) {
+                    // Silent fail
+                  }
+                }
+              }
+              // Reset timer for new activity when tab becomes visible
+              self.resetTimer();
+            } else {
+              // Tab became hidden - store timestamp
+              if (self.hasSessionStorage()) {
+                try {
+                  window.sessionStorage.setItem('__autologout_hidden_since__', Date.now().toString());
+                } catch (e) {
+                  // Silent fail in incognito mode
+                }
+              }
+            }
+          });
+        }
+
         // PREVENT MULTIPLE TABS CONFLICTS: Listen for storage events
         if (window.addEventListener && this.hasLocalStorage()) {
           this.addEventListener(window, 'storage', function(e) {

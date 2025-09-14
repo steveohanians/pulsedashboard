@@ -103,6 +103,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [logoutMutation]);
 
+  // Revalidate session when tab becomes visible after being hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        // Tab became visible and user is logged in - revalidate session
+        queryClient.refetchQueries({ queryKey: ["/api/user"] });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
