@@ -1011,6 +1011,19 @@ export default function AdminPanel() {
       let aValue = (a as any)[sortConfig.key];
       let bValue = (b as any)[sortConfig.key];
 
+      // Special handling for computed sync status
+      if (sortConfig.key === 'computedSyncStatus') {
+        aValue = getCompanySyncStatus((a as any).id, a as any);
+        bValue = getCompanySyncStatus((b as any).id, b as any);
+        
+        // Define status priority order for sorting (completed/verified first, then pending, then errors last)
+        const statusOrder = { 'completed': 0, 'verified': 0, 'pending': 1, 'processing': 1, 'failed': 2, 'error': 2, 'cancelled': 2 };
+        const aOrder = statusOrder[aValue as keyof typeof statusOrder] ?? 999;
+        const bOrder = statusOrder[bValue as keyof typeof statusOrder] ?? 999;
+        
+        return sortConfig.direction === 'asc' ? aOrder - bOrder : bOrder - aOrder;
+      }
+
       // Handle null/undefined values - put them at the end
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return 1;
@@ -2829,8 +2842,8 @@ export default function AdminPanel() {
                           <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
                           <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Verified" sortKey="sourceVerified" /></TableHead>
-                          <TableHead className="w-16">Status</TableHead>
+                          <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Sync Status" sortKey="computedSyncStatus" /></TableHead>
+                          <TableHead className="w-16">Active</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2865,15 +2878,18 @@ export default function AdminPanel() {
                             <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge 
-                                variant={company.sourceVerified ? "default" : "secondary"}
+                                variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
                                 className={`text-xs ${
-                                  company.sourceVerified 
-                                    ? "bg-green-100 text-green-800 border-green-200" 
-                                    : "bg-gray-100 text-gray-600 border-gray-200"
+                                  getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
+                                    ? "text-primary border-primary" 
+                                    : ""
                                 }`}
-                                data-testid={`verified-badge-desktop-${company.id}`}
+                                data-testid={`sync-status-badge-desktop-${company.id}`}
                               >
-                                {company.sourceVerified ? "Verified" : "Unverified"}
+                                {getCompanySyncStatus(company.id, company) === "processing" && (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                )}
+                                {getSyncStatusText(getCompanySyncStatus(company.id, company))}
                               </Badge>
                             </TableCell>
                             <TableCell>
