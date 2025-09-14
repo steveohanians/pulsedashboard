@@ -181,11 +181,10 @@ export class BenchmarkIntegration {
           companyId: company.id,
           companyName: company.name,
           success: result.success,
+          status: finalStatus, // Include the actual status (verified/failed)
           message: result.success 
             ? `Successfully synced ${result.periodsProcessed} periods with ${result.metricsStored} metrics`
-            : `No valid data found after processing ${result.periodsProcessed} periods`,
-          periodsProcessed: result.periodsProcessed,
-          metricsStored: result.metricsStored
+            : `No valid data found after processing ${result.periodsProcessed} periods`
         });
       }
 

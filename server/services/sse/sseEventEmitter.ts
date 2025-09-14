@@ -68,12 +68,19 @@ export interface BenchmarkSyncCompletionData {
   totalTime: number;
   message: string;
   timestamp: string;
+  // Individual company completion fields
+  companyId?: string;
+  companyName?: string;
+  status?: string;
 }
 
 export interface BenchmarkSyncErrorData {
   jobId: string;
   error: string;
   timestamp: string;
+  // Individual company error fields
+  companyId?: string;
+  companyName?: string;
 }
 
 /**
@@ -221,16 +228,21 @@ class SSEEventEmitter extends EventEmitter {
     companyName: string;
     message: string;
     jobId?: string;
+    success?: boolean;
+    status?: string;
   }): void {
     const completionData: BenchmarkSyncCompletionData = {
       jobId: data.jobId || 'individual',
       jobType: 'individual',
       totalCompanies: 1,
       processedCompanies: 1,
-      failedCompanies: 0,
+      failedCompanies: data.success === false ? 1 : 0,
       totalTime: 0,
       message: data.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      companyId: data.companyId,
+      companyName: data.companyName,
+      status: data.status || (data.success ? 'verified' : 'failed')
     };
 
     this.broadcastBenchmarkCompletion(completionData);
@@ -248,7 +260,9 @@ class SSEEventEmitter extends EventEmitter {
     const errorData: BenchmarkSyncErrorData = {
       jobId: data.jobId || 'individual',
       error: `${data.companyName} (${data.companyId}): ${data.error}`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      companyId: data.companyId,
+      companyName: data.companyName
     };
 
     this.broadcastBenchmarkError(errorData);
