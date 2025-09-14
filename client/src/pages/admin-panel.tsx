@@ -2417,7 +2417,7 @@ export default function AdminPanel() {
                               duration: 10000,
                             });
 
-                            const response = await fetch('/api/admin/benchmark/sync-all', {
+                            const response = await fetch('/api/admin/benchmark-companies/sync-all', {
                               method: 'POST',
                               credentials: 'include',
                             });
