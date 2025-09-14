@@ -39,15 +39,32 @@ export interface CanonicalBusinessInsights {
 
 /**
  * Normalize sourceType values from modal format to canonical format expected by UnifiedDataService
+ * Context-aware normalization that treats data differently based on company type:
+ * - Portfolio companies: Individual company data (CD_Portfolio) → Client, averages (CD_Avg) → CD_Avg
+ * - Benchmark companies: Industry data (Benchmark) → Industry_Avg
  */
-function normalizeSourceType(originalSourceType: string): string {
+function normalizeSourceType(originalSourceType: string, companyData?: any): string {
+  // Detect company type from data structure to determine normalization context
+  const isPortfolioCompany = companyData && hasPortfolioCompanyIndicators(companyData);
+  const isBenchmarkCompany = companyData && hasBenchmarkCompanyIndicators(companyData);
+  
+  console.log('[DEBUG] Normalizing sourceType', {
+    originalSourceType,
+    isPortfolioCompany,
+    isBenchmarkCompany,
+    companyName: companyData?.company?.name || companyData?.data?.company?.name
+  });
+  
   const normalizations: Record<string, string> = {
+    // Portfolio company: Individual data should be treated as "Client" data
+    'CD_Portfolio': isPortfolioCompany ? 'Client' : 'CD_Avg',
+    
     // Industry benchmark variations
     'Benchmark': 'Industry_Avg',
     'Industry': 'Industry_Avg', 
     'Industry_Benchmark': 'Industry_Avg',
     
-    // Clear Digital average variations
+    // Clear Digital average variations (these are actual averages)
     'CD': 'CD_Avg',
     'Portfolio_Avg': 'CD_Avg',
     'CD_Avg': 'CD_Avg',
@@ -60,7 +77,97 @@ function normalizeSourceType(originalSourceType: string): string {
     'Client': 'Client'
   };
   
-  return normalizations[originalSourceType] || originalSourceType;
+  const normalized = normalizations[originalSourceType] || originalSourceType;
+  
+  console.log('[DEBUG] SourceType normalization result', {
+    originalSourceType,
+    normalized,
+    context: isPortfolioCompany ? 'portfolio' : isBenchmarkCompany ? 'benchmark' : 'unknown'
+  });
+  
+  return normalized;
+}
+
+/**
+ * Detect if the data represents a portfolio company
+ */
+function hasPortfolioCompanyIndicators(companyData: any): boolean {
+  // Check if data came from portfolio endpoint (has CD_Portfolio sourceTypes)
+  const dataSource = companyData.data || companyData;
+  if (!dataSource?.metrics) return false;
+  
+  // Look for CD_Portfolio sourceType in the metrics
+  for (const metricName of Object.keys(dataSource.metrics)) {
+    const timePeriods = dataSource.metrics[metricName];
+    for (const timePeriod of Object.keys(timePeriods)) {
+      const metricEntries = timePeriods[timePeriod];
+      if (Array.isArray(metricEntries)) {
+        for (const entry of metricEntries) {
+          if (entry.sourceType === 'CD_Portfolio') {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Detect if the data represents a benchmark company
+ */
+function hasBenchmarkCompanyIndicators(companyData: any): boolean {
+  // Check if data came from benchmark endpoint (has Benchmark sourceTypes)
+  const dataSource = companyData.data || companyData;
+  if (!dataSource?.metrics) return false;
+  
+  // Look for Benchmark sourceType in the metrics
+  for (const metricName of Object.keys(dataSource.metrics)) {
+    const timePeriods = dataSource.metrics[metricName];
+    for (const timePeriod of Object.keys(timePeriods)) {
+      const metricEntries = timePeriods[timePeriod];
+      if (Array.isArray(metricEntries)) {
+        for (const entry of metricEntries) {
+          if (entry.sourceType === 'Benchmark') {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Log original sourceTypes for debugging
+ */
+function logOriginalSourceTypes(companyData: any): void {
+  const dataSource = companyData?.data || companyData;
+  if (!dataSource?.metrics) return;
+  
+  const sourceTypes = new Set<string>();
+  const metricCount: Record<string, number> = {};
+  
+  for (const metricName of Object.keys(dataSource.metrics)) {
+    const timePeriods = dataSource.metrics[metricName];
+    for (const timePeriod of Object.keys(timePeriods)) {
+      const metricEntries = timePeriods[timePeriod];
+      if (Array.isArray(metricEntries)) {
+        for (const entry of metricEntries) {
+          sourceTypes.add(entry.sourceType);
+          metricCount[entry.sourceType] = (metricCount[entry.sourceType] || 0) + 1;
+        }
+      }
+    }
+  }
+  
+  console.log('[DEBUG] Original sourceTypes in data', {
+    companyName: dataSource.company?.name,
+    sourceTypes: Array.from(sourceTypes),
+    distribution: metricCount
+  });
 }
 
 /**
@@ -123,9 +230,9 @@ function convertModalDataToDashboardFormat(modalData: any): any {
               // Parse and validate the numeric value
               const parsedValue = parseMetricValue(actualValue);
               
-              // Normalize sourceType to canonical format
+              // Normalize sourceType to canonical format with context awareness
               const originalSourceType = metric.sourceType;
-              const normalizedSourceType = normalizeSourceType(originalSourceType);
+              const normalizedSourceType = normalizeSourceType(originalSourceType, modalData);
               
               // Track sourceType mapping for debugging
               const mappingKey = `${originalSourceType} → ${normalizedSourceType}`;
@@ -197,8 +304,12 @@ export function transformCompanyDataCanonically(companyData: any): CanonicalBusi
     console.log('[DEBUG] Starting canonical transformation', {
       hasCompanyData: !!companyData,
       companyDataType: typeof companyData,
-      companyDataKeys: companyData ? Object.keys(companyData) : []
+      companyDataKeys: companyData ? Object.keys(companyData) : [],
+      companyName: companyData?.company?.name || companyData?.data?.company?.name
     });
+    
+    // Log original sourceTypes before any normalization
+    logOriginalSourceTypes(companyData);
     
     // Convert modal data format to dashboard format first
     const dashboardFormatData = convertModalDataToDashboardFormat(companyData);
