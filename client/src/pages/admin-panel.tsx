@@ -2842,8 +2842,8 @@ export default function AdminPanel() {
                           <TableHead className="hidden lg:table-cell w-40"><SortableHeader label="Website" sortKey="websiteUrl" /></TableHead>
                           <TableHead className="w-32"><SortableHeader label="Industry" sortKey="industryVertical" /></TableHead>
                           <TableHead className="hidden md:table-cell w-32"><SortableHeader label="Business Size" sortKey="businessSize" /></TableHead>
-                          <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Sync Status" sortKey="computedSyncStatus" /></TableHead>
-                          <TableHead className="w-16">Active</TableHead>
+                          <TableHead className="hidden lg:table-cell w-20"><SortableHeader label="Verified" sortKey="computedSyncStatus" /></TableHead>
+                          <TableHead className="w-16">Status</TableHead>
                           <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
