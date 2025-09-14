@@ -695,11 +695,11 @@ export class SemrushDataProcessor {
   private processBenchmarkTrafficChannels(
     companyId: string,
     period: string,
-    trafficChannels: Record<string, any>,
+    channels: SemrushMetricData['trafficChannels'],
     trafficChannelMetrics: InsertMetric[]
   ): void {
-    for (const [channel, data] of Object.entries(trafficChannels)) {
-      if (data && typeof data === 'object' && 'percentage' in data) {
+    for (const channel of channels) {
+      if (channel.percentage > 0) {
         trafficChannelMetrics.push({
           clientId: null,
           competitorId: null,
@@ -707,13 +707,13 @@ export class SemrushDataProcessor {
           benchmarkCompanyId: companyId,
           metricName: 'Traffic Channels',
           value: {
-            percentage: data.percentage,
-            sessions: data.sessions || 0,
+            percentage: channel.percentage,
+            sessions: channel.sessions,
             source: 'semrush'
           },
           sourceType: 'Benchmark',
           timePeriod: period,
-          channel
+          channel: channel.channel
         });
       }
     }
@@ -725,11 +725,11 @@ export class SemrushDataProcessor {
   private processBenchmarkDeviceDistribution(
     companyId: string,
     period: string,
-    deviceDistribution: Record<string, any>,
+    devices: SemrushMetricData['deviceDistribution'],
     deviceDistributionMetrics: InsertMetric[]
   ): void {
-    for (const [device, data] of Object.entries(deviceDistribution)) {
-      if (data && typeof data === 'object' && 'percentage' in data) {
+    for (const device of devices) {
+      if (device.percentage > 0) {
         deviceDistributionMetrics.push({
           clientId: null,
           competitorId: null,
@@ -737,13 +737,13 @@ export class SemrushDataProcessor {
           benchmarkCompanyId: companyId,
           metricName: 'Device Distribution',
           value: {
-            percentage: data.percentage,
-            sessions: data.sessions || 0,
+            percentage: device.percentage,
+            sessions: device.sessions,
             source: 'semrush'
           },
           sourceType: 'Benchmark',
           timePeriod: period,
-          channel: device
+          channel: device.device
         });
       }
     }
