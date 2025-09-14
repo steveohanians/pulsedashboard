@@ -154,9 +154,9 @@ export class BenchmarkIntegration {
         });
       }
 
-      // Step 5: Recalculate and update Industry averages
-      await this.updateIndustryAverages();
-      result.averagesUpdated = true;
+      // Step 5: Skip industry averages update during individual company processing
+      // (Industry averages will be updated once at the end of bulk sync)
+      result.averagesUpdated = false;
 
       // Step 6: Update company sync status based on whether we stored any data
       const hasValidData = result.metricsStored > 0 || result.trafficChannelsStored > 0 || result.deviceDistributionStored > 0;

@@ -177,6 +177,17 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
           }
         }
         
+        // Update industry averages once at the end (performance optimization)
+        if (successCount > 0) {
+          logger.info('[Benchmark Admin] Updating industry averages after bulk sync completion');
+          try {
+            await benchmarkIntegration.updateIndustryAverages();
+            logger.info('[Benchmark Admin] Successfully updated industry averages');
+          } catch (error) {
+            logger.error('[Benchmark Admin] Failed to update industry averages after bulk sync:', error);
+          }
+        }
+
         // Complete the sync job
         await syncManager.completeSyncJob(jobId);
         
