@@ -188,7 +188,7 @@ export class SemrushService implements ISemrushValidator {
       let resetTime: Date;
       let resetPeriod: string;
 
-      // Detect format: JSON vs CSV
+      // Detect format: JSON vs CSV vs Simple Number
       if (text.startsWith('{') || text.startsWith('[')) {
         // JSON format
         logger.debug('Parsing SEMrush response as JSON');
@@ -201,6 +201,24 @@ export class SemrushService implements ISemrushValidator {
         
         const resetValue = data.reset_time || data.resetTime || data.reset_in || data.resetIn;
         resetTime = this.parseResetTime(String(resetValue), Object.keys(data).find(k => k.includes('reset')));
+        
+      } else if (/^\d+$/.test(text)) {
+        // Simple number format - just the units remaining
+        logger.debug('Parsing SEMrush response as simple number');
+        unitsLeft = this.parseRobustNumber(text);
+        unitsLimit = 10000000; // Default high limit for simple responses
+        resetPeriod = 'monthly';
+        
+        // Set reset time to end of current month
+        const now = new Date();
+        resetTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        
+        logger.debug('Simple number parsing successful', {
+          unitsLeft: `${text} -> ${unitsLeft}`,
+          unitsLimit: unitsLimit,
+          resetTime: resetTime.toISOString(),
+          resetPeriod
+        });
         
       } else {
         // CSV format
