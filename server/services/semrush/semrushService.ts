@@ -56,6 +56,7 @@ export interface SemrushBalanceStatus {
 
 import { requireSemrushApiKey } from '../../config';
 import { ISemrushValidator } from '../../utils/company/validation';
+import type { IStorage } from '../../storage';
 
 export class SemrushService implements ISemrushValidator {
   private apiKey: string;
@@ -65,6 +66,7 @@ export class SemrushService implements ISemrushValidator {
   private cachedBalance: SemrushBalanceStatus | null = null;
   private balanceCacheTimeout = 5 * 60 * 1000; // Cache balance for 5 minutes
   private rateLimiter: ApiRateLimiter;
+  private storage: IStorage | null = null;
 
   constructor() {
     this.apiKey = requireSemrushApiKey();
@@ -74,6 +76,13 @@ export class SemrushService implements ISemrushValidator {
       maxRequestsPerSecond: 8,
       burstCapacity: 10
     });
+  }
+
+  /**
+   * Inject storage dependency for incremental sync functionality
+   */
+  public setStorage(storage: IStorage): void {
+    this.storage = storage;
   }
 
   /**
@@ -549,9 +558,63 @@ export class SemrushService implements ISemrushValidator {
    * Check which periods are missing from existing data for incremental sync
    */
   private async getMissingPeriods(companyId: string, allPeriods: string[]): Promise<string[]> {
-    // This would need access to storage to check existing metrics
-    // For now, return all periods to maintain compatibility
-    return allPeriods;
+    if (!this.storage) {
+      logger.warn('Storage not available for incremental sync, fetching all periods', { companyId });
+      return allPeriods;
+    }
+
+    try {
+      const entity = { kind: 'benchmark' as const, id: companyId };
+      
+      // Get existing periods for this benchmark company
+      const existingPeriods = await this.storage.getExistingSemrushPeriods(entity);
+      
+      logger.debug('Existing periods found', { 
+        companyId, 
+        existingPeriodsCount: existingPeriods.size,
+        existingPeriods: Array.from(existingPeriods).sort() 
+      });
+
+      const missingPeriods: string[] = [];
+      
+      for (const period of allPeriods) {
+        if (!existingPeriods.has(period)) {
+          // Period doesn't exist at all
+          missingPeriods.push(period);
+          logger.debug('Period missing entirely', { companyId, period });
+        } else {
+          // Period exists, but check if it has complete data
+          const integrity = await this.storage.getSemrushPeriodIntegrity(entity, period);
+          if (!integrity.complete || integrity.metricCount < 10) { // Expect at least 10 core metrics
+            missingPeriods.push(period);
+            logger.debug('Period exists but incomplete', { 
+              companyId, 
+              period, 
+              metricCount: integrity.metricCount,
+              complete: integrity.complete 
+            });
+          }
+        }
+      }
+
+      logger.info('Incremental sync analysis complete', {
+        companyId,
+        totalPeriods: allPeriods.length,
+        existingPeriods: existingPeriods.size,
+        missingPeriods: missingPeriods.length,
+        missingPeriodsArray: missingPeriods.sort(),
+        efficiency: `${Math.round((1 - missingPeriods.length / allPeriods.length) * 100)}% data already exists`
+      });
+
+      return missingPeriods;
+
+    } catch (error) {
+      logger.error('Failed to determine missing periods, falling back to full sync', {
+        companyId,
+        error: (error as Error).message
+      });
+      return allPeriods;
+    }
   }
 
   /**
@@ -674,7 +737,11 @@ export class SemrushService implements ISemrushValidator {
       const totalVisits = parseFloat(data[1]) || 0; // Total visits for percentage calculation
       
       // Extract traffic channel data from Summary endpoint
-      const trafficChannels = [];
+      const trafficChannels: Array<{
+        channel: string;
+        sessions: number;
+        percentage: number;
+      }> = [];
       if (totalVisits > 0) {
         const channelData = [
           { name: 'Direct', visits: parseFloat(data[6]) || 0 },

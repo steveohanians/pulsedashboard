@@ -99,6 +99,12 @@ export interface IStorage {
   getMetricsByCompanyId(companyId: string): Promise<Metric[]>;
   deleteMetricsByCompany(companyId: string, sourceType: string): Promise<void>;
   
+  // Incremental Sync Methods for SEMrush
+  getExistingSemrushPeriods(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }): Promise<Set<string>>;
+  getSemrushPeriodIntegrity(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }, period: string): Promise<{ complete: boolean; metricCount: number }>;
+  upsertCanonicalMetricsBulk(rows: InsertMetric[], opts?: { onConflict: 'ignore' | 'merge' }): Promise<number>;
+  clearSemrushMetricsByPeriods(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }, periods: string[]): Promise<number>;
+  
   // Bulk operations for efficient processing
   getMetricsCountByCompanyIds(companyIds: string[]): Promise<Map<string, number>>;
   
@@ -2387,6 +2393,154 @@ export class DatabaseStorage implements IStorage {
       cdAvgDeleted: cdAvgDeleted.length,
       note: 'CD_Portfolio source data preserved for recalculation from remaining companies'
     });
+  }
+
+  // Incremental Sync Methods for SEMrush
+  async getExistingSemrushPeriods(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }): Promise<Set<string>> {
+    const sourceTypeMap = {
+      benchmark: 'Benchmark',
+      competitor: 'Competitor',
+      cd_portfolio: 'CD_Portfolio'
+    };
+    
+    const sourceType = sourceTypeMap[entity.kind];
+    const entityIdField = entity.kind === 'benchmark' ? 'benchmarkCompanyId' 
+                        : entity.kind === 'competitor' ? 'competitorId'
+                        : 'cdPortfolioCompanyId';
+    
+    const results = await db
+      .select({
+        timePeriod: metrics.timePeriod
+      })
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, sourceType as any),
+          eq(metrics[entityIdField], entity.id)
+        )
+      )
+      .groupBy(metrics.timePeriod);
+    
+    return new Set(results.map((r: { timePeriod: string }) => r.timePeriod));
+  }
+
+  async getSemrushPeriodIntegrity(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }, period: string): Promise<{ complete: boolean; metricCount: number }> {
+    const sourceTypeMap = {
+      benchmark: 'Benchmark',
+      competitor: 'Competitor',
+      cd_portfolio: 'CD_Portfolio'
+    };
+    
+    const sourceType = sourceTypeMap[entity.kind];
+    const entityIdField = entity.kind === 'benchmark' ? 'benchmarkCompanyId' 
+                        : entity.kind === 'competitor' ? 'competitorId'
+                        : 'cdPortfolioCompanyId';
+    
+    const [result] = await db
+      .select({
+        count: sql`count(*)`
+      })
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, sourceType as any),
+          eq(metrics[entityIdField], entity.id),
+          eq(metrics.timePeriod, period)
+        )
+      );
+    
+    const metricCount = Number(result.count) || 0;
+    
+    // Define expected metric counts per entity type
+    const expectedCounts = {
+      benchmark: 15, // Standard SEMrush metrics
+      competitor: 10, // Competitor-specific metrics
+      cd_portfolio: 15 // Portfolio company metrics
+    };
+    
+    const expected = expectedCounts[entity.kind];
+    const complete = metricCount >= expected;
+    
+    return { complete, metricCount };
+  }
+
+  async upsertCanonicalMetricsBulk(rows: InsertMetric[], opts: { onConflict: 'ignore' | 'merge' } = { onConflict: 'merge' }): Promise<number> {
+    if (rows.length === 0) return 0;
+    
+    try {
+      if (opts.onConflict === 'ignore') {
+        // Insert new records, ignore conflicts
+        const inserted = await db
+          .insert(metrics)
+          .values(rows)
+          .onConflictDoNothing()
+          .returning({ id: metrics.id });
+        
+        return inserted.length;
+      } else {
+        // Merge - update existing records
+        let insertedCount = 0;
+        
+        for (const row of rows) {
+          const result = await db
+            .insert(metrics)
+            .values(row)
+            .onConflictDoUpdate({
+              target: [metrics.clientId, metrics.metricName, metrics.timePeriod, metrics.sourceType],
+              set: {
+                value: sql`excluded.value`,
+                updatedAt: sql`excluded.updated_at`,
+                benchmarkCompanyId: sql`excluded.benchmark_company_id`,
+                competitorId: sql`excluded.competitor_id`,
+                cdPortfolioCompanyId: sql`excluded.cd_portfolio_company_id`
+              }
+            })
+            .returning({ id: metrics.id });
+          
+          if (result.length > 0) insertedCount++;
+        }
+        
+        return insertedCount;
+      }
+    } catch (error) {
+      logger.error('Bulk upsert failed', { error, rowsCount: rows.length });
+      throw error;
+    }
+  }
+
+  async clearSemrushMetricsByPeriods(entity: { kind: 'benchmark' | 'competitor' | 'cd_portfolio'; id: string }, periods: string[]): Promise<number> {
+    if (periods.length === 0) return 0;
+    
+    const sourceTypeMap = {
+      benchmark: 'Benchmark',
+      competitor: 'Competitor',
+      cd_portfolio: 'CD_Portfolio'
+    };
+    
+    const sourceType = sourceTypeMap[entity.kind];
+    const entityIdField = entity.kind === 'benchmark' ? 'benchmarkCompanyId' 
+                        : entity.kind === 'competitor' ? 'competitorId'
+                        : 'cdPortfolioCompanyId';
+    
+    const deleted = await db
+      .delete(metrics)
+      .where(
+        and(
+          eq(metrics.sourceType, sourceType as any),
+          eq(metrics[entityIdField], entity.id),
+          inArray(metrics.timePeriod, periods)
+        )
+      )
+      .returning({ id: metrics.id });
+    
+    logger.info('Cleared SEMrush metrics by periods', {
+      entity: entity.kind,
+      entityId: entity.id,
+      periods,
+      deletedCount: deleted.length
+    });
+    
+    return deleted.length;
   }
 
   /**

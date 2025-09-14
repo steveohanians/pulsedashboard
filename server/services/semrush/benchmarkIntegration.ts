@@ -29,6 +29,8 @@ export class BenchmarkIntegration {
 
   constructor(private storage: IStorage) {
     this.syncManager = new BenchmarkSyncManager(storage);
+    // Inject storage dependency into semrushService for incremental sync functionality
+    semrushService.setStorage(storage);
   }
 
   /**
