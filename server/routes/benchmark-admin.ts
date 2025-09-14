@@ -47,9 +47,9 @@ router.post('/sync/:companyId', requireAuth, requireAdmin, async (req, res) => {
     // Initialize integration service
     const benchmarkIntegration = new BenchmarkIntegration(storage);
     
-    // Process the company through SEMrush (force fetch recent data for individual syncs)
+    // Process the company through SEMrush with incremental sync optimization
     const result = await benchmarkIntegration.processNewBenchmarkCompany(company, { 
-      incrementalSync: false, // Force full refresh to ensure we get data
+      incrementalSync: true, // Use incremental sync to optimize performance
       emitProgressEvents: true 
     });
     
@@ -121,7 +121,7 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
     const jobId = await syncManager.createSyncJob({
       jobType: 'bulk',
       companyIds: activeCompanies.map(c => c.id),
-      incrementalSync: false,
+      incrementalSync: true,
       initiatedByUserId: (req.user as any)?.id
     });
     
@@ -159,6 +159,7 @@ router.post('/sync-all', requireAuth, requireAdmin, async (req, res) => {
             
             // Process the company
             const result = await benchmarkIntegration.processNewBenchmarkCompany(company, {
+              incrementalSync: true, // Use incremental sync for performance optimization
               syncJobId: jobId,
               emitProgressEvents: true
             });
