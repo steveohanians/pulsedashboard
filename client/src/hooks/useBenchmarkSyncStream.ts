@@ -413,7 +413,7 @@ export function useBenchmarkSyncStream(
         disconnect(true); // Force disconnect when disabled
       }
     };
-  }, [enabled]);
+  }, [enabled, connect]);
 
   // Cleanup on unmount
   useEffect(() => {

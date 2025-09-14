@@ -234,7 +234,7 @@ export default function AdminPanel() {
 
   // Real-time benchmark sync status tracking - maintain connection during bulk sync
   const benchmarkSyncStream = useBenchmarkSyncStream({
-    enabled: user?.role === "Admin" && (activeTab === "benchmark" || isBulkSyncInProgress),
+    enabled: user?.role === "Admin",
     autoReconnect: true,
     maxReconnectAttempts: 5,
     reconnectDelay: 2000
@@ -311,26 +311,31 @@ export default function AdminPanel() {
   useEffect(() => {
     if (user?.role !== "Admin") return;
 
-    // Check if there's ongoing bulk sync activity
-    const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
+    // Check if there's ongoing bulk sync activity - use activeSyncJob as primary indicator
+    // because totalProgress depends on SSE connection which we're trying to manage
+    const hasActiveSyncs = benchmarkSyncStream.activeSyncJob !== null || benchmarkSyncStream.totalProgress.total > 0;
+    
     if (hasActiveSyncs && !isBulkSyncInProgress) {
       setIsBulkSyncInProgress(true);
-      console.log('[Admin Panel] Bulk sync detected - maintaining SSE connection');
+      console.log('[Admin Panel] Bulk sync detected - maintaining SSE connection', {
+        activeSyncJob: benchmarkSyncStream.activeSyncJob,
+        totalProgress: benchmarkSyncStream.totalProgress
+      });
     } else if (!hasActiveSyncs && isBulkSyncInProgress) {
-      // Bulk sync completed while we were away
-      setIsBulkSyncInProgress(false);
-      console.log('[Admin Panel] Bulk sync completed - SSE connection can be managed normally');
+      // Only mark as completed if we have confirmation of actual completion
+      if (benchmarkSyncStream.totalProgress.total > 0 && 
+          benchmarkSyncStream.totalProgress.completed === benchmarkSyncStream.totalProgress.total) {
+        setIsBulkSyncInProgress(false);
+        console.log('[Admin Panel] Bulk sync completed - SSE connection can be managed normally');
 
-      // Show completion notification if we missed it
-      if (benchmarkSyncStream.totalProgress.completed > 0) {
         toast({
-          title: "Sync Process Restored",
-          description: `Found ongoing sync progress: ${benchmarkSyncStream.totalProgress.completed}/${benchmarkSyncStream.totalProgress.total} completed`,
+          title: "Bulk Sync Complete", 
+          description: `Successfully synced ${benchmarkSyncStream.totalProgress.completed} companies`,
           duration: 5000,
         });
       }
     }
-  }, [benchmarkSyncStream.totalProgress, user?.role, isBulkSyncInProgress]);
+  }, [benchmarkSyncStream.totalProgress, benchmarkSyncStream.activeSyncJob, user?.role, isBulkSyncInProgress]);
 
   // Auto-refresh companies when sync completes
   useEffect(() => {
@@ -338,17 +343,9 @@ export default function AdminPanel() {
         benchmarkSyncStream.totalProgress.completed === benchmarkSyncStream.totalProgress.total) {
       // All syncs completed, refresh the data
       queryClient.invalidateQueries({ queryKey: AdminQueryKeys.benchmarkCompanies() });
-
-      if (isBulkSyncInProgress) {
-        setIsBulkSyncInProgress(false);
-        toast({
-          title: "Bulk Sync Complete",
-          description: `Successfully synced ${benchmarkSyncStream.totalProgress.completed} companies`,
-          duration: 5000,
-        });
-      }
+      console.log('[Admin Panel] All companies synced - refreshing data');
     }
-  }, [benchmarkSyncStream.totalProgress, queryClient, isBulkSyncInProgress]);
+  }, [benchmarkSyncStream.totalProgress, queryClient]);
 
   // Always-loaded queries for dropdowns and cross-tab functionality
   const { data: clients, isLoading: clientsLoading, isError: clientsError, refetch: refetchClients } = useQuery<Client[]>({
