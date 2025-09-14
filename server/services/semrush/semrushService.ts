@@ -59,7 +59,7 @@ import { ISemrushValidator } from '../../utils/company/validation';
 
 export class SemrushService implements ISemrushValidator {
   private apiKey: string;
-  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3/summary'; // Traffic Analytics Summary endpoint
+  private baseUrl = 'https://api.semrush.com/analytics/ta/api/v3'; // Analytics API v3 for traffic data
   private balanceUrl = 'https://www.semrush.com/users/countapiunits.html';
   private lastBalanceCheck: Date | null = null;
   private cachedBalance: SemrushBalanceStatus | null = null;
@@ -375,78 +375,7 @@ export class SemrushService implements ISemrushValidator {
    * Required by ISemrushValidator interface
    */
   public async fetchHistoricalData(domain: string): Promise<Map<string, any>> {
-    logger.info('Fetching historical data from SEMrush', { domain });
-    
-    try {
-      // Check API balance before making requests
-      await this.checkSufficientBalance(20); // Estimate 20 units for historical data
-      
-      const historicalData = new Map<string, any>();
-      
-      // Get last 12 months of data
-      const months = this.generateLast12Months();
-      
-      for (const month of months) {
-        try {
-          // Apply rate limiting
-          await this.rateLimiter.waitForToken();
-          
-          const params = new URLSearchParams({
-            key: this.apiKey,
-            target: domain,
-            display_date: `${month}-01`, // Convert YYYY-MM to YYYY-MM-DD format
-            export_columns: 'target,visits,users,bounce_rate,time_on_site,pages_per_visit'
-          });
-          
-          const response = await fetch(`${this.baseUrl}?${params}`);
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            logger.warn('SEMrush API request failed for month', { 
-              domain, 
-              month, 
-              status: response.status,
-              statusText: response.statusText,
-              errorResponse: errorText,
-              requestUrl: `${this.baseUrl}?${params}`
-            });
-            continue;
-          }
-          
-          const data = await response.json();
-          
-          if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
-            historicalData.set(month, data);
-            logger.debug('SEMrush data retrieved for month', { 
-              domain, 
-              month, 
-              records: data.data.length 
-            });
-          }
-          
-        } catch (error) {
-          logger.warn('Error fetching SEMrush data for month', { 
-            domain, 
-            month, 
-            error: (error as Error).message 
-          });
-        }
-      }
-      
-      logger.info('SEMrush historical data fetch completed', { 
-        domain, 
-        periodsWithData: historicalData.size 
-      });
-      
-      return historicalData;
-      
-    } catch (error) {
-      logger.error('Failed to fetch SEMrush historical data', { 
-        domain, 
-        error: (error as Error).message 
-      });
-      throw error;
-    }
+    return this.fetchHistoricalDataOptimized(domain, false);
   }
 
   /**
@@ -454,37 +383,120 @@ export class SemrushService implements ISemrushValidator {
    */
   public async fetchHistoricalDataOptimized(
     domain: string, 
-    incrementalSync: boolean = false, 
+    incrementalSync: boolean = false,
     companyId?: string
   ): Promise<Map<string, any>> {
-    logger.info('Fetching optimized historical data from SEMrush', { 
+    logger.info('Starting SEMrush historical data fetch with optimizations', { 
       domain, 
       incrementalSync, 
-      companyId 
+      companyId: companyId || 'unknown' 
     });
     
-    try {
-      // For incremental sync, we could check what data we already have
-      // For now, just use the regular fetch method
-      if (incrementalSync && companyId) {
-        // TODO: Implement incremental sync logic by checking existing data
-        logger.info('Incremental sync requested - fetching only missing data', { 
-          domain, 
-          companyId 
+    // Check balance before starting the data fetch operation
+    const balance = await this.checkBalance();
+    if (!balance.hasUnits) {
+      logger.error('Cannot proceed with historical data fetch - no SEMrush API units available', {
+        domain,
+        unitsRemaining: balance.unitsRemaining,
+        nextResetTime: balance.nextResetTime
+      });
+      throw new Error(`SEMrush API has no remaining units. Next reset: ${balance.nextResetTime.toISOString()}`);
+    }
+    
+    const periods = this.generateHistoricalPeriods();
+    let periodsToFetch = periods;
+
+    // Check existing metrics for incremental sync
+    if (incrementalSync && companyId) {
+      periodsToFetch = await this.getMissingPeriods(companyId, periods);
+      logger.info('Incremental sync analysis', { 
+        domain,
+        totalPeriods: periods.length,
+        missingPeriods: periodsToFetch.length,
+        skipCount: periods.length - periodsToFetch.length
+      });
+    }
+
+    if (periodsToFetch.length === 0) {
+      logger.info('No missing data found, skipping SEMrush fetch', { domain, companyId });
+      return new Map<string, any>();
+    }
+
+    // Estimate total API units needed (approximately 11 units per period: 5 for main metrics + 6 for device distribution)
+    const estimatedUnitsNeeded = periodsToFetch.length * 11;
+    if (balance.unitsRemaining < estimatedUnitsNeeded) {
+      logger.warn('SEMrush API balance may not be sufficient for full historical fetch', {
+        domain,
+        periodsToFetch: periodsToFetch.length,
+        estimatedUnitsNeeded,
+        unitsRemaining: balance.unitsRemaining,
+        percentageUsed: balance.percentageUsed
+      });
+      
+      // If balance is critically low, limit the number of periods to fetch
+      if (balance.criticalBalanceWarning && periodsToFetch.length > 3) {
+        periodsToFetch = periodsToFetch.slice(-3); // Only fetch the last 3 periods
+        logger.warn('Limited periods to fetch due to critically low API balance', {
+          domain,
+          originalCount: periods.length,
+          limitedCount: periodsToFetch.length,
+          unitsRemaining: balance.unitsRemaining
         });
       }
-      
-      return await this.fetchHistoricalData(domain);
-      
-    } catch (error) {
-      logger.error('Failed to fetch optimized SEMrush historical data', { 
-        domain, 
-        incrementalSync, 
-        companyId, 
-        error: (error as Error).message 
-      });
-      throw error;
     }
+
+    logger.info('Starting SEMrush data fetch', { 
+      domain, 
+      totalPeriods: periodsToFetch.length,
+      estimatedUnitsNeeded,
+      currentBalance: balance.unitsRemaining
+    });
+
+    const results = new Map<string, any>();
+
+    // Process periods sequentially to respect rate limits and preserve API units
+    for (let i = 0; i < periodsToFetch.length; i++) {
+      const period = periodsToFetch[i];
+      
+      try {
+        const periodData = await this.fetchPeriodWithRetry(domain, period);
+        
+        if (periodData) {
+          results.set(period, periodData);
+          logger.info(`Successfully processed period ${i + 1}/${periodsToFetch.length}`, { 
+            domain, 
+            period,
+            totalPeriods: results.size 
+          });
+        } else {
+          logger.warn(`No data available for period ${period}`, { domain, period });
+        }
+        
+        // Brief pause between periods to be respectful to the API
+        if (i < periodsToFetch.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+      } catch (error) {
+        logger.error(`Failed to fetch data for period ${period}`, { 
+          domain, 
+          period, 
+          error: (error as Error).message 
+        });
+        
+        // Continue with other periods even if one fails
+        continue;
+      }
+    }
+
+    logger.info('Completed SEMrush historical data fetch', { 
+      domain, 
+      requestedPeriods: periodsToFetch.length,
+      successfulPeriods: results.size,
+      failedPeriods: periodsToFetch.length - results.size
+    });
+
+    return results;
   }
 
   /**
@@ -508,20 +520,225 @@ export class SemrushService implements ISemrushValidator {
   }
 
   /**
-   * Generate last 12 months in YYYY-MM format
+   * Generate 15 months of historical periods starting from last completed month
    */
-  private generateLast12Months(): string[] {
-    const months: string[] = [];
+  private generateHistoricalPeriods(): string[] {
+    const periods: string[] = [];
     const now = new Date();
     
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      months.push(`${year}-${month}`);
+    // SEMrush data is only available up to 2025-06 (June 2025)
+    // Cap the start period to respect SEMrush data availability
+    const maxAvailableDate = new Date(2025, 5, 1); // June 2025 (month 5 = June)
+    const lastCompletedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    
+    // Use the earlier of: last completed month OR max available SEMrush date
+    let currentDate = lastCompletedMonth <= maxAvailableDate ? lastCompletedMonth : maxAvailableDate;
+    
+    for (let i = 0; i < 15; i++) {
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      periods.push(`${year}-${month}`);
+      
+      // Move to previous month
+      currentDate.setMonth(currentDate.getMonth() - 1);
     }
     
-    return months;
+    return periods.reverse(); // Return chronological order (oldest to newest)
+  }
+
+  /**
+   * Check which periods are missing from existing data for incremental sync
+   */
+  private async getMissingPeriods(companyId: string, allPeriods: string[]): Promise<string[]> {
+    // This would need access to storage to check existing metrics
+    // For now, return all periods to maintain compatibility
+    return allPeriods;
+  }
+
+  /**
+   * Fetch single period with retry logic
+   */
+  private async fetchPeriodWithRetry(domain: string, period: string, maxRetries: number = 3): Promise<any | null> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.debug('Fetching SEMrush data for period', { domain, period, attempt });
+
+        // Fetch all metrics in parallel for this period
+        const [mainMetrics, deviceDistribution] = await Promise.all([
+          this.fetchMainMetrics(domain, period),
+          this.fetchDeviceDistribution(domain, period)
+        ]);
+
+        const periodData = {
+          bounceRate: mainMetrics.bounceRate || 0,
+          sessionDuration: mainMetrics.sessionDuration || 0,
+          pagesPerSession: mainMetrics.pagesPerSession || 0,
+          sessionsPerUser: mainMetrics.sessionsPerUser || 0,
+          trafficChannels: mainMetrics.trafficChannels || [],
+          deviceDistribution: deviceDistribution || []
+        };
+
+        logger.info('Successfully fetched SEMrush data for period', { 
+          domain, 
+          period,
+          bounceRate: periodData.bounceRate,
+          sessionDuration: periodData.sessionDuration,
+          trafficChannelsCount: periodData.trafficChannels.length,
+          devicesCount: periodData.deviceDistribution.length
+        });
+
+        return periodData;
+
+      } catch (error) {
+        lastError = error as Error;
+        logger.warn(`Failed to fetch SEMrush data for period (attempt ${attempt}/${maxRetries})`, {
+          domain,
+          period,
+          error: lastError.message
+        });
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5s delay
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed
+    logger.error('Failed to fetch SEMrush data for period after all retries', {
+      domain,
+      period,
+      error: lastError?.message
+    });
+
+    return null;
+  }
+
+  /**
+   * Fetch main website metrics from SEMrush using v3 API
+   */
+  private async fetchMainMetrics(domain: string, period: string): Promise<any> {
+    try {
+      // Check API balance before making the request (estimate 5 units for this call)
+      const hasBalance = await this.checkSufficientBalance(5);
+      if (!hasBalance) {
+        throw new Error('Insufficient SEMrush API units available for main metrics request');
+      }
+
+      const url = `${this.baseUrl}/summary`;
+      
+      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
+      const [year, month] = period.split('-');
+      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
+      
+      const params = new URLSearchParams({
+        key: this.apiKey,
+        targets: domain,
+        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel',
+        display_date: displayDate
+      });
+
+      logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
+
+      // Apply rate limiting before making the API call
+      await this.rateLimiter.waitForToken();
+      const response = await fetch(`${url}?${params}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('SEMrush API HTTP error', { domain, period, status: response.status, error: errorText });
+        throw new Error(`SEMrush API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const text = await response.text();
+      logger.debug('SEMrush main metrics response', { domain, period, response: text });
+
+      if (text.includes('ERROR')) {
+        const errorMessage = `SEMrush API returned error for ${domain}: ${text}`;
+        logger.error('SEMrush API data error', { domain, period, error: text });
+        throw new Error(errorMessage);
+      }
+
+      // Parse CSV-like response from SEMrush v3 API
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        logger.warn('No data returned from SEMrush', { domain, period });
+        return {};
+      }
+
+      // Headers: target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel
+      const data = lines[1].split(';');
+      
+      const totalVisits = parseFloat(data[1]) || 0; // Total visits for percentage calculation
+      
+      // Extract traffic channel data from Summary endpoint
+      const trafficChannels = [];
+      if (totalVisits > 0) {
+        const channelData = [
+          { name: 'Direct', visits: parseFloat(data[6]) || 0 },
+          { name: 'Referral', visits: parseFloat(data[7]) || 0 },
+          { name: 'Organic Search', visits: parseFloat(data[10]) || 0 }, // search_organic
+          { name: 'Paid Search', visits: parseFloat(data[11]) || 0 }, // search_paid
+          { name: 'Social Media', visits: (parseFloat(data[12]) || 0) + (parseFloat(data[13]) || 0) }, // social_organic + social_paid
+          { name: 'Email', visits: parseFloat(data[14]) || 0 }, // mail
+          { name: 'Display Ads', visits: parseFloat(data[15]) || 0 }, // display_ad
+          { name: 'Other', visits: parseFloat(data[16]) || 0 } // unknown_channel
+        ];
+        
+        // Filter out channels with no traffic and calculate percentages
+        channelData.forEach(channel => {
+          if (channel.visits > 0) {
+            trafficChannels.push({
+              channel: channel.name,
+              sessions: Math.round(channel.visits),
+              percentage: Math.round((channel.visits / totalVisits) * 100 * 10) / 10 // Round to 1 decimal
+            });
+          }
+        });
+      }
+      
+      const metrics = {
+        bounceRate: parseFloat(data[5]) || 0, // bounce_rate column (already as decimal)
+        sessionDuration: parseFloat(data[4]) || 0, // time_on_site column (seconds)
+        pagesPerSession: parseFloat(data[3]) || 0, // pages_per_visit column
+        sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0, // visits/users ratio
+        trafficChannels // Add traffic channels to the response
+      };
+
+      logger.info('Parsed SEMrush main metrics with traffic channels', { 
+        domain, 
+        metrics: {
+          ...metrics,
+          trafficChannels: trafficChannels.length
+        }
+      });
+      return metrics;
+
+    } catch (error) {
+      logger.error('Failed to fetch SEMrush main metrics', { 
+        domain, 
+        period, 
+        error: (error as Error).message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch device distribution data from SEMrush
+   */
+  private async fetchDeviceDistribution(domain: string, period: string): Promise<any[]> {
+    try {
+      // Placeholder - would fetch device distribution data
+      // For now return empty array to prevent errors
+      return [];
+    } catch (error) {
+      logger.error('Failed to fetch device distribution', { domain, period, error: (error as Error).message });
+      return [];
+    }
   }
 }
 
