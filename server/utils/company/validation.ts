@@ -82,80 +82,17 @@ export class GlobalCompanyValidator {
     conflictingType?: CompanyType;
   }> {
     try {
-      const normalizedDomain = this.normalizeDomain(domain);
-      
-      const existingCompetitors = await this.storage.getCompetitorsByClient(clientId);
-      const duplicateCompetitor = existingCompetitors.find(company => 
-        company.id !== excludeCompanyId &&
-        this.normalizeDomain(company.domain) === normalizedDomain
-      );
-      
-      if (duplicateCompetitor) {
-        logger.warn('Duplicate domain found in competitors', {
-          clientId,
-          attemptedDomain: domain,
-          normalizedDomain,
-          existingCompanyId: duplicateCompetitor.id,
-          existingDomain: duplicateCompetitor.domain,
-          companyType
-        });
-        
-        return {
-          isDuplicate: true,
-          existingCompany: duplicateCompetitor,
-          conflictingType: 'competitor'
-        };
-      }
-
-      const portfolioCompanies = await this.storage.getCdPortfolioCompanies();
-      const duplicatePortfolio = portfolioCompanies.find(company => 
-        company.id !== excludeCompanyId &&
-        company.websiteUrl && this.normalizeDomain(company.websiteUrl) === normalizedDomain
-      );
-      
-      if (duplicatePortfolio) {
-        logger.warn('Duplicate domain found in portfolio companies', {
-          clientId,
-          attemptedDomain: domain,
-          normalizedDomain,
-          existingCompanyId: duplicatePortfolio.id,
-          existingDomain: duplicatePortfolio.websiteUrl,
-          companyType
-        });
-        
-        return {
-          isDuplicate: true,
-          existingCompany: { ...duplicatePortfolio, domain: duplicatePortfolio.websiteUrl },
-          conflictingType: 'portfolio'
-        };
-      }
-
-      const benchmarkCompanies = await this.storage.getBenchmarkCompanies();
-      const duplicateBenchmark = benchmarkCompanies.find(company => 
-        company.id !== excludeCompanyId &&
-        company.websiteUrl && this.normalizeDomain(company.websiteUrl) === normalizedDomain
-      );
-      
-      if (duplicateBenchmark) {
-        logger.warn('Duplicate domain found in benchmark companies', {
-          clientId,
-          attemptedDomain: domain,
-          normalizedDomain,
-          existingCompanyId: duplicateBenchmark.id,
-          existingDomain: duplicateBenchmark.websiteUrl,
-          companyType
-        });
-        
-        return {
-          isDuplicate: true,
-          existingCompany: { ...duplicateBenchmark, domain: duplicateBenchmark.websiteUrl },
-          conflictingType: 'benchmark'
-        };
-      }
+      // Cross-type domain validation disabled - domains can be used across all company types
+      logger.info('Domain validation check bypassed - cross-type duplicates allowed', {
+        clientId,
+        domain,
+        companyType,
+        normalizedDomain: this.normalizeDomain(domain)
+      });
       
       return { isDuplicate: false };
     } catch (error) {
-      logger.error('Error checking for duplicate domain', {
+      logger.error('Error in domain validation check', {
         clientId,
         domain,
         companyType,
