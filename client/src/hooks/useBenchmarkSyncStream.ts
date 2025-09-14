@@ -141,6 +141,7 @@ export function useBenchmarkSyncStream(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDisconnectingRef = useRef(false);
   const lastConnectAttemptRef = useRef<number>(0);
+  const hasConnectedRef = useRef(false); // StrictMode guard
   const CONNECTION_THROTTLE_MS = 1000;
 
   // API endpoint for benchmark sync SSE
@@ -186,6 +187,12 @@ export function useBenchmarkSyncStream(
       return;
     }
 
+    // StrictMode guard - prevent double connections in development
+    if (hasConnectedRef.current && process.env.NODE_ENV === 'development') {
+      console.log('[Benchmark SSE] StrictMode guard - already connected');
+      return;
+    }
+
     // Throttle connection attempts
     const now = Date.now();
     if (now - lastConnectAttemptRef.current < CONNECTION_THROTTLE_MS) {
@@ -193,6 +200,7 @@ export function useBenchmarkSyncStream(
       return;
     }
     lastConnectAttemptRef.current = now;
+    hasConnectedRef.current = true;
 
     setIsConnecting(true);
     setError(null);
@@ -370,14 +378,8 @@ export function useBenchmarkSyncStream(
     }
   }, [enabled, autoReconnect, maxReconnectAttempts, reconnectDelay, getSSEUrl]);
 
-  // Disconnect from SSE stream with sync protection
+  // Disconnect from SSE stream 
   const disconnect = useCallback((force: boolean = false) => {
-    // Prevent disconnection during active sync unless forced
-    if (!force && isSyncInProgress) {
-      console.warn('[Benchmark SSE] Blocked disconnect during active sync - use force=true to override');
-      return;
-    }
-    
     console.log('[Benchmark SSE] Disconnecting', force ? '(forced)' : '');
     
     isDisconnectingRef.current = true;
@@ -392,6 +394,10 @@ export function useBenchmarkSyncStream(
       eventSourceRef.current = null;
     }
     
+    // Reset throttle and StrictMode guard
+    lastConnectAttemptRef.current = 0;
+    hasConnectedRef.current = false;
+    
     setIsConnected(false);
     setIsConnecting(false);
     setIsReconnecting(false);
@@ -400,9 +406,9 @@ export function useBenchmarkSyncStream(
     setTimeout(() => {
       isDisconnectingRef.current = false;
     }, 1000);
-  }, [isSyncInProgress]);
+  }, []); // No stateful dependencies
 
-  // Auto-connect when enabled
+  // Auto-connect when enabled - only depend on enabled, not stateful values
   useEffect(() => {
     if (enabled && !eventSourceRef.current && !isDisconnectingRef.current) {
       connect();
@@ -413,14 +419,14 @@ export function useBenchmarkSyncStream(
         disconnect(true); // Force disconnect when disabled
       }
     };
-  }, [enabled, connect]);
+  }, [enabled]); // Only depend on enabled, not connect function
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect(true); // Force disconnect on unmount
     };
-  }, [disconnect]);
+  }, []); // No dependencies - only run on mount/unmount
 
   return {
     syncProgress,
