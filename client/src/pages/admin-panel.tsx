@@ -27,7 +27,6 @@ import { GA4IntegrationPanel } from "@/components/admin/GA4IntegrationPanel";
 import { ServiceAccountForm } from "@/components/admin/ServiceAccountForm";
 import { ServiceAccountsTable } from "@/components/admin/ServiceAccountsTable";
 import { UserActivityModal } from "@/components/UserActivityModal";
-import { CompanyDataViewer } from "@/components/admin/CompanyDataViewer";
 import { logger } from "@/utils/logger";
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 import { QueryError } from '@/components/QueryError';
@@ -219,7 +218,6 @@ export default function AdminPanel() {
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
   const [dataViewerOpen, setDataViewerOpen] = useState<boolean>(false);
   const [viewingCompanyData, setViewingCompanyData] = useState<any>(null);
-  const [viewingCompanyType, setViewingCompanyType] = useState<'portfolio' | 'benchmark'>('portfolio');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // State for client data check dialog
@@ -288,6 +286,15 @@ export default function AdminPanel() {
     }
   };
 
+  // Query for fetching portfolio company data
+  const companyDataQuery = useQuery({
+    queryKey: AdminQueryKeys.cdPortfolioData(viewingCompanyData?.id || ''),
+    queryFn: async () => {
+      if (!viewingCompanyData?.id) return null;
+      return await portfolioService.getCompanyData(viewingCompanyData.id);
+    },
+    enabled: !!viewingCompanyData?.id && dataViewerOpen
+  });
 
   // Extract tab from URL
   useEffect(() => {
@@ -2417,7 +2424,7 @@ export default function AdminPanel() {
                               duration: 10000,
                             });
 
-                            const response = await fetch('/api/admin/benchmark-companies/sync-all', {
+                            const response = await fetch('/api/admin/benchmark/sync-all', {
                               method: 'POST',
                               credentials: 'include',
                             });
@@ -2907,7 +2914,6 @@ export default function AdminPanel() {
                                 )}
                               </Button>
 
-
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
@@ -2982,39 +2988,23 @@ export default function AdminPanel() {
                                         }
                                       />
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex justify-end space-x-2">
                                       <Button 
                                         type="button"
-                                        variant="ghost"
-                                        size="sm"
+                                        variant="outline"
                                         onClick={() => {
-                                          setViewingCompanyData(editingItem);
-                                          setViewingCompanyType('benchmark');
-                                          setDataViewerOpen(true);
+                                          setIsDialogOpen(false);
+                                          setEditingItem(null);
                                         }}
-                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                       >
-                                        <BarChart3 className="h-4 w-4 mr-2" />
-                                        View Data
+                                        Cancel
                                       </Button>
-                                      <div className="flex space-x-2">
-                                        <Button 
-                                          type="button"
-                                          variant="outline"
-                                          onClick={() => {
-                                            setIsDialogOpen(false);
-                                            setEditingItem(null);
-                                          }}
-                                        >
-                                          Cancel
-                                        </Button>
-                                        <Button 
-                                          type="submit"
-                                          disabled={updateCompanyMutation.isPending}
-                                        >
-                                          {updateCompanyMutation.isPending ? "Saving..." : "Save Changes"}
-                                        </Button>
-                                      </div>
+                                      <Button 
+                                        type="submit"
+                                        disabled={updateCompanyMutation.isPending}
+                                      >
+                                        {updateCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
                                     </div>
                                   </form>
                                 </DialogContent>
@@ -3320,7 +3310,6 @@ export default function AdminPanel() {
                                       size="sm"
                                       onClick={() => {
                                         setViewingCompanyData(editingItem);
-                                        setViewingCompanyType('portfolio');
                                         setDataViewerOpen(true);
                                       }}
                                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
@@ -3521,7 +3510,6 @@ export default function AdminPanel() {
                                           size="sm"
                                           onClick={() => {
                                             setViewingCompanyData(editingItem);
-                                            setViewingCompanyType('portfolio');
                                             setDataViewerOpen(true);
                                           }}
                                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
@@ -4087,18 +4075,273 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* Company Data Viewer Modal */}
-      <CompanyDataViewer
-        open={dataViewerOpen}
-        onOpenChange={(open) => {
-          setDataViewerOpen(open);
-          if (!open) {
-            setViewingCompanyData(null);
-          }
-        }}
-        company={viewingCompanyData}
-        companyType={viewingCompanyType}
-      />
+      {/* Portfolio Company Data Viewer Modal */}
+      <Dialog open={dataViewerOpen} onOpenChange={(open) => {
+        setDataViewerOpen(open);
+        if (!open) {
+          setViewingCompanyData(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Business Insights{viewingCompanyData?.name ? `: ${viewingCompanyData.name}` : ''}</DialogTitle>
+            <DialogDescription>
+              Performance metrics and business insights organized by category
+            </DialogDescription>
+          </DialogHeader>
+
+          {companyDataQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              Loading company insights...
+            </div>
+          ) : companyDataQuery.error ? (
+            <div className="text-center py-8 text-red-600">
+              <p>Error loading company insights</p>
+              <p className="text-sm text-red-500 mt-1">{(companyDataQuery.error as Error).message}</p>
+            </div>
+          ) : companyDataQuery.data ? (
+            (() => {
+              const businessInsights = transformCompanyDataToBusinessInsights(companyDataQuery.data);
+              
+              const getCategoryIconComponent = (category: string) => {
+                switch (category) {
+                  case 'websitePerformance': return <Gauge className="h-5 w-5" />;
+                  case 'trafficSources': return <Users className="h-5 w-5" />;
+                  case 'userBehavior': return <MousePointer className="h-5 w-5" />;
+                  case 'engagement': return <Target className="h-5 w-5" />;
+                  default: return <BarChart3 className="h-5 w-5" />;
+                }
+              };
+
+              return (
+                <div className="space-y-6">
+                  {/* Company Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Company Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-gray-600">Company Name</span>
+                            <p className="font-medium">{companyDataQuery.data.company.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Website</span>
+                            <p className="font-medium text-blue-600">{companyDataQuery.data.company.websiteUrl}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-gray-600">Industry</span>
+                            <p className="font-medium">{companyDataQuery.data.company.industryVertical}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Business Size</span>
+                            <p className="font-medium">{companyDataQuery.data.company.businessSize}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Data Status */}
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm text-gray-600">Data Status</span>
+                            <p className="font-medium">{businessInsights.overview.dataAvailability}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Total Metrics</span>
+                            <p className="font-medium">{businessInsights.overview.totalMetrics}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Last Updated</span>
+                            <p className="font-medium">{businessInsights.overview.lastUpdated}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+
+                  {/* Business Insights */}
+                  {businessInsights.overview.totalMetrics === 0 ? (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <div className="text-gray-500">
+                          <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">No Performance Data Available</p>
+                          <p className="text-sm">This company hasn't been synced with SEMrush data yet.</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Website Performance */}
+                      {businessInsights.categories.engagementMetrics.metrics.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.engagementMetrics.displayName}
+                            </CardTitle>
+                            {businessInsights.categories.engagementMetrics.periods && businessInsights.categories.engagementMetrics.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagementMetrics.periods)}</p>
+                            )}
+                            <p className="text-sm text-gray-600">{getCategoryDescription('engagementMetrics')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.engagementMetrics.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-blue-700 mb-1">{metric.value}</div>
+                                  {metric.description ? (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  ) : metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Traffic Sources */}
+                      {businessInsights.categories.trafficSources.metrics.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.trafficSources.displayName}
+                            </CardTitle>
+                            {businessInsights.categories.trafficSources.periods && businessInsights.categories.trafficSources.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.trafficSources.periods)}</p>
+                            )}
+                            <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.trafficSources.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-green-700 mb-1">{metric.value}</div>
+                                  {metric.description ? (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  ) : metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* User Behavior */}
+                      {businessInsights.categories.userBehavior.metrics.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.userBehavior.displayName}
+                            </CardTitle>
+                            {businessInsights.categories.userBehavior.periods && businessInsights.categories.userBehavior.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.userBehavior.periods)}</p>
+                            )}
+                            <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.userBehavior.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-4 border border-purple-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-purple-700 mb-1">{metric.value}</div>
+                                  {metric.description ? (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  ) : metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Engagement Metrics */}
+                      {businessInsights.categories.engagement.metrics.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.engagement.displayName}
+                            </CardTitle>
+                            {businessInsights.categories.engagement.periods && businessInsights.categories.engagement.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagement.periods)}</p>
+                            )}
+                            <p className="text-sm text-gray-600">{getCategoryDescription('engagement')}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {businessInsights.engagement.map((metric, index) => (
+                                <div key={index} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-4 border border-orange-100">
+                                  <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-2xl font-bold text-orange-700 mb-1">{metric.value}</div>
+                                  {metric.description ? (
+                                    <div className="text-xs text-gray-500">{metric.description}</div>
+                                  ) : metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Technical Metrics (if any, shown in a collapsed state) */}
+                      {businessInsights.categories.technical.metrics.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">
+                              {businessInsights.categories.technical.displayName}
+                            </CardTitle>
+                            {businessInsights.categories.technical.periods && businessInsights.categories.technical.periods.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.technical.periods)}</p>
+                            )}
+                            <p className="text-sm text-gray-600">Additional technical metrics and data points</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                              {businessInsights.technical.map((metric, index) => (
+                                <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">{metric.name}</div>
+                                  <div className="text-lg font-semibold text-gray-700">{metric.value}</div>
+                                  {metric.period && (
+                                    <div className="text-xs text-gray-400 mt-1">from {metric.period}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No data available</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Client Data Check Results Dialog */}
       <Dialog open={showDataCheckDialog} onOpenChange={setShowDataCheckDialog}>

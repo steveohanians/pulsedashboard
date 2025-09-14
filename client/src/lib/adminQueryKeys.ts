@@ -13,7 +13,6 @@ export const AdminQueryKeys = {
   metricPrompts: () => ["/api/admin/metric-prompts"] as const,
   ga4PropertyAccess: () => ["/api/admin/ga4-property-access"] as const,
   cdPortfolioData: (companyId: string) => ["/api/admin/cd-portfolio", companyId, "data"] as const,
-  benchmarkCompanyData: (companyId: string) => ["/api/admin/benchmark-companies", companyId, "data"] as const,
   ga4ServiceAccounts: () => ["/api/admin/ga4-service-accounts"] as const,
   ga4PropertyAccessClient: (clientId: string) => ["/api/admin/ga4-property-access/client", clientId] as const,
   

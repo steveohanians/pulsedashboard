@@ -116,13 +116,6 @@ export class BenchmarkService extends BaseService {
   }
 
   /**
-   * Get company data
-   */
-  async getCompanyData(id: string): Promise<any> {
-    return this.request('GET', `/${id}/data`);
-  }
-
-  /**
    * Get benchmark companies metrics statistics
    */
   async getStats(): Promise<{
