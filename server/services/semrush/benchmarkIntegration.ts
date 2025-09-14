@@ -65,6 +65,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncProgress({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           stage: 'extracting_domain',
@@ -79,6 +80,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncProgress({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           stage: 'fetching_data',
@@ -102,8 +104,10 @@ export class BenchmarkIntegration {
           
           if (emitProgressEvents) {
             sseEventEmitter.emitBenchmarkSyncCompleted({
+              jobId: syncJobId,
               companyId: company.id,
               companyName: company.name,
+              status: 'verified',
               success: true,
               message: 'No missing data - already up to date'
             });
@@ -117,6 +121,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncProgress({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           stage: 'processing_data',
@@ -130,6 +135,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncProgress({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           stage: 'storing_metrics',
@@ -146,6 +152,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncProgress({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           stage: 'updating_averages',
@@ -178,6 +185,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncCompleted({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           success: result.success,
@@ -203,6 +211,7 @@ export class BenchmarkIntegration {
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncError({
+          jobId: syncJobId,
           companyId: company.id,
           companyName: company.name,
           error: result.error || 'Unknown error occurred during sync'
