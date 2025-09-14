@@ -32,6 +32,9 @@ const CONNECTION_LIMITS = {
   connectionTimeoutMs: 600000,    // 10 minutes max connection time (increased)
 };
 
+// Heartbeat interval for keeping connections alive
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+
 /**
  * SSE endpoint for real-time progress updates
  * GET /progress/:clientId
@@ -212,6 +215,32 @@ router.get('/progress/:clientId', requireAuth, async (req: Request, res: Respons
     }
   }
 });
+
+/**
+ * Clean up an SSE connection
+ */
+function cleanupConnection(res: Response, connectionKey: string): void {
+  try {
+    // Remove from active connections
+    const connections = activeConnections.get(connectionKey);
+    if (connections) {
+      connections.delete(res);
+      if (connections.size === 0) {
+        activeConnections.delete(connectionKey);
+      }
+    }
+    
+    // End the response if not already ended
+    if (!res.writableEnded) {
+      res.end();
+    }
+  } catch (error) {
+    logger.error('Error during connection cleanup', {
+      connectionKey,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 /**
  * Send an SSE event to a specific response stream
@@ -411,10 +440,15 @@ router.get('/benchmark-sync', requireAuth, async (req: Request, res: Response) =
       sendSSEEvent(res, 'error', errorData);
     };
 
+    const handleCompanyStatus = (statusData: any) => {
+      sendSSEEvent(res, 'company-status', statusData);
+    };
+
     // Register event listeners
     sseEventEmitter.on('benchmark-progress', handleBenchmarkProgress);
     sseEventEmitter.on('benchmark-completed', handleBenchmarkCompletion);
     sseEventEmitter.on('benchmark-error', handleBenchmarkError);
+    sseEventEmitter.on('company-status', handleCompanyStatus);
 
     // Heartbeat to keep connection alive
     const heartbeatInterval = setInterval(() => {
@@ -431,6 +465,7 @@ router.get('/benchmark-sync', requireAuth, async (req: Request, res: Response) =
       sseEventEmitter.removeListener('benchmark-progress', handleBenchmarkProgress);
       sseEventEmitter.removeListener('benchmark-completed', handleBenchmarkCompletion);
       sseEventEmitter.removeListener('benchmark-error', handleBenchmarkError);
+      sseEventEmitter.removeListener('company-status', handleCompanyStatus);
       
       cleanupConnection(res, benchmarkConnectionKey);
     };

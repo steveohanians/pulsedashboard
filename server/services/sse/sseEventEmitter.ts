@@ -267,6 +267,29 @@ class SSEEventEmitter extends EventEmitter {
 
     this.broadcastBenchmarkError(errorData);
   }
+
+  /**
+   * Emit company status update - for individual company status changes
+   */
+  emitCompanyStatus(data: {
+    companyId: string;
+    syncStatus: "pending" | "processing" | "completed" | "failed";
+    message?: string;
+  }): void {
+    const statusData = {
+      companyId: data.companyId,
+      syncStatus: data.syncStatus,
+      message: data.message,
+      timestamp: new Date().toISOString()
+    };
+
+    logger.debug('Broadcasting company status update', { 
+      companyId: data.companyId, 
+      status: data.syncStatus 
+    });
+
+    this.emit('company-status', statusData);
+  }
 }
 
 // Export singleton instance

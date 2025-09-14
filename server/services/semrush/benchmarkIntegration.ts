@@ -100,14 +100,14 @@ export class BenchmarkIntegration {
         if (incrementalSync) {
           logger.info('No missing data found for company, sync completed', { companyId: company.id });
           result.success = true;
-          await this.updateCompanySyncStatus(company.id, 'verified', emitProgressEvents);
+          await this.updateCompanySyncStatus(company.id, 'completed', emitProgressEvents);
           
           if (emitProgressEvents) {
             sseEventEmitter.emitBenchmarkSyncCompleted({
               jobId: syncJobId,
               companyId: company.id,
               companyName: company.name,
-              status: 'verified',
+              status: 'completed',
               success: true,
               message: 'No missing data - already up to date'
             });
@@ -167,7 +167,7 @@ export class BenchmarkIntegration {
 
       // Step 6: Update company sync status based on whether we stored any data
       const hasValidData = result.metricsStored > 0 || result.trafficChannelsStored > 0 || result.deviceDistributionStored > 0;
-      const finalStatus = hasValidData ? 'verified' : 'failed';
+      const finalStatus = hasValidData ? 'completed' : 'failed';
       
       await this.updateCompanySyncStatus(company.id, finalStatus, emitProgressEvents);
 
@@ -207,7 +207,7 @@ export class BenchmarkIntegration {
       });
 
       // Update company sync status to error
-      await this.updateCompanySyncStatus(company.id, 'error', emitProgressEvents);
+      await this.updateCompanySyncStatus(company.id, 'failed', emitProgressEvents);
 
       if (emitProgressEvents) {
         sseEventEmitter.emitBenchmarkSyncError({
@@ -227,14 +227,13 @@ export class BenchmarkIntegration {
    */
   public async processBenchmarkCompanies(
     companies: BenchmarkCompany[],
-    options: { incrementalSync?: boolean; jobType?: string } = {}
+    options: { incrementalSync?: boolean; jobType?: 'individual' | 'bulk' | 'incremental' } = {}
   ): Promise<{ jobId: string; results: BenchmarkIntegrationResult[] }> {
-    const { incrementalSync = false, jobType = 'bulk_sync' } = options;
+    const { incrementalSync = false, jobType = 'bulk' } = options;
 
     // Create sync job
     const jobId = await this.syncManager.createSyncJob({
       jobType,
-      totalCompanies: companies.length,
       companyIds: companies.map(c => c.id),
       incrementalSync
     });
@@ -249,16 +248,23 @@ export class BenchmarkIntegration {
     const results: BenchmarkIntegrationResult[] = [];
 
     try {
-      await this.syncManager.updateJob(jobId, { status: 'processing' });
+      await this.syncManager.updateSyncProgress(jobId, { 
+        processedCompanies: 0,
+        phase: 'syncing',
+        message: 'Starting bulk sync' 
+      });
 
       // Process companies sequentially to respect rate limits
       for (let i = 0; i < companies.length; i++) {
         const company = companies[i];
         
         // Update job progress
-        await this.syncManager.updateJob(jobId, {
+        await this.syncManager.updateSyncProgress(jobId, {
           processedCompanies: i,
-          currentCompanyId: company.id
+          currentCompanyId: company.id,
+          currentCompanyName: company.name,
+          phase: 'syncing',
+          message: `Processing ${company.name} (${i + 1}/${companies.length})`
         });
 
         // Process individual company
@@ -271,9 +277,12 @@ export class BenchmarkIntegration {
         results.push(companyResult);
 
         // Update job with company completion
-        await this.syncManager.updateJob(jobId, {
+        await this.syncManager.updateSyncProgress(jobId, {
           processedCompanies: i + 1,
-          currentCompanyId: null
+          currentCompanyId: undefined,
+          currentCompanyName: undefined,
+          phase: 'syncing',
+          message: `Completed ${company.name} (${i + 1}/${companies.length})`
         });
 
         logger.info('Completed company in bulk job', { 
@@ -285,7 +294,7 @@ export class BenchmarkIntegration {
       }
 
       // Complete the job
-      await this.syncManager.completeJob(jobId);
+      await this.syncManager.completeSyncJob(jobId);
 
       logger.info('Completed bulk benchmark sync job', { 
         jobId, 
@@ -295,7 +304,7 @@ export class BenchmarkIntegration {
       });
 
     } catch (error) {
-      await this.syncManager.failJob(jobId, (error as Error).message);
+      await this.syncManager.failSyncJob(jobId, (error as Error).message);
       logger.error('Bulk benchmark sync job failed', { jobId, error: (error as Error).message });
       throw error;
     }
@@ -308,7 +317,7 @@ export class BenchmarkIntegration {
    */
   private async updateCompanySyncStatus(
     companyId: string, 
-    status: string, 
+    status: "pending" | "processing" | "completed" | "failed", 
     emitEvents: boolean = true
   ): Promise<void> {
     try {
@@ -317,11 +326,20 @@ export class BenchmarkIntegration {
         lastSyncAttempt: new Date()
       };
 
-      if (status === 'verified') {
-        updates.lastSuccessfulSync = new Date();
+      if (status === 'completed') {
+        updates.lastSyncCompleted = new Date();
       }
 
       await this.storage.updateBenchmarkCompany(companyId, updates);
+      
+      // Emit company status update via SSE if events are enabled
+      if (emitEvents) {
+        sseEventEmitter.emitCompanyStatus({
+          companyId,
+          syncStatus: status as "pending" | "processing" | "completed" | "failed",
+          message: `Company sync status updated to ${status}`
+        });
+      }
       
       logger.debug('Updated benchmark company sync status', { companyId, status });
     } catch (error) {
