@@ -229,16 +229,16 @@ export default function AdminPanel() {
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
 
-  // Real-time benchmark sync status tracking
+  // Track bulk sync state - declare before SSE hook usage
+  const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
+
+  // Real-time benchmark sync status tracking - maintain connection during bulk sync
   const benchmarkSyncStream = useBenchmarkSyncStream({
-    enabled: user?.role === "Admin" && activeTab === "benchmark",
+    enabled: user?.role === "Admin" && (activeTab === "benchmark" || isBulkSyncInProgress),
     autoReconnect: true,
     maxReconnectAttempts: 5,
     reconnectDelay: 2000
   });
-
-  // Track bulk sync state
-  const [isBulkSyncInProgress, setIsBulkSyncInProgress] = useState(false);
 
   // Track individual company sync state (to show Processing status longer)
   const [syncingCompanyIds, setSyncingCompanyIds] = useState<Set<string>>(new Set());
@@ -309,15 +309,17 @@ export default function AdminPanel() {
 
   // Handle persistent sync state and SSE connection status
   useEffect(() => {
-    if (activeTab !== "benchmark" || user?.role !== "Admin") return;
+    if (user?.role !== "Admin") return;
 
     // Check if there's ongoing bulk sync activity
     const hasActiveSyncs = benchmarkSyncStream.totalProgress.total > 0;
     if (hasActiveSyncs && !isBulkSyncInProgress) {
       setIsBulkSyncInProgress(true);
+      console.log('[Admin Panel] Bulk sync detected - maintaining SSE connection');
     } else if (!hasActiveSyncs && isBulkSyncInProgress) {
       // Bulk sync completed while we were away
       setIsBulkSyncInProgress(false);
+      console.log('[Admin Panel] Bulk sync completed - SSE connection can be managed normally');
 
       // Show completion notification if we missed it
       if (benchmarkSyncStream.totalProgress.completed > 0) {
@@ -328,7 +330,7 @@ export default function AdminPanel() {
         });
       }
     }
-  }, [benchmarkSyncStream.totalProgress, activeTab, user?.role, isBulkSyncInProgress]);
+  }, [benchmarkSyncStream.totalProgress, user?.role, isBulkSyncInProgress]);
 
   // Auto-refresh companies when sync completes
   useEffect(() => {

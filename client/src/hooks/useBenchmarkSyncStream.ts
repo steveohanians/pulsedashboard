@@ -161,6 +161,18 @@ export function useBenchmarkSyncStream(
 
   const isSyncInProgress = Boolean(activeSyncJob && syncProgress && syncProgress.currentPhase !== 'completed');
 
+  // Helper function to map backend status to frontend syncStatus
+  const mapStatusToSyncStatus = (status: string): "pending" | "processing" | "verified" | "error" => {
+    switch (status) {
+      case 'completed': return 'verified';
+      case 'processing': return 'processing';
+      case 'failed':
+      case 'error': return 'error';
+      case 'pending':
+      default: return 'pending';
+    }
+  };
+
   // Compute total progress from sync progress data
   const totalProgress = {
     total: syncProgress?.totalCompanies || 0,
@@ -187,9 +199,7 @@ export function useBenchmarkSyncStream(
     setConnectionAttempts(prev => prev + 1);
 
     try {
-      const eventSource = new EventSource(getSSEUrl(), {
-        withCredentials: true
-      });
+      const eventSource = new EventSource(getSSEUrl());
 
       eventSourceRef.current = eventSource;
 
@@ -207,36 +217,39 @@ export function useBenchmarkSyncStream(
       // Handle different event types
       eventSource.addEventListener('connected', (event) => {
         try {
-          const data = event.data ? JSON.parse(event.data) : {};
+          const messageEvent = event as MessageEvent;
+          const data = messageEvent.data ? JSON.parse(messageEvent.data) : {};
           console.log('[Benchmark SSE] Connected:', data);
         } catch (e) {
-          console.warn('[Benchmark SSE] Failed to parse connected event:', event.data, e);
+          console.warn('[Benchmark SSE] Failed to parse connected event:', (event as MessageEvent).data, e);
         }
       });
 
       eventSource.addEventListener('progress', (event) => {
         try {
-          if (!event.data) {
+          const messageEvent = event as MessageEvent;
+          if (!messageEvent.data) {
             console.warn('[Benchmark SSE] Progress event missing data');
             return;
           }
-          const data: BenchmarkSyncProgressData = JSON.parse(event.data);
+          const data: BenchmarkSyncProgressData = JSON.parse(messageEvent.data);
           console.log('[Benchmark SSE] Progress update:', data.overallPercent + '%', data.message);
           setSyncProgress(data);
           setActiveSyncJob(data.jobId);
           setError(null);
         } catch (e) {
-          console.warn('[Benchmark SSE] Failed to parse progress event:', event.data, e);
+          console.warn('[Benchmark SSE] Failed to parse progress event:', (event as MessageEvent).data, e);
         }
       });
 
       eventSource.addEventListener('completed', (event) => {
         try {
-          if (!event.data) {
+          const messageEvent = event as MessageEvent;
+          if (!messageEvent.data) {
             console.warn('[Benchmark SSE] Completion event missing data');
             return;
           }
-          const data: BenchmarkSyncCompletionData = JSON.parse(event.data);
+          const data: BenchmarkSyncCompletionData = JSON.parse(messageEvent.data);
           console.log('[Benchmark SSE] Sync completed:', data);
           setLastCompletion(data);
           setActiveSyncJob(null);
@@ -249,45 +262,55 @@ export function useBenchmarkSyncStream(
             message: data.message
           } : null);
         } catch (e) {
-          console.warn('[Benchmark SSE] Failed to parse completion event:', event.data, e);
+          console.warn('[Benchmark SSE] Failed to parse completion event:', (event as MessageEvent).data, e);
         }
       });
 
       eventSource.addEventListener('error', (event) => {
         try {
-          if (!event.data) {
+          const messageEvent = event as MessageEvent;
+          if (!messageEvent.data) {
             console.warn('[Benchmark SSE] Error event missing data');
             setError('Unknown SSE error');
             return;
           }
-          const data: BenchmarkSyncErrorData = JSON.parse(event.data);
+          const data: BenchmarkSyncErrorData = JSON.parse(messageEvent.data);
           console.warn('[Benchmark SSE] Server error event:', data);
           setLastError(data);
           setError(data.error);
           setActiveSyncJob(null);
         } catch (e) {
-          console.warn('[Benchmark SSE] Failed to parse error event:', event.data, e);
+          console.warn('[Benchmark SSE] Failed to parse error event:', (event as MessageEvent).data, e);
           setError('SSE communication error');
         }
       });
 
-      // Company status updates
+      // Company status updates with payload normalization
       eventSource.addEventListener('company-status', (event) => {
         try {
-          if (!event.data) {
+          const messageEvent = event as MessageEvent;
+          if (!messageEvent.data) {
             console.warn('[Benchmark SSE] Company status event missing data');
             return;
           }
-          const data: CompanySyncStatus = JSON.parse(event.data);
-          console.log('[Benchmark SSE] Company status update:', data);
+          const rawData = JSON.parse(messageEvent.data);
+          console.log('[Benchmark SSE] Company status update:', rawData);
+          
+          // Normalize payload - handle both { status } and { syncStatus } formats
+          const normalizedData: CompanySyncStatus = {
+            companyId: rawData.companyId,
+            syncStatus: rawData.syncStatus || mapStatusToSyncStatus(rawData.status),
+            message: rawData.message,
+            timestamp: rawData.timestamp || new Date().toISOString()
+          };
           
           setCompanySyncStatuses(prev => {
             const newMap = new Map(prev);
-            newMap.set(data.companyId, data);
+            newMap.set(normalizedData.companyId, normalizedData);
             return newMap;
           });
         } catch (e) {
-          console.warn('[Benchmark SSE] Failed to parse company status event:', event.data, e);
+          console.warn('[Benchmark SSE] Failed to parse company status event:', (event as MessageEvent).data, e);
         }
       });
 
@@ -295,12 +318,13 @@ export function useBenchmarkSyncStream(
         // Silent heartbeat handling
         if (process.env.NODE_ENV === 'development') {
           try {
-            if (event.data) {
-              const data = JSON.parse(event.data);
+            const messageEvent = event as MessageEvent;
+            if (messageEvent.data) {
+              const data = JSON.parse(messageEvent.data);
               console.debug('[Benchmark SSE] Heartbeat:', data.timestamp);
             }
           } catch (e) {
-            console.warn('[Benchmark SSE] Failed to parse heartbeat:', event.data, e);
+            console.warn('[Benchmark SSE] Failed to parse heartbeat:', (event as MessageEvent).data, e);
           }
         }
       });
@@ -346,9 +370,15 @@ export function useBenchmarkSyncStream(
     }
   }, [enabled, autoReconnect, maxReconnectAttempts, reconnectDelay, getSSEUrl]);
 
-  // Disconnect from SSE stream
-  const disconnect = useCallback(() => {
-    console.log('[Benchmark SSE] Manually disconnecting');
+  // Disconnect from SSE stream with sync protection
+  const disconnect = useCallback((force: boolean = false) => {
+    // Prevent disconnection during active sync unless forced
+    if (!force && isSyncInProgress) {
+      console.warn('[Benchmark SSE] Blocked disconnect during active sync - use force=true to override');
+      return;
+    }
+    
+    console.log('[Benchmark SSE] Disconnecting', force ? '(forced)' : '');
     
     isDisconnectingRef.current = true;
     
@@ -370,7 +400,7 @@ export function useBenchmarkSyncStream(
     setTimeout(() => {
       isDisconnectingRef.current = false;
     }, 1000);
-  }, []);
+  }, [isSyncInProgress]);
 
   // Auto-connect when enabled
   useEffect(() => {
@@ -380,7 +410,7 @@ export function useBenchmarkSyncStream(
     
     return () => {
       if (!enabled) {
-        disconnect();
+        disconnect(true); // Force disconnect when disabled
       }
     };
   }, [enabled]);
@@ -388,7 +418,7 @@ export function useBenchmarkSyncStream(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      disconnect();
+      disconnect(true); // Force disconnect on unmount
     };
   }, [disconnect]);
 
