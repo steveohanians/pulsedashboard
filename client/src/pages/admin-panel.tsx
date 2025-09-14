@@ -312,16 +312,16 @@ export default function AdminPanel() {
     if (user?.role !== "Admin") return;
 
     // Check if there's ongoing bulk sync activity - use activeSyncJob as primary indicator
-    // because totalProgress depends on SSE connection which we're trying to manage
-    const hasActiveSyncs = benchmarkSyncStream.activeSyncJob !== null || benchmarkSyncStream.totalProgress.total > 0;
+    // but ignore individual syncs (jobId="individual") which shouldn't affect bulk sync UI state
+    const hasActiveBulkSyncs = (benchmarkSyncStream.activeSyncJob !== null && benchmarkSyncStream.activeSyncJob !== "individual") || benchmarkSyncStream.totalProgress.total > 0;
     
-    if (hasActiveSyncs && !isBulkSyncInProgress) {
+    if (hasActiveBulkSyncs && !isBulkSyncInProgress) {
       setIsBulkSyncInProgress(true);
       console.log('[Admin Panel] Bulk sync detected - maintaining SSE connection', {
         activeSyncJob: benchmarkSyncStream.activeSyncJob,
         totalProgress: benchmarkSyncStream.totalProgress
       });
-    } else if (!hasActiveSyncs && isBulkSyncInProgress) {
+    } else if (!hasActiveBulkSyncs && isBulkSyncInProgress) {
       // Only mark as completed if we have confirmation of actual completion
       if (benchmarkSyncStream.totalProgress.total > 0 && 
           benchmarkSyncStream.totalProgress.completed === benchmarkSyncStream.totalProgress.total) {
