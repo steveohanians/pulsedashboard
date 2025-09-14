@@ -2907,6 +2907,22 @@ export default function AdminPanel() {
                                 )}
                               </Button>
 
+                              {/* View Data Button */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setViewingCompanyData(company);
+                                  setViewingCompanyType('benchmark');
+                                  setDataViewerOpen(true);
+                                }}
+                                title="View Company Data"
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                data-testid={`view-data-button-${company.id}`}
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                              </Button>
+
                               <Dialog open={isDialogOpen && editingItem?.id === company.id} onOpenChange={(open) => {
                                 setIsDialogOpen(open);
                                 if (!open) {
