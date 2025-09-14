@@ -2865,18 +2865,15 @@ export default function AdminPanel() {
                             <TableCell className="hidden md:table-cell text-xs">{company.businessSize}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge 
-                                variant={getSyncStatusVariant(getCompanySyncStatus(company.id, company))} 
+                                variant={company.sourceVerified ? "default" : "secondary"}
                                 className={`text-xs ${
-                                  getCompanySyncStatus(company.id, company) === "verified" || getCompanySyncStatus(company.id, company) === "completed" 
-                                    ? "text-primary border-primary" 
-                                    : ""
+                                  company.sourceVerified 
+                                    ? "bg-green-100 text-green-800 border-green-200" 
+                                    : "bg-gray-100 text-gray-600 border-gray-200"
                                 }`}
-                                data-testid={`sync-status-badge-desktop-${company.id}`}
+                                data-testid={`verified-badge-desktop-${company.id}`}
                               >
-                                {getCompanySyncStatus(company.id, company) === "processing" && (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                )}
-                                {getSyncStatusText(getCompanySyncStatus(company.id, company))}
+                                {company.sourceVerified ? "Verified" : "Unverified"}
                               </Badge>
                             </TableCell>
                             <TableCell>
