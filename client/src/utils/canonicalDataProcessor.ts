@@ -43,12 +43,40 @@ export interface CanonicalBusinessInsights {
  * Dashboard format: { metrics: [...array of DashboardMetric objects...] }
  */
 function convertModalDataToDashboardFormat(modalData: any): any {
-  if (!modalData || !modalData.data) {
+  console.log('[DEBUG] Converting modal data to dashboard format', {
+    hasModalData: !!modalData,
+    hasData: !!modalData?.data,
+    modalDataKeys: modalData ? Object.keys(modalData) : [],
+    dataKeys: modalData?.data ? Object.keys(modalData.data) : []
+  });
+  
+  if (!modalData) {
+    console.log('[DEBUG] No modal data found');
     return null;
   }
 
-  const { company, metrics: groupedMetrics } = modalData.data;
+  // Handle both possible data structures:
+  // 1. Direct structure: { company, metrics, totalMetrics }
+  // 2. Nested structure: { data: { company, metrics } }
+  const dataSource = modalData.data || modalData;
+  const { company, metrics: groupedMetrics } = dataSource;
+  
+  if (!company || !groupedMetrics) {
+    console.log('[DEBUG] Missing company or metrics in data source', {
+      hasCompany: !!company,
+      hasMetrics: !!groupedMetrics,
+      dataSourceKeys: Object.keys(dataSource)
+    });
+    return null;
+  }
   const dashboardMetrics: any[] = [];
+
+  console.log('[DEBUG] Processing grouped metrics', {
+    hasCompany: !!company,
+    hasGroupedMetrics: !!groupedMetrics,
+    groupedMetricsType: typeof groupedMetrics,
+    groupedMetricsKeys: groupedMetrics ? Object.keys(groupedMetrics) : []
+  });
 
   // Convert grouped metrics to flat array format expected by UnifiedDataService
   if (groupedMetrics && typeof groupedMetrics === 'object') {
@@ -57,22 +85,37 @@ function convertModalDataToDashboardFormat(modalData: any): any {
         Object.entries(timePeriods).forEach(([timePeriod, metricEntries]: [string, any]) => {
           if (Array.isArray(metricEntries)) {
             metricEntries.forEach((metric: any) => {
+              // Handle nested value structure: {value: {value: 0.5449, source: "semrush"}}
+              let actualValue = metric.value;
+              if (typeof metric.value === 'object' && metric.value !== null && 'value' in metric.value) {
+                actualValue = metric.value.value;
+              }
+              
               dashboardMetrics.push({
                 metricName,
-                value: metric.value,
+                value: actualValue,
                 sourceType: metric.sourceType,
                 timePeriod,
                 createdAt: metric.createdAt,
-                updatedAt: metric.updatedAt
+                updatedAt: metric.updatedAt,
+                // Add optional properties if they exist
+                channel: metric.channel || null,
+                competitorId: metric.competitorId || null
               });
             });
+          } else {
+            console.warn('[DEBUG] Expected array for metric entries but got:', typeof metricEntries, metricEntries);
           }
         });
+      } else {
+        console.warn('[DEBUG] Expected object for time periods but got:', typeof timePeriods, timePeriods);
       }
     });
+  } else {
+    console.warn('[DEBUG] Expected object for grouped metrics but got:', typeof groupedMetrics, groupedMetrics);
   }
 
-  return {
+  const result = {
     company,
     metrics: dashboardMetrics,
     competitors: [], // Modal data doesn't include competitors
@@ -81,17 +124,49 @@ function convertModalDataToDashboardFormat(modalData: any): any {
     trafficChannelMetrics: [],
     timeSeriesData: {}
   };
+
+  console.log('[DEBUG] Conversion result', {
+    hasCompany: !!result.company,
+    metricsCount: result.metrics.length,
+    metricsIsArray: Array.isArray(result.metrics),
+    sampleMetrics: result.metrics.slice(0, 3)
+  });
+
+  return result;
 }
 
 /**
  * Transform company data using canonical processing pipeline
  */
 export function transformCompanyDataCanonically(companyData: any): CanonicalBusinessInsights {
-  // Convert modal data format to dashboard format first
-  const dashboardFormatData = convertModalDataToDashboardFormat(companyData);
+  try {
+    console.log('[DEBUG] Starting canonical transformation', {
+      hasCompanyData: !!companyData,
+      companyDataType: typeof companyData,
+      companyDataKeys: companyData ? Object.keys(companyData) : []
+    });
+    
+    // Convert modal data format to dashboard format first
+    const dashboardFormatData = convertModalDataToDashboardFormat(companyData);
   
   if (!dashboardFormatData) {
+    console.log('[DEBUG] No dashboard format data, creating empty insights');
     return createEmptyBusinessInsights(companyData?.company?.name || 'Unknown Company');
+  }
+
+  console.log('[DEBUG] About to call UnifiedDataService.processDashboardData', {
+    hasMetrics: !!dashboardFormatData.metrics,
+    metricsIsArray: Array.isArray(dashboardFormatData.metrics),
+    metricsLength: dashboardFormatData.metrics?.length || 0
+  });
+
+  // Validate that metrics is an array before passing to UnifiedDataService
+  if (!Array.isArray(dashboardFormatData.metrics)) {
+    console.error('[ERROR] dashboardFormatData.metrics is not an array:', {
+      metricsType: typeof dashboardFormatData.metrics,
+      metrics: dashboardFormatData.metrics
+    });
+    return createEmptyBusinessInsights(dashboardFormatData?.company?.name || 'Unknown Company');
   }
 
   // Use UnifiedDataService to process the data canonically 
@@ -101,6 +176,7 @@ export function transformCompanyDataCanonically(companyData: any): CanonicalBusi
   );
 
   if (!processedData) {
+    console.log('[DEBUG] No processed data from UnifiedDataService');
     return createEmptyBusinessInsights(dashboardFormatData?.company?.name || 'Unknown Company');
   }
 
@@ -130,6 +206,11 @@ export function transformCompanyDataCanonically(companyData: any): CanonicalBusi
   insights.overview.lastUpdated = processedData.periods?.displayPeriod || 'Unknown';
 
   return insights;
+  
+  } catch (error) {
+    console.error('[ERROR] Failed to transform company data canonically:', error);
+    return createEmptyBusinessInsights(companyData?.company?.name || 'Unknown Company');
+  }
 }
 
 /**
