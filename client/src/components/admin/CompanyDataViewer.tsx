@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, BarChart3, Building, Gauge, Users, MousePointer, Target } from "lucide-react";
-import { transformCompanyDataToBusinessInsights, getCategoryDescription, getCategoryPeriodsSimple } from '@/utils/portfolioDataTransformer';
+import { transformCompanyDataCanonically, getCategoryDescriptionCanonical } from '@/utils/canonicalDataProcessor';
 import { portfolioService, benchmarkService } from '@/services/api';
 import { AdminQueryKeys } from "@/lib/adminQueryKeys";
 
@@ -53,7 +53,7 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
           </div>
         ) : companyDataQuery.data ? (
           (() => {
-            const businessInsights = transformCompanyDataToBusinessInsights(companyDataQuery.data);
+            const businessInsights = transformCompanyDataCanonically(companyDataQuery.data);
             
             return (
               <div className="space-y-6">
@@ -129,14 +129,11 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
                           <CardTitle className="text-lg">
                             {businessInsights.categories.engagementMetrics.displayName}
                           </CardTitle>
-                          {businessInsights.categories.engagementMetrics.periods && businessInsights.categories.engagementMetrics.periods.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagementMetrics.periods)}</p>
-                          )}
-                          <p className="text-sm text-gray-600">{getCategoryDescription('engagementMetrics')}</p>
+                          <p className="text-sm text-gray-600">{getCategoryDescriptionCanonical('engagementMetrics')}</p>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {businessInsights.engagementMetrics.map((metric, index) => (
+                            {businessInsights.categories.engagementMetrics.metrics.map((metric, index) => (
                               <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
                                 <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
                                 <div className="text-2xl font-bold text-blue-700 mb-1">{metric.value}</div>
@@ -159,14 +156,11 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
                           <CardTitle className="text-lg">
                             {businessInsights.categories.trafficSources.displayName}
                           </CardTitle>
-                          {businessInsights.categories.trafficSources.periods && businessInsights.categories.trafficSources.periods.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.trafficSources.periods)}</p>
-                          )}
-                          <p className="text-sm text-gray-600">{getCategoryDescription('trafficSources')}</p>
+                          <p className="text-sm text-gray-600">{getCategoryDescriptionCanonical('trafficSources')}</p>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {businessInsights.trafficSources.map((metric, index) => (
+                            {businessInsights.categories.trafficSources.metrics.map((metric, index) => (
                               <div key={index} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
                                 <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
                                 <div className="text-2xl font-bold text-green-700 mb-1">{metric.value}</div>
@@ -189,14 +183,11 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
                           <CardTitle className="text-lg">
                             {businessInsights.categories.userBehavior.displayName}
                           </CardTitle>
-                          {businessInsights.categories.userBehavior.periods && businessInsights.categories.userBehavior.periods.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.userBehavior.periods)}</p>
-                          )}
-                          <p className="text-sm text-gray-600">{getCategoryDescription('userBehavior')}</p>
+                          <p className="text-sm text-gray-600">{getCategoryDescriptionCanonical('userBehavior')}</p>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {businessInsights.userBehavior.map((metric, index) => (
+                            {businessInsights.categories.userBehavior.metrics.map((metric, index) => (
                               <div key={index} className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-4 border border-purple-100">
                                 <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
                                 <div className="text-2xl font-bold text-purple-700 mb-1">{metric.value}</div>
@@ -219,14 +210,11 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
                           <CardTitle className="text-lg">
                             {businessInsights.categories.engagement.displayName}
                           </CardTitle>
-                          {businessInsights.categories.engagement.periods && businessInsights.categories.engagement.periods.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.engagement.periods)}</p>
-                          )}
-                          <p className="text-sm text-gray-600">{getCategoryDescription('engagement')}</p>
+                          <p className="text-sm text-gray-600">{getCategoryDescriptionCanonical('engagement')}</p>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {businessInsights.engagement.map((metric, index) => (
+                            {businessInsights.categories.engagement.metrics.map((metric, index) => (
                               <div key={index} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-4 border border-orange-100">
                                 <div className="text-sm text-gray-600 mb-1">{metric.name}</div>
                                 <div className="text-2xl font-bold text-orange-700 mb-1">{metric.value}</div>
@@ -249,14 +237,11 @@ export function CompanyDataViewer({ open, onOpenChange, company, companyType }: 
                           <CardTitle className="text-lg">
                             {businessInsights.categories.technical.displayName}
                           </CardTitle>
-                          {businessInsights.categories.technical.periods && businessInsights.categories.technical.periods.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">{getCategoryPeriodsSimple(businessInsights.categories.technical.periods)}</p>
-                          )}
-                          <p className="text-sm text-gray-600">Additional technical metrics and data points</p>
+                          <p className="text-sm text-gray-600">{getCategoryDescriptionCanonical('technical')}</p>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            {businessInsights.technical.map((metric, index) => (
+                            {businessInsights.categories.technical.metrics.map((metric, index) => (
                               <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                 <div className="text-xs text-gray-600 mb-1">{metric.name}</div>
                                 <div className="text-lg font-semibold text-gray-700">{metric.value}</div>
