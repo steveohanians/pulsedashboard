@@ -232,8 +232,7 @@ export class BenchmarkSyncManager {
         processedCompanies,
         failedCompanies,
         currentCompanyId: updates.currentCompanyId,
-        currentCompanyName: updates.currentCompanyName,
-        updatedAt: new Date()
+        currentCompanyName: updates.currentCompanyName
       };
 
       // Calculate estimated completion
@@ -413,7 +412,6 @@ export class BenchmarkSyncManager {
       };
 
       logger.info('Completed sync job', {
-        jobId,
         ...result,
         durationMinutes: Math.round(duration / 60000)
       });
@@ -546,8 +544,8 @@ export class BenchmarkSyncManager {
         totalCompanies: job.totalCompanies,
         processedCompanies: job.processedCompanies,
         failedCompanies: job.failedCompanies,
-        currentCompanyId: job.currentCompanyId,
-        currentCompanyName: job.currentCompanyName,
+        currentCompanyId: job.currentCompanyId || undefined,
+        currentCompanyName: job.currentCompanyName || undefined,
         timeElapsed,
         estimatedTimeRemaining,
         currentPhase: updates.currentPhase || 'syncing',
