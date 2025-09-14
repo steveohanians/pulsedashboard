@@ -38,6 +38,32 @@ export interface CanonicalBusinessInsights {
 }
 
 /**
+ * Normalize sourceType values from modal format to canonical format expected by UnifiedDataService
+ */
+function normalizeSourceType(originalSourceType: string): string {
+  const normalizations: Record<string, string> = {
+    // Industry benchmark variations
+    'Benchmark': 'Industry_Avg',
+    'Industry': 'Industry_Avg', 
+    'Industry_Benchmark': 'Industry_Avg',
+    
+    // Clear Digital average variations
+    'CD': 'CD_Avg',
+    'Portfolio_Avg': 'CD_Avg',
+    'CD_Avg': 'CD_Avg',
+    
+    // Competitor variations
+    'Competitor': 'Competitor',
+    'BenchmarkCompetitor': 'Competitor',
+    
+    // Client variations
+    'Client': 'Client'
+  };
+  
+  return normalizations[originalSourceType] || originalSourceType;
+}
+
+/**
  * Convert modal data format to dashboard data format
  * Modal format: { metrics: { [metricName]: { [timePeriod]: [...] } } }
  * Dashboard format: { metrics: [...array of DashboardMetric objects...] }
@@ -78,6 +104,9 @@ function convertModalDataToDashboardFormat(modalData: any): any {
     groupedMetricsKeys: groupedMetrics ? Object.keys(groupedMetrics) : []
   });
 
+  // Track sourceType normalization for debugging
+  const sourceTypeMapping: Record<string, number> = {};
+
   // Convert grouped metrics to flat array format expected by UnifiedDataService
   if (groupedMetrics && typeof groupedMetrics === 'object') {
     Object.entries(groupedMetrics).forEach(([metricName, timePeriods]: [string, any]) => {
@@ -91,10 +120,21 @@ function convertModalDataToDashboardFormat(modalData: any): any {
                 actualValue = metric.value.value;
               }
               
+              // Parse and validate the numeric value
+              const parsedValue = parseMetricValue(actualValue);
+              
+              // Normalize sourceType to canonical format
+              const originalSourceType = metric.sourceType;
+              const normalizedSourceType = normalizeSourceType(originalSourceType);
+              
+              // Track sourceType mapping for debugging
+              const mappingKey = `${originalSourceType} → ${normalizedSourceType}`;
+              sourceTypeMapping[mappingKey] = (sourceTypeMapping[mappingKey] || 0) + 1;
+              
               dashboardMetrics.push({
                 metricName,
-                value: actualValue,
-                sourceType: metric.sourceType,
+                value: parsedValue,
+                sourceType: normalizedSourceType,
                 timePeriod,
                 createdAt: metric.createdAt,
                 updatedAt: metric.updatedAt,
@@ -115,6 +155,8 @@ function convertModalDataToDashboardFormat(modalData: any): any {
     console.warn('[DEBUG] Expected object for grouped metrics but got:', typeof groupedMetrics, groupedMetrics);
   }
 
+  console.log('[DEBUG] SourceType normalization summary:', sourceTypeMapping);
+
   const result = {
     company,
     metrics: dashboardMetrics,
@@ -125,11 +167,23 @@ function convertModalDataToDashboardFormat(modalData: any): any {
     timeSeriesData: {}
   };
 
+  // Collect sourceType distribution for debugging
+  const sourceTypeDistribution: Record<string, number> = {};
+  dashboardMetrics.forEach(metric => {
+    sourceTypeDistribution[metric.sourceType] = (sourceTypeDistribution[metric.sourceType] || 0) + 1;
+  });
+
   console.log('[DEBUG] Conversion result', {
     hasCompany: !!result.company,
     metricsCount: result.metrics.length,
     metricsIsArray: Array.isArray(result.metrics),
-    sampleMetrics: result.metrics.slice(0, 3)
+    sourceTypeDistribution,
+    sampleMetrics: result.metrics.slice(0, 3).map(m => ({
+      metricName: m.metricName,
+      sourceType: m.sourceType,
+      value: m.value,
+      timePeriod: m.timePeriod
+    }))
   });
 
   return result;
