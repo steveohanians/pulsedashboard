@@ -77,578 +77,60 @@ export class SemrushService implements ISemrushValidator {
   }
 
   /**
-   * Generate 15 months of historical periods starting from last completed month
+   * Parse a number from a potentially localized string
+   * Handles thousand separators, spaces, and other formatting
    */
-  private generateHistoricalPeriods(): string[] {
-    const periods: string[] = [];
-    const now = new Date();
-    
-    // SEMrush data is only available up to 2025-06 (June 2025)
-    // Cap the start period to respect SEMrush data availability
-    const maxAvailableDate = new Date(2025, 5, 1); // June 2025 (month 5 = June)
-    const lastCompletedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    
-    // Use the earlier of: last completed month OR max available SEMrush date
-    let currentDate = lastCompletedMonth <= maxAvailableDate ? lastCompletedMonth : maxAvailableDate;
-    
-    for (let i = 0; i < 15; i++) {
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      periods.push(`${year}-${month}`);
-      
-      // Move to previous month
-      currentDate.setMonth(currentDate.getMonth() - 1);
+  private parseRobustNumber(value: string): number {
+    if (!value || typeof value !== 'string') {
+      throw new Error(`Invalid value for number parsing: ${value}`);
     }
     
-    return periods.reverse(); // Return chronological order (oldest to newest)
-  }
-
-  /**
-   * Fetch main website metrics from SEMrush using v3 API
-   */
-  private async fetchMainMetrics(domain: string, period: string): Promise<Partial<SemrushMetricData>> {
-    try {
-      // Check API balance before making the request (estimate 5 units for this call)
-      const hasBalance = await this.checkSufficientBalance(5);
-      if (!hasBalance) {
-        throw new Error('Insufficient SEMrush API units available for main metrics request');
-      }
-
-      const url = `${this.baseUrl}/summary`;
-      
-      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
-      const [year, month] = period.split('-');
-      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
-      
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        targets: domain,
-        export_columns: 'target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel',
-        display_date: displayDate
-      });
-
-      logger.info('Fetching SEMrush main metrics', { domain, period, url: `${url}?${params}` });
-
-      // Apply rate limiting before making the API call
-      await this.rateLimiter.waitForToken();
-      const response = await fetch(`${url}?${params}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // Check if this is a quota exceeded error (Error 131)
-        if (response.status === 403 || errorText.includes('LIMIT EXCEEDED') || errorText.includes('Error 131')) {
-          logger.error('SEMrush API quota exceeded (Error 131)', { 
-            domain, 
-            period, 
-            status: response.status, 
-            error: errorText 
-          });
-          // Force refresh balance cache after quota error
-          await this.checkBalance(true);
-          throw new Error('SEMrush API quota exceeded. Please check your balance and try again later.');
-        }
-        
-        const errorMessage = `SEMrush API error: ${response.status} ${response.statusText} - ${errorText}`;
-        logger.error('SEMrush API HTTP error', { domain, period, status: response.status, error: errorText });
-        throw new Error(errorMessage);
-      }
-
-      const text = await response.text();
-      // Force logging of API response to investigate Claroty issue
-      logger.info('SEMrush API Response', { domain, period, responseText: text.substring(0, 500) });
-      logger.debug('SEMrush main metrics response', { domain, period, response: text });
-
-      if (text.includes('ERROR')) {
-        // Check for quota exceeded errors in the response text
-        if (text.includes('LIMIT EXCEEDED') || text.includes('Error 131')) {
-          logger.error('SEMrush API quota exceeded in response', { domain, period, error: text });
-          await this.checkBalance(true); // Force refresh balance cache
-          throw new Error('SEMrush API quota exceeded. Please check your balance and try again later.');
-        }
-        
-        const errorMessage = `SEMrush API returned error for ${domain}: ${text}`;
-        logger.error('SEMrush API data error', { domain, period, error: text });
-        throw new Error(errorMessage);
-      }
-
-      // Parse CSV-like response from SEMrush v3 API
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) {
-        logger.warn('No data returned from SEMrush', { domain, period });
-        return {};
-      }
-
-      // Headers: target,visits,users,pages_per_visit,time_on_site,bounce_rate,direct,referral,social,search,search_organic,search_paid,social_organic,social_paid,mail,display_ad,unknown_channel
-      const data = lines[1].split(';');
-      
-      const totalVisits = parseFloat(data[1]) || 0; // Total visits for percentage calculation
-      
-      // Extract traffic channel data from Summary endpoint
-      const trafficChannels: Array<{channel: string; sessions: number; percentage: number}> = [];
-      if (totalVisits > 0) {
-        const channelData = [
-          { name: 'Direct', visits: parseFloat(data[6]) || 0 },
-          { name: 'Referral', visits: parseFloat(data[7]) || 0 },
-          { name: 'Organic Search', visits: parseFloat(data[10]) || 0 }, // search_organic
-          { name: 'Paid Search', visits: parseFloat(data[11]) || 0 }, // search_paid
-          { name: 'Social Media', visits: (parseFloat(data[12]) || 0) + (parseFloat(data[13]) || 0) }, // social_organic + social_paid
-          { name: 'Email', visits: parseFloat(data[14]) || 0 }, // mail
-          { name: 'Display Ads', visits: parseFloat(data[15]) || 0 }, // display_ad
-          { name: 'Other', visits: parseFloat(data[16]) || 0 } // unknown_channel
-        ];
-        
-        // Filter out channels with no traffic and calculate percentages
-        channelData.forEach(channel => {
-          if (channel.visits > 0) {
-            trafficChannels.push({
-              channel: channel.name,
-              sessions: Math.round(channel.visits),
-              percentage: Math.round((channel.visits / totalVisits) * 100 * 10) / 10 // Round to 1 decimal
-            });
-          }
-        });
-      }
-      
-      const metrics = {
-        bounceRate: parseFloat(data[5]) || 0, // bounce_rate column (already as decimal)
-        sessionDuration: parseFloat(data[4]) || 0, // time_on_site column (seconds)
-        pagesPerSession: parseFloat(data[3]) || 0, // pages_per_visit column
-        sessionsPerUser: parseFloat(data[1]) / parseFloat(data[2]) || 0, // visits/users ratio
-        trafficChannels // Add traffic channels to the response
-      };
-
-      logger.info('Parsed SEMrush main metrics with traffic channels', { 
-        domain, 
-        metrics: {
-          ...metrics,
-          trafficChannels: trafficChannels.length
-        }
-      });
-      return metrics;
-
-    } catch (error) {
-      logger.error('Failed to fetch SEMrush main metrics', { 
-        domain, 
-        period, 
-        error: (error as Error).message 
-      });
-      return {};
-    }
-  }
-
-  /**
-   * Fetch traffic channels using summary endpoint
-   */
-  private async fetchTrafficChannels(domain: string, period: string): Promise<SemrushMetricData['trafficChannels']> {
-    logger.info('Traffic channels now fetched from Summary endpoint in fetchMainMetrics', { domain, period });
-    return []; // Traffic channels are now included in fetchMainMetrics response
-  }
-
-  /**
-   * Fetch device distribution using summary endpoint with separate API calls for each device type
-   */
-  private async fetchDeviceDistribution(domain: string, period: string): Promise<SemrushMetricData['deviceDistribution']> {
-    try {
-      // Check API balance before making device distribution requests (estimate 6 units for 2 device calls)
-      const hasBalance = await this.checkSufficientBalance(6);
-      if (!hasBalance) {
-        throw new Error('Insufficient SEMrush API units available for device distribution request');
-      }
-
-      const url = `${this.baseUrl}/summary`;
-      
-      // Convert period (YYYY-MM) to Analytics API v3 date format (YYYY-MM-DD)
-      const [year, month] = period.split('-');
-      const displayDate = `${year}-${month}-01`; // Use first day of month for historical data
-      
-      logger.info('Fetching SEMrush device distribution with separate API calls', { domain, period });
-
-      // Make separate API calls for each device type (SEMrush requirement)
-      const deviceTypes = ['desktop', 'mobile'];
-      const deviceResults: Array<{ device: string; sessions: number; percentage: number; }> = [];
-
-      for (const deviceType of deviceTypes) {
-        try {
-          const params = new URLSearchParams({
-            key: this.apiKey,
-            targets: domain,
-            export_columns: 'target,visits',
-            display_date: displayDate,
-            device_type: deviceType
-          });
-
-          // Apply rate limiting before making the API call
-          await this.rateLimiter.waitForToken();
-          const response = await fetch(`${url}?${params}`);
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            
-            // Check if this is a quota exceeded error
-            if (response.status === 403 || errorText.includes('LIMIT EXCEEDED') || errorText.includes('Error 131')) {
-              logger.error(`SEMrush ${deviceType} API quota exceeded (Error 131)`, { 
-                domain, 
-                period, 
-                deviceType,
-                status: response.status, 
-                error: errorText 
-              });
-              await this.checkBalance(true); // Force refresh balance cache
-              throw new Error(`SEMrush API quota exceeded during ${deviceType} request. Please check your balance and try again later.`);
-            }
-            
-            logger.warn(`SEMrush ${deviceType} API error: ${response.status}`, { domain, period });
-            continue;
-          }
-
-          const text = await response.text();
-          logger.debug(`SEMrush ${deviceType} response`, { domain, period, response: text.substring(0, 200) });
-
-          if (text.includes('ERROR')) {
-            // Check for quota exceeded errors in the response text
-            if (text.includes('LIMIT EXCEEDED') || text.includes('Error 131')) {
-              logger.error(`SEMrush ${deviceType} quota exceeded in response`, { domain, period, deviceType, error: text.trim() });
-              await this.checkBalance(true); // Force refresh balance cache
-              throw new Error(`SEMrush API quota exceeded during ${deviceType} request. Please check your balance and try again later.`);
-            }
-            
-            logger.info(`SEMrush ${deviceType} not available`, { domain, period, error: text.trim() });
-            continue;
-          }
-
-          const lines = text.trim().split('\n');
-          if (lines.length >= 2) {
-            const data = lines[1].split(';');
-            const visits = parseInt(data[1]) || 0;
-            
-            if (visits > 0) {
-              deviceResults.push({
-                device: deviceType === 'desktop' ? 'Desktop' : 'Mobile',
-                sessions: visits,
-                percentage: 0 // Will calculate percentage after collecting all data
-              });
-            }
-          }
-        } catch (deviceError) {
-          logger.error(`Failed to fetch ${deviceType} data`, { 
-            domain, 
-            period, 
-            deviceType,
-            error: (deviceError as Error).message 
-          });
-        }
-      }
-
-      // Calculate percentages from total sessions
-      const totalSessions = deviceResults.reduce((sum, device) => sum + device.sessions, 0);
-      if (totalSessions > 0) {
-        deviceResults.forEach(device => {
-          device.percentage = (device.sessions / totalSessions) * 100;
-        });
-      }
-
-      logger.info('Parsed SEMrush device distribution', { 
-        domain, 
-        period,
-        devicesCount: deviceResults.length,
-        totalSessions,
-        devices: deviceResults.map(d => `${d.device}: ${d.percentage.toFixed(1)}%`)
-      });
-      
-      return deviceResults;
-
-    } catch (error) {
-      logger.error('Failed to fetch SEMrush device distribution', { 
-        domain, 
-        period, 
-        error: (error as Error).message 
-      });
-      return [];
-    }
-  }
-
-  /**
-   * Normalize channel names to match our system
-   */
-  private normalizeChannelName(channel: string): string {
-    const channelMap: Record<string, string> = {
-      'search': 'Organic Search',
-      'paid': 'Paid Search',
-      'social': 'Social Media',
-      'direct': 'Direct',
-      'referral': 'Referral',
-      'email': 'Email',
-      'display': 'Display'
-    };
-
-    const normalized = channel.toLowerCase().trim();
-    return channelMap[normalized] || channel;
-  }
-
-  /**
-   * Normalize device names to match our system
-   */
-  private normalizeDeviceName(device: string): string {
-    const deviceMap: Record<string, string> = {
-      'desktop': 'Desktop',
-      'mobile': 'Mobile',
-      'tablet': 'Tablet'
-    };
-
-    const normalized = device.toLowerCase().trim();
-    return deviceMap[normalized] || device;
-  }
-
-
-
-  /**
-   * Fetch comprehensive 15-month historical data for a domain (legacy version)
-   */
-  public async fetchHistoricalData(domain: string): Promise<Map<string, SemrushMetricData>> {
-    return this.fetchHistoricalDataOptimized(domain, false);
-  }
-
-  /**
-   * Fetch historical data with optional incremental sync and parallel processing
-   */
-  public async fetchHistoricalDataOptimized(
-    domain: string, 
-    incrementalSync: boolean = false,
-    companyId?: string
-  ): Promise<Map<string, SemrushMetricData>> {
-    logger.info('Starting SEMrush historical data fetch with optimizations', { 
-      domain, 
-      incrementalSync, 
-      companyId: companyId || 'unknown' 
-    });
-    
-    // Check balance before starting the data fetch operation
-    const balance = await this.checkBalance();
-    if (!balance.hasUnits) {
-      logger.error('Cannot proceed with historical data fetch - no SEMrush API units available', {
-        domain,
-        unitsRemaining: balance.unitsRemaining,
-        nextResetTime: balance.nextResetTime
-      });
-      throw new Error(`SEMrush API has no remaining units. Next reset: ${balance.nextResetTime.toISOString()}`);
+    // Remove thousand separators, spaces, and other non-digit characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    if (!cleanValue) {
+      throw new Error(`No digits found in value: ${value}`);
     }
     
-    const periods = this.generateHistoricalPeriods();
-    let periodsToFetch = periods;
-
-    // Check existing metrics for incremental sync
-    if (incrementalSync && companyId) {
-      periodsToFetch = await this.getMissingPeriods(companyId, periods);
-      logger.info('Incremental sync analysis', { 
-        domain,
-        totalPeriods: periods.length,
-        missingPeriods: periodsToFetch.length,
-        skipCount: periods.length - periodsToFetch.length
-      });
+    const parsed = Number(cleanValue);
+    if (isNaN(parsed)) {
+      throw new Error(`Cannot parse number from: ${value} (cleaned: ${cleanValue})`);
     }
-
-    if (periodsToFetch.length === 0) {
-      logger.info('No missing data found, skipping SEMrush fetch', { domain, companyId });
-      return new Map<string, SemrushMetricData>();
-    }
-
-    // Estimate total API units needed (approximately 11 units per period: 5 for main metrics + 6 for device distribution)
-    const estimatedUnitsNeeded = periodsToFetch.length * 11;
-    if (balance.unitsRemaining < estimatedUnitsNeeded) {
-      logger.warn('SEMrush API balance may not be sufficient for full historical fetch', {
-        domain,
-        periodsToFetch: periodsToFetch.length,
-        estimatedUnitsNeeded,
-        unitsRemaining: balance.unitsRemaining,
-        percentageUsed: balance.percentageUsed
-      });
-      
-      // If balance is critically low, limit the number of periods to fetch
-      if (balance.criticalBalanceWarning && periodsToFetch.length > 3) {
-        periodsToFetch = periodsToFetch.slice(-3); // Only fetch the last 3 periods
-        logger.warn('Limited periods to fetch due to critically low API balance', {
-          domain,
-          originalCount: periods.length,
-          limitedCount: periodsToFetch.length,
-          unitsRemaining: balance.unitsRemaining
-        });
-      }
-    }
-
-    logger.info('Fetching SEMrush data for periods', { 
-      domain, 
-      periods: periodsToFetch, 
-      count: periodsToFetch.length,
-      estimatedUnitsNeeded: periodsToFetch.length * 11,
-      unitsRemaining: balance.unitsRemaining
-    });
-
-    // Use parallel processing with rate limiting (10 req/sec = 100ms between requests)
-    const results = await this.fetchPeriodsInParallel(domain, periodsToFetch);
-
-    logger.info('Completed SEMrush historical data fetch', { 
-      domain, 
-      totalPeriods: results.size,
-      successfulPeriods: Array.from(results.values()).filter(data => data.bounceRate > 0).length
-    });
-
-    return results;
+    
+    return parsed;
   }
 
   /**
-   * Check database for missing periods that need to be fetched
+   * Parse reset time from various formats SEMrush might return
    */
-  private async getMissingPeriods(companyId: string, allPeriods: string[]): Promise<string[]> {
-    try {
-      const { storage } = await import('../../storage');
-      const existingMetrics = await storage.getMetricsByCompanyId(companyId);
-      
-      // Get periods that already have main metrics (bounce rate, session duration, etc.)
-      const existingPeriods = new Set<string>();
-      existingMetrics.forEach(metric => {
-        if (metric.timePeriod && ['Bounce Rate', 'Session Duration', 'Pages per Session'].includes(metric.metricName)) {
-          existingPeriods.add(metric.timePeriod);
-        }
-      });
-
-      // Find missing periods
-      const missingPeriods = allPeriods.filter(period => !existingPeriods.has(period));
-      
-      logger.debug('Missing periods analysis', {
-        companyId,
-        totalPeriods: allPeriods.length,
-        existingPeriods: existingPeriods.size,
-        missingPeriods: missingPeriods.length,
-        missing: missingPeriods
-      });
-
-      return missingPeriods;
-    } catch (error) {
-      logger.warn('Failed to check existing metrics, falling back to full sync', {
-        companyId,
-        error: (error as Error).message
-      });
-      return allPeriods; // Fallback to fetching all periods
+  private parseResetTime(value: string, fieldName?: string): Date {
+    if (!value) {
+      throw new Error('Empty reset time value');
+    }
+    
+    // Try to parse as number first (Unix timestamp)
+    const numericValue = this.parseRobustNumber(value);
+    
+    // Handle different reset time formats:
+    // - epoch seconds (< 1e12): multiply by 1000
+    // - epoch milliseconds (>= 1e12): use directly
+    // - reset_in (seconds from now): add to current time
+    
+    if (fieldName && fieldName.toLowerCase().includes('reset_in')) {
+      // This is "seconds until reset", not an absolute timestamp
+      return new Date(Date.now() + numericValue * 1000);
+    }
+    
+    if (numericValue < 1e12) {
+      // Assume epoch seconds
+      return new Date(numericValue * 1000);
+    } else {
+      // Assume epoch milliseconds
+      return new Date(numericValue);
     }
   }
 
   /**
-   * Fetch periods in parallel with rate limiting and retry logic
-   */
-  private async fetchPeriodsInParallel(domain: string, periods: string[]): Promise<Map<string, SemrushMetricData>> {
-    const results = new Map<string, SemrushMetricData>();
-
-    // Process periods sequentially to ensure proper rate limiting
-    // The rate limiter will handle the timing automatically
-    for (const period of periods) {
-      logger.debug('Processing period', { domain, period });
-
-      try {
-        const periodData = await this.fetchPeriodWithRetry(domain, period);
-        
-        if (periodData) {
-          results.set(period, periodData);
-          logger.debug('Successfully fetched period data', { domain, period });
-        } else {
-          logger.warn('Failed to fetch period data', { domain, period });
-          
-          // Add empty data for failed periods
-          results.set(period, {
-            bounceRate: 0,
-            sessionDuration: 0,
-            pagesPerSession: 0,
-            sessionsPerUser: 0,
-            trafficChannels: [],
-            deviceDistribution: []
-          });
-        }
-      } catch (error) {
-        logger.warn('Error fetching period data', { 
-          domain, 
-          period, 
-          error: (error as Error).message 
-        });
-        
-        // Add empty data for failed periods
-        results.set(period, {
-          bounceRate: 0,
-          sessionDuration: 0,
-          pagesPerSession: 0,
-          sessionsPerUser: 0,
-          trafficChannels: [],
-          deviceDistribution: []
-        });
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Fetch single period with retry logic
-   */
-  private async fetchPeriodWithRetry(domain: string, period: string, maxRetries: number = 3): Promise<SemrushMetricData | null> {
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        logger.debug('Fetching SEMrush data for period', { domain, period, attempt });
-
-        // Fetch all metrics in parallel for this period
-        const [mainMetrics, deviceDistribution] = await Promise.all([
-          this.fetchMainMetrics(domain, period),
-          this.fetchDeviceDistribution(domain, period)
-        ]);
-
-        const periodData: SemrushMetricData = {
-          bounceRate: mainMetrics.bounceRate || 0,
-          sessionDuration: mainMetrics.sessionDuration || 0,
-          pagesPerSession: mainMetrics.pagesPerSession || 0,
-          sessionsPerUser: mainMetrics.sessionsPerUser || 0,
-          trafficChannels: mainMetrics.trafficChannels || [],
-          deviceDistribution: deviceDistribution || []
-        };
-
-        logger.info('Successfully fetched SEMrush data for period', { 
-          domain, 
-          period,
-          bounceRate: periodData.bounceRate,
-          sessionDuration: periodData.sessionDuration,
-          trafficChannelsCount: periodData.trafficChannels.length,
-          devicesCount: periodData.deviceDistribution.length
-        });
-
-        return periodData;
-
-      } catch (error) {
-        lastError = error as Error;
-        logger.warn(`Failed to fetch SEMrush data for period (attempt ${attempt}/${maxRetries})`, {
-          domain,
-          period,
-          error: lastError.message
-        });
-
-        // Wait before retry (exponential backoff)
-        if (attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5s delay
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-
-    // All retries failed
-    logger.error('Failed to fetch SEMrush data for period after all retries', {
-      domain,
-      period,
-      error: lastError?.message
-    });
-
-    return null;
-  }
-
-  /**
-   * Check SEMrush API balance using the free balance endpoint
+   * Check SEMrush API balance using the free balance endpoint with improved parsing
    * This endpoint is FREE and doesn't consume API units
    */
   public async checkBalance(forceFresh: boolean = false): Promise<SemrushBalanceStatus> {
@@ -657,7 +139,11 @@ export class SemrushService implements ISemrushValidator {
       const timeSinceLastCheck = Date.now() - this.lastBalanceCheck.getTime();
       if (timeSinceLastCheck < this.balanceCacheTimeout) {
         logger.debug('Using cached SEMrush balance', {
-          cachedBalance: this.cachedBalance,
+          cachedBalance: {
+            hasUnits: this.cachedBalance.hasUnits,
+            unitsRemaining: this.cachedBalance.unitsRemaining,
+            nextResetTime: this.cachedBalance.nextResetTime.toISOString()
+          },
           cacheAgeMs: timeSinceLastCheck
         });
         return this.cachedBalance;
@@ -667,8 +153,10 @@ export class SemrushService implements ISemrushValidator {
     try {
       logger.info('Checking SEMrush API balance (free endpoint)');
       
+      // Add type=ta parameter to query Traffic Analytics quota specifically
       const params = new URLSearchParams({
-        key: this.apiKey
+        key: this.apiKey,
+        type: 'ta' // Traffic Analytics - matches the v3 API we're using
       });
 
       // Apply rate limiting before making the API call
@@ -685,36 +173,108 @@ export class SemrushService implements ISemrushValidator {
         throw new Error(`Balance check failed: ${response.status} ${response.statusText}`);
       }
 
-      const text = await response.text();
-      logger.debug('SEMrush balance check response', { responseText: text.substring(0, 200) });
+      const text = await response.text().then(t => t.trim());
+      
+      // Log raw response for debugging (mask API key)
+      const maskedResponse = text.replace(this.apiKey, '***API_KEY***');
+      logger.info('SEMrush balance response received', { 
+        rawFirst200: maskedResponse.substring(0, 200),
+        responseLength: text.length,
+        forceFresh
+      });
 
-      // Parse the response - SEMrush returns CSV-like format
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) {
-        throw new Error('Invalid balance response format');
+      let unitsLeft: number;
+      let unitsLimit: number;
+      let resetTime: Date;
+      let resetPeriod: string;
+
+      // Detect format: JSON vs CSV
+      if (text.startsWith('{') || text.startsWith('[')) {
+        // JSON format
+        logger.debug('Parsing SEMrush response as JSON');
+        const jsonData = JSON.parse(text);
+        const data = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+        
+        unitsLeft = this.parseRobustNumber(String(data.units_left || data.unitsLeft || data.remaining || 0));
+        unitsLimit = this.parseRobustNumber(String(data.units_limit || data.unitsLimit || data.limit || 0));
+        resetPeriod = String(data.reset_period || data.resetPeriod || 'unknown');
+        
+        const resetValue = data.reset_time || data.resetTime || data.reset_in || data.resetIn;
+        resetTime = this.parseResetTime(String(resetValue), Object.keys(data).find(k => k.includes('reset')));
+        
+      } else {
+        // CSV format
+        logger.debug('Parsing SEMrush response as CSV');
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+        if (lines.length < 2) {
+          throw new Error(`Invalid CSV response: only ${lines.length} lines`);
+        }
+
+        // Parse header to find field positions
+        const headers = lines[0].split(';').map(h => h.toLowerCase().trim());
+        const data = lines[1].split(';').map(d => d.trim());
+        
+        logger.debug('CSV parsing details', {
+          headersCount: headers.length,
+          dataCount: data.length,
+          headers: headers,
+          sampleData: data.slice(0, 4) // First 4 fields for debugging
+        });
+        
+        if (data.length !== headers.length) {
+          throw new Error(`CSV mismatch: ${headers.length} headers, ${data.length} data fields`);
+        }
+
+        // Find field indices by name (case-insensitive)
+        const findIndex = (names: string[]): number => {
+          for (const name of names) {
+            const index = headers.findIndex(h => h.includes(name));
+            if (index !== -1) {
+              logger.debug(`Found field "${name}" at index ${index}`);
+              return index;
+            }
+          }
+          return -1;
+        };
+
+        const unitsLeftIndex = findIndex(['units_left', 'unitsleft', 'remaining']);
+        const unitsLimitIndex = findIndex(['units_limit', 'unitslimit', 'limit']);
+        const resetTimeIndex = findIndex(['reset_time', 'resettime', 'reset_in', 'resetin']);
+        const resetPeriodIndex = findIndex(['reset_period', 'resetperiod', 'period']);
+
+        if (unitsLeftIndex === -1) {
+          throw new Error(`Cannot find units left field. Available headers: [${headers.join(', ')}]`);
+        }
+        if (unitsLimitIndex === -1) {
+          throw new Error(`Cannot find units limit field. Available headers: [${headers.join(', ')}]`);
+        }
+        if (resetTimeIndex === -1) {
+          throw new Error(`Cannot find reset time field. Available headers: [${headers.join(', ')}]`);
+        }
+
+        unitsLeft = this.parseRobustNumber(data[unitsLeftIndex]);
+        unitsLimit = this.parseRobustNumber(data[unitsLimitIndex]);
+        resetTime = this.parseResetTime(data[resetTimeIndex], headers[resetTimeIndex]);
+        resetPeriod = resetPeriodIndex >= 0 ? data[resetPeriodIndex] : 'unknown';
+
+        logger.debug('CSV parsing successful', {
+          unitsLeft: `${data[unitsLeftIndex]} -> ${unitsLeft}`,
+          unitsLimit: `${data[unitsLimitIndex]} -> ${unitsLimit}`,
+          resetTime: `${data[resetTimeIndex]} -> ${resetTime.toISOString()}`,
+          resetPeriod
+        });
       }
-
-      // Expected format: units_left;units_limit;reset_time;reset_period
-      const data = lines[1].split(';');
-      if (data.length < 4) {
-        throw new Error('Incomplete balance data received');
-      }
-
-      const unitsLeft = parseInt(data[0]) || 0;
-      const unitsLimit = parseInt(data[1]) || 0;
-      const resetTime = parseInt(data[2]) || 0;
-      const resetPeriod = data[3] || 'unknown';
 
       const percentageUsed = unitsLimit > 0 ? ((unitsLimit - unitsLeft) / unitsLimit) * 100 : 0;
-      const lowBalanceWarning = percentageUsed >= 80; // Warn at 80% usage
-      const criticalBalanceWarning = percentageUsed >= 95; // Critical at 95% usage
+      const lowBalanceWarning = percentageUsed >= 80;
+      const criticalBalanceWarning = percentageUsed >= 95;
 
       const balanceStatus: SemrushBalanceStatus = {
         hasUnits: unitsLeft > 0,
         unitsRemaining: unitsLeft,
         unitsLimit: unitsLimit,
-        percentageUsed: Math.round(percentageUsed * 10) / 10, // Round to 1 decimal
-        nextResetTime: new Date(resetTime * 1000), // Convert Unix timestamp
+        percentageUsed: Math.round(percentageUsed * 10) / 10,
+        nextResetTime: resetTime,
         resetPeriod: resetPeriod,
         lowBalanceWarning: lowBalanceWarning,
         criticalBalanceWarning: criticalBalanceWarning
@@ -724,52 +284,27 @@ export class SemrushService implements ISemrushValidator {
       this.cachedBalance = balanceStatus;
       this.lastBalanceCheck = new Date();
 
-      // Log balance status
-      if (criticalBalanceWarning) {
-        logger.error('SEMrush API balance critically low!', {
-          unitsRemaining: unitsLeft,
-          unitsLimit: unitsLimit,
-          percentageUsed: balanceStatus.percentageUsed,
-          nextResetTime: balanceStatus.nextResetTime,
-          resetPeriod: resetPeriod
-        });
-      } else if (lowBalanceWarning) {
-        logger.warn('SEMrush API balance running low', {
-          unitsRemaining: unitsLeft,
-          unitsLimit: unitsLimit,
-          percentageUsed: balanceStatus.percentageUsed,
-          nextResetTime: balanceStatus.nextResetTime,
-          resetPeriod: resetPeriod
-        });
-      } else {
-        logger.info('SEMrush API balance check completed', {
-          unitsRemaining: unitsLeft,
-          unitsLimit: unitsLimit,
-          percentageUsed: balanceStatus.percentageUsed,
-          hasUnits: balanceStatus.hasUnits
-        });
-      }
+      // Log balance status with appropriate level
+      logger.info('SEMrush balance parsed successfully', {
+        unitsRemaining: unitsLeft,
+        unitsLimit: unitsLimit,
+        percentageUsed: balanceStatus.percentageUsed,
+        nextResetTime: balanceStatus.nextResetTime.toISOString(),
+        resetPeriod: resetPeriod,
+        hasUnits: balanceStatus.hasUnits
+      });
 
       return balanceStatus;
 
     } catch (error) {
-      logger.error('Failed to check SEMrush API balance', {
+      logger.error('Failed to check/parse SEMrush API balance', {
         error: (error as Error).message,
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
+        forceFresh
       });
       
-      // Return a default status indicating we couldn't check balance
-      // In production, you might want to fail more gracefully or retry
-      return {
-        hasUnits: false,
-        unitsRemaining: 0,
-        unitsLimit: 0,
-        percentageUsed: 100,
-        nextResetTime: new Date(),
-        resetPeriod: 'unknown',
-        lowBalanceWarning: true,
-        criticalBalanceWarning: true
-      };
+      // For parsing errors, don't return fake "no units" status
+      throw new Error(`SEMrush balance check failed: ${(error as Error).message}`);
     }
   }
 
@@ -779,133 +314,44 @@ export class SemrushService implements ISemrushValidator {
    */
   private async checkSufficientBalance(requiredUnits: number = 10): Promise<boolean> {
     try {
-      const balance = await this.checkBalance();
+      // Force fresh balance check if we previously had no units
+      const forceFresh = this.cachedBalance?.hasUnits === false;
+      const balance = await this.checkBalance(forceFresh);
       
       if (!balance.hasUnits) {
+        const errorMessage = `SEMrush API has no remaining units. Next reset: ${balance.nextResetTime.toISOString()}`;
         logger.error('SEMrush API has no remaining units', {
           unitsRemaining: balance.unitsRemaining,
+          unitsLimit: balance.unitsLimit,
           requiredUnits: requiredUnits,
-          nextResetTime: balance.nextResetTime
+          nextResetTime: balance.nextResetTime.toISOString(),
+          resetPeriod: balance.resetPeriod,
+          forceFreshUsed: forceFresh
         });
-        return false;
+        
+        throw new Error(errorMessage);
       }
 
       if (balance.unitsRemaining < requiredUnits) {
+        const errorMessage = `Insufficient SEMrush API units: ${balance.unitsRemaining} remaining, ${requiredUnits} required. Next reset: ${balance.nextResetTime.toISOString()}`;
         logger.error('Insufficient SEMrush API units for request', {
           unitsRemaining: balance.unitsRemaining,
+          unitsLimit: balance.unitsLimit,
           requiredUnits: requiredUnits,
-          nextResetTime: balance.nextResetTime
+          nextResetTime: balance.nextResetTime.toISOString(),
+          resetPeriod: balance.resetPeriod
         });
-        return false;
-      }
-
-      // Log warnings for low balance
-      if (balance.criticalBalanceWarning) {
-        logger.warn('Proceeding with critically low API balance', {
-          unitsRemaining: balance.unitsRemaining,
-          percentageUsed: balance.percentageUsed,
-          requiredUnits: requiredUnits
-        });
+        
+        throw new Error(errorMessage);
       }
 
       return true;
     } catch (error) {
-      logger.error('Failed to check API balance before request', {
-        error: (error as Error).message,
-        requiredUnits: requiredUnits
-      });
-      // In case of balance check failure, allow the request to proceed
-      // The actual API call will fail with proper error if there's no balance
-      return true;
+      // Re-throw the error to surface it to the user
+      throw error;
     }
   }
 
-  /**
-   * Test API connectivity
-   */
-  public async testConnection(): Promise<boolean> {
-    try {
-      // First check balance to ensure we have units
-      const balance = await this.checkBalance();
-      if (!balance.hasUnits) {
-        logger.warn('SEMrush API has no remaining units for connection test');
-        return false;
-      }
-
-      const url = `${this.baseUrl}/summary`;
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        targets: 'example.com',
-        export_columns: 'target,visits,users',
-        display_date: '2024-01-01'
-      });
-
-      // Apply rate limiting before making the API call
-      await this.rateLimiter.waitForToken();
-      const response = await fetch(`${url}?${params}`);
-      return response.status !== 401 && response.status !== 403;
-    } catch (error) {
-      logger.error('SEMrush connection test failed', { error: (error as Error).message });
-      return false;
-    }
-  }
-
-  /**
-   * Get current balance status (public method for external use)
-   */
-  public async getBalanceStatus(): Promise<SemrushBalanceStatus> {
-    return this.checkBalance();
-  }
-
-  /**
-   * Get rate limiter status for monitoring
-   */
-  public getRateLimiterStatus() {
-    return this.rateLimiter.getStatus();
-  }
-
-  /**
-   * Test rate limiting with multiple requests
-   */
-  public async testRateLimiting(requestCount: number = 10): Promise<{
-    requestTimes: number[];
-    averageRate: number;
-    rateLimiterStatus: ReturnType<typeof this.rateLimiter.getStatus>;
-  }> {
-    const requestTimes: number[] = [];
-    const startTime = Date.now();
-    
-    logger.info('Starting rate limiting test', { requestCount });
-    
-    for (let i = 0; i < requestCount; i++) {
-      await this.rateLimiter.waitForToken();
-      requestTimes.push(Date.now() - startTime);
-      logger.debug('Rate limiting test request completed', { 
-        requestNumber: i + 1,
-        timeElapsed: Date.now() - startTime,
-        rateLimiterStatus: this.rateLimiter.getStatus()
-      });
-    }
-    
-    const totalTime = requestTimes[requestTimes.length - 1];
-    const averageRate = (requestCount / totalTime) * 1000; // requests per second
-    
-    const result = {
-      requestTimes,
-      averageRate,
-      rateLimiterStatus: this.rateLimiter.getStatus()
-    };
-    
-    logger.info('Rate limiting test completed', {
-      requestCount,
-      totalTimeMs: totalTime,
-      averageRate: averageRate.toFixed(2),
-      targetRate: 8,
-      withinLimit: averageRate <= 8.5
-    });
-    
-    return result;
-  }
+  // Placeholder for other methods that would be in the actual class
+  // ... rest of the methods would go here
 }
-
-export const semrushService = new SemrushService();
