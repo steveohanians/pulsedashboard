@@ -521,18 +521,17 @@ export class SemrushService implements ISemrushValidator {
 
   /**
    * Generate 15 months of historical periods starting from last completed month
+   * Attempts to fetch the freshest available data and gracefully falls back
+   * when recent months aren't available yet via existing error handling
    */
   private generateHistoricalPeriods(): string[] {
     const periods: string[] = [];
     const now = new Date();
     
-    // SEMrush data is only available up to 2025-06 (June 2025)
-    // Cap the start period to respect SEMrush data availability
-    const maxAvailableDate = new Date(2025, 5, 1); // June 2025 (month 5 = June)
-    const lastCompletedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    
-    // Use the earlier of: last completed month OR max available SEMrush date
-    let currentDate = lastCompletedMonth <= maxAvailableDate ? lastCompletedMonth : maxAvailableDate;
+    // Start from last completed month - let API calls determine actual availability
+    // The existing error handling and fallback logic will gracefully handle
+    // cases where the most recent months don't have data yet
+    let currentDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     
     for (let i = 0; i < 15; i++) {
       const year = currentDate.getFullYear();
