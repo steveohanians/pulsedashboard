@@ -33,7 +33,28 @@ class GoogleOAuthService {
     // Initialize OAuth2 configuration
     this.clientId = process.env.GOOGLE_CLIENT_ID || '';
     this.clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-    this.redirectUri = process.env.GOOGLE_REDIRECT_URI || `https://${process.env.REPLIT_DEV_DOMAIN}/api/oauth/google/callback`;
+    
+    // Construct redirect URI with better fallback logic
+    if (process.env.GOOGLE_REDIRECT_URI) {
+      this.redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    } else if (process.env.REPLIT_DEV_DOMAIN) {
+      this.redirectUri = `https://${process.env.REPLIT_DEV_DOMAIN}/api/oauth/google/callback`;
+    } else {
+      // In production deployments, REPLIT_DEV_DOMAIN is not available
+      throw new Error('GOOGLE_REDIRECT_URI environment variable must be set in production deployments');
+    }
+    
+    // Validate redirect URI
+    if (!this.redirectUri || this.redirectUri.includes('undefined')) {
+      throw new Error(`Invalid OAuth redirect URI: ${this.redirectUri}. Please set GOOGLE_REDIRECT_URI environment variable.`);
+    }
+    
+    // Log configuration for debugging (redact secrets)
+    logger.info('Google OAuth Service initialized', {
+      clientId: this.clientId ? `${this.clientId.slice(0, 6)}...${this.clientId.slice(-6)}` : 'NOT_SET',
+      redirectUri: this.redirectUri,
+      hasClientSecret: !!this.clientSecret
+    });
   }
 
   /**
