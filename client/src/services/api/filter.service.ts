@@ -18,7 +18,14 @@ export class FilterService extends BaseService {
     value: string;
     sortOrder?: number;
   }): Promise<any> {
-    const result = await super.create(data);
+    // Transform the data to match backend expectations
+    const backendData = {
+      category: data.type === 'business_size' ? 'businessSizes' : 'industryVerticals',
+      value: data.value,
+      order: data.sortOrder || 0
+    };
+    
+    const result = await super.create(backendData);
     cacheManager.invalidate('filter');
     return result;
   }
@@ -30,7 +37,12 @@ export class FilterService extends BaseService {
     value?: string;
     sortOrder?: number;
   }): Promise<any> {
-    const result = await super.update(id, data);
+    // Transform the data to match backend expectations
+    const backendData: any = {};
+    if (data.value !== undefined) backendData.value = data.value;
+    if (data.sortOrder !== undefined) backendData.order = data.sortOrder;
+    
+    const result = await super.update(id, backendData);
     cacheManager.invalidate('filter');
     return result;
   }
