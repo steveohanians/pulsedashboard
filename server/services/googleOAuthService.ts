@@ -34,6 +34,15 @@ class GoogleOAuthService {
     this.clientId = process.env.GOOGLE_CLIENT_ID || '';
     this.clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
     
+    // Debug environment variables for troubleshooting
+    logger.info('Environment variables check', {
+      hasGoogleRedirectUri: !!process.env.GOOGLE_REDIRECT_URI,
+      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'NOT_SET',
+      hasReplitDevDomain: !!process.env.REPLIT_DEV_DOMAIN,
+      replitDevDomain: process.env.REPLIT_DEV_DOMAIN || 'NOT_SET',
+      isProduction: !!process.env.REPLIT_DEPLOYMENT
+    });
+    
     // Construct redirect URI with better fallback logic
     if (process.env.GOOGLE_REDIRECT_URI) {
       this.redirectUri = process.env.GOOGLE_REDIRECT_URI;
