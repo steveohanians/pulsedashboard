@@ -934,6 +934,17 @@ export class DatabaseStorage implements IStorage {
       filteredMetrics.push(...trafficChannelsFromDB);
     }
     
+    // Add Device Distribution from database fallback
+    const deviceDistributionFromDB = allIndustryMetrics.filter((m: Metric) => 
+      m.metricName === 'Device Distribution' && 
+      m.timePeriod === period && 
+      !calculatedMetricNames.has(m.metricName)
+    );
+    logger.info(`Adding ${deviceDistributionFromDB.length} device distribution from database to ${filteredMetrics.length} calculated metrics`);
+    if (deviceDistributionFromDB.length > 0) {
+      filteredMetrics.push(...deviceDistributionFromDB);
+    }
+    
     logger.info(`Returning ${filteredMetrics.length} filtered Industry_Avg metrics for period ${period} (filters: ${filters.businessSize}, ${filters.industryVertical})`);
     logger.info(`Sample filtered metric: ${JSON.stringify(filteredMetrics.find(m => m.metricName === 'Bounce Rate'))}`);
     return filteredMetrics;
