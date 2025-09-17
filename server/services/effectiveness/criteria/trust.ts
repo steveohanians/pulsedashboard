@@ -264,6 +264,9 @@ export async function scoreTrust(
       "gartner peer insights",
     ];
 
+    // Look for specific trust indicators in text
+    const pageText = $("body").text().toLowerCase();
+    
     // Count trust elements
     let certifications = $(certificationSelectors.join(",")).length;
     const textBadges = certificationTextPhrases.reduce(
@@ -272,10 +275,7 @@ export async function scoreTrust(
     );
     certifications += textBadges;
     const caseStudies = $(caseStudySelectors.join(",")).length;
-    const certifications = $(certificationSelectors.join(",")).length;
 
-    // Look for specific trust indicators in text
-    const pageText = $("body").text().toLowerCase();
     const trustKeywords = [
       "customers",
       "clients served",
