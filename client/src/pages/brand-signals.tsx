@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { NavigationSidebar } from '@/components/NavigationSidebar';
+import { ViewAsSelector } from '@/components/admin/ViewAsSelector';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { useAuth } from "@/hooks/use-auth";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useLoadKit } from "@/components/loading";
@@ -42,6 +44,10 @@ export default function BrandSignals() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("AI Share of Voice");
   const [manualClick, setManualClick] = useState<boolean>(false);
+
+  // Use shared ViewAs context
+  const { viewAsClientId, viewAsUserName, viewAsUserId, viewAsUser, setViewAs, resetViewAs } = useViewAs();
+
 
   // Brand Signals subsection scroll function
   const scrollToSection = (sectionName: string) => {
@@ -145,7 +151,7 @@ export default function BrandSignals() {
 
   // Get client and competitors from existing dashboard data
   const { client, competitors } = useDashboardData({
-    clientId: user?.clientId || "",
+    clientId: viewAsClientId || user?.clientId || "",
     timePeriod: "Last Month",
     businessSize: "All",
     industryVertical: "All",
@@ -513,8 +519,8 @@ export default function BrandSignals() {
                 activeSection={activeSection}
                 onSectionClick={handleSectionClick}
                 userRole={user?.role}
-                viewAsUserRole={undefined}
-                onRefreshData={() => {}}
+                viewAsUserRole={viewAsUser?.role}
+                onRefreshData={() => setMobileMenuOpen(false)}
                 onCloseMobile={() => setMobileMenuOpen(false)}
                 onLogout={() => logoutMutation.mutate()}
               />
@@ -534,7 +540,7 @@ export default function BrandSignals() {
               activeSection={activeSection}
               onSectionClick={handleSectionClick}
               userRole={user?.role}
-              viewAsUserRole={undefined}
+              viewAsUserRole={viewAsUser?.role}
               onRefreshData={() => {}}
               onLogout={() => logoutMutation.mutate()}
             />
@@ -546,6 +552,22 @@ export default function BrandSignals() {
           ref={brandSignalsRef}
           className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
         >
+
+          {/* Admin View-As Selector */}
+          {user?.role === "Admin" && (
+            <ViewAsSelector
+              currentUserId={user.id}
+              currentClientId={user.clientId || ''}
+              viewAsUserId={viewAsUserId}
+              isAdmin={true}
+              onViewAs={(clientId, userName, userId, userData) => {
+                setViewAs(clientId, userName, userId, userData);
+              }}
+              onReset={() => {
+                resetViewAs();
+              }}
+            />
+          )}
 
         {/* Main Container Card - Similar to Dashboard's Bounce Rate */}
         <Card id="ai-share-of-voice" className="mb-6">

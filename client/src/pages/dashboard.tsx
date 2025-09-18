@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 
 import { ViewAsSelector } from '@/components/admin/ViewAsSelector';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { Link, useLocation } from "wouter";
 import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useToast } from "@/hooks/use-toast";
@@ -77,10 +78,6 @@ export default function Dashboard() {
   const [timePeriod, setTimePeriod] = useState("Last Month");
   const [businessSize, setBusinessSize] = useState("All");
   const [industryVertical, setIndustryVertical] = useState("All");
-  const [viewAsClientId, setViewAsClientId] = useState<string | null>(null);
-  const [viewAsUserName, setViewAsUserName] = useState<string | null>(null);
-  const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
-  const [viewAsUser, setViewAsUser] = useState<any>(null);
   const [showCompetitorModal, setShowCompetitorModal] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("Website Effectiveness");
   const [manualClick, setManualClick] = useState<boolean>(false);
@@ -89,6 +86,9 @@ export default function Dashboard() {
     Record<string, "success" | "needs_improvement" | "warning" | undefined>
   >({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Use shared ViewAs context
+  const { viewAsClientId, viewAsUserName, viewAsUserId, viewAsUser, setViewAs, resetViewAs } = useViewAs();
 
   // Clear metric statuses when switching between clients to prevent cross-client contamination
   const effectiveClientId = viewAsClientId || user?.clientId;
@@ -506,16 +506,12 @@ export default function Dashboard() {
               viewAsUserId={viewAsUserId}
               isAdmin={true}
               onViewAs={(clientId, userName, userId, userData) => {
-                setViewAsClientId(clientId);
-                setViewAsUserName(userName);
-                setViewAsUserId(userId);
-                setViewAsUser(userData);
+                setViewAs(clientId, userName, userId, userData);
+                clearDashboardError();
               }}
               onReset={() => {
-                setViewAsClientId(null);
-                setViewAsUserName(null);
-                setViewAsUserId(null);
-                setViewAsUser(null);
+                resetViewAs();
+                clearDashboardError();
               }}
             />
           )}
