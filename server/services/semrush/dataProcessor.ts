@@ -11,6 +11,32 @@ export interface ProcessedMetricData {
 export class SemrushDataProcessor {
   
   /**
+   * Calculate median value from an array of numbers
+   * Handles edge cases: empty arrays, single values, even/odd lengths
+   */
+  private calculateMedian(values: number[]): number {
+    if (values.length === 0) {
+      return 0;
+    }
+    
+    if (values.length === 1) {
+      return values[0];
+    }
+    
+    // Sort values in ascending order
+    const sortedValues = [...values].sort((a, b) => a - b);
+    const midIndex = Math.floor(sortedValues.length / 2);
+    
+    // For even length arrays, return average of two middle values
+    if (sortedValues.length % 2 === 0) {
+      return (sortedValues[midIndex - 1] + sortedValues[midIndex]) / 2;
+    }
+    
+    // For odd length arrays, return middle value
+    return sortedValues[midIndex];
+  }
+
+  /**
    * Convert SEMrush data to our database metric format
    */
   public processCompanyData(
@@ -554,7 +580,7 @@ export class SemrushDataProcessor {
         }
 
         if (values.length > 0) {
-          const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+          const average = this.calculateMedian(values);
           logger.info(`🧮 CALCULATED INDUSTRY AVERAGE: ${metricName} = ${average} from values [${values.join(', ')}]`);
           avgMetrics.push({
             clientId: null,
@@ -647,7 +673,7 @@ export class SemrushDataProcessor {
       }
       
       if (values.length > 0) {
-        const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+        const average = this.calculateMedian(values);
         logger.info(`🔄 Found fallback average for ${metricName}: ${average} from period ${checkPeriod}`);
         return average;
       }
@@ -833,8 +859,8 @@ export class SemrushDataProcessor {
     // Calculate averages for each channel
     for (const [channel, data] of Array.from(channelData.entries())) {
       if (data.percentages.length > 0) {
-        const avgPercentage = data.percentages.reduce((sum: number, val: number) => sum + val, 0) / data.percentages.length;
-        const avgSessions = data.sessions.reduce((sum: number, val: number) => sum + val, 0) / data.sessions.length;
+        const avgPercentage = this.calculateMedian(data.percentages);
+        const avgSessions = this.calculateMedian(data.sessions);
 
         targetArray.push({
           clientId: null,
