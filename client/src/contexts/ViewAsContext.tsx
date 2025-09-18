@@ -120,6 +120,9 @@ export function ViewAsProvider({ children }: ViewAsProviderProps) {
 export function useViewAs() {
   const context = useContext(ViewAsContext);
   if (context === undefined) {
+    // More descriptive error with debugging info
+    console.error('ViewAsContext is undefined. Make sure ViewAsProvider wraps your component.');
+    console.error('Current component stack:', new Error().stack);
     throw new Error('useViewAs must be used within a ViewAsProvider');
   }
   return context;
